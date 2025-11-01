@@ -10,8 +10,8 @@ final class Role: PGModel, @unchecked Sendable {
     struct Fields: PGFields {
         
         let id = PGField("id", .uuid)                           .primary
-        let aclId = PGField("acl_id", .uuid)                    .foreign(ACL.self, \.id, onDelete: .cascade)
-        let ast = PGField("ast", .json)                         .required.def(" '{}'::jsonb ")
+        let aclId = PGField("acl_id", .uuid)                    .required.foreign(ACL.self, \.id, onDelete: .cascade)
+        let ast = PGField("ast", .json)                         .required.cons(.sql(.default("{}")))
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
         let createdAt = PGField("create_at", .string)           .required
@@ -48,7 +48,7 @@ final class Role: PGModel, @unchecked Sendable {
 
 extension Role {
     @usableFromInline
-    struct MIG: PGMigration, Sendable {
+    struct MIG: TdeMIG, Sendable {
         @usableFromInline
         typealias DataModel = Role
         

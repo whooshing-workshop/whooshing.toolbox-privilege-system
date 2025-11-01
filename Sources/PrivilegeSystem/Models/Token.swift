@@ -17,8 +17,8 @@ final class Token: PGModel, @unchecked Sendable {
         let userId = PGField("user_id", .uuid)                      .required.unique.foreign(User.self, \.id, onDelete: .cascade)
         let credential = PGField("credential", .string)             .required.unique
         let token = PGField("token", .string)                       .required.unique
-        let valid = PGField("valid", .bool)                         .required.def(true)  // 是否有效
-        let expireAfter = PGField("expire_after", .int)             .required  // 过期时间，单位为分
+        let valid = PGField("valid", .bool)                         .required.def(true)     // 是否有效
+        let expireAfter = PGField("expire_after", .int)             .required               // 过期时间，单位为分
         let createdAt = PGField("create_at", .string)               .required
     }
     
@@ -46,7 +46,7 @@ final class Token: PGModel, @unchecked Sendable {
 
 extension Token {
     @usableFromInline
-    struct MIG: PGMigration, Sendable {
+    struct MIG: TdeMIG, Sendable {
         @usableFromInline
         typealias DataModel = Token
         

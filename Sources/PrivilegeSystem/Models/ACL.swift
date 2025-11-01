@@ -9,8 +9,8 @@ final class ACL: PGModel, @unchecked Sendable {
     struct Fields: PGFields {
         
         let id = PGField("id", .uuid)                           .primary
-        let parentId = PGField("parent_id", .uuid)              .foreign(ACL.self, \.id, onDelete: .cascade)
-        let ruleId = PGField("rule_id", .uuid)                  .required.foreign(ACL.self, \.id, onDelete: .cascade)
+        let parentId = PGField("parent_id", .uuid)              .foreign(ACL.self, .id, onDelete: .cascade)
+        let ruleId = PGField("rule_id", .uuid)                  .required.foreign(ACL.self, .id, onDelete: .cascade)
         let position = PGField("position", .string)
         let type = PGField("type", .string)                     .required
         let op = PGField("operator", .string)
@@ -41,7 +41,7 @@ final class ACL: PGModel, @unchecked Sendable {
 
 extension ACL {
     @usableFromInline
-    struct MIG: PGMigration, Sendable {
+    struct MIG: TdeMIG, Sendable {
         @usableFromInline
         typealias DataModel = ACL
         

@@ -12,15 +12,16 @@ let package = Package(
         .tvOS(.v13),
     ],
     products: [
-        .library( name: "WhooshingPrivilegeSystem", targets: ["WhooshingPrivilegeSystem"] )
+        .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem"] )
     ],
     dependencies: [
         .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", .upToNextMajor(from: "1.4.4")),
-        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-pgsql.git", .upToNextMajor(from: "1.0.5"))
+//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-pgsql.git", .upToNextMajor(from: "1.0.5"))
+        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-pgsql")
     ],
     targets: [
         .target(
-            name: "WhooshingPrivilegeSystem",
+            name: "PrivilegeSystem",
             dependencies: [
                 .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
@@ -30,7 +31,7 @@ let package = Package(
         .testTarget(
             name: "toolbox-privilege-system-Tests",
             dependencies: [
-                .target(name: "WhooshingPrivilegeSystem")
+                .target(name: "PrivilegeSystem")
             ]
         ),
     ]

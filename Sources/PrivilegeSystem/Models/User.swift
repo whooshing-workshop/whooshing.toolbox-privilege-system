@@ -51,7 +51,7 @@ final class User: PGModel, @unchecked Sendable {
 
 extension User {
     @usableFromInline
-    struct MIG: PGMigration, Sendable {
+    struct MIG: TdeMIG, Sendable {
         @usableFromInline
         typealias DataModel = User
         

@@ -9,8 +9,8 @@ final class RoleUserInGroupPivot: PGModel, @unchecked Sendable {
     struct Fields: PGFields {
         
         let id = PGField("id", .uuid)                           .primary
-        let roleId = PGField("role_id", .uuid)                  .required.foreign(Role.self, \.id, onDelete: .cascade)
-        let userInGroupId = PGField("user_in_group_id", .uuid)  .required.foreign(UserGroupPivot.self, \.id, onDelete: .cascade)
+        let roleId = PGField("role_id", .uuid)                  .required.unique(composite: name + ".pivot").foreign(Role.self, \.id, onDelete: .cascade)
+        let userInGroupId = PGField("user_in_group_id", .uuid)  .required.unique(composite: name + ".pivot").foreign(UserGroupPivot.self, \.id, onDelete: .cascade)
         let createdAt = PGField("create_at", .string)           .required
         let updateAt = PGField("update_at", .string)            .required
         
@@ -32,7 +32,7 @@ final class RoleUserInGroupPivot: PGModel, @unchecked Sendable {
 
 extension RoleUserInGroupPivot {
     @usableFromInline
-    struct MIG: PGMigration, Sendable {
+    struct MIG: TdeMIG, Sendable {
         @usableFromInline
         typealias DataModel = RoleUserInGroupPivot
         

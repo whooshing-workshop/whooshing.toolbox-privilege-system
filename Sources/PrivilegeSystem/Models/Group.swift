@@ -44,7 +44,7 @@ final class UGroup: PGModel, @unchecked Sendable {
 
 extension UGroup {
     @usableFromInline
-    struct MIG: PGMigration, Sendable {
+    struct MIG: TdeMIG, Sendable {
         @usableFromInline
         typealias DataModel = UGroup
         
