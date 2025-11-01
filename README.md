@@ -29,7 +29,7 @@
 
 #### 数据结构 - ERD
 
-![10.SQL数据结构-ERD](diagrams/10.SQL数据结构-ERD.png)
+![11.SQL数据结构-ERD](diagrams/11.SQL数据结构-ERD.png)
 
 要了解详细结构，请见[所有设计图](diagrams)
 
