@@ -7,7 +7,6 @@ final class UGroup: PGModel, @unchecked Sendable {
     static let name = "groups"
     
     struct Fields: PGFields {
-        
         let id = PGField("id", .uuid)                           .primary
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)

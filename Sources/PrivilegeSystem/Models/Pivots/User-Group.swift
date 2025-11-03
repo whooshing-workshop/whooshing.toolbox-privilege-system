@@ -7,7 +7,6 @@ final class UserGroupPivot: PGModel, @unchecked Sendable {
     static let name = "user_group_map"
     
     struct Fields: PGFields {
-        
         let id = PGField("id", .uuid)                           .primary
         let userId = PGField("user_id", .uuid)                  .required.unique(composite: name + ".pivot").foreign(User.self, \.id, onDelete: .cascade)
         let groupId = PGField("group_id", .uuid)                .required.unique(composite: name + ".pivot").foreign(UGroup.self, \.id, onDelete: .cascade)

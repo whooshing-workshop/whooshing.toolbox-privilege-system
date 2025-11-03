@@ -8,7 +8,6 @@ final class Role: PGModel, @unchecked Sendable {
     static let name = "roles"
     
     struct Fields: PGFields {
-        
         let id = PGField("id", .uuid)                           .primary
         let aclId = PGField("acl_id", .uuid)                    .required.foreign(ACL.self, \.id, onDelete: .cascade)
         let ast = PGField("ast", .json)                         .required.cons(.sql(.default("{}")))

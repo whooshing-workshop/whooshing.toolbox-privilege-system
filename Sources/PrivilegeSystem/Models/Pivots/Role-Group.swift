@@ -7,7 +7,6 @@ final class RoleGroupPivot: PGModel, @unchecked Sendable {
     static let name = "role_group_map"
     
     struct Fields: PGFields {
-        
         let id = PGField("id", .uuid)                           .primary
         let roleId = PGField("role_id", .uuid)                  .required.unique(composite: name + ".pivot").foreign(Role.self, \.id, onDelete: .cascade)
         let groupId = PGField("group_id", .uuid)                .required.unique(composite: name + ".pivot").foreign(UGroup.self, \.id, onDelete: .cascade)
