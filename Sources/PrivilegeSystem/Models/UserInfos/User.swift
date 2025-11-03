@@ -39,30 +39,21 @@ final class User: PGModel, @unchecked Sendable {
     )                                                                       var groups: [UGroup]
     @Siblings(
         through: UserRolePivot.self,
-        from: \.$user,
-        to: \.$role
+        from: \.$primaryModel,
+        to: \.$secondaryModel
     )                                                                       var roles: [Role]
+    @Siblings(
+        through: UserDomainPivot.self,
+        from: \.$primaryModel,
+        to: \.$secondaryModel
+    )                                                                       var domains: [Domain]
     
     @Timestamp(fields.createdAt, on: .create)                               var createdAt: Date!
     @Timestamp(fields.updateAt, on: .update)                                var updateAt: Date!
     
     init() {}
-}
-
-extension User {
-    @usableFromInline
-    struct MIG: TdeMIG, Sendable {
-        @usableFromInline
-        typealias DataModel = User
-        
-        @usableFromInline
-        var tdeEncrypt: Bool
-        
-        @inlinable
-        init(tdeEncrypt: Bool = true) {
-            self.tdeEncrypt = tdeEncrypt
-        }
-    }
+    
+    typealias MIG = DefaultMIG<User>
 }
 
 //extension User: ModelAuthenticatable {

@@ -39,24 +39,8 @@ public struct PrivilegeSystem: Sendable {
             self.dbs.use(.postgres(configuration: dbConfigure), as: .psql)
             
             let migs = Migrations()
-
-            let models: [any TdeMIG.Type] = [
-                User.MIG.self,
-                Token.MIG.self,
-                ACL.MIG.self,
-                Role.MIG.self,
-                UGroup.MIG.self,
-                User.Info.MIG.self,
-                UserRolePivot.MIG.self,
-                UserGroupPivot.MIG.self,
-                RoleGroupPivot.MIG.self,
-                RoleUserInGroupPivot.MIG.self,
-                User.Info.Extended<User.Info.Phone>.MIG.self,
-                User.Info.Extended<User.Info.Address>.MIG.self,
-                User.Info.Extended<User.Info.AlternateEmail>.MIG.self
-            ]
             
-            for model in models {
+            for model in DataModels {
                 migs.add(model.init(tdeEncrypt: debuging?.tdeEncrypt ?? true))
             }
             

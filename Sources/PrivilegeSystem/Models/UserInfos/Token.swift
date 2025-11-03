@@ -42,22 +42,8 @@ final class Token: PGModel, @unchecked Sendable {
         self.token = Crypto.Symm.makeKey().data.base64EncodedString()
         self.expireAfter = 7 * 24 * 60      // 7 天，以分钟为单位
     }
-}
-
-extension Token {
-    @usableFromInline
-    struct MIG: TdeMIG, Sendable {
-        @usableFromInline
-        typealias DataModel = Token
-        
-        @usableFromInline
-        var tdeEncrypt: Bool
-        
-        @inlinable
-        init(tdeEncrypt: Bool = true) {
-            self.tdeEncrypt = tdeEncrypt
-        }
-    }
+    
+    typealias MIG = DefaultMIG<Token>
 }
 
 //extension Token: ModelCredentialsAuthenticatable {

@@ -1,13 +1,16 @@
 import PgSQL
+import SQLKit
 import Fluent
 import Foundation
 
-final class UGroup: PGModel, @unchecked Sendable {
+final class Role: PGModel, @unchecked Sendable {
     
-    static let name = "groups"
+    static let name = "roles"
     
     struct Fields: PGFields {
         let id = PGField("id", .uuid)                           .primary
+        let aclId = PGField("acl_id", .uuid)                    .required.foreign(ACL.self, \.id, onDelete: .cascade)
+        let ast = PGField("ast", .json)                         .required.cons(.sql(.default("{}")))
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
         let createdAt = PGField("create_at", .string)           .required
@@ -16,43 +19,30 @@ final class UGroup: PGModel, @unchecked Sendable {
         init() {}
     }
     
-    
     static let fields = Fields()
     
     @ID(custom: fields.id.key)                      var id: UUID?
     
+    @Parent(fields.aclId)                           var acl: ACL
+    @Field(fields.ast)                              var ast: AST
     @Field(fields.name)                             var name: String
     @Field(fields.description)                      var description: String?
     
     @Siblings(
-        through: UserGroupPivot.self,
-        from: \.$group,
-        to: \.$user
+        through: UserRolePivot.self,
+        from: \.$secondaryModel,
+        to: \.$primaryModel
     )                                               var users: [User]
     @Siblings(
         through: RoleGroupPivot.self,
-        from: \.$group,
-        to: \.$role
-    )                                               var groupRoles: [Role]
+        from: \.$primaryModel,
+        to: \.$secondaryModel
+    )                                               var groups: [UGroup]
     
     @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
     @Timestamp(fields.updateAt, on: .update)        var updatedAt: Date!
     
     init() {}
-}
-
-extension UGroup {
-    @usableFromInline
-    struct MIG: TdeMIG, Sendable {
-        @usableFromInline
-        typealias DataModel = UGroup
-        
-        @usableFromInline
-        var tdeEncrypt: Bool
-        
-        @inlinable
-        init(tdeEncrypt: Bool = true) {
-            self.tdeEncrypt = tdeEncrypt
-        }
-    }
+    
+    typealias MIG = DefaultMIG<Role>
 }

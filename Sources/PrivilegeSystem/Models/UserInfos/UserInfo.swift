@@ -37,21 +37,7 @@ extension User {
         @Timestamp(fields.updateAt, on: .update)                var updateAt: Date!
         
         init() {}
-    }
-}
-
-extension User.Info {
-    @usableFromInline
-    struct MIG: TdeMIG, Sendable {
-        @usableFromInline
-        typealias DataModel = User.Info
         
-        @usableFromInline
-        var tdeEncrypt: Bool
-        
-        @inlinable
-        init(tdeEncrypt: Bool = true) {
-            self.tdeEncrypt = tdeEncrypt
-        }
+        typealias MIG = DefaultMIG<Info>
     }
 }
