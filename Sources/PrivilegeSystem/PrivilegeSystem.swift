@@ -1,6 +1,4 @@
-import Cryptos
 import PgSQL
-import Foundation
 import ErrorHandle
 import FluentPostgresDriver
 
@@ -56,23 +54,17 @@ public struct PrivilegeSystem: Sendable {
         } catch {
             await self.dbs.shutdownAsync()
             try? await eventLoop.shutdownGracefully()
-            throw Errcase.databaseInitFailed.d("数据库迁移失败").subErr(error)
+            throw Errcase.databaseInitFailed.d("数据库迁移失败", category: .internel).subErr(error)
         }
         
         guard let db = self.dbs.database(logger: logger, on: eventLoop) else {
-            throw Errcase.databaseInitFailed.d("数据库获取失败")
+            throw Errcase.databaseInitFailed.d("数据库获取失败", category: .internel)
         }
         
         guard let db = db as? PGDatabase else {
-            throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库")
+            throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internel)
         }
         
         self.db = db
-    }
-}
-
-public extension PrivilegeSystem {
-    enum Errcase: String, ErrList {
-        case databaseInitFailed = "数据库初始化失败"
     }
 }

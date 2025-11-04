@@ -15,7 +15,8 @@ let package = Package(
         .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem"] )
     ],
     dependencies: [
-        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", .upToNextMajor(from: "1.4.4")),
+//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", .upToNextMajor(from: "1.4.4")),
+        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-basic"),
 //        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-pgsql.git", .upToNextMajor(from: "1.0.5"))
         .package(path: "/Users/clwang/GitHub/whooshing.toolbox-pgsql")
     ],

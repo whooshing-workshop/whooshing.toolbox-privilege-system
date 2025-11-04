@@ -55,16 +55,3 @@ final class User: PGModel, @unchecked Sendable {
     
     typealias MIG = DefaultMIG<User>
 }
-
-//extension User: ModelAuthenticatable {
-//    static let usernameKey = \User.$email
-//    static let passwordHashKey = \User.$hashedPasswd
-//
-//    func verify(password: String) throws -> Bool {
-//        // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果
-//        let passwd = try Base64String(password).dataRes.get()
-//        // 对客户端密码设置后置盐，并再次哈希
-//        let hashed = Crypto.hash(passwd + self.salt)
-//        return try hashed == Base64String(self.hashedPasswd).dataRes.get()
-//    }
-//}

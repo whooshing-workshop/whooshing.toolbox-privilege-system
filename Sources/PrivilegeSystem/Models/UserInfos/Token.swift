@@ -36,7 +36,7 @@ final class Token: PGModel, @unchecked Sendable {
     
     init() {}
     
-    init(for userId: User.IDValue) throws {
+    init(for userId: User.IDValue) {
         self.$user.id = userId
         self.credential = Crypto.randomDataGenerate(length: 16).base64EncodedString()
         self.token = Crypto.Symm.makeKey().data.base64EncodedString()
@@ -46,8 +46,8 @@ final class Token: PGModel, @unchecked Sendable {
     typealias MIG = DefaultMIG<Token>
 }
 
-//extension Token: ModelCredentialsAuthenticatable {
-//    static let usernameKey = \Token.$credential
-//    static let passwordHashKey = \Token.$token
-//    func verify(password: String) throws -> Bool { password == self.token }
-//}
+extension Token: ModelCredentialsAuthenticatable {
+    static let usernameKey: KeyPath<Token, Field<String>> = \Token.$credential
+    static let passwordHashKey: KeyPath<Token, Field<String>> = \Token.$token
+    func verify(password: String) throws -> Bool { password == self.token }
+}

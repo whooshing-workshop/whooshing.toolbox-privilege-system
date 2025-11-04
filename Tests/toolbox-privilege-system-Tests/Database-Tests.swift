@@ -9,6 +9,6 @@ import Foundation
 struct PrivilegeSystemTests {
     @Test("Tests")
     func tests() async throws {
-        let ps = try await TestingShared.getSystem()
+        _ = try await TestingShared.getSystem()
     }
 }
