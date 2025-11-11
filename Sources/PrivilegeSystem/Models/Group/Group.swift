@@ -1,6 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
+import ACL
 
 final class UGroup: PGModel, @unchecked Sendable {
     

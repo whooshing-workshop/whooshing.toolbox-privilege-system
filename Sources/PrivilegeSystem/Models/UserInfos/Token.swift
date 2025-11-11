@@ -1,10 +1,8 @@
 import PgSQL
-import Fluent
 import Foundation
-import Vapor
-import DataConvertable
+import ACL
 import Cryptos
-import ErrorHandle
+import Fluent
 
 /// 数据库表 tokens 的映射类型
 /// 该 tokens 表记录用户口令和用户凭据的对照，用于用户认证查询

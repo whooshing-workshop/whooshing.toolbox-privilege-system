@@ -1,9 +1,9 @@
 import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
+import ResourceMacros
 
-public struct PrivilegeSystem: Sendable {
-    
+public struct PrivilegeModule: Sendable {
     public typealias PGDatabase = Database & PostgresDatabase & SQLDatabase
     
     @frozen
@@ -28,7 +28,8 @@ public struct PrivilegeSystem: Sendable {
         eventLoop: EventLoop,
         dbConfigure: SQLPostgresConfiguration,
         logger: Logger,
-        debuging: Debuging? = nil
+        debuging: Debuging? = nil,
+        migrationConfigure: ([Migration]) -> [Migration] = { $0 }
     ) async throws(BscError<Errcase>) {
         self.eventLoop = eventLoop
         self.dbs = Databases(threadPool: .singleton, on: eventLoop)

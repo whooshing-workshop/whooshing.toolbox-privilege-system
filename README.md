@@ -4,8 +4,6 @@
 
 它涵盖了 **权限授予、群组权限、用户权限、资源访问限制** 等多个层面，为系统提供灵活、高可扩展的权限解决方案。
 
-另见 [Whooshing Privilege Module](https://github.com/SJJC-Team/whooshing.toolbox-privilege-module), 其用于辅助本模块完成权限系统。
-
 ------
 
 ### **✨ 特性**

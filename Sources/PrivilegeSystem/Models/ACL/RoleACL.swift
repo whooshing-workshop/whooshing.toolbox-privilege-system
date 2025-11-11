@@ -1,3 +1,5 @@
+import ACL
+
 extension Role: ACLType {
     static var namePrefix: String { "role" }
 }

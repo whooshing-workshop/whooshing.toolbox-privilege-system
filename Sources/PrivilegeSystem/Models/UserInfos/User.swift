@@ -1,10 +1,6 @@
 import PgSQL
-import Fluent
 import Foundation
-import Vapor
-import DataConvertable
-import Cryptos
-import ErrorHandle
+import ACL
 
 /// 数据库表 users 的映射类型
 /// 记录所有已注册的用户

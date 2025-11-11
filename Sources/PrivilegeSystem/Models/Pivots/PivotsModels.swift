@@ -1,3 +1,5 @@
+import ACL
+
 let PivotModels: [any TdeMIG.Type] = [
     DomainGroupPivot.MIG.self,
     RoleGroupPivot.MIG.self,

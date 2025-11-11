@@ -1,6 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
+import ACL
 
 extension User.Info {
     final class Extended<T: User.Info.Model>: PGModel, @unchecked Sendable {

@@ -1,4 +1,5 @@
 import PgSQL
+import ACL
 
 extension Pivots {
     struct UserGroup: PivotType {

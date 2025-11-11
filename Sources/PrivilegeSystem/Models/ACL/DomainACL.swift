@@ -1,3 +1,5 @@
+import ACL
+
 extension Domain: ACLType {
     static var namePrefix: String { "domain" }
 }

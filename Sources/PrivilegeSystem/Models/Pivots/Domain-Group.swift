@@ -1,4 +1,5 @@
 import PgSQL
+import ACL
 
 typealias DomainGroupPivot = Pivot<Pivots.DomainGroup>
 

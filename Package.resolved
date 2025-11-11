@@ -1,6 +1,15 @@
 {
-  "originHash" : "d4fb15ea986ca71df2076b1cfeec88f77e840095c41849d20da7dd4c2d147f34",
+  "originHash" : "951503b031aacb5f6d6b83d133e88b50458c4615b1d841264866e4cd41d7916b",
   "pins" : [
+    {
+      "identity" : "anycodable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Flight-School/AnyCodable",
+      "state" : {
+        "revision" : "862808b2070cd908cb04f9aafe7de83d35f81b05",
+        "version" : "0.6.7"
+      }
+    },
     {
       "identity" : "async-http-client",
       "kind" : "remoteSourceControl",
@@ -269,6 +278,15 @@
       "state" : {
         "revision" : "0fcc4c9c2d58dd98504c06f7308c86de775396ff",
         "version" : "2.9.0"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
+        "version" : "602.0.0"
       }
     },
     {
