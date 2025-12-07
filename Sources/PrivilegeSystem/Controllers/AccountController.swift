@@ -8,9 +8,9 @@ import NIOAdvanced
 
 extension PrivilegeSystem {
     /// 权限服务层，提供权限相关的业务接口
-    public struct AccountController: Sendable {
-        private let db: PrivilegeSystem.PGDatabase
-        private let eventLoop: EventLoop
+    public struct AccountController: Controller {
+        let db: PrivilegeSystem.PGDatabase
+        let eventLoop: EventLoop
         
         init(system: PrivilegeSystem) {
             self.db = system.db
@@ -18,22 +18,10 @@ extension PrivilegeSystem {
         }
         
         func register(
-            email: String, 
-            passwordHashed: String
-        ) -> EventLoopRes<UserDTO, Errcase> {
+            for user: DTO.User<DTO.Prepare>
+        ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
             eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
-                let user = User()
-                user.email = email
-                // 为用户创建一个用户加密密钥
-                user.key = Crypto.Symm.makeKey().data
-                user.salt = Crypto.randomDataGenerate()
-
-                // 对用户密码进行第二重加盐哈希
-                let passwd = try required(throws: Errcase.userRegisterFailed, "对密码进行二次哈希时失败", category: .internel) {
-                    try Crypto.hash(Base64String(passwordHashed).dataRes.get() + user.salt)
-                }
-                user.hashedPasswd = passwd.base64EncodedString()
-                return user
+                try user.raw().get()
             }.flatMap { user in
                 user.save(on: db)
                     .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internel)
@@ -46,17 +34,18 @@ extension PrivilegeSystem {
                     guard let user = res else {
                         throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internel)
                     }
-                    return UserDTO(from: user)
+                    return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internel) {
+                        try DTO.User.make(from: user).get()
+                    }
                 }
             }
         }
         
         func login(
-            email: String,
-            password: String
-        ) -> EventLoopRes<TokenDTO, Errcase> {
+            by userData: DTO.User<DTO.Prepare>
+        ) -> EventLoopRes<DTO.Token<DTO.Queried>, Errcase> {
             User.query(on: db)
-                .filter(\.$email == email)
+                .filter(\.$email == userData.email)
                 .first()
                 .withError(Errcase.userLoginFailed, "用户不存在", category: .external)
                 .flatMapThrowing
@@ -65,11 +54,19 @@ extension PrivilegeSystem {
                     throw Errcase.userLoginFailed.d("用户不存在", category: .external)
                 }
                 
+                guard
+                    try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internel, {
+                        try user.verify(password: userData.hashedPasswd)
+                    })
+                else {
+                    throw Errcase.userLoginFailed.d("用户密码不正确", category: .external)
+                }
+                
                 let userId = try required(throws: Errcase.userLoginFailed, "获取用户 ID 失败") {
                     try user.requireID()
                 }
                 
-                let token = Token(for: userId)
+                let token = DTO.Token<DTO.Prepare>(for: userId).raw()
                 
                 return (user, userId, token)
             }.flatMap { (user, id, token) in
@@ -80,7 +77,7 @@ extension PrivilegeSystem {
             }.flatMap { (user, id, token) in
                 token.save(on: db)
                     .withError(Errcase.userLoginFailed, "用户 Token 写入数据库失败，用户: \(user)，token: \(token)")
-                    .map { TokenDTO(from: token) }
+                    .flatMapResult { DTO.Token.make(from: token) }
             }
         }
 
@@ -106,7 +103,7 @@ extension PrivilegeSystem {
                 token.$user
                     .load(on: db)
                     .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(credential)", category: .internel)
-                    .map { token }
+                    .map { @Sendable in token }
             }.flatMapThrowing { token throws(Errcase.ErrType) in
                 // 检查是否有效
                 guard token.valid == true else {
@@ -135,7 +132,5 @@ extension PrivilegeSystem {
                 return key
             }
         }
-        
-        
     }
 }
