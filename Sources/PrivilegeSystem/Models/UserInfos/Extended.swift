@@ -36,23 +36,30 @@ extension User.Info {
 }
 
 extension User.Info {
-    protocol Model {
+    typealias Model = UserInfoExtends.Model
+    typealias Address = UserInfoExtends.Address
+    typealias AlternateEmail = UserInfoExtends.AlternateEmail
+    typealias Phone = UserInfoExtends.Phone
+}
+
+public enum UserInfoExtends {
+    public protocol Model {
         static var tableExtendedName: String { get }
         static var valueFieldName: String { get }
     }
     
-    struct Address: Model {
-        static let tableExtendedName = "addresses"
-        static let valueFieldName = "address"
+    public struct Address: Model {
+        public static let tableExtendedName = "addresses"
+        public static let valueFieldName = "address"
     }
     
-    struct AlternateEmail: Model {
-        static let tableExtendedName = "alternate_emails"
-        static let valueFieldName = "alternate_email"
+    public struct AlternateEmail: Model {
+        public static let tableExtendedName = "alternate_emails"
+        public static let valueFieldName = "alternate_email"
     }
     
-    struct Phone: Model {
-        static let tableExtendedName = "phones"
-        static let valueFieldName = "phone"
+    public struct Phone: Model {
+        public static let tableExtendedName = "phones"
+        public static let valueFieldName = "phone"
     }
 }

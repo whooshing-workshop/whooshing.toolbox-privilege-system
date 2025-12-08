@@ -48,3 +48,23 @@ public extension DTO {
         public init() { self.value = nil }
     }
 }
+
+import Foundation
+import Fluent
+import PgSQL
+
+protocol DTOUpdater: Sendable {
+    associatedtype PreparedDTO: Sendable
+    associatedtype QueriedDTO: Sendable
+    associatedtype DBModel: PGModel & Sendable
+    var id: UUID { get }
+    var updates: [
+        PartialKeyPath<PreparedDTO>:
+        (QueryBuilder<DBModel>, QueriedDTO?) throws -> QueryBuilder<DBModel>
+    ] { get }
+    var needsPeek: Bool { get }
+}
+
+extension DTOUpdater {
+    public var all: [PartialKeyPath<PreparedDTO>] { .init(updates.keys) }
+}

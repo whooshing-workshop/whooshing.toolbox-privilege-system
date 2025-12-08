@@ -54,15 +54,15 @@ public struct PrivilegeSystem: Sendable {
         } catch {
             await self.dbs.shutdownAsync()
             try? await eventLoop.shutdownGracefully()
-            throw Errcase.databaseInitFailed.d("数据库迁移失败", category: .internel).subErr(error)
+            throw Errcase.databaseInitFailed.d("数据库迁移失败", category: .internal).subErr(error)
         }
         
         guard let db = self.dbs.database(logger: logger, on: eventLoop) else {
-            throw Errcase.databaseInitFailed.d("数据库获取失败", category: .internel)
+            throw Errcase.databaseInitFailed.d("数据库获取失败", category: .internal)
         }
         
         guard let db = db as? PGDatabase else {
-            throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internel)
+            throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internal)
         }
         
         self.db = db

@@ -12,22 +12,28 @@ public extension DTO {
         @Passive() public internal(set) var id: UUID
         @Passive() public internal(set) var createdAt: Date
         @Passive() public internal(set) var updateAt: Date
+        
+        init(
+            _email: String
+        ) {
+            self.email = _email
+        }
     }
 }
 
 public extension DTO.User where T == DTO.Prepare {
     // 这里的 hashedPasswd 只有第一层密码加密，存入数据库之前要进行第二次加密
     init(email: String, hashedPasswd: String) {
-        self.email = email
+        self = Self.init(_email: email)
         self.hashedPasswd = hashedPasswd
     }
 }
 
 extension DTO.User where T == DTO.Queried {
     static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internel) {
+        .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internal) {
             var n = Self.init(
-                email: model.email
+                _email: model.email
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
@@ -39,14 +45,14 @@ extension DTO.User where T == DTO.Queried {
 
 extension DTO.User where T == DTO.Prepare {
     func raw() -> Res<User, PrivilegeSystem.Errcase> {
-        .init(throws: .userDTOFailed, category: .internel) {
+        .init(throws: .userDTOFailed, category: .internal) {
             let user = User()
             user.email = email
             // 为用户创建一个用户加密密钥
             user.key = Crypto.Symm.makeKey().data
             user.salt = Crypto.randomDataGenerate()
             // 对用户密码进行第二重加盐哈希
-            let passwd = try required(throws: PrivilegeSystem.Errcase.userRegisterFailed, "对密码进行二次哈希时失败", category: .internel) {
+            let passwd = try required(throws: PrivilegeSystem.Errcase.userRegisterFailed, "对密码进行二次哈希时失败", category: .internal) {
                 try Crypto.hash(Base64String(hashedPasswd).dataRes.get() + user.salt)
             }
             user.hashedPasswd = passwd.base64EncodedString()

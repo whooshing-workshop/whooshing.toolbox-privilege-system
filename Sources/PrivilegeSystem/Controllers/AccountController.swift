@@ -24,17 +24,17 @@ extension PrivilegeSystem {
                 try user.raw().get()
             }.flatMap { user in
                 user.save(on: db)
-                    .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internel)
+                    .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internal)
                     .map { user.id }
             }.flatMap { id in
                 User.find(id, on: db)
-                    .withError(Errcase.userRegisterFailed, "重新加载用户失败", category: .internel)
+                    .withError(Errcase.userRegisterFailed, "重新加载用户失败", category: .internal)
                     .flatMapThrowing
                 { res throws(Errcase.ErrType) in
                     guard let user = res else {
-                        throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internel)
+                        throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internal)
                     }
-                    return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internel) {
+                    return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
                         try DTO.User.make(from: user).get()
                     }
                 }
@@ -55,7 +55,7 @@ extension PrivilegeSystem {
                 }
                 
                 guard
-                    try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internel, {
+                    try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internal, {
                         try user.verify(password: userData.hashedPasswd)
                     })
                 else {
@@ -93,7 +93,7 @@ extension PrivilegeSystem {
                 Token.query(on: db)
                     .filter(\.$credential == credential)
                     .first()
-                    .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败，凭据: \(credential)", category: .internel)
+                    .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败，凭据: \(credential)", category: .internal)
             }.flatMapThrowing { token throws(Errcase.ErrType) in
                 guard let t = token else {
                     throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external)
@@ -102,7 +102,7 @@ extension PrivilegeSystem {
             }.flatMap { token in
                 token.$user
                     .load(on: db)
-                    .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(credential)", category: .internel)
+                    .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(credential)", category: .internal)
                     .map { @Sendable in token }
             }.flatMapThrowing { token throws(Errcase.ErrType) in
                 // 检查是否有效
