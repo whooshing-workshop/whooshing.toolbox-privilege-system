@@ -17,7 +17,7 @@ extension PrivilegeSystem {
             self.eventLoop = system.eventLoop
         }
         
-        func register(
+        public func register(
             for user: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
             eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
@@ -35,13 +35,15 @@ extension PrivilegeSystem {
                         throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internal)
                     }
                     return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
-                        try DTO.User.make(from: user).get()
+                        try required(throws: Errcase.userRegisterFailed, category: .internal) {
+                            try DTO.User.make(from: user).get()
+                        }
                     }
                 }
             }
         }
         
-        func login(
+        public func login(
             by userData: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.Token<DTO.Queried>, Errcase> {
             User.query(on: db)
@@ -62,7 +64,7 @@ extension PrivilegeSystem {
                     throw Errcase.userLoginFailed.d("用户密码不正确", category: .external)
                 }
                 
-                let userId = try required(throws: Errcase.userLoginFailed, "获取用户 ID 失败") {
+                let userId = try required(throws: Errcase.userLoginFailed, "获取用户 ID 失败", category: .internal) {
                     try user.requireID()
                 }
                 
@@ -77,11 +79,15 @@ extension PrivilegeSystem {
             }.flatMap { (user, id, token) in
                 token.save(on: db)
                     .withError(Errcase.userLoginFailed, "用户 Token 写入数据库失败，用户: \(user)，token: \(token)")
-                    .flatMapResult { DTO.Token.make(from: token) }
+                    .flatMapThrowing { () throws(Errcase.ErrType) in
+                        try required(throws: Errcase.userLoginFailed, category: .internal) {
+                            try .make(from: token).get()
+                        }
+                    }
             }
         }
 
-        func authenticate(
+        public func authenticate(
             credential: String,
             tokenEncrypted: Data
         ) -> EventLoopRes<Crypto.Symm.Key, Errcase> {
@@ -130,6 +136,51 @@ extension PrivilegeSystem {
                     throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external)                               // key 是否一致
                 }
                 return key
+            }
+        }
+        
+        public func changePassword(
+            for userData: DTO.User<DTO.Prepare>,
+            to hashedPasswd: String
+        ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
+            User.query(on: db)
+                .filter(\.$email == userData.email)
+                .first()
+                .withError(Errcase.userPasswordChangeFailed, "用户不存在", category: .external)
+                .flatMapThrowing
+            { (res) throws(Errcase.ErrType) in
+                guard let user = res else {
+                    throw Errcase.userPasswordChangeFailed.d("用户不存在", category: .external)
+                }
+                
+                guard
+                    try required(throws: Errcase.userPasswordChangeFailed, "密码验证失败", category: .internal, {
+                        try user.verify(password: userData.hashedPasswd)
+                    })
+                else {
+                    throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external)
+                }
+                
+                let userId = try required(throws: Errcase.userPasswordChangeFailed, "获取用户 ID 失败", category: .internal) {
+                    try user.requireID()
+                }
+                
+                (user.salt, user.hashedPasswd) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
+                    try DTO.User<DTO.Prepare>.doubleEncode(hashedPasswd: hashedPasswd).get()
+                }
+                user.createdAt = nil
+                user.updateAt = nil
+                
+                return user
+            }.flatMap { (user: User) -> EventLoopRes<User, Errcase> in
+                return user
+                    .update(on: db)
+                    .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)
+                    .map { user }
+            }.flatMapThrowing { user throws(Errcase.ErrType) in
+                try required(throws: Errcase.userPasswordChangeFailed, category: .internal) {
+                    try .make(from: user).get()
+                }
             }
         }
     }

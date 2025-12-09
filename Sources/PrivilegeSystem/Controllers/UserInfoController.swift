@@ -52,12 +52,14 @@ extension PrivilegeSystem {
                                 .withError(Errcase.userInfoAddFailed, "用户手机号码插入失败", category: .internal)
                                 .map { @Sendable in info }
                         }.flatMapThrowing { info throws(Errcase.ErrType) in
-                            try DTO.UserInfo<DTO.Queried>.make(
-                                from: raw,
-                                addresses: info.addresses,
-                                alternateEmails: info.altMails,
-                                phones: info.phones
-                            ).get()
+                            try required(throws: Errcase.userInfoAddFailed, category: .internal) {
+                                try DTO.UserInfo<DTO.Queried>.make(
+                                    from: raw,
+                                    addresses: info.addresses,
+                                    alternateEmails: info.altMails,
+                                    phones: info.phones
+                                ).get()
+                            }
                         }
                     }
                     
@@ -91,8 +93,10 @@ extension PrivilegeSystem {
                 .flatMapThrowing
             { () throws(Errcase.ErrType) in
                 try required(throws: Errcase.userInfoAddFailed, "整理用户信息插入结果时出错", category: .internal) {
-                    try raws.map {
-                        try .make(from: $0, addresses: [], alternateEmails: [], phones: []).get()
+                    try raws.map { i throws(Errcase.ErrType) in
+                        try required(throws: Errcase.userInfoAddFailed, category: .internal) {
+                            try .make(from: i, addresses: [], alternateEmails: [], phones: []).get()
+                        }
                     }
                 }
             }
@@ -108,9 +112,11 @@ extension PrivilegeSystem {
                 .withError(Errcase.userInfoAddFailed, "用户\(T.description)插入失败", category: .internal)
                 .flatMapThrowing
             { () throws(Errcase.ErrType) in
-                try required(throws: Errcase.userInfoAddFailed, "整理地址插入结果时出错", category: .internal) {
-                    try raws.map {
-                        try .make(from: $0).get()
+                try required(throws: Errcase.userInfoAddFailed, "整理\(T.description)插入结果时出错", category: .internal) {
+                    try required(throws: Errcase.userInfoAddFailed, category: .internal) {
+                        try raws.map {
+                            try .make(from: $0).get()
+                        }
                     }
                 }
             }
@@ -223,7 +229,9 @@ extension PrivilegeSystem {
                 .flatMapThrowing
             { infos throws(Errcase.ErrType) in
                 try infos.map { i throws(Errcase.ErrType) in
-                    try .make(from: i, addresses: i.addresses, alternateEmails: i.alternateEmails, phones: i.phones).get()
+                    try required(throws: Errcase.userInfoQueryFailed, category: .internal) {
+                        try .make(from: i, addresses: i.addresses, alternateEmails: i.alternateEmails, phones: i.phones).get()
+                    }
                 }
             }
         }

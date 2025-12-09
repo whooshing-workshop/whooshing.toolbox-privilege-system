@@ -9,10 +9,15 @@ extension PrivilegeSystem {
     public struct RoleController: Controller {
         let db: PrivilegeSystem.PGDatabase
         let eventLoop: EventLoop
+        let groupController: GroupController
         
-        init(system: PrivilegeSystem) {
+        init(
+            system: PrivilegeSystem,
+            groupController: GroupController
+        ) {
             self.db = system.db
             self.eventLoop = system.eventLoop
+            self.groupController = groupController
         }
         
         public func create(
@@ -54,5 +59,122 @@ extension PrivilegeSystem {
                 dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
             )
         }
+        
+        // MARK: - 角色任命
+        
+        public func appoint(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .attach,
+                label: "角色与用户",
+                errThrowing: .roleAppointUserFailed,
+                siblingBuilder: { $0.model.$users },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func appoint(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .attach,
+                label: "角色与用户组",
+                errThrowing: .roleAppointGroupFailed,
+                siblingBuilder: { $0.model.$groups },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func appoint(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .attach,
+                label: "角色与群组内用户",
+                errThrowing: .roleAppointGroupUserFailed,
+                siblingBuilder: { $0.model.$usersInGroup },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func appoint(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .attach,
+                label: "角色与群组内用户",
+                errThrowing: .roleAppointGroupUserFailed,
+                siblingBuilder: { $0.model.$usersInGroup },
+                modelsBuilder: { groupController.__query(relations: $0) }
+            )
+        }
+        
+        // MARK: - 角色撤职
+        
+        public func dismiss(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .detach,
+                label: "角色与用户",
+                errThrowing: .roleDismissUserFailed,
+                siblingBuilder: { $0.model.$users },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func dismiss(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .detach,
+                label: "角色与用户组",
+                errThrowing: .roleDismissGroupFailed,
+                siblingBuilder: { $0.model.$groups },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func dismiss(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .detach,
+                label: "角色与群组内用户",
+                errThrowing: .roleDismissGroupUserFailed,
+                siblingBuilder: { $0.model.$usersInGroup },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func dismiss(
+            @RelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .detach,
+                label: "角色与群组内用户",
+                errThrowing: .roleDismissGroupUserFailed,
+                siblingBuilder: { $0.model.$usersInGroup },
+                modelsBuilder: { groupController.__query(relations: $0) }
+            )
+        }
+        
     }
 }

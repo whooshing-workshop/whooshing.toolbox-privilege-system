@@ -54,5 +54,65 @@ extension PrivilegeSystem {
                 dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
             )
         }
+        
+        // MARK: - 域权限指派
+        
+        public func assign(
+            @RelationBuilder<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .attach,
+                label: "域权限与用户",
+                errThrowing: .domainAssignUserFailed,
+                siblingBuilder: { $0.model.$users },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func assign(
+            @RelationBuilder<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .attach,
+                label: "域权限与用户组",
+                errThrowing: .domainAssignGroupFailed,
+                siblingBuilder: { $0.model.$groups },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        // MARK: - 域权限撤销
+        
+        public func unassign(
+            @RelationBuilder<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .detach,
+                label: "域权限与用户",
+                errThrowing: .domainUnassignUserFailed,
+                siblingBuilder: { $0.model.$users },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
+        
+        public func unassign(
+            @RelationBuilder<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [Relation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            __manyToMany(
+                content(),
+                action: .detach,
+                label: "域权限与用户组",
+                errThrowing: .domainUnassignGroupFailed,
+                siblingBuilder: { $0.model.$groups },
+                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            )
+        }
     }
 }

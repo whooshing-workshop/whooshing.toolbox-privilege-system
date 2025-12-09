@@ -19,20 +19,18 @@ open class Pivot<T: PivotType>: PGModel, @unchecked Sendable {
         public let foreignPrimary = PGField(T.foreignPrimaryName + "_id", .uuid)        .required.unique(composite: name + ".pivot").foreign(T.PrimaryModel.self, .id, onDelete: .cascade)
         public let foreignSecondary = PGField(T.foreignSecondaryName + "_id", .uuid)    .required.unique(composite: name + ".pivot").foreign(T.SecondaryModel.self, .id, onDelete: .cascade)
         public let createdAt = PGField("create_at", .string)                            .required
-        public let updateAt = PGField("update_at", .string)                             .required
         
         public init() {}
     }
     
     let fields = Fields()
     
-    @ID(custom: fields.id.key)                      public var id: Int?
+    @ID(custom: fields.id.key)                      public var id: UUID?
     
     @Parent(fields.foreignPrimary)                  public var primaryModel: T.PrimaryModel
     @Parent(fields.foreignSecondary)                public var secondaryModel: T.SecondaryModel
     
     @Timestamp(fields.createdAt, on: .create)       public var createdAt: Date!
-    @Timestamp(fields.updateAt, on: .update)        public var updatedAt: Date!
     
     public required init() {}
     

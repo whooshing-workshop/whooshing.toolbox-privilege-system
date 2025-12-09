@@ -37,6 +37,11 @@ final class Role: PGModel, @unchecked Sendable {
         from: \.$primaryModel,
         to: \.$secondaryModel
     )                                               var groups: [UGroup]
+    @Siblings(
+        through: RoleUserInGroupPivot.self,
+        from: \.$primaryModel,
+        to: \.$secondaryModel
+    )                                               var usersInGroup: [UserGroupPivot]
     
     @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
     @Timestamp(fields.updateAt, on: .update)        var updatedAt: Date!

@@ -4,6 +4,8 @@ import DataConvertable
 import ErrorHandle
 import Cryptos
 
+typealias UserModel = User
+
 public extension DTO {
     struct User<T: Status>: Sendable {
         public let email: String
@@ -13,10 +15,15 @@ public extension DTO {
         @Passive() public internal(set) var createdAt: Date
         @Passive() public internal(set) var updateAt: Date
         
+        typealias AssociatedModel = UserModel
+        private let m: AssociatedModel?
+        
         init(
-            _email: String
+            _email: String,
+            _model: AssociatedModel?
         ) {
             self.email = _email
+            self.m = _model
         }
     }
 }
@@ -24,16 +31,24 @@ public extension DTO {
 public extension DTO.User where T == DTO.Prepare {
     // 这里的 hashedPasswd 只有第一层密码加密，存入数据库之前要进行第二次加密
     init(email: String, hashedPasswd: String) {
-        self = Self.init(_email: email)
+        self = Self.init(_email: email, _model: nil)
         self.hashedPasswd = hashedPasswd
     }
 }
 
 extension DTO.User where T == DTO.Queried {
+    var model: User {
+        guard let m = m else {
+            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
+        }
+        return m
+    }
+    
     static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internal) {
             var n = Self.init(
-                _email: model.email
+                _email: model.email,
+                _model: model
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
@@ -50,13 +65,21 @@ extension DTO.User where T == DTO.Prepare {
             user.email = email
             // 为用户创建一个用户加密密钥
             user.key = Crypto.Symm.makeKey().data
-            user.salt = Crypto.randomDataGenerate()
+            (user.salt, user.hashedPasswd) = try Self.doubleEncode(hashedPasswd: hashedPasswd).get()
+            return user
+        }
+    }
+    
+    static func doubleEncode(hashedPasswd: String) -> Res<(salt: Data, passwdEncoded: String), PrivilegeSystem.Errcase> {
+        .init(throws: .userDTOFailed, category: .internal) {
+            // 生成随即盐
+            let salt = Crypto.randomDataGenerate()
             // 对用户密码进行第二重加盐哈希
             let passwd = try required(throws: PrivilegeSystem.Errcase.userRegisterFailed, "对密码进行二次哈希时失败", category: .internal) {
-                try Crypto.hash(Base64String(hashedPasswd).dataRes.get() + user.salt)
+                try Crypto.hash(Base64String(hashedPasswd).dataRes.get() + salt)
             }
-            user.hashedPasswd = passwd.base64EncodedString()
-            return user
+            
+            return (salt, passwd.base64EncodedString())
         }
     }
 }

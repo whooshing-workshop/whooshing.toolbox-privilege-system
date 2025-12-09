@@ -3,6 +3,8 @@ import Foundation
 import ACL
 import ErrorHandle
 
+typealias RoleModel = Role
+
 public extension DTO {
     struct Role<T: Status>: Sendable {
         public let ast: AST
@@ -13,14 +15,19 @@ public extension DTO {
         @Passive() public internal(set) var createdAt: Date
         @Passive() public internal(set) var updateAt: Date
         
+        typealias AssociatedModel = RoleModel
+        private let m: AssociatedModel?
+        
         init(
             _ast: AST,
             _name: String,
-            _description: String?
+            _description: String?,
+            _model: AssociatedModel?
         ) {
             self.ast = _ast
             self.name = _name
             self.description = _description
+            self.m = _model
         }
     }
 }
@@ -31,17 +38,25 @@ public extension DTO.Role where T == DTO.Prepare {
         name: String,
         description: String? = nil
     ) {
-        self = Self.init(_ast: ast, _name: name, _description: description)
+        self = Self.init(_ast: ast, _name: name, _description: description, _model: nil)
     }
 }
 
 extension DTO.Role where T == DTO.Queried {
+    var model: Role {
+        guard let m = m else {
+            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
+        }
+        return m
+    }
+    
     static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .roleDTOFailed, category: .internal) {
             var n = Self.init(
                 _ast: model.ast,
                 _name: model.name,
-                _description: model.description
+                _description: model.description,
+                _model: model
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt

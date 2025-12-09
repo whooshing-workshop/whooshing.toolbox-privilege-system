@@ -18,6 +18,9 @@ public extension DTO {
         @Passive() public internal(set) var createdAt: Date
         @Passive() public internal(set) var updateAt: Date
         
+        typealias AssociatedModel = UserModel.Info
+        private let m: AssociatedModel?
+        
         init(
             _userId: UUID,
             _identifier: String,
@@ -25,7 +28,8 @@ public extension DTO {
             _other: String?,
             _addresses: [DTO.UserExtendedInfo<DTO.Address, T>],
             _alternateEmails: [DTO.UserExtendedInfo<DTO.AlternateEmail, T>],
-            _phones: [DTO.UserExtendedInfo<DTO.Phone, T>]
+            _phones: [DTO.UserExtendedInfo<DTO.Phone, T>],
+            _model: AssociatedModel?
         ) {
             self.userId = _userId
             self.identifier = _identifier
@@ -34,6 +38,7 @@ public extension DTO {
             self.addresses = _addresses
             self.alternateEmails = _alternateEmails
             self.phones = _phones
+            self.m = _model
         }
     }
 }
@@ -55,12 +60,20 @@ public extension DTO.UserInfo where T == DTO.Prepare {
             _other: other,
             _addresses: addresses,
             _alternateEmails: alternateEmails,
-            _phones: phones
+            _phones: phones,
+            _model: nil
         )
     }
 }
 
 extension DTO.UserInfo where T == DTO.Queried {
+    var model: User.Info {
+        guard let m = m else {
+            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
+        }
+        return m
+    }
+    
     static func make(
         from model: User.Info,
         addresses: [User.Info.Extended<User.Info.Address>],
@@ -75,7 +88,8 @@ extension DTO.UserInfo where T == DTO.Queried {
                 _other: model.other,
                 _addresses: addresses.map { try .make(from: $0).get() },
                 _alternateEmails: alternateEmails.map { try .make(from: $0).get() },
-                _phones: phones.map { try .make(from: $0).get() }
+                _phones: phones.map { try .make(from: $0).get() },
+                _model: model
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
@@ -169,8 +183,6 @@ public extension DTO.UserInfo.Updater {
 
 // MARK: - UserInfoExtended defines
 
-typealias UserModel = User
-
 public extension DTO {
     protocol UserInfoModel: Sendable {
         associatedtype Value: Sendable
@@ -188,14 +200,19 @@ public extension DTO {
         @Passive() public internal(set) var createdAt: Date
         @Passive() public internal(set) var updateAt: Date
         
+        typealias AssociatedModel = UserModel.Info.Extended<T.Model>
+        private let m: AssociatedModel?
+        
         init(
             _value: T.Value,
             _order: Int16,
-            _description: String?
+            _description: String?,
+            _model: AssociatedModel?
         ) {
             self.value = _value
             self.order = _order
             self.description = _description
+            self.m = _model
         }
     }
     
@@ -224,17 +241,26 @@ public extension DTO.UserExtendedInfo where G == DTO.Prepare {
             _value: value,
             _order: order,
             _description: description,
+            _model: nil
         )
     }
 }
 
 extension DTO.UserExtendedInfo where G == DTO.Queried, T.Value == String {
+    var model: User.Info.Extended<T.Model> {
+        guard let m = m else {
+            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
+        }
+        return m
+    }
+    
     static func make(from model: User.Info.Extended<T.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
             var n = Self.init(
                 _value: model.value,     // 暂时使用强制解包，因为目前用户 Info Value 字段均为 String
                 _order: model.order,
-                _description: model.description
+                _description: model.description,
+                _model: model
             )
             n.$id = try model.requireID()
             n.$userInfoId = model.$userInfo.id

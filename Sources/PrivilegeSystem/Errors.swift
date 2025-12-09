@@ -9,6 +9,7 @@ public extension PrivilegeSystem {
         case userLoginFailed = "用户登陆失败"
         case userAuthenticateFailed = "用户口令认证失败"
         case accountDataFetchFailed = "账号数据检索失败"
+        case userPasswordChangeFailed = "用户密码修改失败"
         
         // 用户信息相关错误
         case userInfoAddFailed = "用户信息数据创建失败"
@@ -20,16 +21,29 @@ public extension PrivilegeSystem {
         case roleCreateFailed = "角色数据创建失败"
         case roleDeleteFailed = "角色数据删除失败"
         case roleUpdateFailed = "角色数据更新失败"
+        case roleAppointUserFailed = "角色任命到用户失败"
+        case roleAppointGroupFailed = "角色任命到用户组失败"
+        case roleAppointGroupUserFailed = "角色任命到用户组内用户失败"
+        case roleDismissUserFailed = "角色从用户撤职组失败"
+        case roleDismissGroupFailed = "角色从用户组撤职组失败"
+        case roleDismissGroupUserFailed = "角色从用户组内用户撤职失败"
         
         // 角色组相关错误
         case groupCreateFailed = "群组数据创建失败"
         case groupDeleteFailed = "群组数据删除失败"
         case groupUpdateFailed = "群组数据更新失败"
+        case userJoinGroupFailed = "用户加入群组失败"
+        case userKickGroupFailed = "用户从群组移除失败"
+        case userGroupRelationQueryFailed = "用户与群组关系查询失败"
         
         // 域权限相关错误
         case domainCreateFailed = "域权限数据创建失败"
         case domainDeleteFailed = "域权限数据删除失败"
         case domainUpdateFailed = "域权限数据更新失败"
+        case domainAssignUserFailed = "域权限指派到用户失败"
+        case domainAssignGroupFailed = "域权限指派到用户组失败"
+        case domainUnassignUserFailed = "域权限从用户取消指派失败"
+        case domainUnassignGroupFailed = "域权限从用户组取消指派失败"
         
         // DTO 相关错误
         case userDTOFailed = "用户数据 DTO 处理失败"
@@ -38,5 +52,6 @@ public extension PrivilegeSystem {
         case roleDTOFailed = "角色数据 DTO 处理失败"
         case groupDTOFailed = "用户群组数据 DTO 处理失败"
         case domainDTOFailed = "域权限数据 DTO 处理失败"
+        case userInGroupDTOFailed = "用户群组关系数据 DTO 处理失败"
     }
 }
