@@ -46,7 +46,7 @@ let package = Package(
             name: "PrivilegeModule",
             dependencies: [
                 .target(name: "ResourceMacros"),
-                .target(name: "PrivilegeInterprete"),
+                .target(name: "PrivilegeInterpreter"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
             ]
