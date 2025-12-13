@@ -3,7 +3,6 @@ import NIOAdvanced
 import Foundation
 
 public indirect enum AST: Sendable {
-    
     public enum ValueType: String, Codable, Sendable, CaseIterable {
         case string = "string"
         case number = "number"
@@ -13,7 +12,7 @@ public indirect enum AST: Sendable {
     
     case variable(String)
     case value(String, type: ValueType)
-    case binary(op: Op, left: Self, right: Self)
+    case infix(op: Op, left: Self, right: Self)
 }
     
 extension AST: Codable {
@@ -24,7 +23,7 @@ extension AST: Codable {
     public enum CodingType: String, Codable, Sendable, CaseIterable {
         case variable = "variable"
         case value = "value"
-        case binary = "binary"
+        case infix = "infix"
     }
 
     public init(from decoder: Decoder) throws {
@@ -41,11 +40,11 @@ extension AST: Codable {
             let type = try c.decode(ValueType.self, forKey: .valueType)
             self = .value(value, type: type)
 
-        case .binary:
+        case .infix:
             let op = try c.decode(Op.self, forKey: .op)
             let left = try c.decode(Self.self, forKey: .left)
             let right = try c.decode(Self.self, forKey: .right)
-            self = .binary(op: op, left: left, right: right)
+            self = .infix(op: op, left: left, right: right)
         }
     }
 
@@ -62,8 +61,8 @@ extension AST: Codable {
             try c.encode(t, forKey: .valueType)
             try c.encode(v, forKey: .value)
 
-        case .binary(let op, let left, let right):
-            try c.encode(CodingType.binary, forKey: .type)
+        case .infix(let op, let left, let right):
+            try c.encode(CodingType.infix, forKey: .type)
             try c.encode(op, forKey: .op)
             try c.encode(left, forKey: .left)
             try c.encode(right, forKey: .right)
@@ -131,8 +130,8 @@ public extension AST {
             acl.value = v
             acl.valueType = t
             return [acl]
-        case .binary(let op, let left, let right):
-            acl.type = .binary
+        case .infix(let op, let left, let right):
+            acl.type = .infix
             acl.op = op
             
             var res: [ACLExp<T>] = [acl]

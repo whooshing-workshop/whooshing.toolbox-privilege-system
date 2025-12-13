@@ -1,3 +1,5 @@
+import PrivilegeInterprete
+
 public enum PropertyType {
     case vars
     case lets

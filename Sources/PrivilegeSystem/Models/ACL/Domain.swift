@@ -10,6 +10,7 @@ final class Domain: PGModel, @unchecked Sendable {
         let id = PGField("id", .uuid)                           .primary
         let aclId = PGField("acl_id", .uuid)                    .required.foreign(ACL.self, \.id, onDelete: .cascade)
         let ast = PGField("ast", .json)                         .required.cons(.sql(.default("{}")))
+        let expression = PGField("expression", .string)         .required
         let name = PGField("name", .string)
         let description = PGField("description", .string)
         let createdAt = PGField("create_at", .string)           .required
@@ -24,6 +25,7 @@ final class Domain: PGModel, @unchecked Sendable {
     
     @Parent(fields.aclId)                           var acl: ACL
     @Field(fields.ast)                              var ast: AST
+    @Field(fields.expression)                       var expression: String
     @Field(fields.name)                             var name: String?
     @Field(fields.description)                      var description: String?
     

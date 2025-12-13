@@ -7,7 +7,7 @@ typealias DomainModel = Domain
 
 public extension DTO {
     struct Domain<T: Status>: Sendable {
-        public let ast: AST
+        public let expression: PrivilegeExpression
         public let name: String?
         public let description: String?
         
@@ -19,12 +19,12 @@ public extension DTO {
         private let m: AssociatedModel?
         
         init(
-            _ast: AST,
+            _expression: PrivilegeExpression,
             _name: String?,
             _description: String?,
             _model: AssociatedModel?
         ) {
-            self.ast = _ast
+            self.expression = _expression
             self.name = _name
             self.description = _description
             self.m = _model
@@ -34,11 +34,11 @@ public extension DTO {
 
 public extension DTO.Domain where T == DTO.Prepare {
     init(
-        ast: AST,
+        expression: PrivilegeExpression,
         name: String? = nil,
         description: String? = nil
     ) {
-        self = Self.init(_ast: ast, _name: name, _description: description, _model: nil)
+        self = Self.init(_expression: expression, _name: name, _description: description, _model: nil)
     }
 }
 
@@ -53,7 +53,7 @@ extension DTO.Domain where T == DTO.Queried {
     static func make(from model: Domain) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .domainDTOFailed, category: .internal) {
             var n = Self.init(
-                _ast: model.ast,
+                _expression: .init(ast: model.ast, expression: model.expression),
                 _name: model.name,
                 _description: model.description,
                 _model: model
@@ -70,7 +70,8 @@ extension DTO.Domain where T == DTO.Prepare {
     func raw(domainId: UUID) -> Domain {
         let domain = Domain()
         domain.$acl.id = domainId
-        domain.ast = ast
+        domain.ast = expression.ast
+        domain.expression = expression.expression
         domain.name = name
         domain.description = description
         return domain
@@ -98,9 +99,12 @@ extension DTO.Domain.Updater: DTOUpdater {}
 
 public extension DTO.Domain.Updater {
     mutating
-    func update(ast: @escaping @autoclosure () throws -> AST) {
-        updates[\.ast] = { builder, _ in
-            builder.set(\.$ast, to: try ast())
+    func update(expression: @escaping @autoclosure () throws -> PrivilegeExpression) {
+        updates[\.expression] = { builder, _ in
+            let exp = try expression()
+            return builder
+                .set(\.$ast, to: exp.ast)
+                .set(\.$expression, to: exp.expression)
         }
     }
     
@@ -121,11 +125,14 @@ public extension DTO.Domain.Updater {
 
 public extension DTO.Domain.Updater {
     mutating
-    func update(ast: @escaping (DTO.Domain<DTO.Queried>) throws -> AST) {
+    func update(expression: @escaping (DTO.Domain<DTO.Queried>) throws -> PrivilegeExpression) {
         needsPeek = true
-        updates[\.ast] = { builder, query in
+        updates[\.expression] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$ast, to: try ast(q))
+            let exp = try expression(q)
+            return builder
+                .set(\.$ast, to: exp.ast)
+                .set(\.$expression, to: exp.expression)
         }
     }
     

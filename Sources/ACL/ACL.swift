@@ -16,20 +16,20 @@ public final class ACLExp<T: ACLType>: PGModel, @unchecked Sendable {
     public static var name: String { T.namePrefix + "_acl_exps" }
     
     public struct Fields: PGFields {
-        
-        
         public let id = PGField("id", .uuid)                            .primary
         public let parentId = PGField("parent_id", .uuid)               .foreign(ACLExp<T>.self, .id, onDelete: .cascade)
         public let ruleId = PGField("rule_id", .uuid)                   .required.foreign(ACLExp<T>.self, .id, onDelete: .cascade)
-        public let position = PGField("position",
-            .enum(ACLPosition.self, as: "\(ACLExp<T>.name)_position"))
-        public let type = PGField("type",
-            .enum(AST.CodingType.self, as: "\(ACLExp<T>.name)_type"))   .required
-        public let op = PGField("operator",
-            .enum(AST.Op.self, as: "\(ACLExp<T>.name)_operator"))
+        
+        public let position = PGField("position", .enum(ACLPosition.self, as: "\(ACLExp<T>.name)_position"))
+        
+        public let type = PGField("type", .enum(AST.CodingType.self, as: "\(ACLExp<T>.name)_type"))
+                                                                        .required
+        
+        public let op = PGField("operator", .enum(AST.Op.self, as: "\(ACLExp<T>.name)_operator"))
+        
         public let value = PGField("value", .string)
-        public let valueType = PGField("value_type",
-            .enum(AST.ValueType.self, as: "\(ACLExp<T>.name)_value_type"))
+        
+        public let valueType = PGField("value_type", .enum(AST.ValueType.self, as: "\(ACLExp<T>.name)_value_type"))
         
         public init() {}
     }
