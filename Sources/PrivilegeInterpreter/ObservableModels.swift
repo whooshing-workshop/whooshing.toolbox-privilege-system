@@ -2,7 +2,7 @@ import ACL
 import Foundation
 
 public protocol ObservableModel {
-    var properties: [String: (type: AST.ValueType?, value: () throws -> Any)] { get }
+    var properties: [String: (type: AST.ValueType?, isArray: Bool, nullable: Bool, value: () throws -> Any?)] { get }
 }
 
 public protocol Resource: ObservableModel {
@@ -25,11 +25,11 @@ public struct PriviliegeModule: ObservableModel {
     public let name: String
     public let createAt: Date
     
-    public var properties: [String : (type: ACL.AST.ValueType?, value: () throws -> Any)] {
+    public var properties: [String : (type: ACL.AST.ValueType?, isArray: Bool, nullable: Bool, value: () throws -> Any?)] {
         [
-            "id": (.uuid, { id }),
-            "name": (.string, { name }),
-            "createAt": (.date, { createAt })
+            "id": (.uuid, false, false, { id }),
+            "name": (.string, false, false, { name }),
+            "createAt": (.date, false, false, { createAt })
         ]
     }
 }

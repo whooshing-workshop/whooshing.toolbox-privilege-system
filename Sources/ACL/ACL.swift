@@ -20,17 +20,29 @@ public final class ACLExp<T: ACLType>: PGModel, @unchecked Sendable {
         public let parentId = PGField("parent_id", .uuid)               .foreign(ACLExp<T>.self, .id, onDelete: .cascade)
         public let ruleId = PGField("rule_id", .uuid)                   .required.foreign(ACLExp<T>.self, .id, onDelete: .cascade)
         
-        public let position = PGField("position", .enum(ACLPosition.self, as: "\(ACLExp<T>.name)_position"))
+        public let position = PGField(
+            "position",
+            .enum(ACLPosition.self, as: "\(ACLExp<T>.name)_position")
+        )
         
-        public let type = PGField("type", .enum(AST.CodingType.self, as: "\(ACLExp<T>.name)_type"))
-                                                                        .required
+        public let type = PGField(
+            "type",
+            .enum(AST.CodingType.self, as: "\(ACLExp<T>.name)_type")
+        )                                                               .required
         
-        public let op = PGField("operator", .enum(AST.Op.self, as: "\(ACLExp<T>.name)_operator"))
+        public let op = PGField(
+            "operator",
+            .enum(AST.Operator.self, as: "\(ACLExp<T>.name)_operator")
+        )
         
         public let value = PGField("value", .string)
         
-        public let valueType = PGField("value_type", .enum(AST.ValueType.self, as: "\(ACLExp<T>.name)_value_type"))
+        public let valueType = PGField(
+            "value_type",
+            .enum(AST.ValueType.self, as: "\(ACLExp<T>.name)_value_type")
+        )
         
+        public let valueNullable = PGField("value_nullable", .bool)
         public init() {}
     }
     
@@ -42,9 +54,10 @@ public final class ACLExp<T: ACLType>: PGModel, @unchecked Sendable {
     @Parent(fields.ruleId)                          public var rule: ACLExp<T>
     @OptionalEnum(fields.position)                  public var position: ACLPosition?
     @Enum(fields.type)                              public var type: AST.CodingType
-    @OptionalEnum(fields.op)                        public var op: AST.Op?
+    @OptionalEnum(fields.op)                        public var op: AST.Operator?
     @Field(fields.value)                            public var value: String?
     @OptionalEnum(fields.valueType)                 public var valueType: AST.ValueType?
+    @Field(fields.valueNullable)                    public var valueNullable: Bool?
     
     public init() {}
     
