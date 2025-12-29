@@ -1,4 +1,4 @@
-public struct PrivilegeExpression: Sendable, Codable {
+public struct Censor: Sendable {
     public let ast: AST
     public let expression: String
     
@@ -8,7 +8,7 @@ public struct PrivilegeExpression: Sendable, Codable {
     }
 }
 
-extension PrivilegeExpression: ExpressibleByStringLiteral {
+extension Censor: ExpressibleByStringLiteral {
     public init(stringLiteral value: String) {
         self.expression = value
         fatalError()

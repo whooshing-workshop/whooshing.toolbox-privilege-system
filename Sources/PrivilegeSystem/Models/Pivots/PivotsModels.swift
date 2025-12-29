@@ -1,4 +1,4 @@
-import ACL
+import Censor
 
 let PivotModels: [any TdeMIG.Type] = [
     DomainGroupPivot.MIG.self,

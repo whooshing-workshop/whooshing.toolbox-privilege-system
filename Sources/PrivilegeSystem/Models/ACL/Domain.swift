@@ -1,6 +1,6 @@
 import PgSQL
 import Foundation
-import ACL
+import Censor
 
 final class Domain: PGModel, @unchecked Sendable {
     

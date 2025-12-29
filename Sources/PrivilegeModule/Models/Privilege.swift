@@ -1,7 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
-import ACL
+import Censor
 
 public final class Privilege: PGModel, @unchecked Sendable {
     

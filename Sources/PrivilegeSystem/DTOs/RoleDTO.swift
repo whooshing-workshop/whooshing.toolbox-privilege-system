@@ -1,6 +1,6 @@
 import Fluent
 import Foundation
-import ACL
+import Censor
 import ErrorHandle
 
 typealias RoleModel = Role

@@ -29,6 +29,6 @@ public func => <L, R>(left: [L], right: [R]) -> Relation<L, R> {
 @resultBuilder
 public struct RelationBuilder<Left, Right>: Sendable where Left: Sendable, Right: Sendable  {
     public static func buildBlock(_ components: Relation<Left, Right>...) -> [Relation<Left, Right>] {
-        return components
+        components
     }
 }

@@ -1,4 +1,4 @@
-import ACL
+import Censor
 
 extension Role: ACLType {
     static var namePrefix: String { "role" }

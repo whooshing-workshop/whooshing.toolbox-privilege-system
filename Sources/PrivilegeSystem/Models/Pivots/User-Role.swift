@@ -1,5 +1,5 @@
 import PgSQL
-import ACL
+import Censor
 
 typealias UserRolePivot = Pivot<Pivots.UserRole>
 

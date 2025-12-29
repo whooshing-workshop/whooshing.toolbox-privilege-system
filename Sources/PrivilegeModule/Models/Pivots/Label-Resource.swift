@@ -1,6 +1,6 @@
 import PgSQL
 import Foundation
-import ACL
+import Censor
 import ResourceMacros
 
 final class LabelResourcePivot: PGModel, @unchecked Sendable {

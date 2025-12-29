@@ -1,5 +1,5 @@
 import PgSQL
-import ACL
+import Censor
 
 extension Pivots {
     struct UserGroup: PivotType {

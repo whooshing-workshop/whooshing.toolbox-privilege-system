@@ -1,7 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
-import ACL
+import Censor
 
 public final class PrivilegeResourcePivot: PGModel, @unchecked Sendable {
     public static var name: String { "privilege_resource_map" }

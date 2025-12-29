@@ -1,4 +1,4 @@
-import ACL
+import Censor
 
 extension Domain: ACLType {
     static var namePrefix: String { "domain" }

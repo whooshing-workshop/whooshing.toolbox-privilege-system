@@ -30,13 +30,13 @@ let package = Package(
             name: "ResourceMacros",
             dependencies: [
                 .target(name: "MacroImplements"),
-                .target(name: "PrivilegeInterpreter")
+                .target(name: "Executor")
             ]
         ),
         .target(
             name: "PrivilegeSystem",
             dependencies: [
-                .target(name: "ACL"),
+                .target(name: "Censor"),
                 .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
@@ -46,20 +46,20 @@ let package = Package(
             name: "PrivilegeModule",
             dependencies: [
                 .target(name: "ResourceMacros"),
-                .target(name: "PrivilegeInterpreter"),
+                .target(name: "Executor"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
             ]
         ),
         .target(
-            name: "PrivilegeInterpreter",
+            name: "Executor",
             dependencies: [
-                .target(name: "ACL"),
+                .target(name: "Censor"),
                 .product(name: "ErrorHandle", package: "whooshing.toolbox-basic")
             ]
         ),
         .target(
-            name: "ACL",
+            name: "Censor",
             dependencies: [
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
             ]
