@@ -2,11 +2,6 @@ import ErrorHandle
 import Foundation
 
 extension Censor {
-    public enum Keyword: String {
-        case null = "NULL"
-        case `in` = "IN"
-    }
-
     public protocol TypeDeclare: Sendable, Equatable, CustomStringConvertible {
         associatedtype RealType
         
@@ -15,15 +10,25 @@ extension Censor {
         
         func set(nullable: Bool) -> Self
         
-        static var properties: [String: Property] { get }
-        static var staticProperties: [String: Property] { get }
+        var properties: [String: PropertyDeclare] { get }
+        static var staticProperties: [String: PropertyDeclare] { get }
         
-        static var functions: [String: Function] { get }
-        static var staticFunctions: [String: Function] { get }
+        var functions: [String: FunctionDeclare] { get }
+        static var staticFunctions: [String: FunctionDeclare] { get }
         
-        static var prefixOperations: [Operator: [Operation.Prefix]] { get }
-        static var suffixOperations: [Operator: [Operation.Suffix]] { get }
-        static var infixOperations: [Operator: [Operation.Infix]] { get }
+        var prefixOperations: [Operator.Prefix: OperationDeclare.Prefix] { get }
+        var suffixOperations: [Operator.Postfix: OperationDeclare.Suffix] { get }
+        var infixOperations: [Operator.Infix: [OperationDeclare.Infix]] { get }
+        
+        static var propertyActions: [String: ExecutableAction] { get }
+        static var functionActions: [String: ExecutableAction] { get }
+        
+        static var staticPropertieActions: [String: ExecutableAction] { get }
+        static var staticFunctionActions: [String: ExecutableAction] { get }
+        
+        static var prefixOpActions: [Operator.Prefix: ExecutableAction] { get }
+        static var suffixOpActions: [Operator.Postfix: ExecutableAction] { get }
+        static var infixOpActions: [Operator.Infix: [String: ExecutableAction]] { get }
         
         func make(_ value: RealType?) -> Res<Variable, Censor.Errcase>
         func make(value: Value) -> Res<Variable, Censor.Errcase>
@@ -52,14 +57,23 @@ extension Censor {
 }
 
 public extension Censor.TypeDeclare {
-    static var properties: [String: Censor.Property] { [:] }
-    static var staticProperties: [String: Censor.Property] { [:] }
-    static var functions: [String: Censor.Function] { [:] }
-    static var staticFunctions: [String: Censor.Function] { [:] }
+    var properties: [String: Censor.PropertyDeclare] { [:] }
+    static var staticProperties: [String: Censor.PropertyDeclare] { [:] }
+    var functions: [String: Censor.FunctionDeclare] { [:] }
+    static var staticFunctions: [String: Censor.FunctionDeclare] { [:] }
     
-    static var prefixOperations: [Censor.Operator: [Censor.Operation.Prefix]] { [:] }
-    static var suffixOperations: [Censor.Operator: [Censor.Operation.Suffix]] { [:] }
-    static var infixOperations: [Censor.Operator: [Censor.Operation.Infix]] { [:] }
+    var prefixOperations: [Censor.Operator.Prefix: Censor.OperationDeclare.Prefix] { [:] }
+    var suffixOperations: [Censor.Operator.Postfix: Censor.OperationDeclare.Suffix] { [:] }
+    var infixOperations: [Censor.Operator.Infix: [Censor.OperationDeclare.Infix]] { [:] }
+    
+    static var propertyActions: [String: Censor.ExecutableAction] { [:] }
+    static var functionActions: [String: Censor.ExecutableAction] { [:] }
+    static var staticPropertieActions: [String: Censor.ExecutableAction] { [:] }
+    static var staticFunctionActions: [String: Censor.ExecutableAction] { [:] }
+    
+    static var prefixOpActions: [Censor.Operator.Prefix: Censor.ExecutableAction] { [:] }
+    static var suffixOpActions: [Censor.Operator.Postfix: Censor.ExecutableAction] { [:] }
+    static var infixOpActions: [Censor.Operator.Infix: [String: Censor.ExecutableAction]] { [:] }
     
     func set(nullable: Bool) -> Self {
         .init(nullable: nullable)

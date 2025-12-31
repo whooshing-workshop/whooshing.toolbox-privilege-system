@@ -7,34 +7,23 @@ public extension Censor {
         public static let name = "Int"
         public let nullable: Bool
         
-        public static let properties: [String : Property] = [
-            "asString": .init {
-                Return { StringType(nullable: false) }
-                Action { .succ($0.cast(as: Int64.self).description) }
-            },
-            "asDate": .init {
-                Return { DateType(nullable: false) }
-                Action { .succ(Date(timeIntervalSince1970: Double($0.cast(as: Int64.self)) / 1000)) }
-            },
-            "asDecimal": .init {
-                Return { DecimalType(nullable: false) }
-                Action { .succ(Decimal($0.cast(as: Int64.self))) }
-            }
+        public let properties: [String : PropertyDeclare] = [
+            "asString": .init { StringType(nullable: false) },
+            "asDate": .init { DateType(nullable: false) },
+            "asDecimal": .init { DecimalType(nullable: false) }
         ]
         
-        public static let infixOperations: [Operator : [Operation.Infix]] = [
+        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
             .plus: [
                 .init {
                     Return { IntegerType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) + $1.cast(as: Int64.self)) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ(Decimal($0.cast(as: Int64.self)) + $1.cast(as: Decimal.self)) }
                 }
             ],
             .minus: [
@@ -42,13 +31,11 @@ public extension Censor {
                     Return { IntegerType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) - $1.cast(as: Int64.self)) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ(Decimal($0.cast(as: Int64.self)) - $1.cast(as: Decimal.self)) }
                 }
             ],
             .multi: [
@@ -56,13 +43,11 @@ public extension Censor {
                     Return { IntegerType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) * $1.cast(as: Int64.self)) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ(Decimal($0.cast(as: Int64.self)) * $1.cast(as: Decimal.self)) }
                 }
             ],
             .divide: [
@@ -70,13 +55,11 @@ public extension Censor {
                     Return { IntegerType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) / $1.cast(as: Int64.self)) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ(Decimal($0.cast(as: Int64.self)) / $1.cast(as: Decimal.self)) }
                 }
             ],
             .mode: [
@@ -84,7 +67,6 @@ public extension Censor {
                     Return { IntegerType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) % $1.cast(as: Int64.self)) }
                 }
             ],
             .exp: [
@@ -92,13 +74,11 @@ public extension Censor {
                     Return { DecimalType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ(pow(Decimal($0.cast(as: Int64.self)), Int($1.cast(as: Int64.self)))) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ(Decimal(powl(Double($0.cast(as: Int64.self)), ($1.cast(as: Decimal.self) as NSDecimalNumber).doubleValue))) }
                 }
             ],
             .equal: [
@@ -106,13 +86,11 @@ public extension Censor {
                     Return { BoolType(nullable: false) }
                     true
                     IntegerType(nullable: true)
-                    InfixAction { .succ($0.cast(as: Int64?.self) == $1.cast(as: Int64?.self)) }
                 },
                 .init {
                     Return { BoolType(nullable: false) }
                     true
                     DecimalType(nullable: true)
-                    InfixAction { .succ($0.cast(as: Int64?.self) == ($1.cast(as: Decimal?.self) as? NSDecimalNumber)?.int64Value) }
                 }
             ],
             .less: [
@@ -120,32 +98,69 @@ public extension Censor {
                     Return { BoolType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) < $1.cast()) }
                 },
                 .init {
                     Return { BoolType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Int64.self) < ($1.cast(as: Decimal.self) as NSDecimalNumber).int64Value) }
                 }
             ]
         ]
         
-        public static let prefixOperations: [Operator : [Operation.Prefix]] = [
+        public let prefixOperations: [Operator.Prefix : OperationDeclare.Prefix] = [
+            .positive: .init {
+                Return { IntegerType(nullable: false) }
+                false
+            },
+            .negetive: .init {
+                Return { IntegerType(nullable: false) }
+                false
+            }
+        ]
+        
+        public static let propertyActions: [String : ExecutableAction] = [
+            "asString": .init { .succ($0.first!.cast(as: Int64.self).description) },
+            "asDate": .init { .succ(Date(timeIntervalSince1970: Double($0.first!.cast(as: Int64.self)) / 1000)) },
+            "asDecimal": .init { .succ(Decimal($0.first!.cast(as: Int64.self))) }
+        ]
+        
+        public static let infixOpActions: [Operator.Infix : [String : ExecutableAction]] = [
             .plus: [
-                .init {
-                    Return { IntegerType(nullable: false) }
-                    false
-                    Action { .succ($0.cast(as: Int64.self)) }
-                }
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64.self) + $0[1].cast(as: Int64.self)) },
+                DecimalType.name: .init { .succ(Decimal($0[0].cast(as: Int64.self)) + $0[1].cast(as: Decimal.self)) }
             ],
             .minus: [
-                .init {
-                    Return { IntegerType(nullable: false) }
-                    false
-                    Action { .succ(-$0.cast(as: Int64.self)) }
-                }
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64.self) - $0[1].cast(as: Int64.self)) },
+                DecimalType.name: .init { .succ(Decimal($0[0].cast(as: Int64.self)) - $0[1].cast(as: Decimal.self)) }
+            ],
+            .multi: [
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64.self) * $0[1].cast(as: Int64.self)) },
+                DecimalType.name: .init { .succ(Decimal($0[0].cast(as: Int64.self)) * $0[1].cast(as: Decimal.self)) }
+            ],
+            .divide: [
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64.self) / $0[1].cast(as: Int64.self)) },
+                DecimalType.name: .init { .succ(Decimal($0[0].cast(as: Int64.self)) / $0[1].cast(as: Decimal.self)) }
+            ],
+            .mode: [
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64.self) % $0[1].cast(as: Int64.self)) }
+            ],
+            .exp: [
+                IntegerType.name: .init { .succ(pow(Decimal($0[0].cast(as: Int64.self)), Int($0[1].cast(as: Int64.self)))) },
+                DecimalType.name: .init { .succ(Decimal(powl(Double($0[0].cast(as: Int64.self)), ($0[1].cast(as: Decimal.self) as NSDecimalNumber).doubleValue))) }
+            ],
+            .equal: [
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64?.self) == $0[1].cast(as: Int64?.self)) },
+                DecimalType.name: .init { .succ($0[0].cast(as: Int64?.self) == ($0[1].cast(as: Decimal?.self) as? NSDecimalNumber)?.int64Value) }
+            ],
+            .less: [
+                IntegerType.name: .init { .succ($0[0].cast(as: Int64.self) < $0[1].cast()) },
+                DecimalType.name: .init { .succ($0[0].cast(as: Int64.self) < ($0[1].cast(as: Decimal.self) as NSDecimalNumber).int64Value) }
             ]
+        ]
+        
+        public static let prefixOpActions: [Censor.Operator.Prefix : ExecutableAction] = [
+            .positive: .init { .succ($0.first!.cast(as: Int64.self)) },
+            .negetive: .init { .succ(-$0.first!.cast(as: Int64.self)) }
         ]
         
         public init(nullable: Bool) {

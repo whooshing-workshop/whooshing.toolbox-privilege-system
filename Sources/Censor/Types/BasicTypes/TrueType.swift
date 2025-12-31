@@ -4,16 +4,19 @@ import Foundation
 public extension Censor {
     struct TrueType<T>: TypeDeclare where T: TypeDeclare {
         public typealias RealType = T.Type
-        public static var name: String { "TrueType<\(T.name)>" }
+        public static var name: String { "\(T.name).Type" }
         public let nullable: Bool
         
-        public static var properties: [String : Property] {
+        public var properties: [String : PropertyDeclare] {
             T.staticProperties
         }
         
-        public static var functions: [String: Function] {
+        public var functions: [String: FunctionDeclare] {
             T.staticFunctions
         }
+        
+        public static var propertyActions: [String: ExecutableAction] { T.staticPropertieActions }
+        public static var functionActions: [String: ExecutableAction] { T.staticFunctionActions }
         
         public init(nullable: Bool) {
             self.nullable = nullable

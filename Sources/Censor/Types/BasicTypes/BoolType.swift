@@ -7,28 +7,18 @@ public extension Censor {
         public static let name = "Bool"
         public let nullable: Bool
         
-        public static let properties: [String : Property] = [
-            "asString": .init {
-                Return { StringType(nullable: false) }
-                Action { .succ(String($0.cast(as: Bool.self))) }
-            },
-            "asInteger": .init {
-                Return { IntegerType(nullable: false) }
-                Action { .succ(Int64($0.cast() ? 1 : 0)) }
-            },
-            "asDecimal": .init {
-                Return { DecimalType(nullable: false) }
-                Action { .succ(Decimal($0.cast() ? 1 : 0)) }
-            },
+        public let properties: [String : PropertyDeclare] = [
+            "asString": .init { StringType(nullable: false) },
+            "asInteger": .init { IntegerType(nullable: false) },
+            "asDecimal": .init { DecimalType(nullable: false) }
         ]
         
-        public static let infixOperations: [Operator : [Operation.Infix]] = [
+        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
             .equal: [
                 .init {
                     Return { BoolType(nullable: false) }
                     true
                     BoolType(nullable: true)
-                    InfixAction { .succ($0.cast(as: Bool?.self) == $1.cast(as: Bool?.self)) }
                 }
             ],
             .and: [
@@ -36,7 +26,6 @@ public extension Censor {
                     Return { BoolType(nullable: false) }
                     false
                     BoolType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Bool.self) && $1.cast(as: Bool.self)) }
                 }
             ],
             .or: [
@@ -44,8 +33,25 @@ public extension Censor {
                     Return { BoolType(nullable: false) }
                     false
                     BoolType(nullable: false)
-                    InfixAction { .succ($0.cast(as: Bool.self) || $1.cast(as: Bool.self)) }
                 }
+            ]
+        ]
+        
+        public static let propertyActions: [String : ExecutableAction] = [
+            "asString": .init { .succ(String($0.first!.cast(as: Bool.self))) },
+            "asInteger": .init { .succ(Int64($0.first!.cast() ? 1 : 0)) },
+            "asDecimal": .init { .succ(Decimal($0.first!.cast() ? 1 : 0)) },
+        ]
+        
+        public static let infixOpActions: [Censor.Operator.Infix : [String : ExecutableAction]] = [
+            .equal: [
+                BoolType.name: .init { .succ($0[0].cast(as: Bool?.self) == $0[1].cast(as: Bool?.self)) }
+            ],
+            .and: [
+                BoolType.name: .init { .succ($0[0].cast(as: Bool.self) && $0[1].cast(as: Bool.self)) }
+            ],
+            .or: [
+                BoolType.name: .init { .succ($0[0].cast(as: Bool.self) || $0[1].cast(as: Bool.self)) }
             ]
         ]
         

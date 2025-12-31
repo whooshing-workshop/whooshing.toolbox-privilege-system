@@ -8,92 +8,61 @@ public extension Censor {
         public static let name = "String"
         public let nullable: Bool
         
-        public static let properties: [String : Property] = [
-            "asInteger": .init {
-                Return { IntegerType(nullable: true) }
-                Action { .succ(Int64($0.cast(as: String.self))) }
-            },
-            "asDecimal": .init {
-                Return { DecimalType(nullable: true) }
-                Action { .succ(Decimal(string: $0.cast())) }
-            },
-            "asDate": .init {
-                Return { DateType(nullable: true) }
-                Action { .succ(DateType.dateFormatter.date(from: $0.cast())) }
-            },
-            "asBool": .init {
-                Return { BoolType(nullable: true) }
-                Action { .succ($0.cast() == "true" ? true : $0.cast() == "false" ? false : nil) }
-            },
-            "asUUID": .init {
-                Return { UUIDType(nullable: true) }
-                Action { .succ(UUID(uuidString: $0.cast())) }
-            },
-            "count": .init {
-                Return { IntegerType(nullable: false) }
-                Action { .succ(Int64($0.cast(as: String.self).count)) }
-            },
-            "last": .init {
-                Return { CharacterType(nullable: true) }
-                Action { .succ($0.cast(as: String.self).last) }
-            }
+        public let properties: [String : PropertyDeclare] = [
+            "asInteger": .init { IntegerType(nullable: true) },
+            "asDecimal": .init { DecimalType(nullable: true) },
+            "asDate": .init { DateType(nullable: true) },
+            "asBool": .init { BoolType(nullable: true) },
+            "asUUID": .init { UUIDType(nullable: true) },
+            "count": .init { IntegerType(nullable: false) },
+            "last": .init { CharacterType(nullable: true) }
         ]
         
-        public static let functions: [String : Function] = [
+        public let functions: [String : FunctionDeclare] = [
             "like": .init {
                 Return { BoolType(nullable: false) }
                 ArgumentDeclare {
                     (nil, StringType(nullable: false)) >- nil
                 }
-                FunctionAction {
-                    .succ($0.cast(as: String.self).like($1[0].cast()))
-                }
             }
         ]
         
-        public static let infixOperations: [Operator : [Operation.Infix]] = [
+        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
             .plus: [
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     StringType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + $1.cast(as: String.self)) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     CharacterType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + String($1.cast(as: Character.self))) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + String($1.cast(as: Int64.self))) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     DecimalType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + $1.cast(as: Decimal.self).description) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     DateType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + DateType.dateFormatter.string(from: $1.cast())) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     UUIDType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + $1.cast(as: UUID.self).uuidString) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
                     BoolType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) + ($1.cast() ? "true" : "false")) }
                 }
             ],
             .multi: [
@@ -101,7 +70,6 @@ public extension Censor {
                     Return { StringType(nullable: false) }
                     false
                     IntegerType(nullable: false)
-                    InfixAction { .succ(String(repeating: $0.cast(as: String.self), count: .init($1.cast(as: Int64.self)))) }
                 }
             ],
             .equal: [
@@ -109,7 +77,6 @@ public extension Censor {
                     Return { BoolType(nullable: false) }
                     true
                     StringType(nullable: true)
-                    InfixAction { .succ($0.cast(as: String?.self) == $1.cast(as: String?.self)) }
                 }
             ],
             .less: [
@@ -117,8 +84,42 @@ public extension Censor {
                     Return { BoolType(nullable: false) }
                     false
                     StringType(nullable: false)
-                    InfixAction { .succ($0.cast(as: String.self) < $1.cast(as: String.self)) }
                 }
+            ]
+        ]
+        
+        public static let propertyActions: [String : ExecutableAction] = [
+            "asInteger": .init { .succ(Int64($0.first!.cast(as: String.self))) },
+            "asDecimal": .init { .succ(Decimal(string: $0.first!.cast())) },
+            "asDate": .init { .succ(DateType.dateFormatter.date(from: $0.first!.cast())) },
+            "asBool": .init { .succ($0.first!.cast() == "true" ? true : $0.first!.cast() == "false" ? false : nil) },
+            "asUUID": .init { .succ(UUID(uuidString: $0.first!.cast())) },
+            "count": .init { .succ(Int64($0.first!.cast(as: String.self).count)) },
+            "last": .init { .succ($0.first!.cast(as: String.self).last) }
+        ]
+        
+        public static let functionActions: [String : ExecutableAction] = [
+            "like": .init { .succ($0[0].cast(as: String.self).like($0[1].cast())) }
+        ]
+        
+        public static let infixOpActions: [Censor.Operator.Infix : [String : ExecutableAction]] = [
+            .plus: [
+                StringType.name: .init { .succ($0[0].cast(as: String.self) + $0[1].cast(as: String.self)) },
+                CharacterType.name: .init { .succ($0[0].cast(as: String.self) + String($0[1].cast(as: Character.self))) },
+                IntegerType.name: .init { .succ($0[0].cast(as: String.self) + String($0[1].cast(as: Int64.self))) },
+                DecimalType.name: .init { .succ($0[0].cast(as: String.self) + $0[1].cast(as: Decimal.self).description) },
+                DateType.name: .init { .succ($0[0].cast(as: String.self) + DateType.dateFormatter.string(from: $0[1].cast())) },
+                UUIDType.name: .init { .succ($0[0].cast(as: String.self) + $0[1].cast(as: UUID.self).uuidString) },
+                BoolType.name: .init { .succ($0[0].cast(as: String.self) + ($0[1].cast() ? "true" : "false")) }
+            ],
+            .multi: [
+                IntegerType.name: .init { .succ(String(repeating: $0[0].cast(as: String.self), count: .init($0[1].cast(as: Int64.self)))) }
+            ],
+            .equal: [
+                StringType.name: .init { .succ($0[0].cast(as: String?.self) == $0[1].cast(as: String?.self)) }
+            ],
+            .less: [
+                StringType.name: .init { .succ($0[0].cast(as: String.self) < $0[1].cast(as: String.self)) }
             ]
         ]
         

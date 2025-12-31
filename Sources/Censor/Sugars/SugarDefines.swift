@@ -4,15 +4,18 @@ public extension Censor {
     struct Sugar: Sendable {
         public let returns: @Sendable ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase>
         public let argumentCount: Int
-        public let action: @Sendable ([Value]) -> Res<Value, Errcase>
+        public let precedence: Operator.Precedence.Declare.Type
+        public let action: ExecutableAction
         
         init(
             returns: @Sendable @escaping ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase>,
             argumentCount: Int,
-            action: @Sendable @escaping ([Value]) -> Res<Value, Errcase>
+            precedence: Operator.Precedence.Declare.Type,
+            action: ExecutableAction
         ) {
             self.returns = returns
             self.argumentCount = argumentCount
+            self.precedence = precedence
             self.action = action
         }
         
@@ -26,25 +29,44 @@ public extension Censor {
         public static func buildBlock(
             _ returns: @Sendable @escaping ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase>,
             _ argumentCount: Int,
-            _ action: @Sendable @escaping ([Value]) -> Res<Value, Errcase>
+            _ precedence: Operator.Precedence.Declare.Type,
+            _ action: ExecutableAction
         ) -> Sugar {
-            Sugar(returns: returns, argumentCount: argumentCount, action: action)
+            Sugar(returns: returns, argumentCount: argumentCount, precedence: precedence, action: action)
         }
     }
     
     static func ArgumentCount(_ count: @Sendable @escaping () -> Int) -> Int { count() }
+    static func PrecedenceSet(_ content: @Sendable @escaping () -> Operator.Precedence.Declare.Type) -> Operator.Precedence.Declare.Type { content() }
     static func GenericReturn(_ content: @Sendable @escaping ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase>) -> @Sendable ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase> { content }
-    static func SugarAction(_ action: @Sendable @escaping ([Value]) -> Res<Value, Errcase>) -> @Sendable ([Value]) -> Res<Value, Errcase> { action }
 }
 
 public extension Censor {
     enum SugarKey: String, Hashable, Sendable {
-        case forceCast
-        case nilCoalescing
-        case ternary
+        case not = "Not"
+        case forceCast = "ForceCast"
+        case nilCoalescing = "NilCoalescing"
+        case ternary = "Ternary"
     }
     
     static let sugars: [SugarKey: Sugar] = [
+        .not: .init {
+            GenericReturn {
+                guard $0.count == 1, let variable = $0.first else {
+                    return .failure(.sugarTypeDetectFailed, "传入的参数不合法，预期为 1 个，却得到 \($0.count) 个", category: .internal)
+                }
+                
+                guard variable is BoolType, !variable.nullable else {
+                    return .failure(.sugarTypeDetectFailed, "取反操作仅当应用在 Boolean")
+                }
+                
+                return .success(variable)
+            }
+            ArgumentCount { 1 }
+            PrecedenceSet { Operator.Precedence.Prefix.self }
+            ExecutableAction { .succ(!$0.first!.cast(as: Bool.self)) }
+            
+        },
         .forceCast: .init {
             GenericReturn {
                 guard $0.count == 1, let variable = $0.first else {
@@ -58,7 +80,8 @@ public extension Censor {
                 return .success(variable.set(nullable: false))
             }
             ArgumentCount { 1 }
-            SugarAction { .succ($0.first!.content!) }
+            PrecedenceSet { Operator.Precedence.Postfix.self }
+            ExecutableAction { .succ($0.first!.content!) }
         },
         .nilCoalescing: .init {
             GenericReturn {
@@ -84,7 +107,8 @@ public extension Censor {
                 return .success(instead)
             }
             ArgumentCount { 2 }
-            SugarAction { .succ($0.first!.content ?? $0.last!.content) }
+            PrecedenceSet { Operator.Precedence.NilCoalescing.self }
+            ExecutableAction { .succ($0.first!.content ?? $0.last!.content) }
         },
         .ternary: .init {
             GenericReturn {
@@ -111,7 +135,8 @@ public extension Censor {
                 return .success(pass.set(nullable: nullable))
             }
             ArgumentCount { 3 }
-            SugarAction { .succ( ($0[0].content as! Bool) ? $0[1] : $0[2] ) }
+            PrecedenceSet { Operator.Precedence.Ternary.self }
+            ExecutableAction { .succ( ($0[0].content as! Bool) ? $0[1] : $0[2] ) }
         }
     ]
 }

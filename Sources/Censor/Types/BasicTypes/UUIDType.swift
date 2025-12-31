@@ -7,28 +7,35 @@ public extension Censor {
         public static let name = "UUID"
         public let nullable: Bool
         
-        public static let properties: [String : Property] = [
-            "asString": .init {
-                Return { StringType(nullable: false) }
-                Action { .succ($0.cast(as: UUID.self).uuidString) }
-            }
+        public let properties: [String : PropertyDeclare] = [
+            "asString": .init { StringType(nullable: false) }
         ]
         
-        public static let staticProperties: [String : Property] = [
-            "new": .init {
-                Return { UUIDType(nullable: false) }
-                Action { _ in .succ(UUID()) }
-            }
+        public let staticProperties: [String : PropertyDeclare] = [
+            "new": .init { UUIDType(nullable: false) }
         ]
         
-        public static let infixOperations: [Operator : [Operation.Infix]] = [
+        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
             .equal: [
                 .init {
                     Return { BoolType(nullable: false) }
                     true
                     UUIDType(nullable: true)
-                    InfixAction { .succ($0.cast(as: UUID?.self) == $1.cast(as: UUID?.self)) }
                 }
+            ]
+        ]
+        
+        public static let propertyActions: [String : ExecutableAction] = [
+            "asString": .init { .succ($0.first!.cast(as: UUID.self).uuidString) }
+        ]
+        
+        public static let staticPropertieActions: [String : ExecutableAction] = [
+            "new": .init { _ in .succ(UUID()) }
+        ]
+        
+        public static let infixOpActions: [Operator : [String : ExecutableAction]] = [
+            .equal: [
+                UUIDType.name: .init { .succ($0[0].cast(as: UUID?.self) == $0[1].cast(as: UUID?.self)) }
             ]
         ]
         

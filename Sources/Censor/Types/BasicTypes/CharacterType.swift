@@ -7,11 +7,12 @@ public extension Censor {
         public static let name = "Character"
         public let nullable: Bool
         
-        public static let properties: [String : Property] = [
-            "asString": .init {
-                Return { StringType(nullable: false) }
-                Action { .succ(String($0.cast(as: Character.self))) }
-            }
+        public let properties: [String : PropertyDeclare] = [
+            "asString": .init { StringType(nullable: false) }
+        ]
+        
+        public static let propertyActions: [String : ExecutableAction] = [
+            "asString": .init { .succ(String($0.first!.cast(as: Character.self))) }
         ]
         
         public init(nullable: Bool) {
