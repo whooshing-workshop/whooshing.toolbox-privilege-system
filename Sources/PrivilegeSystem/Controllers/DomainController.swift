@@ -1,5 +1,5 @@
 import Fluent
-import Expression
+import Censor
 import Vapor
 import PgSQL
 import ErrorHandle
@@ -22,7 +22,7 @@ extension PrivilegeSystem {
                 models: domains,
                 label: "域权限",
                 errThrowing: .domainCreateFailed,
-                aclBuilder: { $0.expression.ast.toACL(Domain.self) },
+                aclBuilder: { $0.censor.ast.toACL(Domain.self) },
                 modelBuilder: { $0.raw(domainId: $1) },
                 dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
             )

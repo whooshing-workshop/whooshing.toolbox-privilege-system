@@ -11,8 +11,8 @@ extension Censor {
             switch self {
             case .null: Compiler.Token.Extra.null
             case .in: Compiler.Token.Extra.scope
-            case .boolTrue: Compiler.Token.Literal.bool(true)
-            case .boolFalse: Compiler.Token.Literal.bool(false)
+            case .boolTrue: Compiler.Token.Literal.bool(BoolType(nullable: false).make(true))
+            case .boolFalse: Compiler.Token.Literal.bool(BoolType(nullable: false).make(false))
             }
         }
     }
@@ -47,21 +47,14 @@ extension Censor.Compiler {
         protocol TokenType: Sendable {}
         
         enum Literal: TokenType {
-            case string(String)
-            case character(Character)
-            case integer(Int64)
-            case decimal(Decimal)
-            case date(Date)
-            case uuid(UUID)
-            case bool(Bool)
-            case stringType(Censor.TrueType<Censor.StringType>)
-            case characterType(Censor.TrueType<Censor.CharacterType>)
-            case integerType(Censor.TrueType<Censor.IntegerType>)
-            case decimalType(Censor.TrueType<Censor.DecimalType>)
-            case dateType(Censor.TrueType<Censor.DateType>)
-            case uuidType(Censor.TrueType<Censor.UUIDType>)
-            case boolType(Censor.TrueType<Censor.BoolType>)
-            case arrayType(Censor.TrueType<Censor.ArrayType>)
+            case string(Censor.Variable<Censor.StringType>)
+            case character(Censor.Variable<Censor.CharacterType>)
+            case integer(Censor.Variable<Censor.IntegerType>)
+            case decimal(Censor.Variable<Censor.DecimalType>)
+            case date(Censor.Variable<Censor.DateType>)
+            case uuid(Censor.Variable<Censor.UUIDType>)
+            case bool(Censor.Variable<Censor.BoolType>)
+            case trueType(Censor.Variable<Censor.TrueType>)
         }
         
         enum Symbol: TokenType {

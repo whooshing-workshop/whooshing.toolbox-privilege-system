@@ -5,7 +5,7 @@ public extension Censor {
         public let content: Any?
         public var isNull: Bool { content == nil }
         
-        public init(_ content: Any?) {
+        public init<T>(_ content: T) {
             self.content = content
         }
         

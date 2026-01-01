@@ -2,26 +2,27 @@ import ErrorHandle
 import Foundation
 
 public extension Censor {
-    struct TrueType<T>: TypeDeclare where T: TypeDeclare {
-        public typealias RealType = T.Type
-        public static var name: String { "\(T.name).Type" }
+    struct TrueType: TypeDeclare {
+        public typealias RealType = Any.Type
+        public static let name = "TrueType"
         public let nullable: Bool
+        public let type: any TypeDeclare.Type
         
         public var properties: [String : PropertyDeclare] {
-            T.staticProperties
+            type.staticProperties
         }
         
         public var functions: [String: FunctionDeclare] {
-            T.staticFunctions
+            type.staticFunctions
         }
         
-        public static var propertyActions: [String: ExecutableAction] { T.staticPropertieActions }
-        public static var functionActions: [String: ExecutableAction] { T.staticFunctionActions }
-        
         public init(nullable: Bool) {
+            self = Self.init(nullable: nullable, type: AnyType.self)
+        }
+        
+        public init(nullable: Bool, type: any TypeDeclare.Type) {
             self.nullable = nullable
+            self.type = type
         }
     }
 }
-
-extension ISO8601DateFormatter: @unchecked @retroactive Sendable {}

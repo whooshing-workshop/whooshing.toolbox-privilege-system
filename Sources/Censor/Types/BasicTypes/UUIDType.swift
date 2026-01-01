@@ -33,7 +33,7 @@ public extension Censor {
             "new": .init { _ in .succ(UUID()) }
         ]
         
-        public static let infixOpActions: [Operator : [String : ExecutableAction]] = [
+        public static let infixOpActions: [Operator.Infix : [String : ExecutableAction]] = [
             .equal: [
                 UUIDType.name: .init { .succ($0[0].cast(as: UUID?.self) == $0[1].cast(as: UUID?.self)) }
             ]

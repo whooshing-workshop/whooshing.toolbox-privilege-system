@@ -1,6 +1,6 @@
 import ErrorHandle
 import Foundation
-import Expression
+import Censor
 
 public struct Executor {
     
@@ -17,7 +17,7 @@ public struct Executor {
 //import Foundation
 //import Censor
 //
-//public struct PrivilegeInterpreter {
+//public struct Executorr {
 //    
 //    public enum Macro: String {
 //        case resource = "RESOURCE"
@@ -27,7 +27,7 @@ public struct Executor {
 //    public let globals: [String: ValueWrapper] = [:]
 //    
 //    public func execute<R: Resource>(
-//        with expression: PrivilegeExpression,
+//        with expression: Censor,
 //        for resource: R,
 //        operations: Set<R.Op>,
 //        in module: PriviliegeModule

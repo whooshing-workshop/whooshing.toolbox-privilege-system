@@ -1,9 +1,9 @@
 import ErrorHandle
 import Foundation
 
-extension Censor {
-    public protocol TypeDeclare: Sendable, Equatable, CustomStringConvertible {
-        associatedtype RealType
+public extension Censor {
+    protocol TypeDeclare: Sendable, Equatable, CustomStringConvertible {
+        associatedtype RealType: Sendable
         
         static var name: String { get }
         var nullable: Bool { get }
@@ -30,26 +30,28 @@ extension Censor {
         static var suffixOpActions: [Operator.Postfix: ExecutableAction] { get }
         static var infixOpActions: [Operator.Infix: [String: ExecutableAction]] { get }
         
-        func make(_ value: RealType?) -> Res<Variable, Censor.Errcase>
-        func make(value: Value) -> Res<Variable, Censor.Errcase>
-        func realType(of value: Value) -> RealType
-        func optionalRealType(of value: Value) -> RealType?
+        func isMatch(value: Censor.Value) -> Bool
+        
+        func make(_ value: RealType?) -> Variable<Self>
+//        func make(value: Value) -> Res<Variable<Self>, Censor.Errcase>
+//        func realType(of value: Value) -> RealType
+//        func optionalRealType(of value: Value) -> RealType?
         
         init(nullable: Bool)
     }
 
-    public struct Variable: Sendable {
-        public let type: any TypeDeclare
-        public let value: Value
+    struct Variable<T>: Sendable where T: TypeDeclare {
+        public let type: T
+        public let value: T.RealType?
         public var declaredType: String { self.type.description }
         public var optional: Bool { self.type.nullable }
         
-        public func `is`(type: any TypeDeclare) -> Bool {
-            Swift.type(of: self.type).name == Swift.type(of: type).name &&
-            (value.isNull ?  type.nullable == true : true)
-        }
-        
-        init(type: any TypeDeclare, value: Value) {
+//        public func `is`(type: any TypeDeclare) -> Bool {
+//            Swift.type(of: self.type).name == Swift.type(of: type).name &&
+//            (value.isNull ?  type.nullable == true : true)
+//        }
+
+        fileprivate init(type: T, value: T.RealType?) {
             self.type = type
             self.value = value
         }
@@ -79,41 +81,12 @@ public extension Censor.TypeDeclare {
         .init(nullable: nullable)
     }
     
-    func make(_ value: RealType?) -> Res<Censor.Variable, Censor.Errcase> {
-        make(value: .init(value))
-    }
-    
-    func make(value: Censor.Value) -> Res<Censor.Variable, Censor.Errcase> {
-        guard isMatch(value: value) else {
-            return .failure(.valueAssignFailed, "无法将 \(log: value) 赋值与 \(self)")
-        }
-        
-        return .success(.init(type: self, value: value))
+    func make(_ value: RealType?) -> Censor.Variable<Self> {
+        .init(type: self, value: value)
     }
     
     func isMatch(value: Censor.Value) -> Bool {
         (self.nullable || !value.isNull) && (value is RealType?)
-    }
-    
-    func realType(of value: Censor.Value) -> RealType {
-        guard !self.nullable else {
-            preconditionFailure("类型为可选值")
-        }
-        
-        let optionValue = optionalRealType(of: value)
-        
-        guard let v = optionValue else {
-            preconditionFailure("应当为非空值，却得到 \(log: Censor.Keyword.null.rawValue)")
-        }
-        return v
-    }
-    
-    func optionalRealType(of value: Censor.Value) -> RealType? {
-        guard let v = value as? RealType? else {
-            preconditionFailure("类型应当为 \(String(describing: RealType.self))，却得到 \(log: value)")
-        }
-        
-        return v
     }
     
     static func == (lhs: Self, rhs: Self) -> Bool {
@@ -126,21 +99,15 @@ public extension Censor.TypeDeclare {
 }
 
 public extension Censor.Variable {
-    enum StoringType {
-        case string(String?)
-        case integer(Int64?)
-        case decimal(Decimal?)
-    }
-    
-    var storingValue: StoringType {
-        switch Swift.type(of: self.type).name {
-        case Censor.StringType.name: return .string(value.cast())
-        case Censor.CharacterType.name: let c = value.cast(as: Character?.self); return .string((c != nil) ? String(c!) : nil)
-        case Censor.IntegerType.name: return .integer(value.cast())
-        case Censor.DecimalType.name: return .decimal(value.cast())
-        case Censor.DateType.name: let v = value.cast(as: Date?.self); return .string(v != nil ? Censor.DateType.dateFormatter.string(from: v!) : nil)
-        case Censor.UUIDType.name: let v = value.cast(as: UUID?.self); return .string(v != nil ? v!.uuidString : nil)
-        case Censor.BoolType.name: let v = value.cast(as: Bool?.self); return .string(v != nil ? (v! ? "true" : "false") : nil)
+    var storingValue: Censor.AST.StoringType {
+        switch T.name {
+        case Censor.StringType.name: return .string(value as! String?)
+        case Censor.CharacterType.name: let c = value as! Character?; return .string((c != nil) ? String(c!) : nil)
+        case Censor.IntegerType.name: return .integer(value as! Int64?)
+        case Censor.DecimalType.name: return .decimal(value as! Decimal?)
+        case Censor.DateType.name: let v = value as! Date?; return .string(v != nil ? Censor.DateType.dateFormatter.string(from: v!) : nil)
+        case Censor.UUIDType.name: let v = value as! UUID?; return .string(v != nil ? v!.uuidString : nil)
+        case Censor.BoolType.name: let v = value as! Bool?; return .string(v != nil ? (v! ? "true" : "false") : nil)
         default: preconditionFailure()
         }
     }
@@ -149,4 +116,32 @@ public extension Censor.Variable {
 public func == (lhs: any Censor.TypeDeclare, rhs: any Censor.TypeDeclare) -> Bool {
     type(of: lhs).name == type(of: rhs).name &&
     lhs.nullable == rhs.nullable
+}
+
+public extension Censor {
+    struct AnyVariable: Sendable, CustomStringConvertible {
+        public let type: any TypeDeclare
+        
+        public let anyValue: Sendable?
+
+        public init<T: TypeDeclare>(_ variable: Variable<T>) {
+            self.type = variable.type
+            self.anyValue = variable.value
+            self.storingValue = variable.storingValue
+        }
+
+        public let storingValue: Censor.AST.StoringType
+
+        public var description: String {
+            "Variable<\(type.description)>(value: \(String(describing: anyValue)))"
+        }
+        
+        public func asVariable<T: TypeDeclare>(of type: T.Type) -> Variable<T>? {
+            guard let value = anyValue as? T.RealType?,
+                  let specificType = self.type as? T else {
+                return nil
+            }
+            return specificType.make(value)
+        }
+    }
 }

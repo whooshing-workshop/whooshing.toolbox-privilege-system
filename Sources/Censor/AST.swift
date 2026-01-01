@@ -2,7 +2,9 @@ import Foundation
 
 public extension Censor {
     indirect enum AST: Sendable {
-        case value(Variable)
+        case value(AnyVariable)
+        case trueType(String)
+        case variable(String)   // 全局变量
         case property(String)
         case function(String, args: [Self])
         case forceCast
@@ -12,21 +14,23 @@ public extension Censor {
         case arraySelector(index: Int)
         case chain(content:Self, next: Self)
         case scope(domain: String, content: Self)
-        case prefix(operator: Operator, right: Self)
-        case suffix(operator: Operator, left: Self)
-        case infix(operator: Operator, left: Self, right: Self)
-    }
-}
-
-public extension Censor.AST {
-    func toMap() -> Censor.Map {
+        case prefix(operator: Operator.Prefix, right: Self)
+        case suffix(operator: Operator.Postfix, left: Self)
+        case infix(operator: Operator.Infix, left: Self, right: Self)
         
+        public enum StoringType: Sendable {
+            case string(String?)
+            case integer(Int64?)
+            case decimal(Decimal?)
+        }
     }
 }
 
 public extension Censor.AST {
     enum CodingType: String, Codable, CaseIterable, Sendable {
         case value = "Value"
+        case trueType = "TrueType"
+        case variable = "Variable"
         case property = "Property"
         case function = "Function"
         case forceCast = "ForceCast"
@@ -64,7 +68,17 @@ public extension Censor.AST {
             acl.valueType = .init(from: v.type)
             acl.valueNullable = v.type.nullable
             return [acl]
-
+            
+        case .trueType(let s):
+            acl.type = .trueType
+            acl.value = s
+            return [acl]
+            
+        case .variable(let s):
+            acl.type = .variable
+            acl.value = s
+            return [acl]
+            
         case .property(let s):
             acl.type = .property
             acl.value = s
@@ -173,7 +187,7 @@ public extension Censor.AST {
 
         case .prefix(let op, let right):
             acl.type = .prefix
-            acl.op = op
+            acl.op = op.rawValue
 
             var res: [ACLExp<T>] = [acl]
             res.append(contentsOf: right.toACL(
@@ -186,7 +200,7 @@ public extension Censor.AST {
 
         case .suffix(let op, let left):
             acl.type = .suffix
-            acl.op = op
+            acl.op = op.rawValue
 
             var res: [ACLExp<T>] = [acl]
             res.append(contentsOf: left.toACL(
@@ -199,7 +213,7 @@ public extension Censor.AST {
 
         case .infix(let op, let left, let right):
             acl.type = .infix
-            acl.op = op
+            acl.op = op.rawValue
 
             var res: [ACLExp<T>] = [acl]
             res.append(contentsOf: left.toACL(

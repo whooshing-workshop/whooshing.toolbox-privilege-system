@@ -7,9 +7,9 @@ typealias RoleModel = Role
 
 public extension DTO {
     struct Role<T: Status>: Sendable {
-        public let expression: PrivilegeExpression
         public let name: String
         public let description: String?
+        public let censor: Censor<T>
         
         @Passive() public internal(set) var id: UUID
         @Passive() public internal(set) var createdAt: Date
@@ -19,14 +19,14 @@ public extension DTO {
         private let m: AssociatedModel?
         
         init(
-            _expression: PrivilegeExpression,
             _name: String,
             _description: String?,
+            _censor: Censor<T>,
             _model: AssociatedModel?
         ) {
-            self.expression = _expression
             self.name = _name
             self.description = _description
+            self.censor = _censor
             self.m = _model
         }
     }
@@ -34,11 +34,11 @@ public extension DTO {
 
 public extension DTO.Role where T == DTO.Prepare {
     init(
-        expression: PrivilegeExpression,
         name: String,
-        description: String? = nil
+        description: String?,
+        censor: DTO.Censor<T>
     ) {
-        self = Self.init(_expression: expression, _name: name, _description: description, _model: nil)
+        self = Self.init(_name: name, _description: description, _censor: censor, _model: nil)
     }
 }
 
@@ -53,9 +53,9 @@ extension DTO.Role where T == DTO.Queried {
     static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .roleDTOFailed, category: .internal) {
             var n = Self.init(
-                _expression: .init(ast: model.ast, expression: model.expression),
                 _name: model.name,
                 _description: model.description,
+                _censor: try .make(from: model).get(),
                 _model: model
             )
             n.$id = try model.requireID()
@@ -70,8 +70,8 @@ extension DTO.Role where T == DTO.Prepare {
     func raw(aclId: UUID) -> Role {
         let role = Role()
         role.$acl.id = aclId
-        role.ast = expression.ast
-        role.expression = expression.expression
+        role.map = censor.map
+        role.expression = censor.expression
         role.name = name
         role.description = description
         return role
@@ -99,11 +99,11 @@ extension DTO.Role.Updater: DTOUpdater {}
 
 public extension DTO.Role.Updater {
     mutating
-    func update(expression: @escaping @autoclosure () throws -> PrivilegeExpression) {
-        updates[\.expression] = { builder, _ in
-            let exp = try expression()
+    func update(censor: @escaping @autoclosure () throws -> DTO.Censor<DTO.Prepare>) {
+        updates[\.censor] = { builder, _ in
+            let exp = try censor()
             return builder
-                .set(\.$ast, to: exp.ast)
+                .set(\.$map, to: exp.map)
                 .set(\.$expression, to: exp.expression)
         }
     }
@@ -125,13 +125,13 @@ public extension DTO.Role.Updater {
 
 public extension DTO.Role.Updater {
     mutating
-    func update(expression: @escaping (DTO.Role<DTO.Queried>) throws -> PrivilegeExpression) {
+    func update(censor: @escaping (DTO.Role<DTO.Queried>) throws -> DTO.Censor<DTO.Prepare>) {
         needsPeek = true
-        updates[\.expression] = { builder, query in
+        updates[\.censor] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            let exp = try expression(q)
+            let exp = try censor(q)
             return builder
-                .set(\.$ast, to: exp.ast)
+                .set(\.$map, to: exp.map)
                 .set(\.$expression, to: exp.expression)
         }
     }

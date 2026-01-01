@@ -29,23 +29,6 @@ extension Censor {
             self.defaults = defaults
         }
         
-    //    func make(_ values: [Value?]) -> Res<ArgumentVariable, PrivilegeExpression.Errcase> {
-    //        guard values.count == labels.count else {
-    //            return .failure(.argumentValueAssignFailed, "参数个数不正确，预期为 \(labels.count) 个，却得到 \(values.count) 个", category: .external)
-    //        }
-    //
-    //        for (i, value) in values.enumerated() {
-    //            guard let v = value ?? defaults[i] else {
-    //                return .failure(.argumentValueAssignFailed, "参数 \(labels[i]) 未赋值", category: .external)
-    //            }
-    //
-    //            guard types[i].isMatch(value: v) else {
-    //                return .failure(.argumentValueAssignFailed, "无法将 \(log: v) 赋值与 \(types[i])", category: .external)
-    //            }
-    //        }
-    //        return .success(.init(declare: self, values: values))
-    //    }
-        
         func validate(_ values: [Value?]) -> Res<[Value], Censor.Errcase> {
             guard values.count == labels.count else {
                 return .failure(.argumentValueAssignFailed, "参数个数不正确，预期为 \(labels.count) 个，却得到 \(values.count) 个", category: .external)

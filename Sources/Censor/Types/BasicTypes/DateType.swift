@@ -102,3 +102,5 @@ public extension Censor {
         }
     }
 }
+
+extension ISO8601DateFormatter: @unchecked @retroactive Sendable {}

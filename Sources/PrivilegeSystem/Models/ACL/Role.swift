@@ -2,14 +2,14 @@ import PgSQL
 import Foundation
 import Censor
 
-final class Role: PGModel, @unchecked Sendable {
+final class Role: PGModel, ACLInterface, @unchecked Sendable {
     
     static let name = "roles"
     
     struct Fields: PGFields {
         let id = PGField("id", .uuid)                           .primary
         let aclId = PGField("acl_id", .uuid)                    .required.foreign(ACL.self, \.id, onDelete: .cascade)
-        let ast = PGField("ast", .json)                         .required.cons(.sql(.default("{}")))
+        let map = PGField("map", .json)                         .required.cons(.sql(.default("{}")))
         let expression = PGField("expression", .string)         .required
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
@@ -24,7 +24,7 @@ final class Role: PGModel, @unchecked Sendable {
     @ID(custom: fields.id.key)                      var id: UUID?
     
     @Parent(fields.aclId)                           var acl: ACL
-    @Field(fields.ast)                              var ast: AST
+    @Field(fields.map)                              var map: Censor.Map
     @Field(fields.expression)                       var expression: String
     @Field(fields.name)                             var name: String
     @Field(fields.description)                      var description: String?

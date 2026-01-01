@@ -3,7 +3,7 @@ import Foundation
 
 public extension Censor {
     struct AnyType: TypeDeclare {
-        public typealias RealType = Any
+        public typealias RealType = Sendable
         public static let name = "Any"
         public let nullable: Bool
         

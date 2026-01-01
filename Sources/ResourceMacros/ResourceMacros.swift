@@ -1,4 +1,4 @@
-import PrivilegeInterprete
+import Executor
 
 public enum PropertyType {
     case vars
@@ -23,18 +23,18 @@ public struct IncludeStrategy {
     }
 }
 
-@attached(extension, conformances: Resource, names: named(vars), named(label))
-public macro Resource(
-    include: IncludeStrategy = .or(.propertyWrappers)
-) = #externalMacro(
-    module: "MacroImplements",
-    type: "ResourceMacro"
-)
-
-@attached(extension, conformances: Label, names: named(vars))
-public macro Label(
-    include: IncludeStrategy = .or(.propertyWrappers)
-) = #externalMacro(
-    module: "MacroImplements",
-    type: "LabelMacro"
-)
+//@attached(extension, conformances: Resource, names: named(vars), named(label))
+//public macro Resource(
+//    include: IncludeStrategy = .or(.propertyWrappers)
+//) = #externalMacro(
+//    module: "MacroImplements",
+//    type: "ResourceMacro"
+//)
+//
+//@attached(extension, conformances: Label, names: named(vars))
+//public macro Label(
+//    include: IncludeStrategy = .or(.propertyWrappers)
+//) = #externalMacro(
+//    module: "MacroImplements",
+//    type: "LabelMacro"
+//)

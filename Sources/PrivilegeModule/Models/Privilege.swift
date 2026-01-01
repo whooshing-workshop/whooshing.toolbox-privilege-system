@@ -3,14 +3,14 @@ import Fluent
 import Foundation
 import Censor
 
-public final class Privilege: PGModel, @unchecked Sendable {
+public final class Privilege: PGModel, ACLInterface, @unchecked Sendable {
     
     public static let name = "privileges"
     
     public struct Fields: PGFields {
         public let id = PGField("id", .uuid)                            .primary
         public let aclId = PGField("acl_id", .uuid)                     .required.foreign(ACL.self, \.id, onDelete: .cascade)
-        public let ast = PGField("ast", .json)                          .required.def("{}")
+        public let map = PGField("map", .json)                          .required.def("{}")
         public let expression = PGField("expression", .string)          .required
         public let name = PGField("name", .string)
         public let description = PGField("description", .string)
@@ -25,7 +25,7 @@ public final class Privilege: PGModel, @unchecked Sendable {
     @ID(custom: fields.id.key)                      public var id: UUID?
     
     @Parent(fields.aclId)                           public var acl: ACL
-    @Field(fields.ast)                              public var ast: AST
+    @Field(fields.map)                              public var map: Censor.Map
     @Field(fields.expression)                       public var expression: String
     @Field(fields.name)                             public var name: String?
     @Field(fields.description)                      public var description: String?

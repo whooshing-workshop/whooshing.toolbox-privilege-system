@@ -7,9 +7,9 @@ typealias DomainModel = Domain
 
 public extension DTO {
     struct Domain<T: Status>: Sendable {
-        public let expression: PrivilegeExpression
         public let name: String?
         public let description: String?
+        public let censor: Censor<T>
         
         @Passive() public internal(set) var id: UUID
         @Passive() public internal(set) var createdAt: Date
@@ -19,14 +19,14 @@ public extension DTO {
         private let m: AssociatedModel?
         
         init(
-            _expression: PrivilegeExpression,
             _name: String?,
             _description: String?,
+            _censor: Censor<T>,
             _model: AssociatedModel?
         ) {
-            self.expression = _expression
             self.name = _name
             self.description = _description
+            self.censor = _censor
             self.m = _model
         }
     }
@@ -34,11 +34,11 @@ public extension DTO {
 
 public extension DTO.Domain where T == DTO.Prepare {
     init(
-        expression: PrivilegeExpression,
-        name: String? = nil,
-        description: String? = nil
+        name: String?,
+        description: String?,
+        censor: DTO.Censor<T>
     ) {
-        self = Self.init(_expression: expression, _name: name, _description: description, _model: nil)
+        self = Self.init(_name: name, _description: description, _censor: censor, _model: nil)
     }
 }
 
@@ -53,9 +53,9 @@ extension DTO.Domain where T == DTO.Queried {
     static func make(from model: Domain) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .domainDTOFailed, category: .internal) {
             var n = Self.init(
-                _expression: .init(ast: model.ast, expression: model.expression),
                 _name: model.name,
                 _description: model.description,
+                _censor: try .make(from: model).get(),
                 _model: model
             )
             n.$id = try model.requireID()
@@ -67,11 +67,12 @@ extension DTO.Domain where T == DTO.Queried {
 }
 
 extension DTO.Domain where T == DTO.Prepare {
+    /// 需要先存 ACL 到数据库中
     func raw(domainId: UUID) -> Domain {
         let domain = Domain()
         domain.$acl.id = domainId
-        domain.ast = expression.ast
-        domain.expression = expression.expression
+        domain.map = censor.map
+        domain.expression = censor.expression
         domain.name = name
         domain.description = description
         return domain
@@ -98,12 +99,13 @@ public extension DTO.Domain where T == DTO.Prepare {
 extension DTO.Domain.Updater: DTOUpdater {}
 
 public extension DTO.Domain.Updater {
+    /// 需要先处理 ACL
     mutating
-    func update(expression: @escaping @autoclosure () throws -> PrivilegeExpression) {
-        updates[\.expression] = { builder, _ in
-            let exp = try expression()
+    func update(censor: @escaping @autoclosure () throws -> DTO.Censor<DTO.Prepare>) {
+        updates[\.censor] = { builder, _ in
+            let exp = try censor()
             return builder
-                .set(\.$ast, to: exp.ast)
+                .set(\.$map, to: exp.map)
                 .set(\.$expression, to: exp.expression)
         }
     }
@@ -125,13 +127,13 @@ public extension DTO.Domain.Updater {
 
 public extension DTO.Domain.Updater {
     mutating
-    func update(expression: @escaping (DTO.Domain<DTO.Queried>) throws -> PrivilegeExpression) {
+    func update(censor: @escaping (DTO.Domain<DTO.Queried>) throws -> DTO.Censor<DTO.Prepare>) {
         needsPeek = true
-        updates[\.expression] = { builder, query in
+        updates[\.censor] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            let exp = try expression(q)
+            let exp = try censor(q)
             return builder
-                .set(\.$ast, to: exp.ast)
+                .set(\.$map, to: exp.map)
                 .set(\.$expression, to: exp.expression)
         }
     }

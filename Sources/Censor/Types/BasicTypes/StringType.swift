@@ -102,7 +102,7 @@ public extension Censor {
             "like": .init { .succ($0[0].cast(as: String.self).like($0[1].cast())) }
         ]
         
-        public static let infixOpActions: [Censor.Operator.Infix : [String : ExecutableAction]] = [
+        public static let infixOpActions: [Operator.Infix : [String : ExecutableAction]] = [
             .plus: [
                 StringType.name: .init { .succ($0[0].cast(as: String.self) + $0[1].cast(as: String.self)) },
                 CharacterType.name: .init { .succ($0[0].cast(as: String.self) + String($0[1].cast(as: Character.self))) },

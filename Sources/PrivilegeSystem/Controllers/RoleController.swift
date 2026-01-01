@@ -27,7 +27,7 @@ extension PrivilegeSystem {
                 models: roles,
                 label: "角色",
                 errThrowing: .roleCreateFailed,
-                aclBuilder: { $0.expression.ast.toACL(Role.self) },
+                aclBuilder: { $0.censor.ast.toACL(Role.self) },
                 modelBuilder: { $0.raw(aclId: $1) },
                 dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
             )

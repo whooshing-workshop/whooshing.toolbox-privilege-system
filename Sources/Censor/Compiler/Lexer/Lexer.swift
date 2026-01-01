@@ -37,6 +37,13 @@ extension Censor.Compiler {
 }
 
 private extension Censor.Compiler.Lexer {
+    typealias TrieNode = Censor.Compiler.TrieNode
+    typealias Token = Censor.Compiler.Token
+    typealias Literal = Token.Literal
+    typealias Extra = Token.Extra
+}
+
+private extension Censor.Compiler.Lexer {
     var atEnd: Bool {
         indexCurrent == source.endIndex
     }
@@ -101,12 +108,15 @@ private extension Censor.Compiler.Lexer {
 }
 
 private extension Censor.Compiler.Lexer {
-    typealias TrieNode = Censor.Compiler.TrieNode
     func scanToken() {
         guard let char = peek(at: 0) else { return }
         guard !char.isWhitespace else { _ = advance(); return }
         guard !scanSymbol() else { return }
         guard !scanLiteral() else { return }
+        
+        reportError("非预期的字符: \(char)")
+        let c = advance()
+        add(token: Extra.invalid, lexeme: String(c))
     }
     
     func scanSymbol() -> Bool {
@@ -153,28 +163,22 @@ private extension Censor.Compiler.Lexer {
         guard let char = peek(at: 0) else { return false }
         
         // 1. String: "XXX"
-        if char == "\"" {
-            return scanString()
-        }
+        if char == "\"" { return scanString() }
         
         // 2. Character or Date: 'x' or '2025-01-25...'
-        if char == "'" {
-            return scanSingleQuoteLiteral()
-        }
+        if char == "'" { return scanSingleQuoteLiteral() }
         
         // 3. Number: 123 or 123.3
-        if char.isNumber {
-            return scanNumber()
-        }
+        if char.isNumber { return scanNumber() }
         
         // 4. Bool & Keywords: true, false
-        if char.isLetter || char == "_" {
-            return scanIdentifier() // 内部通过关键字表匹配 true/false
-        }
+        if char.isLetter || char == "_" { return scanIdentifier() }
         
         return false
     }
-    
+}
+
+private extension Censor.Compiler.Lexer {
     func scanString() -> Bool {
         // 1. 此时主指针 indexCurrent 在第一个 "
         _ = advance()
@@ -212,7 +216,7 @@ private extension Censor.Compiler.Lexer {
         _ = advance()
         
         // 5. 添加 Token。注意：lexeme 建议保留原始引号以供调试
-        add(token: Censor.Compiler.Token.Literal.string(value), lexeme: "\"\(value)\"")
+        add(token: Literal.string(Censor.StringType(nullable: false).make(value)), lexeme: "\"\(value)\"")
         return true
     }
     
@@ -230,13 +234,13 @@ private extension Censor.Compiler.Lexer {
         _ = advance() // 消费结尾 '
 
         if content.count == 1 {
-            add(token: Censor.Compiler.Token.Literal.character(content.first!), lexeme: "'\(content)'")
+            add(token: Literal.character(Censor.CharacterType(nullable: false).make(content.first!)), lexeme: "'\(content)'")
         } else {
             guard let date = Censor.DateType.dateFormatter.date(from: content) else {
                 reportError("日期格式错误，请遵循 ISO8601 日期格式，如 \"2025-01-25T09:33\"")
                 return true
             }
-            add(token: Censor.Compiler.Token.Literal.date(date), lexeme: "'\(content)'")
+            add(token: Literal.date(Censor.DateType(nullable: false).make(date)), lexeme: "'\(content)'")
         }
         return true
     }
@@ -265,14 +269,14 @@ private extension Censor.Compiler.Lexer {
                 return true
             }
             
-            add(token: Censor.Compiler.Token.Literal.decimal(decimal), lexeme: lexeme)
+            add(token: Literal.decimal(Censor.DecimalType(nullable: false).make(decimal)), lexeme: lexeme)
         } else {
             guard let num = Int64(lexeme) else {
                 reportError("整数识别失败，格式有误")
                 return true
             }
             
-            add(token: Censor.Compiler.Token.Literal.integer(num), lexeme: lexeme)
+            add(token: Literal.integer(Censor.IntegerType(nullable: false).make(num)), lexeme: lexeme)
         }
         return true
     }
@@ -290,11 +294,11 @@ private extension Censor.Compiler.Lexer {
         
         // 3. 关键字检查 (Keyword Lookup)
         // 检查这个 lexeme 是否在 Keyword Map 中
-        if let keywordType = Censor.Compiler.Token.Keyword(rawValue: lexeme)?.token {
+        if let keywordType = Censor.Keyword(rawValue: lexeme)?.token {
             add(token: keywordType, lexeme: lexeme)
         } else {
             // 否则，它就是一个标识符
-            add(token: Censor.Compiler.Token.Extra.identifier(lexeme), lexeme: lexeme)
+            add(token: Extra.identifier(lexeme), lexeme: lexeme)
         }
         
         return true
