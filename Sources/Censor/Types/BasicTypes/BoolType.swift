@@ -8,9 +8,9 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asString": .init { StringType(nullable: false) },
-            "asInteger": .init { IntegerType(nullable: false) },
-            "asDecimal": .init { DecimalType(nullable: false) }
+            "asString": .init(returns: StringType(nullable: false)),
+            "asInteger": .init(returns: IntegerType(nullable: false)),
+            "asDecimal": .init(returns: DecimalType(nullable: false))
         ]
         
         public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
@@ -18,21 +18,21 @@ public extension Censor {
                 .init {
                     Return { BoolType(nullable: false) }
                     true
-                    BoolType(nullable: true)
+                    Right { BoolType(nullable: true) }
                 }
             ],
             .and: [
                 .init {
                     Return { BoolType(nullable: false) }
                     false
-                    BoolType(nullable: false)
+                    Right { BoolType(nullable: false) }
                 }
             ],
             .or: [
                 .init {
                     Return { BoolType(nullable: false) }
                     false
-                    BoolType(nullable: false)
+                    Right { BoolType(nullable: false) }
                 }
             ]
         ]

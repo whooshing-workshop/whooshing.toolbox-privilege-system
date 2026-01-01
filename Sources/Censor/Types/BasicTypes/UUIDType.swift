@@ -8,11 +8,11 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asString": .init { StringType(nullable: false) }
+            "asString": .init(returns: StringType(nullable: false))
         ]
         
         public let staticProperties: [String : PropertyDeclare] = [
-            "new": .init { UUIDType(nullable: false) }
+            "new": .init(returns: UUIDType(nullable: false))
         ]
         
         public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
@@ -20,7 +20,7 @@ public extension Censor {
                 .init {
                     Return { BoolType(nullable: false) }
                     true
-                    UUIDType(nullable: true)
+                    Right { UUIDType(nullable: true) }
                 }
             ]
         ]

@@ -24,25 +24,42 @@ extension Censor.Compiler {
 }
 
 extension Censor.Compiler.Error {
-    func prettyPrint(in source: String) {
-        let lineIndex = range.start.line
+    func prettyDescription(in source: String) -> String {
         let lines = source.components(separatedBy: .newlines)
+        let startLoc = range.start
+        let endLoc = range.end
         
+        let lineIndex = startLoc.line
         guard lineIndex > 0 && lineIndex <= lines.count else {
-            print(description)
-            return
+            return " [\(range.description)] \(message)"
         }
         
         let errorLine = lines[lineIndex - 1]
-        let column = range.start.column
+        let lineNumStr = "\(lineIndex)"
+        let gutter = " \(lineNumStr) │ "
         
-        print("--------------------------------------------------")
-        print(description)
-        print("\(lineIndex) | \(errorLine)")
+        var output = ""
+        output += " 位置: \(range.description)\n"
+        output += " 错误: \(message)\n"
+        output += "\(gutter)\(errorLine)\n"
         
-        // 打印指向符 ^
-        let padding = String(repeating: " ", count: String(lineIndex).count + 3 + column - 1)
-        print("\(padding)^")
-        print("--------------------------------------------------")
+        // 计算对齐空格：gutter 的宽度 + startLoc.column - 1
+        let leadingPadding = String(repeating: " ", count: gutter.count + startLoc.column - 1)
+        
+        var marker = "^"
+        if startLoc.line == endLoc.line {
+            let length = max(0, endLoc.column - startLoc.column)
+            marker += String(repeating: "~", count: length)
+        } else {
+            let length = max(0, errorLine.count - startLoc.column)
+            marker += String(repeating: "~", count: length) + "..."
+        }
+        
+        output += "\(leadingPadding)\(marker)"
+        return output
     }
+}
+
+extension Censor.Compiler.Error.Kind {
+    var description: String { self.rawValue }
 }

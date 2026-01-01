@@ -8,9 +8,9 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asString": .init { StringType(nullable: false) },
-            "asDate": .init { DateType(nullable: false) },
-            "asDecimal": .init { DecimalType(nullable: false) }
+            "asString": .init(returns: StringType(nullable: false)),
+            "asDate": .init(returns: DateType(nullable: false)),
+            "asDecimal": .init(returns: DecimalType(nullable: false))
         ]
         
         public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
@@ -18,91 +18,91 @@ public extension Censor {
                 .init {
                     Return { IntegerType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .minus: [
                 .init {
                     Return { IntegerType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .multi: [
                 .init {
                     Return { IntegerType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .divide: [
                 .init {
                     Return { IntegerType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .mode: [
                 .init {
                     Return { IntegerType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 }
             ],
             .exp: [
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DecimalType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .equal: [
                 .init {
                     Return { BoolType(nullable: false) }
                     true
-                    IntegerType(nullable: true)
+                    Right { IntegerType(nullable: true) }
                 },
                 .init {
                     Return { BoolType(nullable: false) }
                     true
-                    DecimalType(nullable: true)
+                    Right { DecimalType(nullable: true) }
                 }
             ],
             .less: [
                 .init {
                     Return { BoolType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { BoolType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ]
         ]

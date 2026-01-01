@@ -23,12 +23,18 @@ extension Censor.Compiler {
         case left, right
     }
     
-    enum BracketType {
-        case parenth, square
+    enum BracketType: String, CustomStringConvertible {
+        case parenth = "PAREN"
+        case square = "SQUARE"
+        
+        var description: String { self.rawValue }
     }
     
-    enum TernaryPart {
-        case question, colon
+    enum TernaryPart: String, CustomStringConvertible {
+        case question = "QUEST"
+        case colon = "COLON"
+        
+        var description: String { self.rawValue }
     }
     
     struct SourceLocation: Sendable, Equatable {
@@ -55,6 +61,7 @@ extension Censor.Compiler {
             case uuid(Censor.Variable<Censor.UUIDType>)
             case bool(Censor.Variable<Censor.BoolType>)
             case trueType(Censor.Variable<Censor.TrueType>)
+            case identifier(String)
         }
         
         enum Symbol: TokenType {
@@ -95,7 +102,6 @@ extension Censor.Compiler {
         }
         
         enum Extra: TokenType {
-            case identifier(String)
             case scope
             case eof
             case invalid

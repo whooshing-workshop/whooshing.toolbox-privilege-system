@@ -9,19 +9,19 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asString": .init { StringType(nullable: false) },
-            "timeIntervalSince1970": .init { IntegerType(nullable: false) }
+            "asString": .init(returns: StringType(nullable: false)),
+            "timeIntervalSince1970": .init(returns: IntegerType(nullable: false))
         ]
         
         public static let staticProperties: [String : PropertyDeclare] = [
-            "now": .init { DateType(nullable: false) }
+            "now": .init(returns: DateType(nullable: false))
         ]
         
         public let functions: [String : FunctionDeclare] = [
             "timeInterval": .init {
                 Return { IntegerType(nullable: false) }
                 ArgumentDeclare {
-                    ("since", DateType(nullable: false)) >- nil
+                    ("since", { DateType(nullable: false) }) >- nil
                 }
             }
         ]
@@ -31,38 +31,38 @@ public extension Censor {
                 .init {
                     Return { DateType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DateType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .minus: [
                 .init {
                     Return { DateType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { DateType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 }
             ],
             .equal: [
                 .init {
                     Return { BoolType(nullable: false) }
                     true
-                    DateType(nullable: true)
+                    Right { DateType(nullable: true) }
                 }
             ],
             .less: [
                 .init {
                     Return { BoolType(nullable: false) }
                     false
-                    DateType(nullable: false)
+                    Right { DateType(nullable: false) }
                 }
             ]
         ]

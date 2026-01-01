@@ -2,25 +2,21 @@ import ErrorHandle
 
 public extension Censor {
     struct PropertyDeclare: Sendable {
-        public let returns: any TypeDeclare
+        public let returns: @Sendable () -> any TypeDeclare
         
-        init(
-            returns: any TypeDeclare
+        public init(
+            returns: @Sendable @escaping @autoclosure () -> any TypeDeclare
         ) {
             self.returns = returns
-        }
-        
-        public init(@PropertyBuilder _ content: () -> Self) {
-            self = content()
         }
     }
     
     struct FunctionDeclare: Sendable {
-        public let returns: any TypeDeclare
+        public let returns: @Sendable () -> any TypeDeclare
         public let argument: ArgumentDeclare
         
-        init(
-            returns: any TypeDeclare,
+        fileprivate init(
+            returns: @Sendable @escaping () -> any TypeDeclare,
             argument: ArgumentDeclare
         ) {
             self.returns = returns
@@ -33,18 +29,9 @@ public extension Censor {
     }
     
     @resultBuilder
-    struct PropertyBuilder {
-        public static func buildBlock(
-            _ returns: any TypeDeclare
-        ) -> PropertyDeclare {
-            .init(returns: returns)
-        }
-    }
-    
-    @resultBuilder
     struct FunctionBuilder {
         public static func buildBlock(
-            _ returns: any TypeDeclare,
+            _ returns: @Sendable @escaping () -> any TypeDeclare,
             _ argument: ArgumentDeclare
         ) -> FunctionDeclare {
             .init(returns: returns, argument: argument)
@@ -54,10 +41,10 @@ public extension Censor {
     enum OperationDeclare {
         public struct Prefix: Sendable {
             public let selfNullable: Bool
-            public let returns: any TypeDeclare
+            public let returns: @Sendable () -> any TypeDeclare
             
             init(
-                returns: any TypeDeclare,
+                returns: @Sendable @escaping () -> any TypeDeclare,
                 selfNullable: Bool
             ) {
                 self.returns = returns
@@ -71,10 +58,10 @@ public extension Censor {
 
         public struct Suffix: Sendable {
             public let selfNullable: Bool
-            public let returns: any TypeDeclare
+            public let returns: @Sendable () -> any TypeDeclare
             
             init(
-                returns: any TypeDeclare,
+                returns: @Sendable @escaping () -> any TypeDeclare,
                 selfNullable: Bool
             ) {
                 self.returns = returns
@@ -88,13 +75,13 @@ public extension Censor {
 
         public struct Infix: Sendable {
             public let selfNullable: Bool
-            public let returns: any TypeDeclare
-            public let right: any TypeDeclare
+            public let returns: @Sendable () -> any TypeDeclare
+            public let right: @Sendable () -> any TypeDeclare
             
             init(
-                returns: any TypeDeclare,
+                returns: @Sendable @escaping () -> any TypeDeclare,
                 selfNullable: Bool,
-                right: any TypeDeclare
+                right: @Sendable @escaping () -> any TypeDeclare
             ) {
                 self.returns = returns
                 self.selfNullable = selfNullable
@@ -109,9 +96,9 @@ public extension Censor {
         @resultBuilder
         public struct InfixBuilder {
             public static func buildBlock(
-                _ returns: any TypeDeclare,
+                _ returns: @Sendable @escaping () -> any TypeDeclare,
                 _ selfNullable: Bool,
-                _ right: any TypeDeclare
+                _ right: @Sendable @escaping () -> any TypeDeclare
             ) -> OperationDeclare.Infix {
                 .init(returns: returns, selfNullable: selfNullable, right: right)
             }
@@ -120,7 +107,7 @@ public extension Censor {
         @resultBuilder
         public struct PrefixBuilder {
             public static func buildBlock(
-                _ returns: any TypeDeclare,
+                _ returns: @Sendable @escaping () -> any TypeDeclare,
                 _ selfNullable: Bool
             ) -> OperationDeclare.Prefix {
                 .init(returns: returns, selfNullable: selfNullable)
@@ -130,7 +117,7 @@ public extension Censor {
         @resultBuilder
         public struct SuffixBuilder {
             public static func buildBlock(
-                _ returns: any TypeDeclare,
+                _ returns: @Sendable @escaping () -> any TypeDeclare,
                 _ selfNullable: Bool
             ) -> OperationDeclare.Suffix {
                 .init(returns: returns, selfNullable: selfNullable)
@@ -138,5 +125,6 @@ public extension Censor {
         }
     }
 
-    static func Return(_ type: @Sendable @escaping () -> any TypeDeclare) -> any TypeDeclare { type() }
+    static func Right(_ type: @Sendable @escaping () -> any TypeDeclare) -> @Sendable () -> any TypeDeclare { type }
+    static func Return(_ type: @Sendable @escaping () -> any TypeDeclare) -> @Sendable () -> any TypeDeclare { type }
 }

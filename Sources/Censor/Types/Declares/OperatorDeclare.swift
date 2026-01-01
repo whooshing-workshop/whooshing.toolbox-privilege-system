@@ -118,3 +118,25 @@ public extension Censor.Operator {
         }
     }
 }
+
+// MARK: - Log Descriptions
+extension Censor.Operator.Infix: CustomStringConvertible {
+    public var description: String {
+        // 返回如: INFIX(+)
+        return "Infix(\(self.rawValue))"
+    }
+}
+
+extension Censor.Operator.Prefix: CustomStringConvertible {
+    public var description: String {
+        // 返回如: PREFIX(-)
+        return "Prefix(\(self.rawValue))"
+    }
+}
+
+extension Censor.Operator.Postfix: CustomStringConvertible {
+    public var description: String {
+        // 返回如: POSTFIX(~)
+        return "Postfix(\(self.rawValue))"
+    }
+}

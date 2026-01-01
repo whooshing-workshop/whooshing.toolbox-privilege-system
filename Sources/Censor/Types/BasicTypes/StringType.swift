@@ -9,20 +9,20 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asInteger": .init { IntegerType(nullable: true) },
-            "asDecimal": .init { DecimalType(nullable: true) },
-            "asDate": .init { DateType(nullable: true) },
-            "asBool": .init { BoolType(nullable: true) },
-            "asUUID": .init { UUIDType(nullable: true) },
-            "count": .init { IntegerType(nullable: false) },
-            "last": .init { CharacterType(nullable: true) }
+            "asInteger": .init(returns: IntegerType(nullable: true)),
+            "asDecimal": .init(returns: DecimalType(nullable: true)),
+            "asDate": .init(returns: DateType(nullable: true)),
+            "asBool": .init(returns: BoolType(nullable: true)),
+            "asUUID": .init(returns: UUIDType(nullable: true)),
+            "count": .init(returns: IntegerType(nullable: false)),
+            "last": .init(returns: CharacterType(nullable: true))
         ]
         
         public let functions: [String : FunctionDeclare] = [
             "like": .init {
                 Return { BoolType(nullable: false) }
                 ArgumentDeclare {
-                    (nil, StringType(nullable: false)) >- nil
+                    (nil, { StringType(nullable: false) }) >- nil
                 }
             }
         ]
@@ -32,58 +32,58 @@ public extension Censor {
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    StringType(nullable: false)
+                    Right { StringType(nullable: false) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    CharacterType(nullable: false)
+                    Right { CharacterType(nullable: false) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    DecimalType(nullable: false)
+                    Right { DecimalType(nullable: false) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    DateType(nullable: false)
+                    Right { DateType(nullable: false) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    UUIDType(nullable: false)
+                    Right { UUIDType(nullable: false) }
                 },
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    BoolType(nullable: false)
+                    Right { BoolType(nullable: false) }
                 }
             ],
             .multi: [
                 .init {
                     Return { StringType(nullable: false) }
                     false
-                    IntegerType(nullable: false)
+                    Right { IntegerType(nullable: false) }
                 }
             ],
             .equal: [
                 .init {
                     Return { BoolType(nullable: false) }
                     true
-                    StringType(nullable: true)
+                    Right { StringType(nullable: true) }
                 }
             ],
             .less: [
                 .init {
                     Return { BoolType(nullable: false) }
                     false
-                    StringType(nullable: false)
+                    Right { StringType(nullable: false) }
                 }
             ]
         ]

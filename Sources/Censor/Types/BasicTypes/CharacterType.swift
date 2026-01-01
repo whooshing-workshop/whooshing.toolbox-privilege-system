@@ -8,7 +8,7 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asString": .init { StringType(nullable: false) }
+            "asString": .init(returns: StringType(nullable: false))
         ]
         
         public static let propertyActions: [String : ExecutableAction] = [

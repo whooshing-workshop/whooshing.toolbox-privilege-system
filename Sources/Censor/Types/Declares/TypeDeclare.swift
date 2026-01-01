@@ -17,7 +17,7 @@ public extension Censor {
         static var staticFunctions: [String: FunctionDeclare] { get }
         
         var prefixOperations: [Operator.Prefix: OperationDeclare.Prefix] { get }
-        var suffixOperations: [Operator.Postfix: OperationDeclare.Suffix] { get }
+        var postfixOperations: [Operator.Postfix: OperationDeclare.Suffix] { get }
         var infixOperations: [Operator.Infix: [OperationDeclare.Infix]] { get }
         
         static var propertyActions: [String: ExecutableAction] { get }
@@ -27,7 +27,7 @@ public extension Censor {
         static var staticFunctionActions: [String: ExecutableAction] { get }
         
         static var prefixOpActions: [Operator.Prefix: ExecutableAction] { get }
-        static var suffixOpActions: [Operator.Postfix: ExecutableAction] { get }
+        static var postfixOpActions: [Operator.Postfix: ExecutableAction] { get }
         static var infixOpActions: [Operator.Infix: [String: ExecutableAction]] { get }
         
         func isMatch(value: Censor.Value) -> Bool
@@ -65,7 +65,7 @@ public extension Censor.TypeDeclare {
     static var staticFunctions: [String: Censor.FunctionDeclare] { [:] }
     
     var prefixOperations: [Censor.Operator.Prefix: Censor.OperationDeclare.Prefix] { [:] }
-    var suffixOperations: [Censor.Operator.Postfix: Censor.OperationDeclare.Suffix] { [:] }
+    var postfixOperations: [Censor.Operator.Postfix: Censor.OperationDeclare.Suffix] { [:] }
     var infixOperations: [Censor.Operator.Infix: [Censor.OperationDeclare.Infix]] { [:] }
     
     static var propertyActions: [String: Censor.ExecutableAction] { [:] }
@@ -74,7 +74,7 @@ public extension Censor.TypeDeclare {
     static var staticFunctionActions: [String: Censor.ExecutableAction] { [:] }
     
     static var prefixOpActions: [Censor.Operator.Prefix: Censor.ExecutableAction] { [:] }
-    static var suffixOpActions: [Censor.Operator.Postfix: Censor.ExecutableAction] { [:] }
+    static var postfixOpActions: [Censor.Operator.Postfix: Censor.ExecutableAction] { [:] }
     static var infixOpActions: [Censor.Operator.Infix: [String: Censor.ExecutableAction]] { [:] }
     
     func set(nullable: Bool) -> Self {

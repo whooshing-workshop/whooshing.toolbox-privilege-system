@@ -31,7 +31,7 @@ extension Censor.Compiler {
             }
             
             add(token: Token.Extra.eof, lexeme: "")
-            return .init(tokens: tokens, diagnostics: errors)
+            return .init(tokens: tokens, diagnostics: errors, source: source)
         }
     }
 }
@@ -48,11 +48,6 @@ private extension Censor.Compiler.Lexer {
         indexCurrent == source.endIndex
     }
     
-    var previousSpaceSign: Character {
-        guard let last = lastChar else { return TrieNode.N }
-        return last == " " ? TrieNode.S : TrieNode.N
-    }
-    
     func advance(times: Int = 1) -> Character {
         guard times > 0 else { preconditionFailure("至少消费一个字符") }
         
@@ -63,8 +58,8 @@ private extension Censor.Compiler.Lexer {
         return c!
         
         func advance() -> Character {
-            lastChar = current == 0 ? nil : source[source.index(before: indexCurrent)]
             let c = source[indexCurrent]
+            lastChar = c
             indexCurrent = source.index(after: indexCurrent)
             current += 1
             
@@ -93,9 +88,8 @@ private extension Censor.Compiler.Lexer {
         return source[targetIndex]
     }
     
-    func reportError(_ message: String, kind: Censor.Compiler.Error.Kind = .lexical) {
-        let endLocation = currentLocation
-        let errorRange = Censor.Compiler.SourceRange(start: currentLocation, end: endLocation)
+    func reportError(_ message: String, start: Censor.Compiler.SourceLocation, kind: Censor.Compiler.Error.Kind = .lexical) {
+        let errorRange = Censor.Compiler.SourceRange(start: start, end: currentLocation)
         
         let error = Censor.Compiler.Error(
             kind: kind,
@@ -104,6 +98,58 @@ private extension Censor.Compiler.Lexer {
             snippet: nil
         )
         errors.append(error)
+        
+        if !atEnd { _ = advance() }
+    }
+}
+
+private extension Censor.Compiler.Lexer {
+    /// 判定一个字符是否属于“字面量/变量”范畴（用于匹配 ■ 和 □）
+    func isLiteralAttribute(_ char: Character?) -> Bool {
+        guard let c = char else { return false }
+        // 字母、数字、下划线，以及闭合括号都被视为字面量属性的延续/结尾
+        return c.isLetter || c.isNumber || c == "_" || c == ")" || c == "]" || c == "'"
+    }
+
+    /// 根据左侧上下文，获取 Trie 树的起始 Sign
+    var leftContextSign: Character {
+        let isPrevLit = tokens.last?.type is Literal
+        let isPrevSpace = lastChar == " "
+        
+        if isPrevLit {
+            return isPrevSpace ? TrieNode.Sign.all.rawValue     // □ (Lit && Space)
+                               : TrieNode.Sign.literal.rawValue // ■ (Lit && !Space)
+        } else {
+            return isPrevSpace ? TrieNode.Sign.space.rawValue   // ○ (!Lit && Space)
+                               : TrieNode.Sign.none.rawValue    // ● (!Lit && !Space)
+        }
+    }
+
+    /// 根据右侧上下文（peek），获取 Trie 树的结束 Sign
+    func rightContextSign(at matchLength: Int) -> Character {
+        guard let nextChar = peek(at: matchLength) else { return TrieNode.Sign.space.rawValue }
+        let isNextSpace = nextChar.isWhitespace
+        var isNextLit: Bool = false
+        if isNextSpace {
+            var i = matchLength + 1
+            while let c = peek(at: i) {
+                if !c.isWhitespace {
+                    isNextLit = isLiteralAttribute(c)
+                    break
+                }
+                i += 1
+            }
+        } else {
+            isNextLit = isLiteralAttribute(nextChar)
+        }
+        
+        if isNextLit {
+            return isNextSpace ? TrieNode.Sign.all.rawValue     // □
+                               : TrieNode.Sign.literal.rawValue // ■
+        } else {
+            return isNextSpace ? TrieNode.Sign.space.rawValue   // ○
+                               : TrieNode.Sign.none.rawValue    // ●
+        }
     }
 }
 
@@ -114,49 +160,45 @@ private extension Censor.Compiler.Lexer {
         guard !scanSymbol() else { return }
         guard !scanLiteral() else { return }
         
-        reportError("非预期的字符: \(char)")
-        let c = advance()
-        add(token: Extra.invalid, lexeme: String(c))
+        reportError("非预期的字符: \(char)", start: currentLocation)
+        add(token: Extra.invalid, lexeme: String(char))
     }
     
     func scanSymbol() -> Bool {
-        // 1. 根据左侧上下文选择 Trie 分支
-        guard var currentNode = TrieNode.root.children[previousSpaceSign] else {
+        // 1. 根据左侧物理环境（是否是字面量、是否有空格）选择 Trie 的第一层入口
+        guard var currentNode = TrieNode.root.children[leftContextSign] else {
             return false
         }
-        
+//        print(current, leftContextSign)
         var matchLength = 0
         var bestMatch: (symbol: Censor.Compiler.TrieSymbol, length: Int)? = nil
         
-        // 2. 深度探测符号字符
-        // 注意：matchLength 为 0 时 peek(at: 0) 是符号第一个字符
-        while
-            let currentChar = peek(at: matchLength),
-            let nextNode = currentNode.children[currentChar]
-        {
+        // 2. 深度探测符号内容
+        while let currentChar = peek(at: matchLength),
+              let nextNode = currentNode.children[currentChar] {
             
             currentNode = nextNode
             matchLength += 1
             
-            // 3. 每走一步，都尝试匹配后续的“右侧空格上下文”
-            // 探测：“在当前这个空格语境下，这个符号路径是否已经到头了？”
-            let nextChar = peek(at: matchLength)
-            let nextSign: Character = (nextChar?.isWhitespace ?? true) ? TrieNode.S : TrieNode.N
+            // 3. 核心：每前进一个字符，都探测其“后置约束”是否满足
+            // 比如符号后是一个数字且无空格，则对应的 Sign 是 ■ (Literal && !Space)
+            let sign = rightContextSign(at: matchLength)
+//            print(current, matchLength + current, sign)
             
-            // 注意：这里用 if let 而不是 guard
-            // 即使当前节点不是终点，我们也要继续往后看，因为更长的符号可能在后面
-            if let found = currentNode.children[nextSign]?.symbol {
-                // 记录当前最长的合法匹配
+            if let found = currentNode.children[sign]?.symbol {
+                // 贪婪匹配：记录当前最长路径
                 bestMatch = (found, matchLength)
             }
         }
         
-        // 4. 提交匹配结果
-        guard let result = bestMatch else { return false }
+        // 4. 提交结果
+        if let result = bestMatch {
+            _ = advance(times: result.length)
+            add(token: result.symbol.symbol, lexeme: result.symbol.lexeme)
+            return true
+        }
         
-        _ = advance(times: result.length)
-        add(token: result.symbol.symbol, lexeme: result.symbol.lexeme)
-        return true
+        return false
     }
     
     func scanLiteral() -> Bool {
@@ -180,15 +222,12 @@ private extension Censor.Compiler.Lexer {
 
 private extension Censor.Compiler.Lexer {
     func scanString() -> Bool {
-        // 1. 此时主指针 indexCurrent 在第一个 "
+        let startLocation = currentLocation
         _ = advance()
         var value = ""
         
-        var closed = false
-        // 2. 只要没到结尾且没看到闭合引号，就一直走
-        while !atEnd {
-            guard peek(at: 0) != "\"" else { closed = true; break; }
-            
+        // 只要没到结尾且没看到闭合引号，就一直走
+        while !atEnd && peek(at: 0) != "\"" {
             let char = advance()
             
             if char == "\\" {
@@ -198,29 +237,29 @@ private extension Censor.Compiler.Lexer {
                 case "n": value.append("\n")
                 case "\"": value.append("\"")
                 case "\\": value.append("\\")
-                default: reportError("无效的转义序列: \\\(escaped)")
+                default: reportError("无效的转义序列: \\\(escaped)", start: currentLocation)
                 }
             } else {
                 value.append(char)
             }
         }
         
-        // 3. 退出循环后，检查是否是因为遇到了闭合引号
-        guard closed else {
-            reportError("未闭合的字符串字面量")
+        // 退出循环后，检查是否是因为遇到了闭合引号
+        guard !atEnd else {
+            reportError("未闭合的字符串字面量", start: startLocation)
             // 这里不需要 addToken，因为是不完整的
             return true
         }
         
-        // 4. 消费掉最后的闭合引号
+        // 消费掉最后的闭合引号
         _ = advance()
         
-        // 5. 添加 Token。注意：lexeme 建议保留原始引号以供调试
         add(token: Literal.string(Censor.StringType(nullable: false).make(value)), lexeme: "\"\(value)\"")
         return true
     }
     
     func scanSingleQuoteLiteral() -> Bool {
+        let startLocation = currentLocation
         _ = advance() // 消费 '
         var content = ""
         while !atEnd && peek(at: 0) != "'" {
@@ -228,24 +267,26 @@ private extension Censor.Compiler.Lexer {
         }
         
         guard !atEnd else {
-            reportError("未闭合的单引号字面量")
+            reportError("未闭合的单引号字面量", start: startLocation)
             return true
         }
-        _ = advance() // 消费结尾 '
 
         if content.count == 1 {
             add(token: Literal.character(Censor.CharacterType(nullable: false).make(content.first!)), lexeme: "'\(content)'")
         } else {
             guard let date = Censor.DateType.dateFormatter.date(from: content) else {
-                reportError("日期格式错误，请遵循 ISO8601 日期格式，如 \"2025-01-25T09:33\"")
+                reportError("日期格式错误，请遵循 ISO8601 日期格式，如 '2025-01-25T09:30:00Z'", start: startLocation)
                 return true
             }
             add(token: Literal.date(Censor.DateType(nullable: false).make(date)), lexeme: "'\(content)'")
         }
+        
+        _ = advance() // 消费结尾 '
         return true
     }
     
     func scanNumber() -> Bool {
+        let startLocation = currentLocation
         let startIndex = indexCurrent
         var hasDecimal = false
         
@@ -265,14 +306,14 @@ private extension Censor.Compiler.Lexer {
         let lexeme = String(source[startIndex..<indexCurrent])
         if hasDecimal {
             guard let decimal = Decimal(string: lexeme) else {
-                reportError("小数识别失败，格式有误")
+                reportError("小数识别失败，格式有误", start: startLocation)
                 return true
             }
             
             add(token: Literal.decimal(Censor.DecimalType(nullable: false).make(decimal)), lexeme: lexeme)
         } else {
             guard let num = Int64(lexeme) else {
-                reportError("整数识别失败，格式有误")
+                reportError("整数识别失败，格式有误", start: startLocation)
                 return true
             }
             
@@ -298,7 +339,7 @@ private extension Censor.Compiler.Lexer {
             add(token: keywordType, lexeme: lexeme)
         } else {
             // 否则，它就是一个标识符
-            add(token: Extra.identifier(lexeme), lexeme: lexeme)
+            add(token: Literal.identifier(lexeme), lexeme: lexeme)
         }
         
         return true
@@ -309,6 +350,7 @@ extension Censor.Compiler.Lexer {
     struct Result {
         let tokens: [Censor.Compiler.Token]
         let diagnostics: [Censor.Compiler.Error]
+        let source: String
         
         /// 是否存在足以中断编译的严重错误
         var hasErrors: Bool {

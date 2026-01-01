@@ -72,6 +72,13 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "censor-tests",
+            dependencies: [
+                .target(name: "Censor"),
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+            ]
+        ),
+        .testTarget(
             name: "toolbox-privilege-system-Tests",
             dependencies: [
                 .target(name: "PrivilegeSystem"),

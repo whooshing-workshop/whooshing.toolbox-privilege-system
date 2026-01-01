@@ -15,7 +15,7 @@ public extension Censor {
         case chain(content:Self, next: Self)
         case scope(domain: String, content: Self)
         case prefix(operator: Operator.Prefix, right: Self)
-        case suffix(operator: Operator.Postfix, left: Self)
+        case postfix(operator: Operator.Postfix, left: Self)
         case infix(operator: Operator.Infix, left: Self, right: Self)
         
         public enum StoringType: Sendable {
@@ -198,7 +198,7 @@ public extension Censor.AST {
 
             return res
 
-        case .suffix(let op, let left):
+        case .postfix(let op, let left):
             acl.type = .suffix
             acl.op = op.rawValue
 

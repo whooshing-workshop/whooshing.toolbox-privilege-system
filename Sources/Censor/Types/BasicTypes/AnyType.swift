@@ -8,13 +8,13 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "asString": .init { StringType(nullable: true) },
-            "asCharacter": .init { CharacterType(nullable: true) },
-            "asInteger": .init { IntegerType(nullable: true) },
-            "asDecimal": .init { DecimalType(nullable: true) },
-            "asDate": .init { DateType(nullable: true) },
-            "asUUID": .init { UUIDType(nullable: true) },
-            "asBool": .init { BoolType(nullable: true) }
+            "asString": .init(returns: StringType(nullable: true)),
+            "asCharacter": .init(returns: CharacterType(nullable: true)),
+            "asInteger": .init(returns: IntegerType(nullable: true)),
+            "asDecimal": .init(returns: DecimalType(nullable: true)),
+            "asDate": .init(returns: DateType(nullable: true)),
+            "asUUID": .init(returns: UUIDType(nullable: true)),
+            "asBool": .init(returns: BoolType(nullable: true))
         ]
         
         public static let propertyActions: [String : ExecutableAction] = [

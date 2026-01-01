@@ -85,9 +85,9 @@ public extension Censor {
         public let nullable: Bool
         
         public let properties: [String : PropertyDeclare] = [
-            "count": .init { IntegerType(nullable: false) },
-            "first": .init { Element(nullable: true) },
-            "last": .init { Element(nullable: true) }
+            "count": .init(returns: IntegerType(nullable: false)),
+            "first": .init(returns: Element(nullable: true)),
+            "last": .init(returns: Element(nullable: true))
         ]
         
         public static var propertyActions: [String : ExecutableAction] {

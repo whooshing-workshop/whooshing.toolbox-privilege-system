@@ -3,12 +3,12 @@ import ErrorHandle
 extension Censor {
     public struct ArgumentDeclare: Sendable {
         public let labels: [String?]
-        public let types: [any TypeDeclare]
+        public let types: [@Sendable () -> any TypeDeclare]
         public let defaults: [Value?]
         
         public struct Define: Sendable {
             public let label: String?
-            public let type: any TypeDeclare
+            public let type: @Sendable() -> any TypeDeclare
             public let `default`: Value?
         }
         
@@ -17,7 +17,7 @@ extension Censor {
             _ components: () -> [ArgumentDeclare.Define]
         ) {
             var labels: [String?] = []
-            var types: [any TypeDeclare] = []
+            var types: [@Sendable () -> any TypeDeclare] = []
             var defaults: [Value?] = []
             for define in components() {
                 labels.append(define.label)
@@ -41,8 +41,8 @@ extension Censor {
                     return .failure(.argumentValueAssignFailed, "第 \(i) 参数未赋值", category: .external)
                 }
                 
-                guard types[i].isMatch(value: v) else {
-                    return .failure(.argumentValueAssignFailed, "无法将 \(log: v) 赋值与 \(types[i])", category: .external)
+                guard types[i]().isMatch(value: v) else {
+                    return .failure(.argumentValueAssignFailed, "无法将 \(log: v) 赋值与 \(types[i]())", category: .external)
                 }
                 
                 res.append(v)
@@ -85,7 +85,7 @@ extension Censor {
 
 infix operator >-
 
-public func >- (left: (String?, any Censor.TypeDeclare), right: Censor.Value?) -> Censor.ArgumentDeclare.Define {
+public func >- (left: (String?, @Sendable () -> any Censor.TypeDeclare), right: Censor.Value?) -> Censor.ArgumentDeclare.Define {
     .init(label: left.0, type: left.1, default: right)
 }
 
