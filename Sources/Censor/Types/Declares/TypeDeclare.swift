@@ -58,6 +58,8 @@ public extension Censor {
     }
 }
 
+extension Censor.Variable: Equatable where T.RealType: Equatable {}
+
 public extension Censor.TypeDeclare {
     var properties: [String: Censor.PropertyDeclare] { [:] }
     static var staticProperties: [String: Censor.PropertyDeclare] { [:] }

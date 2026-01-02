@@ -12,6 +12,7 @@ extension Censor.Compiler {
         private var line = 1                // 行号追踪
         private var column = 1              // 列号追踪
         private var lastChar: Character? = nil
+        private var lastSymbol: TrieSymbol? = nil
         private var currentLocation: Censor.Compiler.SourceLocation {
             .init(offset: start, line: line, column: column)
         }
@@ -74,7 +75,7 @@ private extension Censor.Compiler.Lexer {
         }
     }
     
-    func add(token: Censor.Compiler.Token.TokenType, lexeme: String) {
+    func add(token: any Censor.Compiler.Token.TokenType, lexeme: String) {
         tokens.append(.init(type: token, lexeme: lexeme, location: currentLocation))
     }
     
@@ -104,52 +105,61 @@ private extension Censor.Compiler.Lexer {
 }
 
 private extension Censor.Compiler.Lexer {
-    /// 判定一个字符是否属于“字面量/变量”范畴（用于匹配 ■ 和 □）
-    func isLiteralAttribute(_ char: Character?) -> Bool {
-        guard let c = char else { return false }
-        // 字母、数字、下划线，以及闭合括号都被视为字面量属性的延续/结尾
-        return c.isLetter || c.isNumber || c == "_" || c == ")" || c == "]" || c == "'"
-    }
-
     /// 根据左侧上下文，获取 Trie 树的起始 Sign
     var leftContextSign: Character {
-        let isPrevLit = tokens.last?.type is Literal
-        let isPrevSpace = lastChar == " "
+        guard let c = lastChar else { return TrieNode.S }
         
-        if isPrevLit {
-            return isPrevSpace ? TrieNode.Sign.all.rawValue     // □ (Lit && Space)
-                               : TrieNode.Sign.literal.rawValue // ■ (Lit && !Space)
+        if let lastToken = lastSymbol, let c = lastChar, lastToken.allowRepeating, !c.isWhitespace, c != "\"" {
+            switch lastToken.spacing {
+            case .symm(let bool):
+                if let b = bool {
+                    return b ? TrieNode.S : TrieNode.N
+                }
+            case .asym(let bool):
+                if let b = bool {
+                    return b ? TrieNode.S : TrieNode.N
+                }
+            case .any: return TrieNode.N
+            case .none: return TrieNode.N
+            }
+        }
+        
+        if (
+            Token.Punctuator.signs(of: .left) +
+            Token.Delimiter.lexemeMap.map { $0.lexeme.first! }
+        ).contains(where: { $0 == c }) || c.isWhitespace || c == "\n" || c == "\t" {
+            return TrieNode.S
         } else {
-            return isPrevSpace ? TrieNode.Sign.space.rawValue   // ○ (!Lit && Space)
-                               : TrieNode.Sign.none.rawValue    // ● (!Lit && !Space)
+            return TrieNode.N
         }
     }
 
     /// 根据右侧上下文（peek），获取 Trie 树的结束 Sign
     func rightContextSign(at matchLength: Int) -> Character {
-        guard let nextChar = peek(at: matchLength) else { return TrieNode.Sign.space.rawValue }
-        let isNextSpace = nextChar.isWhitespace
-        var isNextLit: Bool = false
-        if isNextSpace {
-            var i = matchLength + 1
-            while let c = peek(at: i) {
-                if !c.isWhitespace {
-                    isNextLit = isLiteralAttribute(c)
-                    break
-                }
-                i += 1
-            }
-        } else {
-            isNextLit = isLiteralAttribute(nextChar)
-        }
+        guard let c = peek(at: matchLength) else { return TrieNode.S }
         
-        if isNextLit {
-            return isNextSpace ? TrieNode.Sign.all.rawValue     // □
-                               : TrieNode.Sign.literal.rawValue // ■
+        if (
+            Token.Punctuator.signs(of: .right) +
+            Token.Delimiter.lexemeMap.map { $0.lexeme.first! }
+        ).contains(where: { $0 == c }) || c.isWhitespace || c == "\n" || c == "\t" {
+            return TrieNode.S
         } else {
-            return isNextSpace ? TrieNode.Sign.space.rawValue   // ○
-                               : TrieNode.Sign.none.rawValue    // ●
+            return TrieNode.N
         }
+    }
+    
+    func isNextSymbolMatched(at matchLength: Int, lexeme: String) -> Bool {
+        var match = true
+        for (i, c) in lexeme.enumerated() {
+            guard let n = peek(at: matchLength + i) else {
+                break
+            }
+            if c != n {
+                match = false
+                break
+            }
+        }
+        return match
     }
 }
 
@@ -158,6 +168,7 @@ private extension Censor.Compiler.Lexer {
         guard let char = peek(at: 0) else { return }
         guard !char.isWhitespace else { _ = advance(); return }
         guard !scanSymbol() else { return }
+        lastSymbol = nil
         guard !scanLiteral() else { return }
         
         reportError("非预期的字符: \(char)", start: currentLocation)
@@ -169,31 +180,38 @@ private extension Censor.Compiler.Lexer {
         guard var currentNode = TrieNode.root.children[leftContextSign] else {
             return false
         }
-//        print(current, leftContextSign)
+        
         var matchLength = 0
         var bestMatch: (symbol: Censor.Compiler.TrieSymbol, length: Int)? = nil
-        
+        var matchedLexeme = ""
         // 2. 深度探测符号内容
         while let currentChar = peek(at: matchLength),
               let nextNode = currentNode.children[currentChar] {
             
             currentNode = nextNode
             matchLength += 1
-            
+            matchedLexeme += String(currentChar)
             // 3. 核心：每前进一个字符，都探测其“后置约束”是否满足
             // 比如符号后是一个数字且无空格，则对应的 Sign 是 ■ (Literal && !Space)
             let sign = rightContextSign(at: matchLength)
-//            print(current, matchLength + current, sign)
-            
             if let found = currentNode.children[sign]?.symbol {
                 // 贪婪匹配：记录当前最长路径
                 bestMatch = (found, matchLength)
+            } else {
+                for (_, node) in currentNode.children {
+                    guard node.isLeaf, let s = node.symbol, s.allowRepeating else { continue }
+                    if isNextSymbolMatched(at: matchLength, lexeme: matchedLexeme) {
+                        bestMatch = (s, matchLength)
+                        break
+                    }
+                }
             }
         }
         
         // 4. 提交结果
         if let result = bestMatch {
             _ = advance(times: result.length)
+            lastSymbol = result.symbol
             add(token: result.symbol.symbol, lexeme: result.symbol.lexeme)
             return true
         }
@@ -356,5 +374,107 @@ extension Censor.Compiler.Lexer {
         var hasErrors: Bool {
             !diagnostics.isEmpty
         }
+    }
+}
+
+// MARK: - Logs
+extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
+    var description: String {
+        guard !tokens.isEmpty || !diagnostics.isEmpty else { return "词法分析: 空输入" }
+
+        if hasErrors {
+            return formatErrorReport()
+        } else {
+            return formatTokenList()
+        }
+    }
+
+    private func formatTokenList() -> String {
+        let maxPreview = 100
+        let previewTokens = Array(tokens.prefix(maxPreview))
+        
+        // 1. 预计算每一列的最大宽度
+        var maxPosWidth = "Location".count // 预留表头宽度
+        var maxTypeWidth = "Type".count
+        var maxLexemeWidth = "Lexeme".count
+
+        for token in previewTokens {
+            let posStr = "[\(token.location.line):\(token.location.column)]"
+            let typeStr = getTypeName(token.type)
+            let lexemeStr = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
+            
+            maxPosWidth = max(maxPosWidth, posStr.count)
+            maxTypeWidth = max(maxTypeWidth, typeStr.count)
+            maxLexemeWidth = max(maxLexemeWidth, lexemeStr.count)
+        }
+
+        // 2. 计算总宽度：三列宽度 + 两个分隔符 (每个 "  │  " 占 5 个宽度) + 两端间距
+        // 这里的 10 是：开头空1 + 间距1(2) + 间距2(2) + 间距3(2) + 结尾1 ...
+        // 简单计算：空格 + 坐标 + 间距 + 类型 + 间距 + 源码 + 空格
+        let paddingWidth = 8
+        let totalWidth = maxPosWidth + maxTypeWidth + maxLexemeWidth + paddingWidth
+        let bar = String(repeating: "━", count: totalWidth)
+        let thinLine = String(repeating: "─", count: totalWidth)
+
+        // 3. 构建输出
+        var output = "\n" + "词法分析通过: \(tokens.count) TOKENS\n"
+        output += bar + "\n"
+        
+        // 表头 (可选)
+        let hPos = "Location".padding(toLength: maxPosWidth, withPad: " ", startingAt: 0)
+        let hType = "Type".padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
+        output += " \(hPos) │ \(hType) │ Lexeme\n"
+        output += thinLine + "\n"
+
+        // 内容行
+        for token in previewTokens {
+            let pos = "[\(token.location.line):\(token.location.column)]".padding(toLength: maxPosWidth, withPad: " ", startingAt: 0)
+            let typeName = getTypeName(token.type).padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
+            let cleanLexeme = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
+            
+            output += " \(pos) │ \(typeName) │ \(cleanLexeme)\n"
+        }
+
+        if tokens.count > maxPreview {
+            output += thinLine + "\n"
+            output += " ... 还有 \(tokens.count - maxPreview) 个 tokens.\n"
+        }
+        
+        output += bar + "\n"
+        return output
+    }
+
+    private func formatErrorReport() -> String {
+        let thickLine = String(repeating: "━", count: 60)
+        let thinLine  = String(repeating: "─", count: 60)
+        
+        var output = "\n" + thickLine + "\n"
+        output += " 词法分析失败, 找到 \(diagnostics.count) 个错误\n"
+        output += thickLine + "\n"
+        
+        for (index, error) in diagnostics.enumerated() {
+            if index > 0 { output += thinLine + "\n" }
+            output += " [错误 \(index + 1)]\n"
+            output += error.prettyDescription(in: source) + "\n"
+        }
+        
+        output += thickLine + "\n"
+        return output
+    }
+
+    // 内部辅助：获取类型名称字符串
+    private func getTypeName(_ type: any Censor.Compiler.Token.TokenType) -> String {
+        if let lit = type as? Censor.Compiler.Token.Literal {
+            return "Literal.\(lit.name)"
+        } else if let sym = type as? Censor.Compiler.Token.Symbol {
+            return "Symbol.\(sym.name)"
+        } else if let pun = type as? Censor.Compiler.Token.Punctuator {
+            return "Punctuator.\(pun.name)"
+        } else if let del = type as? Censor.Compiler.Token.Delimiter {
+            return "Delimiter.\(del.name)"
+        } else if let ext = type as? Censor.Compiler.Token.Extra {
+            return ext.name
+        }
+        return "Unknown"
     }
 }

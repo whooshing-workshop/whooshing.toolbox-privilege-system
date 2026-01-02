@@ -3,32 +3,46 @@ extension Censor.Compiler {
         case prefix     = "Prefix"
         case postfix    = "Postfix"
         case infix      = "Infix"
+        case none       = "None"
         
         var description: String { self.rawValue }
     }
     
     struct TrieSymbol {
         let lexeme: String
-        let symbol: Token.Symbol
+        let symbol: any Token.TokenType
         let symbolType: SymbolType
         let spacing: Spacing
+        let allowRepeating: Bool
         
-        enum Spacing {
-            case must(symm: Bool)
-            case allow(symm: Bool)
-            case no
+        enum Spacing: CustomStringConvertible {
+            case symm(Bool?)
+            case asym(Bool?)
+            case any
+            case none
+            
+            var description: String {
+                switch self {
+                case .symm(let bool): "symm" + (bool == nil ? "" : "(\(bool!))")
+                case .asym(let bool): "asym" + (bool == nil ? "" : "(\(bool!))")
+                case .any: "any"
+                case .none: "none"
+                }
+            }
         }
         
         init(
             _ lexeme: String,
-            _ symbol: Token.Symbol,
+            _ symbol: any Token.TokenType,
             _ symbolType: SymbolType,
-            spacing: Spacing
+            spacing: Spacing,
+            allowRepeating: Bool = false,
         ) {
             self.symbol = symbol
             self.lexeme = lexeme
             self.symbolType = symbolType
             self.spacing = spacing
+            self.allowRepeating = allowRepeating
         }
     }
     
@@ -36,23 +50,21 @@ extension Censor.Compiler {
     class TrieNode: @unchecked Sendable {
         private(set) var children: [Character: TrieNode] = [:]
         private(set) var symbol: TrieSymbol? = nil
-        private(set) var isTail: Bool
         
-        enum Sign: Character, Sendable {
-            case all            = "□"
-            case literal        = "■"
-            case space          = "○"
-            case none           = "●"
+        enum SpacingSign: Character, Sendable {
+            case requireSpaceSign = "□"
+            case notSpaceSign = "■"
         }
+        static var S: Character { SpacingSign.requireSpaceSign.rawValue }
+        static var N: Character { SpacingSign.notSpaceSign.rawValue }
         
-        static let root = TrieNode.build(from: Token.Symbol.lexemeMap)
+        static let root = TrieNode.build(from: Token.Symbol.lexemeMap + Token.Delimiter.lexemeMap + Token.Punctuator.lexemeMap)
         
         var isLeaf: Bool { children.isEmpty }
         
-        private init(children: [Character : TrieNode] = [:], symbol: TrieSymbol? = nil, isTail: Bool = false) {
+        private init(children: [Character : TrieNode] = [:], symbol: TrieSymbol? = nil) {
             self.children = children
             self.symbol = symbol
-            self.isTail = isTail
         }
         
         static func build(from symbols: [TrieSymbol]) -> TrieNode {
@@ -60,112 +72,51 @@ extension Censor.Compiler {
             
             for trieSymbol in symbols {
                 
-                // 每个 Symbol 的前后空格以及位置均有严格规定，设定存于
-                // TrieSymbol 的 spacing 以及 symbolType 中
-                // 下面列出所有处理情况：
+                // 每个 Symbol 的前后空格均有严格规定，设定存于 TrieSymbol 的 spacing
+                // 中，下面列出所有处理情况：
                 //
-                //   a □: 前一个字符必须为空格, 且必须为字面量/变量
-                //   l ■: 前一个字符必须不是空格, 且必须为字面量/变量
-                //   s ○: 前一个字符必须为空格, 且必须不为字面量/变量
-                //   n ●: 前一个字符必须不是空格, 且必须不为字面量/变量
-                //    <>: 符号的值，每个 TrieNode 仅存一个字母
+                //          space: 前一个字符必须为空格
+                //             \t: 前一个字符必须不是空格
+                //             <>: 符号的值，每个 TrieNode 仅存一个字母
                 //
-                //  ----------------------------------------------------
-                //  |               |         在 Trie 树中的存储链
-                //  |               |              一行表示一条
-                //  |---------------|-----------------------------------
-                //  |   .must(true) |   ○   | <> |   □   |  1  |  s a  |
-                //  |       .prefix |       |    |       |     |       |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |  .must(false) |   ○   | <> |   □   |  3  |  s a  |
-                //  |       .prefix |   ○   | <> |   ■   |     |  s l  |
-                //  |               |   ●   | <> |   □   |     |  n a  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |  .allow(true) |   ○   | <> |   □   |  2  |  s a  |
-                //  |       .prefix |   ●   | <> |   ■   |     |  n l  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  | .allow(false) |   ●   | <> |   ■   |  4  |  n l  |
-                //  |       .prefix |   ○   | <> |   ■   |     |  s l  |
-                //  |               |   ○   | <> |   □   |     |  s a  |
-                //  |               |   ●   | <> |   □   |     |  n a  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |           .no |   ●   | <> |   ■   |  1  |  n l  |
-                //  |       .prefix |       |    |       |     |       |
-                //  ----------------------------------------------------
+                //  --------------------------------------------
+                //  |               | 在 Trie 树中的存储链
+                //  |               |     一行表示一条
+                //  |---------------|---------------------------
+                //  |   .symm(true) | space | <> | space |  1  |
+                //  |---------------|-------|----|-------|-----|
+                //  |  .symm(false) |    \t | <> | \t    |  1  |
+                //  |---------------|-------|----|-------|-----|
+                //  |    .symm(nil) | space | <> | space |  2  |
+                //  |               |    \t | <> | \t    |     |
+                //  |---------------|-------|----|-------|-----|
+                //  |   .asym(true) | space | <> | \t    |  1  |
+                //  |---------------|-------|----|-------|-----|
+                //  |  .asym(false) |    \t | <> | space |  1  |
+                //  |---------------|-------|----|-------|-----|
+                //  |    .asym(nil) | space | <> | \t    |  2  |
+                //  |               |    \t | <> | space |     |
+                //  |---------------|-------|----|-------|-----|
+                //  |          .any |    \t | <> | \t    |  4  |
+                //  |               | space | <> | \t    |     |
+                //  |               | space | <> | space |     |
+                //  |               |    \t | <> | space |     |
+                //  |---------------|-------|----|-------|-----|
+                //  |         .none |    \t | <> | \t    |  1  |
+                //  --------------------------------------------
                 //
-                //  ----------------------------------------------------
-                //  |   .must(true) |   □   | <> |   ○   |  1  |  a s  |
-                //  |      .postfix |       |    |       |     |       |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |  .must(false) |   □   | <> |   ○   |  3  |  a s  |
-                //  |      .postfix |   □   | <> |   ●   |     |  a n  |
-                //  |               |   ■   | <> |   ○   |     |  l s  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |  .allow(true) |   □   | <> |   ○   |  2  |  a s  |
-                //  |      .postfix |   ■   | <> |   ●   |     |  l n  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  | .allow(false) |   ■   | <> |   ●   |  4  |  l n  |
-                //  |      .postfix |   □   | <> |   ●   |     |  a n  |
-                //  |               |   □   | <> |   ○   |     |  a s  |
-                //  |               |   ■   | <> |   ○   |     |  l s  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |           .no |   ■   | <> |   ●   |  1  |  l n  |
-                //  |      .postfix |       |    |       |     |       |
-                //  ----------------------------------------------------
-                //
-                //  ----------------------------------------------------
-                //  |   .must(true) |   □   | <> |   □   |  1  |  a a  |
-                //  |        .infix |       |    |       |     |       |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |  .must(false) |   □   | <> |   □   |  3  |  a a  |
-                //  |        .infix |   □   | <> |   ■   |     |  a l  |
-                //  |               |   ■   | <> |   □   |     |  l a  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |  .allow(true) |   □   | <> |   □   |  2  |  a a  |
-                //  |        .infix |   ■   | <> |   ■   |     |  l l  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  | .allow(false) |   ■   | <> |   ■   |  4  |  l l  |
-                //  |        .infix |   □   | <> |   ■   |     |  a l  |
-                //  |               |   □   | <> |   □   |     |  a a  |
-                //  |               |   ■   | <> |   □   |     |  l a  |
-                //  |---------------|-------|----|-------|-----|-------|
-                //  |           .no |   ■   | <> |   ■   |  1  |  l l  |
-                //  |        .infix |       |    |       |     |       |
-                //  ----------------------------------------------------
-                //
-                let checkList: [(Sign, Sign)]
-                let a = Sign.all                // □
-                let l = Sign.literal            // ■
-                let s = Sign.space              // ○
-                let n = Sign.none               // ●
+                let checkList: [(SpacingSign, SpacingSign)]
+                let s = SpacingSign.requireSpaceSign
+                let n = SpacingSign.notSpaceSign
                 switch trieSymbol.spacing {
-                case .must(let symm):
-                    switch trieSymbol.symbolType {
-                    case .prefix:
-                        checkList = symm ? [(s, a)] : [(s, a), (s, l), (n, a)]
-                    case .postfix:
-                        checkList = symm ? [(a, s)] : [(a, s), (a, n), (l, s)]
-                    case .infix:
-                        checkList = symm ? [(a, a)] : [(a, a), (a, l), (l, a)]
-                    }
-                case .allow(let symm):
-                    switch trieSymbol.symbolType {
-                    case .prefix:
-                        checkList = symm ? [(s, a), (n, l)] : [(n, l), (s, l), (s, a), (n, a)]
-                    case .postfix:
-                        checkList = symm ? [(a, s), (l, n)] : [(l, n), (a, n), (a, s), (l, s)]
-                    case .infix:
-                        checkList = symm ? [(a, a), (l, l)] : [(l, l), (a, l), (a, a), (l, a)]
-                    }
-                case .no:
-                    switch trieSymbol.symbolType {
-                    case .prefix:
-                        checkList = [(n, l)]
-                    case .postfix:
-                        checkList = [(l, n)]
-                    case .infix:
-                        checkList = [(l, l)]
-                    }
+                case .symm(let left):
+                    checkList = left == nil ? [(s, s), (n, n)] : (left! ? [(s, s)] : [(n, n)])
+                case .asym(let left):
+                    checkList = left == nil ? [(s, n), (n, s)] : (left! ? [(s, n)] : [(n, s)])
+                case .any:
+                    checkList = [(n, n), (s, n), (s, s), (n, s)]
+                case .none:
+                    checkList = [(n, n)]
                 }
                 
                 for heads in checkList {
@@ -176,15 +127,14 @@ extension Censor.Compiler {
                         append(character: char)
                     }
                     
-                    append(character: heads.1.rawValue, isTail: true)
+                    append(character: heads.1.rawValue)
                     currentNode.symbol = trieSymbol
                     
-                    func append(character: Character, isTail: Bool = false) {
+                    func append(character: Character) {
                         if let node = currentNode.children[character] {
-                            node.isTail = isTail
                             currentNode = node
                         } else {
-                            let newNode = TrieNode(isTail: isTail)
+                            let newNode = TrieNode()
                             currentNode.children[character] = newNode
                             currentNode = newNode
                         }
@@ -210,7 +160,6 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         return output
     }
 
-    // MARK: - 1. 符号清单格式化 (聚合路径逻辑)
     private func formatSymbolSummary() -> String {
         let allEntries = collectSymbolEntries(node: self, path: "")
         
@@ -267,8 +216,8 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         
         var table = "━━━ 已注册符号清单 (Registered Symbols) ━━━\n"
         table += "图例 (Legend):\n"
-        table += "  □: All (Lit & Space)\n  ■: Lit (Lit & !Space)\n"
-        table += "  ○: Space (!Lit & Space)\n  ●: None (!Lit & !Space)\n"
+        table += "  □: Space\n"
+        table += "  ■: None Space\n"
         table += thickBar + "\n"
         
         // 打印表头
@@ -292,7 +241,6 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         return table
     }
 
-    // MARK: - 2. 树结构递归描述 (带 Sign 解释逻辑)
     private func describe(node: Censor.Compiler.TrieNode, prefix: String, explainedSigns: Set<Character>) -> String {
         var result = ""
         var updatedExplainedSigns = explainedSigns
@@ -309,10 +257,9 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             if isSign {
                 if !updatedExplainedSigns.contains(key) {
                     switch key {
-                    case Censor.Compiler.TrieNode.Sign.all.rawValue:     charDisplay = "\(key) [All]"
-                    case Censor.Compiler.TrieNode.Sign.literal.rawValue: charDisplay = "\(key) [Lit]"
-                    case Censor.Compiler.TrieNode.Sign.space.rawValue:   charDisplay = "\(key) [Space]"
-                    case Censor.Compiler.TrieNode.Sign.none.rawValue:    charDisplay = "\(key) [None]"
+                    case Censor.Compiler.TrieNode.SpacingSign.requireSpaceSign.rawValue:    charDisplay = "\(key) [Space]"
+                    case Censor.Compiler.TrieNode.SpacingSign.notSpaceSign.rawValue:        charDisplay = "\(key) [None]"
+                        
                     default: charDisplay = "'\(key)'"
                     }
                     updatedExplainedSigns.insert(key)
@@ -325,7 +272,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             
             var symbolInfo = ""
             if let sym = child.symbol {
-                symbolInfo = " ➜  \(sym.symbolType.description)(\(sym.lexeme))"
+                symbolInfo = " -> \(sym.symbolType.description)(\(sym.lexeme))"
             }
             
             result += prefix + connector + charDisplay + symbolInfo + "\n"
@@ -336,7 +283,6 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         return result
     }
 
-    // MARK: - 3. 辅助：收集完整路径
     private struct SymbolEntry {
         let leftSign: Character
         let lexeme: String

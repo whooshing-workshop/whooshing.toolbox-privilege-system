@@ -1,6 +1,10 @@
 public extension Censor {
     enum Operator {
-        public enum Infix: String, Sendable, Codable, CaseIterable {
+        public protocol Base: Sendable {
+            var precedence: Precedence.Declare.Type { get }
+        }
+        
+        public enum Infix: String, Sendable, Codable, CaseIterable, Base {
             case plus           = "+"
             case minus          = "-"
             case multi          = "*"
@@ -31,7 +35,7 @@ public extension Censor {
             }
         }
         
-        public enum Prefix: String, Sendable, Codable, CaseIterable {
+        public enum Prefix: String, Sendable, Codable, CaseIterable, Base {
             case positive       = "+"
             case negetive       = "-"
             
@@ -42,7 +46,7 @@ public extension Censor {
             }
         }
         
-        public enum Postfix: String, Sendable, Codable, CaseIterable {
+        public enum Postfix: String, Sendable, Codable, CaseIterable, Base {
             case placeholder     = "~"      // 无用，仅为了在此处占位防止 Swift 编译器报错
             
             public var precedence: Precedence.Declare.Type {
