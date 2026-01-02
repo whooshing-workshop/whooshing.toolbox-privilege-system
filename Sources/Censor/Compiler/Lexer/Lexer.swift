@@ -400,7 +400,7 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
 
         for token in previewTokens {
             let posStr = "[\(token.location.line):\(token.location.column)]"
-            let typeStr = getTypeName(token.type)
+            let typeStr = token.type.description
             let lexemeStr = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
             
             maxPosWidth = max(maxPosWidth, posStr.count)
@@ -429,7 +429,7 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
         // 内容行
         for token in previewTokens {
             let pos = "[\(token.location.line):\(token.location.column)]".padding(toLength: maxPosWidth, withPad: " ", startingAt: 0)
-            let typeName = getTypeName(token.type).padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
+            let typeName = token.type.description.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
             let cleanLexeme = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
             
             output += " \(pos) │ \(typeName) │ \(cleanLexeme)\n"
@@ -460,21 +460,5 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
         
         output += thickLine + "\n"
         return output
-    }
-
-    // 内部辅助：获取类型名称字符串
-    private func getTypeName(_ type: any Censor.Compiler.Token.TokenType) -> String {
-        if let lit = type as? Censor.Compiler.Token.Literal {
-            return "Literal.\(lit.name)"
-        } else if let sym = type as? Censor.Compiler.Token.Symbol {
-            return "Symbol.\(sym.name)"
-        } else if let pun = type as? Censor.Compiler.Token.Punctuator {
-            return "Punctuator.\(pun.name)"
-        } else if let del = type as? Censor.Compiler.Token.Delimiter {
-            return "Delimiter.\(del.name)"
-        } else if let ext = type as? Censor.Compiler.Token.Extra {
-            return ext.name
-        }
-        return "Unknown"
     }
 }

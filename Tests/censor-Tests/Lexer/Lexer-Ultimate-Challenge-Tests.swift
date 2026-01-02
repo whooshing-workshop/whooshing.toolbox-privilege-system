@@ -31,7 +31,7 @@ struct LexerUltimateBoundaryTests {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -56,7 +56,7 @@ struct LexerUltimateBoundaryTests {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -78,7 +78,7 @@ struct LexerUltimateBoundaryTests {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -100,7 +100,7 @@ struct LexerUltimateBoundaryTests {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 }

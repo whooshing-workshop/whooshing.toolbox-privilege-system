@@ -56,7 +56,7 @@ struct LexerFullCoverageTests {
             #expect(Bool(false), "未能识别操作符: \(input)")
             return
         }
-        #expect(getTypeName(t.type) == expected)
+        #expect(t.type.description == expected)
     }
 
     // MARK: - 专项 2: 字面量与歧义消除 (20个用例)
@@ -82,8 +82,8 @@ struct LexerFullCoverageTests {
         // --- 标识符与关键字 ---
         ("true", "Literal.BOOL"),
         ("false", "Literal.BOOL"),
-        ("nil", "NULL"),
-        ("IN", "SCOPE(IN)"),
+        ("nil", "Keyword.NULL"),
+        ("IN", "Keyword.IN"),
         ("_temp", "Literal.IDENT(_temp)"),
         ("a1", "Literal.IDENT(a1)")
     ])
@@ -94,7 +94,7 @@ struct LexerFullCoverageTests {
             print(result)
             return
         }
-        #expect(getTypeName(result.tokens[0].type) == expected)
+        #expect(result.tokens[0].type.description == expected)
     }
 
     // MARK: - 专项 3: 结构化与嵌套 (10个用例)
@@ -103,13 +103,13 @@ struct LexerFullCoverageTests {
         let source = "(a + b) * -c / (d ?? 0) >= 100 == !false"
         let result = Censor.Compiler.Lexer(source: source).scanTokens()
         
-        let types = result.tokens.map { getTypeName($0.type) }
+        let types = result.tokens.map { $0.type.description }
         
         // 关键点校验
-        #expect(getTypeName(result.tokens[6].type) == "Symbol.Prefix(-)")       // -c
-        #expect(getTypeName(result.tokens[11].type) == "Symbol.NIL_COAL")       // d ?? 0
-        #expect(getTypeName(result.tokens[16].type) == "Symbol.Infix(==)")      // ... == !
-        #expect(getTypeName(result.tokens[17].type) == "Symbol.NOT")            // !false
+        #expect(result.tokens[6].type.description == "Symbol.Prefix(-)")       // -c
+        #expect(result.tokens[11].type.description == "Symbol.NIL_COAL")       // d ?? 0
+        #expect(result.tokens[16].type.description == "Symbol.Infix(==)")      // ... == !
+        #expect(result.tokens[17].type.description == "Symbol.NOT")            // !false
         #expect(!result.hasErrors)
     }
 
@@ -124,6 +124,6 @@ struct LexerFullCoverageTests {
 
 // MARK: - 辅助判定函数
 private func isOperator(_ type: Censor.Compiler.Token.TokenType) -> Bool {
-    let name = getTypeName(type)
+    let name = type.description
     return name.contains("Symbol") || name.contains("NOT") || name.contains("NIL_COAL") || name.contains("Delimiter")
 }

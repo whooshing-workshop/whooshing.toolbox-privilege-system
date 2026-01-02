@@ -1,7 +1,7 @@
 import Foundation
 
 extension Censor {
-    enum Keyword: String {
+    enum Keyword: String, Equatable, Censor.Compiler.Token.TokenType {
         case null           = "nil"
         case `in`           = "IN"
         case boolTrue       = "true"
@@ -9,11 +9,19 @@ extension Censor {
         
         var token: any Compiler.Token.TokenType {
             switch self {
-            case .null: Compiler.Token.Extra.null
-            case .in: Compiler.Token.Extra.scope
             case .boolTrue: Compiler.Token.Literal.bool(BoolType(nullable: false).make(true))
             case .boolFalse: Compiler.Token.Literal.bool(BoolType(nullable: false).make(false))
+            default: self
             }
+        }
+        
+        var description: String {
+            let keyw = switch self {
+            case .null: "NULL"
+            case .in: "IN"
+            case .boolTrue, .boolFalse: fatalError()
+            }
+            return "Keyword." + keyw
         }
     }
 }
@@ -22,13 +30,6 @@ extension Censor.Compiler {
     enum BracketType: String, CustomStringConvertible {
         case parenth = "PAREN"
         case square = "SQUARE"
-        
-        var description: String { self.rawValue }
-    }
-    
-    enum TernaryPart: String, CustomStringConvertible {
-        case question = "QUEST"
-        case colon = "COLON"
         
         var description: String { self.rawValue }
     }
@@ -46,7 +47,7 @@ extension Censor.Compiler {
     }
     
     struct Token {
-        protocol TokenType: Sendable, Equatable {}
+        protocol TokenType: Sendable, Equatable, CustomStringConvertible {}
         
         enum Literal: TokenType {
             case string(Censor.Variable<Censor.StringType>)
@@ -64,11 +65,7 @@ extension Censor.Compiler {
             case prefixOperator(Censor.Operator.Prefix)
             case postfixOperator(Censor.Operator.Postfix)
             case infixOperator(Censor.Operator.Infix)
-            case ternary(TernaryPart)
-            case not
-            case forceCast
-            case optionalChaining
-            case nilCoalescing
+            case sugar(Censor.SugarKey)
             
             static let lexemeMap: [TrieSymbol] =
                 Censor.Operator.Prefix.allCases.map {
@@ -77,15 +74,7 @@ extension Censor.Compiler {
                     TrieSymbol($0.rawValue, Self.postfixOperator($0), .postfix, spacing: .asym(false))
                 } + Censor.Operator.Infix.allCases.map {
                     TrieSymbol($0.rawValue, Self.infixOperator($0), .infix, spacing: .symm(nil))
-                } + [
-                    TrieSymbol("?", Self.ternary(.question), .infix, spacing: .symm(true), allowRepeating: true),
-                    TrieSymbol(":", Self.ternary(.colon), .infix, spacing: .symm(true))
-                ] + [
-                    TrieSymbol("!", Self.not, .prefix, spacing: .asym(true)),
-                    TrieSymbol("!", Self.forceCast, .postfix, spacing: .asym(false), allowRepeating: true),
-                    TrieSymbol("?", Self.optionalChaining, .postfix, spacing: .asym(false)),
-                    TrieSymbol("??", Self.nilCoalescing, .postfix, spacing: .symm(nil))
-                ]
+                } + Censor.SugarKey.allCases.flatMap { $0.sugar.lexemes }
         }
         
         enum Punctuator: TokenType {
@@ -121,10 +110,8 @@ extension Censor.Compiler {
         }
         
         enum Extra: TokenType {
-            case scope
             case eof
             case invalid
-            case null
         }
         
         let type: any TokenType
@@ -134,64 +121,62 @@ extension Censor.Compiler {
 }
 
 // MARK: - Logs
-extension Censor.Compiler.Token.Literal {
-    var name: String {
-        switch self {
-        case .string:               return "STRING"
-        case .character:            return "CHAR"
-        case .integer:              return "INT"
-        case .decimal:              return "DECIMAL"
-        case .date:                 return "DATE"
-        case .uuid:                 return "UUID"
-        case .bool:                 return "BOOL"
-        case .trueType:             return "TRUETYPE"
-        case .identifier(let s):    return "IDENT(\(s))"
+extension Censor.Compiler.Token.Literal: CustomStringConvertible {
+    var description: String {
+        let lit = switch self {
+        case .string:               "STRING"
+        case .character:            "CHAR"
+        case .integer:              "INT"
+        case .decimal:              "DECIMAL"
+        case .date:                 "DATE"
+        case .uuid:                 "UUID"
+        case .bool:                 "BOOL"
+        case .trueType:             "TRUETYPE"
+        case .identifier(let s):    "IDENT(\(s))"
         }
+        return "Literal." + lit
     }
 }
 
-extension Censor.Compiler.Token.Symbol {
-    var name: String {
-        switch self {
-        case .prefixOperator(let op):   return op.description
-        case .postfixOperator(let op):  return op.description
-        case .infixOperator(let op):    return op.description
-        case .ternary(let part):        return "TERNARY_\(part)"
-            
-        case .not:                  return "NOT"
-        case .forceCast:            return "F_CAST"
-        case .optionalChaining:     return "OP_CHAIN"
-        case .nilCoalescing:        return "NIL_COAL"
+extension Censor.Compiler.Token.Symbol: CustomStringConvertible {
+    var description: String {
+        let sym = switch self {
+        case .prefixOperator(let op):   op.description
+        case .postfixOperator(let op):  op.description
+        case .infixOperator(let op):    op.description
+        case .sugar(let sugar):         sugar.description
         }
+        return "Symbol." + sym
     }
 }
 
-extension Censor.Compiler.Token.Punctuator {
-    var name: String {
+extension Censor.Compiler.Token.Punctuator: CustomStringConvertible {
+    var description: String {
+        let punc: String
         switch self {
         case .bracket(let type, let dir):
             let dirStr = dir == .left ? "L" : "R"
-            return "\(type)_\(dirStr)"
+            punc = "\(type)_\(dirStr)"
         }
+        return "Punctuator." + punc
     }
 }
 
-extension Censor.Compiler.Token.Delimiter {
-    var name: String {
-        switch self {
-        case .dot:           return "DOT"
-        case .comma:         return "COMMA"
+extension Censor.Compiler.Token.Delimiter: CustomStringConvertible {
+    var description: String {
+        let del = switch self {
+        case .dot:           "DOT"
+        case .comma:         "COMMA"
         }
+        return "Delimiter." + del
     }
 }
 
-extension Censor.Compiler.Token.Extra {
-    var name: String {
+extension Censor.Compiler.Token.Extra: CustomStringConvertible {
+    var description: String {
         switch self {
-        case .scope:            return "SCOPE(IN)"
         case .eof:              return "EOF"
         case .invalid:          return "INVALID"
-        case .null:             return "NULL"
         }
     }
 }

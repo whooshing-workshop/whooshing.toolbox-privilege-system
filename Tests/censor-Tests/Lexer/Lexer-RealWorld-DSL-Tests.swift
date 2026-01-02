@@ -27,7 +27,7 @@ struct LexerDSLSimulationTests {
         ("data?.items[count-1] ? \"has_data\" : nil", [
             "Literal.IDENT(data)", "Symbol.OP_CHAIN", "Delimiter.DOT", "Literal.IDENT(items)",
             "Punctuator.SQUARE_L", "Literal.IDENT(count)", "Symbol.Infix(-)", "Literal.INT", "Punctuator.SQUARE_R",
-            "Symbol.TERNARY_QUEST", "Literal.STRING", "Symbol.TERNARY_COLON", "NULL"
+            "Symbol.TERNARY_QUEST", "Literal.STRING", "Symbol.TERNARY_COLON", "Keyword.NULL"
         ]),
         
         // 4. UUID 与标识符碰撞
@@ -50,7 +50,7 @@ struct LexerDSLSimulationTests {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -92,7 +92,7 @@ struct LexerDSLSimulationTests {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -106,7 +106,7 @@ struct LexerDSLSimulationTests {
         // 模拟日期计算：'2026-01-01'.toDate() > nil
         ("\"2026-01-01\".toDate() > nil", [
             "Literal.STRING", "Delimiter.DOT", "Literal.IDENT(toDate)",
-            "Punctuator.PAREN_L", "Punctuator.PAREN_R", "Symbol.Infix(>)", "NULL"
+            "Punctuator.PAREN_L", "Punctuator.PAREN_R", "Symbol.Infix(>)", "Keyword.NULL"
         ])
     ])
     func testDataConversion(source: String, expectedTypes: [String]) {
@@ -115,7 +115,7 @@ struct LexerDSLSimulationTests {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
         }
-        let actualTypes = result.tokens.filter { getTypeName($0.type) != "EOF" }.map { getTypeName($0.type) }
+        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
         #expect(actualTypes == expectedTypes)
     }
 }
