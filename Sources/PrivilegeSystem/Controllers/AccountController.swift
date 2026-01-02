@@ -161,7 +161,7 @@ extension PrivilegeSystem {
                     throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external)
                 }
                 
-                let userId = try required(throws: Errcase.userPasswordChangeFailed, "获取用户 ID 失败", category: .internal) {
+                _ = try required(throws: Errcase.userPasswordChangeFailed, "获取用户 ID 失败", category: .internal) {
                     try user.requireID()
                 }
                 

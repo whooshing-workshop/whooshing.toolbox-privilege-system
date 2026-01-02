@@ -1,23 +1,23 @@
 import Foundation
 
 extension Censor.Compiler {
-    public class Parser {
+    class Parser {
         private let tokens: [Token]
         private var current = 0
-        private var errors: [Error] = []
+        private var errors: [Censor.Compiler.Error] = []
         private let source: String
 
-        public init(tokens: [Token], source: String) {
+        init(tokens: [Token], source: String) {
             self.tokens = tokens
             self.source = source
         }
 
         typealias Token = Censor.Compiler.Token
 
-        public func parse() -> Result {
+        func parse() -> Result {
             var statements: [Censor.AST] = []
 
-            while !isAtEnd {
+            while !atEnd {
                 do {
                     let stmt = try parseExpression()
                     statements.append(stmt)
@@ -72,12 +72,12 @@ extension Censor.Compiler.Parser {
         }
     }
 
-    func getRule(_ type: Token.TokenType) -> ParseRule {
+    func getRule(_ type: any Token.TokenType) -> ParseRule {
         switch type {
         case let literal as Token.Literal:
             return ParseRule(prefix: { [weak self] _ in
                 try self?.literal(literal)
-                    ?? .value(.init(Censor.IntegerType(nullable: false).make(0)))
+                    ?? .value(Censor.AnyVariable(Censor.IntegerType(nullable: false).make(0)))
             })
 
         case Token.Punctuator.bracket(.parenth, .left):
@@ -109,7 +109,7 @@ extension Censor.Compiler.Parser {
         }
     }
 
-    func getPrecedence(_ type: Token.TokenType) -> Int {
+    func getPrecedence(_ type: any Token.TokenType) -> Int {
         getRule(type).precedence
     }
 }
@@ -153,7 +153,6 @@ extension Censor.Compiler.Parser {
         case .prefixOperator(let op):
             return .prefix(operator: op, right: right)
         case .sugar(.not):
-            // Mapping logical NOT '!' to a function call representation for AST compatibility
             return .function("!", args: [right])
         default:
             throw error(token: token, message: "Unexpected unary operator.")
@@ -207,7 +206,6 @@ extension Censor.Compiler.Parser {
         case .variable(let name):
             return .function(name, args: args)
         case .property(let name):
-            // Handling method call on property access as simplified function call for now
             return .function(name, args: args)
         default:
             throw error(token: previous, message: "Expected function name before '('.")
@@ -242,7 +240,7 @@ extension Censor.Compiler.Parser {
 // MARK: - Helpers
 extension Censor.Compiler.Parser {
 
-    var isAtEnd: Bool {
+    var atEnd: Bool {
         return peek.type == Token.Extra.eof
     }
 
@@ -256,12 +254,12 @@ extension Censor.Compiler.Parser {
 
     @discardableResult
     func advance() -> Token {
-        if !isAtEnd { current += 1 }
+        if !atEnd { current += 1 }
         return previous
     }
 
     @discardableResult
-    func consume(_ type: Token.TokenType, message: String) throws -> Token {
+    func consume(_ type: any Token.TokenType, message: String) throws -> Token {
         if check(type) {
             return advance()
         }
@@ -276,12 +274,12 @@ extension Censor.Compiler.Parser {
         throw error(token: peek, message: "Expect identifier.")
     }
 
-    func check(_ type: Token.TokenType) -> Bool {
-        if isAtEnd { return false }
+    func check(_ type: any Token.TokenType) -> Bool {
+        if atEnd { return false }
         return peek.type == type
     }
 
-    func match(_ type: Token.TokenType) -> Bool {
+    func match(_ type: any Token.TokenType) -> Bool {
         if check(type) {
             advance()
             return true
@@ -289,17 +287,20 @@ extension Censor.Compiler.Parser {
         return false
     }
 
-    func error(token: Token, message: String) -> Error {
-        let err = Error(
-            kind: .syntactic, range: .init(start: token.location, end: token.location),
-            message: message)
+    func error(token: Token, message: String) -> Censor.Compiler.Error {
+        let err = Censor.Compiler.Error(
+            kind: .syntactic,
+            range: token.range,
+            message: message,
+            snippet: nil
+        )
         errors.append(err)
         return err
     }
 
     func synchronize() {
         advance()
-        while !isAtEnd {
+        while !atEnd {
             if previous.type == Token.Delimiter.comma { return }
             advance()
         }
@@ -310,7 +311,7 @@ extension Censor.Compiler.Parser {
 extension Censor.Compiler.Parser {
     public struct Result {
         public let ast: [Censor.AST]
-        public let diagnostics: [Error]
+        public let diagnostics: [Censor.Compiler.Error]
         public let source: String
 
         public var hasErrors: Bool { !diagnostics.isEmpty }

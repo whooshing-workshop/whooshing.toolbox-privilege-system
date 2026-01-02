@@ -39,6 +39,10 @@ extension Censor.Compiler {
         let line: Int   /// 行号（通常从 1 开始计数）
         let column: Int /// 列号（通常从 1 开始计数）
         let sourceId: String? = nil
+        
+        func offset(by i: Int) -> Self {
+            .init(offset: offset, line: line, column: column + i)
+        }
     }
     
     struct SourceRange: Sendable, Equatable {
@@ -100,10 +104,12 @@ extension Censor.Compiler {
         }
         
         enum Delimiter: TokenType {
+            case colon
             case dot
             case comma
             
             static let lexemeMap: [TrieSymbol] = [
+                TrieSymbol(":", Self.colon, .infix, spacing: .asym(false)),
                 TrieSymbol(".", Self.dot, .infix, spacing: .any),
                 TrieSymbol(",", Self.comma, .infix, spacing: .any)
             ]
@@ -116,7 +122,7 @@ extension Censor.Compiler {
         
         let type: any TokenType
         let lexeme: String
-        let location: SourceLocation
+        let range: SourceRange
     }
 }
 
@@ -172,8 +178,9 @@ extension Censor.Compiler.Token.Punctuator: CustomStringConvertible {
 extension Censor.Compiler.Token.Delimiter: CustomStringConvertible {
     var description: String {
         let del = switch self {
-        case .dot:           "DOT"
-        case .comma:         "COMMA"
+        case .colon:        "COLON"
+        case .dot:          "DOT"
+        case .comma:        "COMMA"
         }
         return "Delimiter." + del
     }
@@ -197,7 +204,9 @@ extension Censor.Compiler.SourceLocation: CustomStringConvertible {
 
 extension Censor.Compiler.SourceRange: CustomStringConvertible {
     public var description: String {
-        if start.line == end.line {
+        if start == end {
+            return start.description
+        } else if start.line == end.line {
             // 同一行: 1:5-12 (第1行，第5到12列)
             return "\(start.description)-\(end.column)"
         } else {

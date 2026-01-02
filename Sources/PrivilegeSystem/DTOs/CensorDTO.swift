@@ -35,7 +35,7 @@ public extension DTO.Censor where T == DTO.Prepare {
 extension DTO.Censor where T == DTO.Queried {
     static func make<G>(from model: G) -> Res<Self, PrivilegeSystem.Errcase> where G: ACLInterface {
         .init(throws: .censorDTOFailed, category: .internal) {
-            var n = Self.init(
+            let n = Self.init(
                 _expression: model.expression,
                 _map: model.map
             )

@@ -135,7 +135,11 @@ public extension Censor {
         public let storingValue: Censor.AST.StoringType
 
         public var description: String {
-            "Variable<\(type.description)>(value: \(String(describing: anyValue)))"
+            if let v = anyValue {
+                return String(describing: v)
+            } else {
+                return Keyword.null.rawValue
+            }
         }
         
         public func asVariable<T: TypeDeclare>(of type: T.Type) -> Variable<T>? {
