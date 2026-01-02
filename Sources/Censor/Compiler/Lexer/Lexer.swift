@@ -49,6 +49,7 @@ private extension Censor.Compiler.Lexer {
         indexCurrent == source.endIndex
     }
     
+    @discardableResult
     func advance(times: Int = 1) -> Character {
         guard times > 0 else { preconditionFailure("至少消费一个字符") }
         

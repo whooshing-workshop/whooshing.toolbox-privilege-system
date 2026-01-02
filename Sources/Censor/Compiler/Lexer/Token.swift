@@ -120,6 +120,13 @@ extension Censor.Compiler {
     }
 }
 
+func == (
+    lhs: any Censor.Compiler.Token.TokenType,
+    rhs: any Censor.Compiler.Token.TokenType
+) -> Bool {
+    lhs.description == rhs.description
+}
+
 // MARK: - Logs
 extension Censor.Compiler.Token.Literal: CustomStringConvertible {
     var description: String {

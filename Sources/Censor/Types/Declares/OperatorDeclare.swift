@@ -71,54 +71,54 @@ public extension Censor.Operator {
             static var associative: Associative { get }
         }
         
-        public enum Postfix: Declare {
-            public static let power = 50
-            public static let associative: Associative = .none
-        }
-        
-        public enum Prefix: Declare {
-            public static let power = 75
-            public static let associative: Associative = .none
-        }
-        
-        public enum Exponentiation: Declare {
+        public enum Ternary: Declare {
             public static let power = 100
-            public static let associative: Associative = .left
+            public static let associative: Associative = .right
         }
-        
-        public enum Multiplication: Declare {
+
+        public enum LogicOr: Declare {
             public static let power = 200
             public static let associative: Associative = .left
         }
-        
-        public enum Addition: Declare {
+
+        public enum LogicAnd: Declare {
             public static let power = 300
             public static let associative: Associative = .left
         }
-        
+
+        public enum Comparison: Declare {
+            public static let power = 400
+            public static let associative: Associative = .none
+        }
+
         public enum NilCoalescing: Declare {
             public static let power = 500
             public static let associative: Associative = .right
         }
-        
-        public enum Comparison: Declare {
+
+        public enum Addition: Declare {
             public static let power = 600
-            public static let associative: Associative = .none
+            public static let associative: Associative = .left
         }
-        
-        public enum LogicAnd: Declare {
+
+        public enum Multiplication: Declare {
             public static let power = 700
             public static let associative: Associative = .left
         }
-        
-        public enum LogicOr: Declare {
+
+        public enum Exponentiation: Declare {
             public static let power = 800
             public static let associative: Associative = .left
         }
-        
-        public enum Ternary: Declare {
+
+        public enum Prefix: Declare {
             public static let power = 900
-            public static let associative: Associative = .right
+            public static let associative: Associative = .none
+        }
+
+        public enum Postfix: Declare {
+            public static let power = 1000
+            public static let associative: Associative = .none
         }
     }
 }
