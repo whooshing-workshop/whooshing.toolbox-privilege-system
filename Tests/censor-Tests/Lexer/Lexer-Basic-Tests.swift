@@ -23,10 +23,16 @@ struct LexerTests {
     @Suite("运算符缀位测试")
     struct OperatorContextTests {
         
+        @Test("Logs")
+        func logs() {
+            print(Censor.Compiler.TrieNode.root)
+        }
+        
         @Test("感叹号身份识别: 前缀 vs 后缀")
         func testExclamationMark() {
             // 前缀：左虚(行首)右实
             let prefixResult = Censor.Compiler.Lexer(source: "!flag").scanTokens()
+            print(prefixResult)
             #expect(getTypeName(prefixResult.tokens[0].type) == "Symbol.NOT")
             
             // 后缀：左实右虚(行尾)

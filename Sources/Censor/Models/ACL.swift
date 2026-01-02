@@ -29,8 +29,8 @@ public final class ACLExp<T: ACLType>: PGModel, @unchecked Sendable {
         
         public let op = PGField("operator", .string)
         public let value = PGField("value", .string)
-        public let valueInt = PGField("value", .int64)
-        public let valueDecimal = PGField("value", .custom("numeric"))
+        public let valueInt = PGField("value_int", .int64)
+        public let valueDecimal = PGField("value_numeric", .custom("numeric"))
         
         public let valueType = PGField(
             "value_type",
