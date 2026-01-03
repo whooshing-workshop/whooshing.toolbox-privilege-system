@@ -1,7 +1,7 @@
 import Foundation
 
 extension Censor {
-    enum Keyword: String, Equatable, Censor.Compiler.Token.TokenType {
+    enum Keyword: String, Equatable, Censor.Compiler.Token.Kind {
         case null           = "nil"
         case `in`           = "IN"
         case boolTrue       = "true"
@@ -34,6 +34,15 @@ extension Censor.Compiler {
         var description: String { self.rawValue }
     }
     
+    enum Fixity: String, Hashable, CustomStringConvertible {
+        case prefix     = "Prefix"
+        case postfix    = "Postfix"
+        case infix      = "Infix"
+        case none       = "None"
+        
+        var description: String { self.rawValue }
+    }
+    
     struct SourceLocation: Sendable, Equatable {
         let offset: Int /// 全局字符偏移量（从 0 开始），用于在原始 String 中快速切片
         let line: Int   /// 行号（通常从 1 开始计数）
@@ -52,8 +61,8 @@ extension Censor.Compiler {
     
     struct Token {
         let lexeme: String
-        let symbol: any TokenType
-        let type: SymbolType
+        let content: any Kind
+        let fixity: Fixity
         let spacing: Spacing
         let allowRepeating: Bool
         let range: SourceRange
@@ -76,30 +85,30 @@ extension Censor.Compiler {
         
         init(
             _ lexeme: String,
-            _ symbol: any TokenType,
-            _ type: SymbolType,
+            _ symbol: any Kind,
+            _ type: Fixity,
             spacing: Spacing,
             allowRepeating: Bool = false,
             range: SourceRange? = nil
         ) {
-            self.symbol = symbol
+            self.content = symbol
             self.lexeme = lexeme
-            self.type = type
+            self.fixity = type
             self.spacing = spacing
             self.allowRepeating = allowRepeating
             self.range = range ?? .init(start: .init(offset: 0, line: 0, column: 0), end: .init(offset: 0, line: 0, column: 0))
         }
         
         func set(range: SourceRange) -> Self {
-            .init(lexeme, symbol, type, spacing: spacing, range: range)
+            .init(lexeme, content, fixity, spacing: spacing, range: range)
         }
     }
 }
 
 extension Censor.Compiler.Token {
-    protocol TokenType: Sendable, Equatable, CustomStringConvertible {}
+    protocol Kind: Sendable, Equatable, CustomStringConvertible {}
     
-    enum Literal: TokenType {
+    enum Literal: Kind {
         case string(Censor.Variable<Censor.StringType>)
         case character(Censor.Variable<Censor.CharacterType>)
         case integer(Censor.Variable<Censor.IntegerType>)
@@ -111,7 +120,7 @@ extension Censor.Compiler.Token {
         case identifier(String)
     }
     
-    enum Symbol: TokenType {
+    enum Symbol: Kind {
         case prefixOperator(Censor.Operator.Prefix)
         case postfixOperator(Censor.Operator.Postfix)
         case infixOperator(Censor.Operator.Infix)
@@ -127,7 +136,7 @@ extension Censor.Compiler.Token {
             } + Censor.SugarKey.allCases.flatMap { $0.sugar.lexemes }
     }
     
-    enum Punctuator: TokenType {
+    enum Punctuator: Kind {
         enum Direction {
             case left, right
         }
@@ -149,7 +158,7 @@ extension Censor.Compiler.Token {
         }
     }
     
-    enum Delimiter: TokenType {
+    enum Delimiter: Kind {
         case colon
         case dot
         case comma
@@ -161,15 +170,15 @@ extension Censor.Compiler.Token {
         ]
     }
     
-    enum Extra: TokenType {
+    enum Extra: Kind {
         case eof
         case invalid
     }
 }
 
 func == (
-    lhs: any Censor.Compiler.Token.TokenType,
-    rhs: any Censor.Compiler.Token.TokenType
+    lhs: any Censor.Compiler.Token.Kind,
+    rhs: any Censor.Compiler.Token.Kind
 ) -> Bool {
     lhs.description == rhs.description
 }

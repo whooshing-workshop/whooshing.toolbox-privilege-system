@@ -32,7 +32,7 @@ struct LexerAdvancedChallengeTests {
             print(result)
             return
         }
-        let actualTypes = result.tokens.filter { $0.symbol.description != "EOF" }.map { $0.symbol.description }
+        let actualTypes = result.tokens.filter { $0.content.description != "EOF" }.map { $0.content.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -64,7 +64,7 @@ struct LexerAdvancedChallengeTests {
             print(result)
             return
         }
-        let actualTypes = result.tokens.filter { $0.symbol.description != "EOF" }.map { $0.symbol.description }
+        let actualTypes = result.tokens.filter { $0.content.description != "EOF" }.map { $0.content.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -80,7 +80,7 @@ struct LexerAdvancedChallengeTests {
     ])
     func testUnsupportedGrammar(source: String, expectedTypes: [String]) {
         let result = Censor.Compiler.Lexer(source: source).scanTokens()
-        let actualTypes = result.tokens.filter { $0.symbol.description != "EOF" }.map { $0.symbol.description }
+        let actualTypes = result.tokens.filter { $0.content.description != "EOF" }.map { $0.content.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -94,7 +94,7 @@ struct LexerAdvancedChallengeTests {
 
         // 2. 异常空白符混入
         let res2 = Censor.Compiler.Lexer(source: "a\u{00A0}+\t\nb").scanTokens() // 包含不间断空格
-        #expect(res2.tokens.filter { $0.symbol.description == "Symbol.Infix(+)" }.count == 1)
+        #expect(res2.tokens.filter { $0.content.description == "Symbol.Infix(+)" }.count == 1)
 
         // 3. 连续的操作符但无操作数 (!+-+!!)
         let res3 = Censor.Compiler.Lexer(source: "!+-+!!").scanTokens()

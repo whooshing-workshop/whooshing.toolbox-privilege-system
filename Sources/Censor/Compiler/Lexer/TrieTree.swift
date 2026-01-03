@@ -1,13 +1,4 @@
 extension Censor.Compiler {
-    enum SymbolType: String, Hashable, CustomStringConvertible {
-        case prefix     = "Prefix"
-        case postfix    = "Postfix"
-        case infix      = "Infix"
-        case none       = "None"
-        
-        var description: String { self.rawValue }
-    }
-
     class TrieNode: @unchecked Sendable {
         private(set) var children: [Character: TrieNode] = [:]
         private(set) var symbol: Token? = nil
@@ -129,7 +120,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         var grouped: [String: (lex: String, type: String, rule: String, contexts: Set<String>)] = [:]
         
         for entry in allEntries {
-            let key = "\(entry.symbol.lexeme)_\(entry.symbol.type)"
+            let key = "\(entry.symbol.lexeme)_\(entry.symbol.content)"
             let ctxString = "\(entry.leftSign) \(entry.rightSign)"
             
             if var existing = grouped[key] {
@@ -138,7 +129,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             } else {
                 grouped[key] = (
                     "`\(entry.symbol.lexeme)`",
-                    entry.symbol.type.description,
+                    entry.symbol.content.description,
                     "\(entry.symbol.spacing)",
                     [ctxString]
                 )
@@ -233,7 +224,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             
             var symbolInfo = ""
             if let sym = child.symbol {
-                symbolInfo = " -> \(sym.type.description)(\(sym.lexeme))"
+                symbolInfo = " -> \(sym.content.description)(\(sym.lexeme))"
             }
             
             result += prefix + connector + charDisplay + symbolInfo + "\n"

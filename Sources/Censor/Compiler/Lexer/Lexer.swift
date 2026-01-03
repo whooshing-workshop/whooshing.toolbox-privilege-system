@@ -405,7 +405,7 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
 
         for token in previewTokens {
             let posStr = "[\(token.range)]"
-            let typeStr = token.symbol.description
+            let typeStr = token.content.description
             let lexemeStr = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
             
             maxPosWidth = max(maxPosWidth, posStr.count)
@@ -434,7 +434,7 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
         // 内容行
         for token in previewTokens {
             let pos = "[\(token.range)]".padding(toLength: maxPosWidth, withPad: " ", startingAt: 0)
-            let typeName = token.symbol.description.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
+            let typeName = token.content.description.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
             let cleanLexeme = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
             
             output += " \(pos) │ \(typeName) │ \(cleanLexeme)\n"

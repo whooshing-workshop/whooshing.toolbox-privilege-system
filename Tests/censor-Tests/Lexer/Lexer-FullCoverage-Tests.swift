@@ -56,7 +56,7 @@ struct LexerFullCoverageTests {
             #expect(Bool(false), "未能识别操作符: \(input)")
             return
         }
-        #expect(t.symbol.description == expected)
+        #expect(t.content.description == expected)
     }
 
     // MARK: - 专项 2: 字面量与歧义消除 (20个用例)
@@ -94,7 +94,7 @@ struct LexerFullCoverageTests {
             print(result)
             return
         }
-        #expect(result.tokens[0].symbol.description == expected)
+        #expect(result.tokens[0].content.description == expected)
     }
 
     // MARK: - 专项 3: 结构化与嵌套 (10个用例)
@@ -103,13 +103,13 @@ struct LexerFullCoverageTests {
         let source = "(a + b) * -c / (d ?? 0) >= 100 == !false"
         let result = Censor.Compiler.Lexer(source: source).scanTokens()
         
-        let types = result.tokens.map { $0.symbol.description }
+        let types = result.tokens.map { $0.content.description }
         
         // 关键点校验
-        #expect(result.tokens[6].symbol.description == "Symbol.Prefix(-)")       // -c
-        #expect(result.tokens[11].symbol.description == "Symbol.NIL_COAL")       // d ?? 0
-        #expect(result.tokens[16].symbol.description == "Symbol.Infix(==)")      // ... == !
-        #expect(result.tokens[17].symbol.description == "Symbol.NOT")            // !false
+        #expect(result.tokens[6].content.description == "Symbol.Prefix(-)")       // -c
+        #expect(result.tokens[11].content.description == "Symbol.NIL_COAL")       // d ?? 0
+        #expect(result.tokens[16].content.description == "Symbol.Infix(==)")      // ... == !
+        #expect(result.tokens[17].content.description == "Symbol.NOT")            // !false
         #expect(!result.hasErrors)
     }
 
@@ -124,6 +124,6 @@ struct LexerFullCoverageTests {
 
 // MARK: - 辅助判定函数
 private func isOperator(_ type: Censor.Compiler.Token) -> Bool {
-    let name = type.symbol.description
+    let name = type.content.description
     return name.contains("Symbol") || name.contains("NOT") || name.contains("NIL_COAL") || name.contains("Delimiter")
 }
