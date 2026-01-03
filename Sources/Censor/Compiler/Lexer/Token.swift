@@ -7,11 +7,11 @@ extension Censor {
         case boolTrue       = "true"
         case boolFalse      = "false"
         
-        var token: any Compiler.Token.TokenType {
+        var token: Compiler.Token {
             switch self {
-            case .boolTrue: Compiler.Token.Literal.bool(BoolType(nullable: false).make(true))
-            case .boolFalse: Compiler.Token.Literal.bool(BoolType(nullable: false).make(false))
-            default: self
+            case .boolTrue: .init(self.rawValue, Compiler.Token.Literal.bool(BoolType(nullable: false).make(true)), .none, spacing: .none)
+            case .boolFalse: .init(self.rawValue, Compiler.Token.Literal.bool(BoolType(nullable: false).make(false)), .none, spacing: .none)
+            default: .init(self.rawValue, self, .none, spacing: .none)
             }
         }
         
@@ -51,78 +51,119 @@ extension Censor.Compiler {
     }
     
     struct Token {
-        protocol TokenType: Sendable, Equatable, CustomStringConvertible {}
+        let lexeme: String
+        let symbol: any TokenType
+        let type: SymbolType
+        let spacing: Spacing
+        let allowRepeating: Bool
+        let range: SourceRange
         
-        enum Literal: TokenType {
-            case string(Censor.Variable<Censor.StringType>)
-            case character(Censor.Variable<Censor.CharacterType>)
-            case integer(Censor.Variable<Censor.IntegerType>)
-            case decimal(Censor.Variable<Censor.DecimalType>)
-            case date(Censor.Variable<Censor.DateType>)
-            case uuid(Censor.Variable<Censor.UUIDType>)
-            case bool(Censor.Variable<Censor.BoolType>)
-            case trueType(Censor.Variable<Censor.TrueType>)
-            case identifier(String)
-        }
-        
-        enum Symbol: TokenType {
-            case prefixOperator(Censor.Operator.Prefix)
-            case postfixOperator(Censor.Operator.Postfix)
-            case infixOperator(Censor.Operator.Infix)
-            case sugar(Censor.SugarKey)
+        enum Spacing: CustomStringConvertible {
+            case symm(Bool?)
+            case asym(Bool?)
+            case any
+            case none
             
-            static let lexemeMap: [TrieSymbol] =
-                Censor.Operator.Prefix.allCases.map {
-                    TrieSymbol($0.rawValue, Self.prefixOperator($0), .prefix, spacing: .asym(true))
-                } + Censor.Operator.Postfix.allCases.map {
-                    TrieSymbol($0.rawValue, Self.postfixOperator($0), .postfix, spacing: .asym(false))
-                } + Censor.Operator.Infix.allCases.map {
-                    TrieSymbol($0.rawValue, Self.infixOperator($0), .infix, spacing: .symm(nil))
-                } + Censor.SugarKey.allCases.flatMap { $0.sugar.lexemes }
-        }
-        
-        enum Punctuator: TokenType {
-            enum Direction {
-                case left, right
-            }
-            
-            case bracket(BracketType, Direction)
-            
-            static let lexemeMap: [TrieSymbol] = [
-                TrieSymbol("(", Self.bracket(.parenth, .left), .prefix, spacing: .any),
-                TrieSymbol(")", Self.bracket(.parenth, .right), .postfix, spacing: .any),
-                TrieSymbol("[", Self.bracket(.square, .left), .prefix, spacing: .any),
-                TrieSymbol("]", Self.bracket(.square, .right), .postfix, spacing: .any) 
-            ]
-            
-            static func signs(of direction: Direction) -> [Character] {
-                switch direction {
-                case .left: ["(", "["]
-                case .right: [")", "]"]
+            var description: String {
+                switch self {
+                case .symm(let bool): "symm" + (bool == nil ? "" : "(\(bool!))")
+                case .asym(let bool): "asym" + (bool == nil ? "" : "(\(bool!))")
+                case .any: "any"
+                case .none: "none"
                 }
             }
         }
         
-        enum Delimiter: TokenType {
-            case colon
-            case dot
-            case comma
-            
-            static let lexemeMap: [TrieSymbol] = [
-                TrieSymbol(":", Self.colon, .infix, spacing: .asym(false)),
-                TrieSymbol(".", Self.dot, .infix, spacing: .any),
-                TrieSymbol(",", Self.comma, .infix, spacing: .any)
-            ]
+        init(
+            _ lexeme: String,
+            _ symbol: any TokenType,
+            _ type: SymbolType,
+            spacing: Spacing,
+            allowRepeating: Bool = false,
+            range: SourceRange? = nil
+        ) {
+            self.symbol = symbol
+            self.lexeme = lexeme
+            self.type = type
+            self.spacing = spacing
+            self.allowRepeating = allowRepeating
+            self.range = range ?? .init(start: .init(offset: 0, line: 0, column: 0), end: .init(offset: 0, line: 0, column: 0))
         }
         
-        enum Extra: TokenType {
-            case eof
-            case invalid
+        func set(range: SourceRange) -> Self {
+            .init(lexeme, symbol, type, spacing: spacing, range: range)
+        }
+    }
+}
+
+extension Censor.Compiler.Token {
+    protocol TokenType: Sendable, Equatable, CustomStringConvertible {}
+    
+    enum Literal: TokenType {
+        case string(Censor.Variable<Censor.StringType>)
+        case character(Censor.Variable<Censor.CharacterType>)
+        case integer(Censor.Variable<Censor.IntegerType>)
+        case decimal(Censor.Variable<Censor.DecimalType>)
+        case date(Censor.Variable<Censor.DateType>)
+        case uuid(Censor.Variable<Censor.UUIDType>)
+        case bool(Censor.Variable<Censor.BoolType>)
+        case trueType(Censor.Variable<Censor.TrueType>)
+        case identifier(String)
+    }
+    
+    enum Symbol: TokenType {
+        case prefixOperator(Censor.Operator.Prefix)
+        case postfixOperator(Censor.Operator.Postfix)
+        case infixOperator(Censor.Operator.Infix)
+        case sugar(Censor.SugarKey)
+        
+        static let lexemeMap: [Censor.Compiler.Token] =
+            Censor.Operator.Prefix.allCases.map {
+                .init($0.rawValue, Self.prefixOperator($0), .prefix, spacing: .asym(true))
+            } + Censor.Operator.Postfix.allCases.map {
+                .init($0.rawValue, Self.postfixOperator($0), .postfix, spacing: .asym(false))
+            } + Censor.Operator.Infix.allCases.map {
+                .init($0.rawValue, Self.infixOperator($0), .infix, spacing: .symm(nil))
+            } + Censor.SugarKey.allCases.flatMap { $0.sugar.lexemes }
+    }
+    
+    enum Punctuator: TokenType {
+        enum Direction {
+            case left, right
         }
         
-        let type: any TokenType
-        let lexeme: String
-        let range: SourceRange
+        case bracket(Censor.Compiler.BracketType, Direction)
+        
+        static let lexemeMap: [Censor.Compiler.Token] = [
+            .init("(", Self.bracket(.parenth, .left), .prefix, spacing: .any),
+            .init(")", Self.bracket(.parenth, .right), .postfix, spacing: .any),
+            .init("[", Self.bracket(.square, .left), .prefix, spacing: .any),
+            .init("]", Self.bracket(.square, .right), .postfix, spacing: .any)
+        ]
+        
+        static func signs(of direction: Direction) -> [Character] {
+            switch direction {
+            case .left: ["(", "["]
+            case .right: [")", "]"]
+            }
+        }
+    }
+    
+    enum Delimiter: TokenType {
+        case colon
+        case dot
+        case comma
+        
+        static let lexemeMap: [Censor.Compiler.Token] = [
+            .init(":", Self.colon, .infix, spacing: .asym(false)),
+            .init(".", Self.dot, .infix, spacing: .any),
+            .init(",", Self.comma, .infix, spacing: .any)
+        ]
+    }
+    
+    enum Extra: TokenType {
+        case eof
+        case invalid
     }
 }
 

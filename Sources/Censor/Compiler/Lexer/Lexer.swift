@@ -12,7 +12,7 @@ extension Censor.Compiler {
         private var line = 1                // 行号追踪
         private var column = 1              // 列号追踪
         private var lastChar: Character? = nil
-        private var lastSymbol: TrieSymbol? = nil
+        private var lastSymbol: Token? = nil
         private var currentLocation: Censor.Compiler.SourceLocation {
             .init(offset: start, line: line, column: column)
         }
@@ -31,7 +31,7 @@ extension Censor.Compiler {
                 scanToken()
             }
             
-            add(token: Token.Extra.eof, start: currentLocation, lexeme: " ")
+            add(token: .init(" ", Token.Extra.eof, .none, spacing: .none), start: currentLocation)
             return Result(tokens: tokens, diagnostics: errors, source: source)
         }
     }
@@ -86,8 +86,9 @@ private extension Censor.Compiler.Lexer {
         return source[targetIndex]
     }
     
-    func add(token: any Censor.Compiler.Token.TokenType, start: Censor.Compiler.SourceLocation, lexeme: String) {
-        tokens.append(.init(type: token, lexeme: lexeme, range: .init(start: start, end: start.offset(by: lexeme.count - 1))))
+    func add(token: Censor.Compiler.Token, start: Censor.Compiler.SourceLocation) {
+        let range = Censor.Compiler.SourceRange(start: start, end: start.offset(by: token.lexeme.count - 1))
+        tokens.append(token.set(range: range))
     }
     
     func reportError(_ message: String, start: Censor.Compiler.SourceLocation, kind: Censor.Compiler.Error.Kind = .lexical) {
@@ -172,7 +173,7 @@ private extension Censor.Compiler.Lexer {
         lastSymbol = nil
         guard !scanLiteral() else { return }
         
-        add(token: Extra.invalid, start: currentLocation, lexeme: String(char))
+        add(token: .init(String(char), Extra.invalid, .none, spacing: .none), start: currentLocation)
         reportError("非预期的字符: \(char)", start: currentLocation)
     }
     
@@ -183,7 +184,7 @@ private extension Censor.Compiler.Lexer {
         }
         
         var matchLength = 0
-        var bestMatch: (symbol: Censor.Compiler.TrieSymbol, length: Int)? = nil
+        var bestMatch: (symbol: Censor.Compiler.Token, length: Int)? = nil
         var matchedLexeme = ""
         // 2. 深度探测符号内容
         while let currentChar = peek(at: matchLength),
@@ -214,7 +215,7 @@ private extension Censor.Compiler.Lexer {
             lastSymbol = result.symbol
             let start = currentLocation
             advance(times: result.length)
-            add(token: result.symbol.symbol, start: start, lexeme: result.symbol.lexeme)
+            add(token: result.symbol, start: start)
             return true
         }
         
@@ -271,7 +272,7 @@ private extension Censor.Compiler.Lexer {
             return true
         }
         
-        add(token: Literal.string(Censor.StringType(nullable: false).make(value)), start: startLocation, lexeme: "\"\(value)\"")
+        add(token: .init("\"\(value)\"", Literal.string(Censor.StringType(nullable: false).make(value)), .none, spacing: .none), start: startLocation)
         
         // 消费掉最后的闭合引号
         _ = advance()
@@ -293,13 +294,13 @@ private extension Censor.Compiler.Lexer {
         }
 
         if content.count == 1 {
-            add(token: Literal.character(Censor.CharacterType(nullable: false).make(content.first!)), start: startLocation, lexeme: "'\(content)'")
+            add(token: .init("'\(content)'", Literal.character(Censor.CharacterType(nullable: false).make(content.first!)), .none, spacing: .none), start: startLocation)
         } else {
             guard let date = Censor.DateType.dateFormatter.date(from: content) else {
                 reportError("日期格式错误，请遵循 ISO8601 日期格式，如 '2025-01-25T09:30:00Z'", start: startLocation)
                 return true
             }
-            add(token: Literal.date(Censor.DateType(nullable: false).make(date)), start: startLocation, lexeme: "'\(content)'")
+            add(token: .init("'\(content)'", Literal.date(Censor.DateType(nullable: false).make(date)), .none, spacing: .none), start: startLocation)
         }
         
         _ = advance() // 消费结尾 '
@@ -331,14 +332,14 @@ private extension Censor.Compiler.Lexer {
                 return true
             }
             
-            add(token: Literal.decimal(Censor.DecimalType(nullable: false).make(decimal)), start: startLocation, lexeme: lexeme)
+            add(token: .init(lexeme, Literal.decimal(Censor.DecimalType(nullable: false).make(decimal)), .none, spacing: .none), start: startLocation)
         } else {
             guard let num = Int64(lexeme) else {
                 reportError("整数识别失败，格式有误", start: startLocation)
                 return true
             }
             
-            add(token: Literal.integer(Censor.IntegerType(nullable: false).make(num)), start: startLocation, lexeme: lexeme)
+            add(token: .init(lexeme, Literal.integer(Censor.IntegerType(nullable: false).make(num)), .none, spacing: .none), start: startLocation)
         }
         return true
     }
@@ -357,11 +358,11 @@ private extension Censor.Compiler.Lexer {
         
         // 3. 关键字检查 (Keyword Lookup)
         // 检查这个 lexeme 是否在 Keyword Map 中
-        if let keywordType = Censor.Keyword(rawValue: lexeme)?.token {
-            add(token: keywordType, start: startLocation, lexeme: lexeme)
+        if let token = Censor.Keyword(rawValue: lexeme)?.token {
+            add(token: token, start: startLocation)
         } else {
             // 否则，它就是一个标识符
-            add(token: Literal.identifier(lexeme), start: startLocation, lexeme: lexeme)
+            add(token: .init(lexeme, Literal.identifier(lexeme), .none, spacing: .none), start: startLocation)
         }
         
         return true
@@ -404,7 +405,7 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
 
         for token in previewTokens {
             let posStr = "[\(token.range)]"
-            let typeStr = token.type.description
+            let typeStr = token.symbol.description
             let lexemeStr = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
             
             maxPosWidth = max(maxPosWidth, posStr.count)
@@ -433,7 +434,7 @@ extension Censor.Compiler.Lexer.Result: CustomStringConvertible {
         // 内容行
         for token in previewTokens {
             let pos = "[\(token.range)]".padding(toLength: maxPosWidth, withPad: " ", startingAt: 0)
-            let typeName = token.type.description.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
+            let typeName = token.symbol.description.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
             let cleanLexeme = "`\(token.lexeme.replacingOccurrences(of: "\n", with: "\\n"))`"
             
             output += " \(pos) │ \(typeName) │ \(cleanLexeme)\n"

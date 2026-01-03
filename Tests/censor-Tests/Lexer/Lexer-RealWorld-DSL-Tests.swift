@@ -50,7 +50,7 @@ struct LexerDSLSimulationTests {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
         }
-        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
+        let actualTypes = result.tokens.filter { $0.symbol.description != "EOF" }.map { $0.symbol.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -92,7 +92,7 @@ struct LexerDSLSimulationTests {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
         }
-        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
+        let actualTypes = result.tokens.filter { $0.symbol.description != "EOF" }.map { $0.symbol.description }
         #expect(actualTypes == expectedTypes)
     }
 
@@ -115,7 +115,7 @@ struct LexerDSLSimulationTests {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
         }
-        let actualTypes = result.tokens.filter { $0.type.description != "EOF" }.map { $0.type.description }
+        let actualTypes = result.tokens.filter { $0.symbol.description != "EOF" }.map { $0.symbol.description }
         #expect(actualTypes == expectedTypes)
     }
 }

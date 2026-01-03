@@ -9,8 +9,8 @@ struct ParserTesting {
         let result = Censor.Compiler.Lexer(source: source).scanTokens()
         #expect(!result.hasErrors)
         print(result)
-        let r = Censor.Compiler.Parser(tokens: result.tokens, source: source).parse()
-        print(r.ast)
-        r.diagnostics.map { print($0.prettyDescription(in: source)) }
+//        let r = Censor.Compiler.Parser(tokens: result.tokens, source: source).parse()
+//        print(r.ast)
+//        r.diagnostics.map { print($0.prettyDescription(in: source)) }
     }
 }

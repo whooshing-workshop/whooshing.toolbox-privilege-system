@@ -16,7 +16,7 @@ struct LexerTests {
         let result = Censor.Compiler.Lexer(source: input).scanTokens()
         #expect(result.tokens.count >= 1)
         let firstToken = result.tokens[0]
-        #expect(firstToken.type.description == expectedType)
+        #expect(firstToken.symbol.description == expectedType)
     }
 
     // MARK: - 2. 物理环境 (Prefix/Postfix/Infix) 专项测试
@@ -33,20 +33,20 @@ struct LexerTests {
             // 前缀：左虚(行首)右实
             let prefixResult = Censor.Compiler.Lexer(source: "!flag").scanTokens()
             print(prefixResult)
-            #expect(prefixResult.tokens[0].type.description == "Symbol.NOT")
+            #expect(prefixResult.tokens[0].symbol.description == "Symbol.NOT")
             
             // 后缀：左实右虚(行尾)
             let postfixResult = Censor.Compiler.Lexer(source: "flag!").scanTokens()
-            #expect(postfixResult.tokens[1].type.description == "Symbol.F_CAST")
+            #expect(postfixResult.tokens[1].symbol.description == "Symbol.F_CAST")
         }
 
         @Test("加号对称性: 中缀识别")
         func testAdditionInfix() {
             let result1 = Censor.Compiler.Lexer(source: "a + b").scanTokens()
-            #expect(result1.tokens[1].type.description == "Symbol.Infix(+)")
+            #expect(result1.tokens[1].symbol.description == "Symbol.Infix(+)")
             
             let result2 = Censor.Compiler.Lexer(source: "a+b").scanTokens()
-            #expect(result2.tokens[1].type.description == "Symbol.Infix(+)")
+            #expect(result2.tokens[1].symbol.description == "Symbol.Infix(+)")
         }
 
         @Test("Swift 风格不对称报错案例: (1+4) -1")
@@ -54,7 +54,7 @@ struct LexerTests {
             let result = Censor.Compiler.Lexer(source: "(1+4) -1").scanTokens()
             
             let minusToken = result.tokens[5] // 索引5应该是 '-'
-            #expect(minusToken.type.description == "Symbol.Prefix(-)")
+            #expect(minusToken.symbol.description == "Symbol.Prefix(-)")
         }
     }
 
@@ -74,7 +74,7 @@ struct LexerTests {
         let result = Censor.Compiler.Lexer(source: source).scanTokens()
         
         #expect(!result.hasErrors)
-        #expect(result.tokens[1].type.description == "Symbol.Infix(+)")
+        #expect(result.tokens[1].symbol.description == "Symbol.Infix(+)")
     }
 
     // MARK: - 5. 错误处理测试

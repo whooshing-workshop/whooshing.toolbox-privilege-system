@@ -7,49 +7,10 @@ extension Censor.Compiler {
         
         var description: String { self.rawValue }
     }
-    
-    struct TrieSymbol {
-        let lexeme: String
-        let symbol: any Token.TokenType
-        let symbolType: SymbolType
-        let spacing: Spacing
-        let allowRepeating: Bool
-        
-        enum Spacing: CustomStringConvertible {
-            case symm(Bool?)
-            case asym(Bool?)
-            case any
-            case none
-            
-            var description: String {
-                switch self {
-                case .symm(let bool): "symm" + (bool == nil ? "" : "(\(bool!))")
-                case .asym(let bool): "asym" + (bool == nil ? "" : "(\(bool!))")
-                case .any: "any"
-                case .none: "none"
-                }
-            }
-        }
-        
-        init(
-            _ lexeme: String,
-            _ symbol: any Token.TokenType,
-            _ symbolType: SymbolType,
-            spacing: Spacing,
-            allowRepeating: Bool = false,
-        ) {
-            self.symbol = symbol
-            self.lexeme = lexeme
-            self.symbolType = symbolType
-            self.spacing = spacing
-            self.allowRepeating = allowRepeating
-        }
-    }
-    
 
     class TrieNode: @unchecked Sendable {
         private(set) var children: [Character: TrieNode] = [:]
-        private(set) var symbol: TrieSymbol? = nil
+        private(set) var symbol: Token? = nil
         
         enum SpacingSign: Character, Sendable {
             case requireSpaceSign = "□"
@@ -62,17 +23,17 @@ extension Censor.Compiler {
         
         var isLeaf: Bool { children.isEmpty }
         
-        private init(children: [Character : TrieNode] = [:], symbol: TrieSymbol? = nil) {
+        private init(children: [Character : TrieNode] = [:], symbol: Token? = nil) {
             self.children = children
             self.symbol = symbol
         }
         
-        static func build(from symbols: [TrieSymbol]) -> TrieNode {
+        static func build(from symbols: [Token]) -> TrieNode {
             let root = TrieNode()
             
-            for trieSymbol in symbols {
+            for Symbol in symbols {
                 
-                // 每个 Symbol 的前后空格均有严格规定，设定存于 TrieSymbol 的 spacing
+                // 每个 Symbol 的前后空格均有严格规定，设定存于 Symbol 的 spacing
                 // 中，下面列出所有处理情况：
                 //
                 //          space: 前一个字符必须为空格
@@ -108,7 +69,7 @@ extension Censor.Compiler {
                 let checkList: [(SpacingSign, SpacingSign)]
                 let s = SpacingSign.requireSpaceSign
                 let n = SpacingSign.notSpaceSign
-                switch trieSymbol.spacing {
+                switch Symbol.spacing {
                 case .symm(let left):
                     checkList = left == nil ? [(s, s), (n, n)] : (left! ? [(s, s)] : [(n, n)])
                 case .asym(let left):
@@ -123,12 +84,12 @@ extension Censor.Compiler {
                     var currentNode = root
                     append(character: heads.0.rawValue)
                     
-                    for char in trieSymbol.lexeme {
+                    for char in Symbol.lexeme {
                         append(character: char)
                     }
                     
                     append(character: heads.1.rawValue)
-                    currentNode.symbol = trieSymbol
+                    currentNode.symbol = Symbol
                     
                     func append(character: Character) {
                         if let node = currentNode.children[character] {
@@ -168,7 +129,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         var grouped: [String: (lex: String, type: String, rule: String, contexts: Set<String>)] = [:]
         
         for entry in allEntries {
-            let key = "\(entry.symbol.lexeme)_\(entry.symbol.symbolType)"
+            let key = "\(entry.symbol.lexeme)_\(entry.symbol.type)"
             let ctxString = "\(entry.leftSign) \(entry.rightSign)"
             
             if var existing = grouped[key] {
@@ -177,7 +138,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             } else {
                 grouped[key] = (
                     "`\(entry.symbol.lexeme)`",
-                    entry.symbol.symbolType.description,
+                    entry.symbol.type.description,
                     "\(entry.symbol.spacing)",
                     [ctxString]
                 )
@@ -272,7 +233,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             
             var symbolInfo = ""
             if let sym = child.symbol {
-                symbolInfo = " -> \(sym.symbolType.description)(\(sym.lexeme))"
+                symbolInfo = " -> \(sym.type.description)(\(sym.lexeme))"
             }
             
             result += prefix + connector + charDisplay + symbolInfo + "\n"
@@ -287,7 +248,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         let leftSign: Character
         let lexeme: String
         let rightSign: Character
-        let symbol: Censor.Compiler.TrieSymbol
+        let symbol: Censor.Compiler.Token
     }
 
     private func collectSymbolEntries(node: Censor.Compiler.TrieNode, path: String) -> [SymbolEntry] {

@@ -6,10 +6,10 @@ public extension Censor {
         public let argumentCount: Int
         public let precedence: Operator.Precedence.Declare.Type
         public let action: ExecutableAction
-        let lexemes: [Censor.Compiler.TrieSymbol]
+        let lexemes: [Censor.Compiler.Token]
         
         init(
-            lexemes: [Censor.Compiler.TrieSymbol],
+            lexemes: [Censor.Compiler.Token],
             returns: @Sendable @escaping ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase>,
             argumentCount: Int,
             precedence: Operator.Precedence.Declare.Type,
@@ -30,7 +30,7 @@ public extension Censor {
     @resultBuilder
     internal struct SugarBuilder {
         static func buildBlock(
-            _ lexemes: [Censor.Compiler.TrieSymbol],
+            _ lexemes: [Censor.Compiler.Token],
             _ returns: @Sendable @escaping ([any TypeDeclare]) -> Res<any TypeDeclare, Errcase>,
             _ argumentCount: Int,
             _ precedence: Operator.Precedence.Declare.Type,
@@ -46,7 +46,7 @@ public extension Censor {
 }
 
 public extension Censor {
-    internal typealias TrieSymbol = Censor.Compiler.TrieSymbol
+    internal typealias Token = Censor.Compiler.Token
     internal typealias Symbol = Censor.Compiler.Token.Symbol
     enum SugarKey: Hashable, Sendable {
         
@@ -67,7 +67,7 @@ public extension Censor {
             switch self {
             case .not: .init {
                 [
-                    TrieSymbol("!", Symbol.sugar(.not), .prefix, spacing: .asym(true))
+                    Token("!", Symbol.sugar(.not), .prefix, spacing: .asym(true))
                 ]
                 GenericReturn {
                     guard $0.count == 1, let variable = $0.first else {
@@ -86,7 +86,7 @@ public extension Censor {
             }
             case .forceCast: .init {
                 [
-                    TrieSymbol("!", Symbol.sugar(.forceCast), .postfix, spacing: .asym(false), allowRepeating: true)
+                    Token("!", Symbol.sugar(.forceCast), .postfix, spacing: .asym(false), allowRepeating: true)
                 ]
                 GenericReturn {
                     guard $0.count == 1, let variable = $0.first else {
@@ -105,7 +105,7 @@ public extension Censor {
             }
             case .nilCoalescing: .init {
                 [
-                    TrieSymbol("??", Symbol.sugar(.nilCoalescing), .postfix, spacing: .symm(nil))
+                    Token("??", Symbol.sugar(.nilCoalescing), .postfix, spacing: .symm(nil))
                 ]
                 GenericReturn {
                     guard
@@ -135,7 +135,7 @@ public extension Censor {
             }
             case .optionalChaining: .init {
                 [
-                    TrieSymbol("?", Symbol.sugar(.optionalChaining), .postfix, spacing: .asym(false)),
+                    Token("?", Symbol.sugar(.optionalChaining), .postfix, spacing: .asym(false)),
                 ]
                 GenericReturn { _ in
                     fatalError()
@@ -146,8 +146,8 @@ public extension Censor {
             }
             case .ternary: .init {
                 [
-                    TrieSymbol("?", Symbol.sugar(.ternary(.question)), .infix, spacing: .symm(true), allowRepeating: true),
-                    TrieSymbol(":", Symbol.sugar(.ternary(.colon)), .infix, spacing: .symm(true))
+                    Token("?", Symbol.sugar(.ternary(.question)), .infix, spacing: .symm(true), allowRepeating: true),
+                    Token(":", Symbol.sugar(.ternary(.colon)), .infix, spacing: .symm(true))
                 ]
                 GenericReturn {
                     guard $0.count == 3 else {
