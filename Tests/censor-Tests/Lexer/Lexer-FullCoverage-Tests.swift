@@ -106,10 +106,10 @@ struct LexerFullCoverageTests {
         let types = result.tokens.map { $0.content.description }
         
         // 关键点校验
-        #expect(result.tokens[6].content.description == "Symbol.Prefix(-)")       // -c
-        #expect(result.tokens[11].content.description == "Symbol.NIL_COAL")       // d ?? 0
-        #expect(result.tokens[16].content.description == "Symbol.Infix(==)")      // ... == !
-        #expect(result.tokens[17].content.description == "Symbol.NOT")            // !false
+        #expect(types[6] == "Symbol.Prefix(-)")       // -c
+        #expect(types[11] == "Symbol.NIL_COAL")       // d ?? 0
+        #expect(types[16] == "Symbol.Infix(==)")      // ... == !
+        #expect(types[17] == "Symbol.NOT")            // !false
         #expect(!result.hasErrors)
     }
 
