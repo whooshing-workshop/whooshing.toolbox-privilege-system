@@ -42,7 +42,7 @@ extension Censor.Symbol {
             return .success(variable)
         }
         
-        let action = Censor.ExecutableAction { .succ(!$0.first!.cast(as: Bool.self)) }
+        let action = Censor.ExecutableAction { .succ(!$0[0].cast(as: Bool.self)) }
     }
 
     struct ForceCast: Sugar, Postfix {
@@ -63,7 +63,7 @@ extension Censor.Symbol {
             return .success(variable.set(nullable: false))
         }
         
-        let action = Censor.ExecutableAction { .succ($0.first!.content!) }
+        let action = Censor.ExecutableAction { .succ($0[0].content!) }
     }
 
     struct OptionalChaining: Sugar, Postfix {
@@ -107,7 +107,7 @@ extension Censor.Symbol {
             return .success(instead)
         }
         
-        let action = Censor.ExecutableAction { .succ($0.first!.content ?? $0.last!.content) }
+        let action = Censor.ExecutableAction { .succ($0[0].content ?? $0[1].content) }
     }
 
     struct Ternary: Sugar, Vary {

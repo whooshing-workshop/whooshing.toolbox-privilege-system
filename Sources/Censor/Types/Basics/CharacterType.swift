@@ -12,7 +12,7 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asString": .init { .succ(String($0.first!.cast(as: Character.self))) }
+            "asString": .init { .succ(String($0[0].cast(as: Character.self))) }
         ]
         
         init(nullable: Bool) {

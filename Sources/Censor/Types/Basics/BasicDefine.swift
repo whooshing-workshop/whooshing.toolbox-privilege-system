@@ -33,9 +33,6 @@ extension Censor {
         func isMatch(value: Censor.Value) -> Bool
         
         func make(_ value: RealType?) -> Variable<Self>
-//        func make(value: Value) -> Res<Variable<Self>, Censor.Errcase>
-//        func realType(of value: Value) -> RealType
-//        func optionalRealType(of value: Value) -> RealType?
         
         init(nullable: Bool)
     }
@@ -45,11 +42,6 @@ extension Censor {
         let value: T.RealType?
         var declaredType: String { self.type.description }
         var optional: Bool { self.type.nullable }
-        
-//        func `is`(type: any TypeDeclare) -> Bool {
-//            Swift.type(of: self.type).name == Swift.type(of: type).name &&
-//            (value.isNull ?  type.nullable == true : true)
-//        }
 
         fileprivate init(type: T, value: T.RealType?) {
             self.type = type

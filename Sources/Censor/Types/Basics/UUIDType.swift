@@ -26,7 +26,7 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asString": .init { .succ($0.first!.cast(as: UUID.self).uuidString) }
+            "asString": .init { .succ($0[0].cast(as: UUID.self).uuidString) }
         ]
         
         static let staticPropertieActions: [String : ExecutableAction] = [

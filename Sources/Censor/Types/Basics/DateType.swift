@@ -68,8 +68,8 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asString": .init { .succ(Self.dateFormatter.string(from: $0.first!.cast())) },
-            "timeIntervalSince1970": .init { .succ(Int64($0.first!.cast(as: Date.self).timeIntervalSince1970 * 1000)) }
+            "asString": .init { .succ(Self.dateFormatter.string(from: $0[0].cast())) },
+            "timeIntervalSince1970": .init { .succ(Int64($0[0].cast(as: Date.self).timeIntervalSince1970 * 1000)) }
         ]
         
         static let functionActions: [String : ExecutableAction] = [

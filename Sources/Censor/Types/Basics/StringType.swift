@@ -89,13 +89,13 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asInteger": .init { .succ(Int64($0.first!.cast(as: String.self))) },
-            "asDecimal": .init { .succ(Decimal(string: $0.first!.cast())) },
-            "asDate": .init { .succ(DateType.dateFormatter.date(from: $0.first!.cast())) },
-            "asBool": .init { .succ($0.first!.cast() == "true" ? true : $0.first!.cast() == "false" ? false : nil) },
-            "asUUID": .init { .succ(UUID(uuidString: $0.first!.cast())) },
-            "count": .init { .succ(Int64($0.first!.cast(as: String.self).count)) },
-            "last": .init { .succ($0.first!.cast(as: String.self).last) }
+            "asInteger": .init { .succ(Int64($0[0].cast(as: String.self))) },
+            "asDecimal": .init { .succ(Decimal(string: $0[0].cast())) },
+            "asDate": .init { .succ(DateType.dateFormatter.date(from: $0[0].cast())) },
+            "asBool": .init { .succ($0[0].cast() == "true" ? true : $0[0].cast() == "false" ? false : nil) },
+            "asUUID": .init { .succ(UUID(uuidString: $0[0].cast())) },
+            "count": .init { .succ(Int64($0[0].cast(as: String.self).count)) },
+            "last": .init { .succ($0[0].cast(as: String.self).last) }
         ]
         
         static let functionActions: [String : ExecutableAction] = [

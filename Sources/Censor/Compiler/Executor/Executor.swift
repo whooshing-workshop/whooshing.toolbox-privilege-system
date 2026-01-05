@@ -1,0 +1,5 @@
+extension Censor {
+    class Executor {
+        
+    }
+}

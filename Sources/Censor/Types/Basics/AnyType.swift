@@ -18,13 +18,13 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asString": .init { .succ($0.first!.cast(as: Any.self) as? String) },
-            "asCharacter": .init { .succ($0.first!.cast(as: Any.self) as? Character) },
-            "asInteger": .init { .succ($0.first!.cast(as: Any.self) as? Int64) },
-            "asDecimal": .init { .succ($0.first!.cast(as: Any.self) as? Decimal) },
-            "asDate": .init { .succ($0.first!.cast(as: Any.self) as? Date) },
-            "asUUID": .init { .succ($0.first!.cast(as: Any.self) as? UUID) },
-            "asBool": .init { .succ($0.first!.cast(as: Any.self) as? Bool) }
+            "asString": .init { .succ($0[0].cast(as: Any.self) as? String) },
+            "asCharacter": .init { .succ($0[0].cast(as: Any.self) as? Character) },
+            "asInteger": .init { .succ($0[0].cast(as: Any.self) as? Int64) },
+            "asDecimal": .init { .succ($0[0].cast(as: Any.self) as? Decimal) },
+            "asDate": .init { .succ($0[0].cast(as: Any.self) as? Date) },
+            "asUUID": .init { .succ($0[0].cast(as: Any.self) as? UUID) },
+            "asBool": .init { .succ($0[0].cast(as: Any.self) as? Bool) }
         ]
         
         init(nullable: Bool) {

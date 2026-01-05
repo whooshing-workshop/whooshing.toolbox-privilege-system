@@ -7,7 +7,7 @@ extension Censor.Symbol {
     
     protocol ArithmeticOp: Operator {}
     
-    public enum InfixOperator: Sendable, Codable, CaseIterable {
+    public enum InfixOperator: String, Sendable, Codable, CaseIterable {
         case plus
         case minus
         case multi
@@ -51,7 +51,7 @@ extension Censor.Symbol {
         }
     }
     
-    public enum PrefixOperator: Sendable, Codable, CaseIterable {
+    public enum PrefixOperator: String, Sendable, Codable, CaseIterable {
         case positive
         case negative
         
@@ -67,7 +67,7 @@ extension Censor.Symbol {
         }
     }
     
-    public enum PostfixOperator: Sendable, Codable, CaseIterable {
+    public enum PostfixOperator: String, Sendable, Codable, CaseIterable {
         case forceCast
         case optionalChaining
         

@@ -38,9 +38,9 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asString": .init { .succ(String($0.first!.cast(as: Bool.self))) },
-            "asInteger": .init { .succ(Int64($0.first!.cast() ? 1 : 0)) },
-            "asDecimal": .init { .succ(Decimal($0.first!.cast() ? 1 : 0)) },
+            "asString": .init { .succ(String($0[0].cast(as: Bool.self))) },
+            "asInteger": .init { .succ(Int64($0[0].cast() ? 1 : 0)) },
+            "asDecimal": .init { .succ(Decimal($0[0].cast() ? 1 : 0)) },
         ]
         
         static let infixOpActions: [Censor.Symbol.InfixOperator : [String : ExecutableAction]] = [

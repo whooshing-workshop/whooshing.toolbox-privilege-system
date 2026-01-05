@@ -112,9 +112,9 @@ extension Censor {
         ]
         
         static let propertyActions: [String : Censor.ExecutableAction] = [
-            "asString": .init { .succ($0.first!.cast(as: Decimal.self).description) },
-            "asDate": .init { .succ(Date(timeIntervalSince1970: ($0.first!.cast(as: Decimal.self) / 1000 as NSDecimalNumber).doubleValue)) },
-            "asInteger": .init { .succ(($0.first!.cast(as: Decimal.self) as NSDecimalNumber).int64Value) }
+            "asString": .init { .succ($0[0].cast(as: Decimal.self).description) },
+            "asDate": .init { .succ(Date(timeIntervalSince1970: ($0[0].cast(as: Decimal.self) / 1000 as NSDecimalNumber).doubleValue)) },
+            "asInteger": .init { .succ(($0[0].cast(as: Decimal.self) as NSDecimalNumber).int64Value) }
         ]
         
         static let infixOpActions: [Censor.Symbol.InfixOperator : [String : ExecutableAction]] = [
@@ -149,8 +149,8 @@ extension Censor {
         ]
         
         static let prefixOpActions: [Censor.Symbol.PrefixOperator : ExecutableAction] = [
-            .positive: .init { .succ($0.first!.cast(as: Decimal.self)) },
-            .negative: .init { .succ(-$0.first!.cast(as: Decimal.self)) }
+            .positive: .init { .succ($0[0].cast(as: Decimal.self)) },
+            .negative: .init { .succ(-$0[0].cast(as: Decimal.self)) }
         ]
         
         init(nullable: Bool) {

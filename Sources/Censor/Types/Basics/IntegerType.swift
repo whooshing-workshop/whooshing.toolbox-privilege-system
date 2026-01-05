@@ -119,9 +119,9 @@ extension Censor {
         ]
         
         static let propertyActions: [String : ExecutableAction] = [
-            "asString": .init { .succ($0.first!.cast(as: Int64.self).description) },
-            "asDate": .init { .succ(Date(timeIntervalSince1970: Double($0.first!.cast(as: Int64.self)) / 1000)) },
-            "asDecimal": .init { .succ(Decimal($0.first!.cast(as: Int64.self))) }
+            "asString": .init { .succ($0[0].cast(as: Int64.self).description) },
+            "asDate": .init { .succ(Date(timeIntervalSince1970: Double($0[0].cast(as: Int64.self)) / 1000)) },
+            "asDecimal": .init { .succ(Decimal($0[0].cast(as: Int64.self))) }
         ]
         
         static let infixOpActions: [Symbol.InfixOperator : [String : ExecutableAction]] = [
@@ -159,8 +159,8 @@ extension Censor {
         ]
         
         static let prefixOpActions: [Censor.Symbol.PrefixOperator : ExecutableAction] = [
-            .positive: .init { .succ($0.first!.cast(as: Int64.self)) },
-            .negative: .init { .succ(-$0.first!.cast(as: Int64.self)) }
+            .positive: .init { .succ($0[0].cast(as: Int64.self)) },
+            .negative: .init { .succ(-$0[0].cast(as: Int64.self)) }
         ]
         
         init(nullable: Bool) {
