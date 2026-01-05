@@ -4,6 +4,7 @@ public extension Censor {
     indirect enum AST: Sendable {
         case value(AnyVariable)
         case trueType(String)
+        case rule(any Rule.Define, contents: [Self])
         case global(String)
         case property(String)
         case keyword(Keyword.Define)
@@ -26,7 +27,8 @@ public extension Censor.AST {
     enum CodingType: String, Codable, CaseIterable, Sendable {
         case value = "Value"
         case trueType = "TrueType"
-        case variable = "Variable"
+        case rule = "Rule"
+        case global = "Global"
         case property = "Property"
         case keyword = "Keyword"
         case function = "Function"
@@ -36,6 +38,7 @@ public extension Censor.AST {
         case suffix = "Suffix"
         case infix = "Infix"
     }
+
 
     func toACL<T: ACLType>(
         _ type: T.Type = T.self,
@@ -67,7 +70,7 @@ public extension Censor.AST {
             return [acl]
 
         case .global(let s):
-            acl.type = .variable
+            acl.type = .global
             acl.value = s
             return [acl]
 
@@ -159,6 +162,22 @@ public extension Censor.AST {
 
             return res
 
+        case .rule(let r, let c):
+            acl.type = .rule
+            acl.value = r.name
+            
+            var res: [ACLExp<T>] = [acl]
+            for (i, child) in c.enumerated() {
+                res.append(
+                    contentsOf: child.toACL(
+                        parent: acl.id,
+                        rule: rule ?? acl.id,
+                        position: i
+                    )
+                )
+            }
+            return res
+
         case .infix(let op, let left, let right):
             acl.type = .infix
             acl.op = op.operator.lexeme
@@ -180,8 +199,10 @@ public extension Censor.AST {
             )
 
             return res
-        }
+            
+
     }
+}
 }
 
 extension Censor.AST: CustomStringConvertible {
@@ -200,7 +221,7 @@ extension Censor.AST: CustomStringConvertible {
             str += "TrueType(\(s))"
 
         case .global(let s):
-            str += "Variable(\(s))"
+            str += "Global(\(s))"
 
         case .property(let s):
             str += "Property(\(s))"
@@ -221,16 +242,21 @@ extension Censor.AST: CustomStringConvertible {
             str += childrenDescription(children: [array], prefix: prefix)
 
         case .prefix(let op, let right):
-            str += "\(op)"
+            str += "\(op.operator)"
             str += childrenDescription(children: [right], prefix: prefix)
 
         case .postfix(let op, let left):
-            str += "\(op)"
+            str += "\(op.operator)"
             str += childrenDescription(children: [left], prefix: prefix)
 
+        case .rule(let r, let c):
+            str += "\(r.description)"
+            str += childrenDescription(children: c, prefix: prefix)
+
         case .infix(let op, let left, let right):
-            str += "\(op)"
+            str += "\(op.operator)"
             str += childrenDescription(children: [left, right], prefix: prefix)
+            
         }
 
         return str

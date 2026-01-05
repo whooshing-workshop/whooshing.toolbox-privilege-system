@@ -3,7 +3,7 @@ extension Censor.Symbol {
         var name: String { get }
     }
     
-    static let delimiters: [any Delimiter] = [
+    static let delimiters: [any Define] = [
         Comma(),
         Dot()
     ]
@@ -19,12 +19,6 @@ extension Censor.Symbol {
     struct Comma: Delimiter {
         let lexeme = ","
         let name = "COMMA"
-        let spacing: Spacing = .any
-    }
-    
-    struct Dot: Delimiter {
-        let lexeme = "."
-        let name = "DOT"
         let spacing: Spacing = .any
     }
 }

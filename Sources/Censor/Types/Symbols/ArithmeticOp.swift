@@ -1,3 +1,5 @@
+import Foundation
+
 extension Censor.Symbol {
     protocol Operator: Define {
         var precedence: AnyPrecedence { get }
@@ -23,7 +25,8 @@ extension Censor.Symbol {
         
         case nilCoalescing
         case ternary
-        
+        case dot
+
         var `operator`: any Operator {
             switch self {
             case .plus: Plus()
@@ -37,26 +40,27 @@ extension Censor.Symbol {
             case .and: And()
             case .or: Or()
             case .notEqual: NotEqual()
-            case .greater: GreaterEqual()
+            case .greater: Greater()
             case .lessEqual: LessEqual()
-            case .greaterEqual: Greater()
+            case .greaterEqual: GreaterEqual()
                 
             case .nilCoalescing: NilCoalescing()
             case .ternary: Ternary()
+            case .dot: Dot()
             }
         }
     }
     
     public enum PrefixOperator: Sendable, Codable, CaseIterable {
         case positive
-        case negetive
+        case negative
         
         case not
         
         var `operator`: any Operator {
             switch self {
             case .positive: Positive()
-            case .negetive: Negetive()
+            case .negative: Negetive()
                 
             case .not: Not()
             }
@@ -153,6 +157,12 @@ extension Censor.Symbol {
     struct Or: ArithmeticOp, Hashable, Infix {
         let lexeme = "|"
         let precedence: AnyPrecedence = Precedence.LogicOr().any
+    }
+
+    struct Dot: ArithmeticOp, Hashable, Infix {
+        let lexeme = "."
+        let spacing: Spacing = .any
+        let precedence: AnyPrecedence = Precedence.Postfix().any
     }
 }
 

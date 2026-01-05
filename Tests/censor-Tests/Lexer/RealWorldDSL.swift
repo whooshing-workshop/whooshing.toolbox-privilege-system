@@ -10,7 +10,7 @@ struct LexerDSLSimulationTests {
     @Test("综合逻辑流测试", arguments: [
         // 1. 典型的权限校验逻辑
         ("user.roles[0] == \"admin\" & (is_active!! | expiry_date > '2026-01-01T00:00:00Z')", [
-            "Literal.IDENT(user)", "Delimiter.DOT", "Literal.IDENT(roles)", "Punctuator.SQUARE_L", "Literal.INT", "Punctuator.SQUARE_R",
+            "Literal.IDENT(user)", "Symbol.Infix(.)", "Literal.IDENT(roles)", "Punctuator.SQUARE_L", "Literal.INT", "Punctuator.SQUARE_R",
             "Symbol.Infix(==)", "Literal.STRING", "Symbol.Infix(&)", "Punctuator.PAREN_L",
             "Literal.IDENT(is_active)", "Symbol.F_CAST", "Symbol.F_CAST", "Symbol.Infix(|)",
             "Literal.IDENT(expiry_date)", "Symbol.Infix(>)", "Literal.DATE", "Punctuator.PAREN_R"
@@ -20,12 +20,12 @@ struct LexerDSLSimulationTests {
         ("-(100.5 * 2) + -(item.price / -1.0)", [
             "Symbol.Prefix(-)", "Punctuator.PAREN_L", "Literal.DECIMAL", "Symbol.Infix(*)", "Literal.INT", "Punctuator.PAREN_R",
             "Symbol.Infix(+)", "Symbol.Prefix(-)", "Punctuator.PAREN_L",
-            "Literal.IDENT(item)", "Delimiter.DOT", "Literal.IDENT(price)", "Symbol.Infix(/)", "Symbol.Prefix(-)", "Literal.DECIMAL", "Punctuator.PAREN_R"
+            "Literal.IDENT(item)", "Symbol.Infix(.)", "Literal.IDENT(price)", "Symbol.Infix(/)", "Symbol.Prefix(-)", "Literal.DECIMAL", "Punctuator.PAREN_R"
         ]),
         
         // 3. 可选链与三目嵌套
         ("data?.items[count-1] ? \"has_data\" : nil", [
-            "Literal.IDENT(data)", "Symbol.OP_CHAIN", "Delimiter.DOT", "Literal.IDENT(items)",
+            "Literal.IDENT(data)", "Symbol.OP_CHAIN", "Symbol.Infix(.)", "Literal.IDENT(items)",
             "Punctuator.SQUARE_L", "Literal.IDENT(count)", "Symbol.Infix(-)", "Literal.INT", "Punctuator.SQUARE_R",
             "Symbol.TERNARY_QUEST", "Literal.STRING", "Symbol.TERNARY_COLON", "Keyword.NULL"
         ]),
@@ -82,8 +82,8 @@ struct LexerDSLSimulationTests {
         
         // 7. 复杂的点号与可选链
         ("a?.b.c?.d", [
-            "Literal.IDENT(a)", "Symbol.OP_CHAIN", "Delimiter.DOT", "Literal.IDENT(b)",
-            "Delimiter.DOT", "Literal.IDENT(c)", "Symbol.OP_CHAIN", "Delimiter.DOT", "Literal.IDENT(d)"
+            "Literal.IDENT(a)", "Symbol.OP_CHAIN", "Symbol.Infix(.)", "Literal.IDENT(b)",
+            "Symbol.Infix(.)", "Literal.IDENT(c)", "Symbol.OP_CHAIN", "Symbol.Infix(.)", "Literal.IDENT(d)"
         ])
     ])
     func testLayoutHell(source: String, expectedTypes: [String]) {
@@ -100,12 +100,12 @@ struct LexerDSLSimulationTests {
     @Test("数据转换 DSL 模拟", arguments: [
         // 模拟 value.asInteger() + 10
         ("value.asInteger() + 10", [
-            "Literal.IDENT(value)", "Delimiter.DOT", "Literal.IDENT(asInteger)",
+            "Literal.IDENT(value)", "Symbol.Infix(.)", "Literal.IDENT(asInteger)",
             "Punctuator.PAREN_L", "Punctuator.PAREN_R", "Symbol.Infix(+)", "Literal.INT"
         ]),
         // 模拟日期计算：'2026-01-01'.toDate() > nil
         ("\"2026-01-01\".toDate() > nil", [
-            "Literal.STRING", "Delimiter.DOT", "Literal.IDENT(toDate)",
+            "Literal.STRING", "Symbol.Infix(.)", "Literal.IDENT(toDate)",
             "Punctuator.PAREN_L", "Punctuator.PAREN_R", "Symbol.Infix(>)", "Keyword.NULL"
         ])
     ])

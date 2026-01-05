@@ -105,7 +105,7 @@ extension Censor {
                 Return { DecimalType(nullable: false) }
                 false
             },
-            .negetive: .init {
+            .negative: .init {
                 Return { DecimalType(nullable: false) }
                 false
             }
@@ -150,7 +150,7 @@ extension Censor {
         
         static let prefixOpActions: [Censor.Symbol.PrefixOperator : ExecutableAction] = [
             .positive: .init { .succ($0.first!.cast(as: Decimal.self)) },
-            .negetive: .init { .succ(-$0.first!.cast(as: Decimal.self)) }
+            .negative: .init { .succ(-$0.first!.cast(as: Decimal.self)) }
         ]
         
         init(nullable: Bool) {

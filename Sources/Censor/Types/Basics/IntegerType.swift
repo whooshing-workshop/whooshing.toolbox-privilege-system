@@ -112,7 +112,7 @@ extension Censor {
                 Return { IntegerType(nullable: false) }
                 false
             },
-            .negetive: .init {
+            .negative: .init {
                 Return { IntegerType(nullable: false) }
                 false
             }
@@ -160,7 +160,7 @@ extension Censor {
         
         static let prefixOpActions: [Censor.Symbol.PrefixOperator : ExecutableAction] = [
             .positive: .init { .succ($0.first!.cast(as: Int64.self)) },
-            .negetive: .init { .succ(-$0.first!.cast(as: Int64.self)) }
+            .negative: .init { .succ(-$0.first!.cast(as: Int64.self)) }
         ]
         
         init(nullable: Bool) {

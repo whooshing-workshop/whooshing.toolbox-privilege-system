@@ -73,7 +73,7 @@ struct LexerFullCoverageTests {
         
         // --- 数字与点号歧义 ---
         ("0.1", "Literal.DECIMAL"),
-        (".1", "Delimiter.DOT"),          // 你的逻辑点号后需数字才是小数
+        (".1", "Symbol.Infix(.)"),          // 你的逻辑点号后需数字才是小数
         ("1.", "Literal.INT"),            // 整数后接点
         ("1.0.1", "Literal.DECIMAL"),     // 解析 1.0 后接 .1
         ("0", "Literal.INT"),

@@ -9,7 +9,7 @@ struct LexerAdvancedChallengeTests {
         // 1. 连续后缀与三目嵌套
         ("a!! ? b?.c! : d ?? !e", [
             "Literal.IDENT(a)", "Symbol.F_CAST", "Symbol.F_CAST", "Symbol.TERNARY_QUEST",
-            "Literal.IDENT(b)", "Symbol.OP_CHAIN", "Delimiter.DOT", "Literal.IDENT(c)", "Symbol.F_CAST",
+            "Literal.IDENT(b)", "Symbol.OP_CHAIN", "Symbol.Infix(.)", "Literal.IDENT(c)", "Symbol.F_CAST",
             "Symbol.TERNARY_COLON", "Literal.IDENT(d)", "Symbol.NIL_COAL", "Symbol.NOT", "Literal.IDENT(e)"
         ]),
         // 2. 负号在复杂表达式中的多次出现
@@ -76,7 +76,7 @@ struct LexerAdvancedChallengeTests {
         // 2. 伪位运算 (a&b -> IDENT(a) + INVALID(&) + IDENT(b))
         ("a&b", ["Literal.IDENT(a)", "Symbol.Infix(&)", "Literal.IDENT(b)"]),
         // 3. 多个点号 (1.2.3.4 -> DECIMAL(1.2) + DOT(.) + DECIMAL(3.4))
-        ("1.2.3.4", ["Literal.DECIMAL", "Delimiter.DOT", "Literal.DECIMAL"])
+        ("1.2.3.4", ["Literal.DECIMAL", "Symbol.Infix(.)", "Literal.DECIMAL"])
     ])
     func testUnsupportedGrammar(source: String, expectedTypes: [String]) {
         let result = Censor.Lexer(source: source).scanTokens()
