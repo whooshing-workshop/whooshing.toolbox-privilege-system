@@ -1,7 +1,7 @@
-public extension Censor {
+extension Censor {
     static let basicTypes = BasicType.allCases.map { $0.realType }
     
-    enum BasicType: String, Codable, CaseIterable, Sendable {
+    public enum BasicType: String, Codable, CaseIterable, Sendable {
         case string             = "String"
         case character          = "Character"
         case integer            = "Integer"
@@ -10,7 +10,7 @@ public extension Censor {
         case uuid               = "UUID"
         case bool               = "Bool"
         
-        public var realType: any TypeDeclare.Type {
+        var realType: any TypeDeclare.Type {
             switch self {
             case .string:           StringType.self
             case .character:        CharacterType.self
@@ -22,7 +22,7 @@ public extension Censor {
             }
         }
         
-        public init(from type: any TypeDeclare) {
+        init(from type: any TypeDeclare) {
             guard let r = Self.init(rawValue: Swift.type(of: type).name) else {
                 preconditionFailure("非法的类型")
             }

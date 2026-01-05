@@ -1,21 +1,21 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct UUIDType: TypeDeclare {
-        public typealias RealType = UUID
-        public static let name = "UUID"
-        public let nullable: Bool
+        typealias RealType = UUID
+        static let name = "UUID"
+        let nullable: Bool
         
-        public let properties: [String : PropertyDeclare] = [
+        let properties: [String : PropertyDeclare] = [
             "asString": .init(returns: StringType(nullable: false))
         ]
         
-        public let staticProperties: [String : PropertyDeclare] = [
+        let staticProperties: [String : PropertyDeclare] = [
             "new": .init(returns: UUIDType(nullable: false))
         ]
         
-        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
+        let infixOperations: [Symbol.InfixOperator : [OperationDeclare.Infix]] = [
             .equal: [
                 .init {
                     Return { BoolType(nullable: false) }
@@ -25,21 +25,21 @@ public extension Censor {
             ]
         ]
         
-        public static let propertyActions: [String : ExecutableAction] = [
+        static let propertyActions: [String : ExecutableAction] = [
             "asString": .init { .succ($0.first!.cast(as: UUID.self).uuidString) }
         ]
         
-        public static let staticPropertieActions: [String : ExecutableAction] = [
+        static let staticPropertieActions: [String : ExecutableAction] = [
             "new": .init { _ in .succ(UUID()) }
         ]
         
-        public static let infixOpActions: [Operator.Infix : [String : ExecutableAction]] = [
+        static let infixOpActions: [Symbol.InfixOperator : [String : ExecutableAction]] = [
             .equal: [
                 UUIDType.name: .init { .succ($0[0].cast(as: UUID?.self) == $0[1].cast(as: UUID?.self)) }
             ]
         ]
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

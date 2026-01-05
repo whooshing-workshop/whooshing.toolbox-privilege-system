@@ -13,7 +13,7 @@ struct LexerTests {
         ("true", "Literal.BOOL")
     ])
     func testBaseLiterals(input: String, expectedType: String) {
-        let result = Censor.Compiler.Lexer(source: input).scanTokens()
+        let result = Censor.Lexer(source: input).scanTokens()
         #expect(result.tokens.count >= 1)
         let firstToken = result.tokens[0]
         #expect(firstToken.content.description == expectedType)
@@ -25,9 +25,9 @@ struct LexerTests {
         
         @Test("Logs")
         func logs() {
-            print(Censor.Compiler.TrieNode.root)
+            print(Censor.TrieNode.root)
             
-            let error = Censor.Compiler.Error(
+            let error = Censor.Error(
                 kind: .lexical,
                 range: .init(
                     start: .init(offset: 10, line: 1, column: 11),
@@ -44,27 +44,27 @@ struct LexerTests {
         @Test("感叹号身份识别: 前缀 vs 后缀")
         func testExclamationMark() {
             // 前缀：左虚(行首)右实
-            let prefixResult = Censor.Compiler.Lexer(source: "!flag").scanTokens()
+            let prefixResult = Censor.Lexer(source: "!flag").scanTokens()
             print(prefixResult)
             #expect(prefixResult.tokens[0].content.description == "Symbol.NOT")
             
             // 后缀：左实右虚(行尾)
-            let postfixResult = Censor.Compiler.Lexer(source: "flag!").scanTokens()
+            let postfixResult = Censor.Lexer(source: "flag!").scanTokens()
             #expect(postfixResult.tokens[1].content.description == "Symbol.F_CAST")
         }
 
         @Test("加号对称性: 中缀识别")
         func testAdditionInfix() {
-            let result1 = Censor.Compiler.Lexer(source: "a + b").scanTokens()
+            let result1 = Censor.Lexer(source: "a + b").scanTokens()
             #expect(result1.tokens[1].content.description == "Symbol.Infix(+)")
             
-            let result2 = Censor.Compiler.Lexer(source: "a+b").scanTokens()
+            let result2 = Censor.Lexer(source: "a+b").scanTokens()
             #expect(result2.tokens[1].content.description == "Symbol.Infix(+)")
         }
 
         @Test("Swift 风格不对称报错案例: (1+4) -1")
         func testAsymmetricOperator() {
-            let result = Censor.Compiler.Lexer(source: "(1+4) -1").scanTokens()
+            let result = Censor.Lexer(source: "(1+4) -1").scanTokens()
             
             let minusToken = result.tokens[5] // 索引5应该是 '-'
             #expect(minusToken.content.description == "Symbol.Prefix(-)")
@@ -75,7 +75,7 @@ struct LexerTests {
     @Test("嵌套括号与紧凑符号: 1+(3-[4])")
     func testComplexBrackets() {
         let source = "1+(3-[4])"
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         
         #expect(!result.hasErrors)
     }
@@ -84,7 +84,7 @@ struct LexerTests {
     @Test("字符串连接识别")
     func testStringConcatenation() {
         let source = "\"str\"+123"
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         
         #expect(!result.hasErrors)
         #expect(result.tokens[1].content.description == "Symbol.Infix(+)")
@@ -94,14 +94,14 @@ struct LexerTests {
     @Test("非法字符识别")
     func testInvalidCharacter() {
         let source = "a # b"
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         #expect(result.hasErrors)
         #expect(result.diagnostics.first?.message.contains("非预期的字符") == true)
     }
     
     @Test("测试关键字识别")
     func testKeyword() {
-        let result = Censor.Compiler.Lexer(source: "IN asdfas nil").scanTokens()
+        let result = Censor.Lexer(source: "IN asdfas nil").scanTokens()
         print(result)
     }
 }

@@ -1,4 +1,4 @@
-extension Censor.Compiler {
+extension Censor {
     struct Error: Swift.Error, CustomStringConvertible {
         let kind: Kind
         let range: SourceRange
@@ -23,7 +23,7 @@ extension Censor.Compiler {
     }
 }
 
-extension Censor.Compiler.Error {
+extension Censor.Error {
     func prettyDescription(in source: String) -> String {
         let lines = source.components(separatedBy: .newlines)
         let startLoc = range.start
@@ -60,6 +60,6 @@ extension Censor.Compiler.Error {
     }
 }
 
-extension Censor.Compiler.Error.Kind {
+extension Censor.Error.Kind {
     var description: String { self.rawValue }
 }

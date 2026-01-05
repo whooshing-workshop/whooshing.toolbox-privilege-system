@@ -1,7 +1,7 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     protocol TypeDeclare: Sendable, Equatable, CustomStringConvertible {
         associatedtype RealType: Sendable
         
@@ -16,9 +16,9 @@ public extension Censor {
         var functions: [String: FunctionDeclare] { get }
         static var staticFunctions: [String: FunctionDeclare] { get }
         
-        var prefixOperations: [Operator.Prefix: OperationDeclare.Prefix] { get }
-        var postfixOperations: [Operator.Postfix: OperationDeclare.Suffix] { get }
-        var infixOperations: [Operator.Infix: [OperationDeclare.Infix]] { get }
+        var prefixOperations: [Symbol.PrefixOperator: OperationDeclare.Prefix] { get }
+        var postfixOperations: [Symbol.PostfixOperator: OperationDeclare.Suffix] { get }
+        var infixOperations: [Symbol.InfixOperator: [OperationDeclare.Infix]] { get }
         
         static var propertyActions: [String: ExecutableAction] { get }
         static var functionActions: [String: ExecutableAction] { get }
@@ -26,9 +26,9 @@ public extension Censor {
         static var staticPropertieActions: [String: ExecutableAction] { get }
         static var staticFunctionActions: [String: ExecutableAction] { get }
         
-        static var prefixOpActions: [Operator.Prefix: ExecutableAction] { get }
-        static var postfixOpActions: [Operator.Postfix: ExecutableAction] { get }
-        static var infixOpActions: [Operator.Infix: [String: ExecutableAction]] { get }
+        static var prefixOpActions: [Symbol.PrefixOperator: ExecutableAction] { get }
+        static var postfixOpActions: [Symbol.PostfixOperator: ExecutableAction] { get }
+        static var infixOpActions: [Symbol.InfixOperator: [String: ExecutableAction]] { get }
         
         func isMatch(value: Censor.Value) -> Bool
         
@@ -41,12 +41,12 @@ public extension Censor {
     }
 
     struct Variable<T>: Sendable where T: TypeDeclare {
-        public let type: T
-        public let value: T.RealType?
-        public var declaredType: String { self.type.description }
-        public var optional: Bool { self.type.nullable }
+        let type: T
+        let value: T.RealType?
+        var declaredType: String { self.type.description }
+        var optional: Bool { self.type.nullable }
         
-//        public func `is`(type: any TypeDeclare) -> Bool {
+//        func `is`(type: any TypeDeclare) -> Bool {
 //            Swift.type(of: self.type).name == Swift.type(of: type).name &&
 //            (value.isNull ?  type.nullable == true : true)
 //        }
@@ -60,24 +60,24 @@ public extension Censor {
 
 extension Censor.Variable: Equatable where T.RealType: Equatable {}
 
-public extension Censor.TypeDeclare {
+extension Censor.TypeDeclare {
     var properties: [String: Censor.PropertyDeclare] { [:] }
     static var staticProperties: [String: Censor.PropertyDeclare] { [:] }
     var functions: [String: Censor.FunctionDeclare] { [:] }
     static var staticFunctions: [String: Censor.FunctionDeclare] { [:] }
     
-    var prefixOperations: [Censor.Operator.Prefix: Censor.OperationDeclare.Prefix] { [:] }
-    var postfixOperations: [Censor.Operator.Postfix: Censor.OperationDeclare.Suffix] { [:] }
-    var infixOperations: [Censor.Operator.Infix: [Censor.OperationDeclare.Infix]] { [:] }
+    var prefixOperations: [Censor.Symbol.PrefixOperator: Censor.OperationDeclare.Prefix] { [:] }
+    var postfixOperations: [Censor.Symbol.PostfixOperator: Censor.OperationDeclare.Suffix] { [:] }
+    var infixOperations: [Censor.Symbol.InfixOperator: [Censor.OperationDeclare.Infix]] { [:] }
     
     static var propertyActions: [String: Censor.ExecutableAction] { [:] }
     static var functionActions: [String: Censor.ExecutableAction] { [:] }
     static var staticPropertieActions: [String: Censor.ExecutableAction] { [:] }
     static var staticFunctionActions: [String: Censor.ExecutableAction] { [:] }
     
-    static var prefixOpActions: [Censor.Operator.Prefix: Censor.ExecutableAction] { [:] }
-    static var postfixOpActions: [Censor.Operator.Postfix: Censor.ExecutableAction] { [:] }
-    static var infixOpActions: [Censor.Operator.Infix: [String: Censor.ExecutableAction]] { [:] }
+    static var prefixOpActions: [Censor.Symbol.PrefixOperator: Censor.ExecutableAction] { [:] }
+    static var postfixOpActions: [Censor.Symbol.PostfixOperator: Censor.ExecutableAction] { [:] }
+    static var infixOpActions: [Censor.Symbol.InfixOperator: [String: Censor.ExecutableAction]] { [:] }
     
     func set(nullable: Bool) -> Self {
         .init(nullable: nullable)
@@ -100,7 +100,7 @@ public extension Censor.TypeDeclare {
     }
 }
 
-public extension Censor.Variable {
+extension Censor.Variable {
     var storingValue: Censor.AST.StoringType {
         switch T.name {
         case Censor.StringType.name: return .string(value as! String?)
@@ -115,18 +115,18 @@ public extension Censor.Variable {
     }
 }
 
-public func == (lhs: any Censor.TypeDeclare, rhs: any Censor.TypeDeclare) -> Bool {
+func == (lhs: any Censor.TypeDeclare, rhs: any Censor.TypeDeclare) -> Bool {
     type(of: lhs).name == type(of: rhs).name &&
     lhs.nullable == rhs.nullable
 }
 
 public extension Censor {
     struct AnyVariable: Sendable, CustomStringConvertible {
-        public let type: any TypeDeclare
+        let type: any TypeDeclare
         
         public let anyValue: Sendable?
 
-        public init<T: TypeDeclare>(_ variable: Variable<T>) {
+        init<T: TypeDeclare>(_ variable: Variable<T>) {
             self.type = variable.type
             self.anyValue = variable.value
             self.storingValue = variable.storingValue
@@ -138,11 +138,11 @@ public extension Censor {
             if let v = anyValue {
                 return String(describing: v)
             } else {
-                return Keyword.null.rawValue
+                return Keyword.null.lexeme
             }
         }
         
-        public func asVariable<T: TypeDeclare>(of type: T.Type) -> Variable<T>? {
+        func asVariable<T: TypeDeclare>(of type: T.Type) -> Variable<T>? {
             guard let value = anyValue as? T.RealType?,
                   let specificType = self.type as? T else {
                 return nil

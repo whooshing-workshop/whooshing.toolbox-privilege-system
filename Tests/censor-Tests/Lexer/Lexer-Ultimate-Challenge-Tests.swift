@@ -26,7 +26,7 @@ struct LexerUltimateBoundaryTests {
         ])
     ])
     func testOperatorChains(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
@@ -51,7 +51,7 @@ struct LexerUltimateBoundaryTests {
         ])
     ])
     func testPunctuationContext(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
@@ -73,7 +73,7 @@ struct LexerUltimateBoundaryTests {
         ("_ + _", ["Literal.IDENT(_)", "Symbol.Infix(+)", "Literal.IDENT(_)"])
     ])
     func testIdentifierEdges(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return
@@ -95,7 +95,7 @@ struct LexerUltimateBoundaryTests {
         ("a\t\n\t==\n\tb", ["Literal.IDENT(a)", "Symbol.Infix(==)", "Literal.IDENT(b)"])
     ])
     func testWhitespaceTrivia(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "符号链条解析失败\n\(result)")
             return

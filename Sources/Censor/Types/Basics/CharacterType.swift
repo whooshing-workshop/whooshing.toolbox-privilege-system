@@ -1,21 +1,21 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct CharacterType: TypeDeclare {
-        public typealias RealType = Character
-        public static let name = "Character"
-        public let nullable: Bool
+        typealias RealType = Character
+        static let name = "Character"
+        let nullable: Bool
         
-        public let properties: [String : PropertyDeclare] = [
+        let properties: [String : PropertyDeclare] = [
             "asString": .init(returns: StringType(nullable: false))
         ]
         
-        public static let propertyActions: [String : ExecutableAction] = [
+        static let propertyActions: [String : ExecutableAction] = [
             "asString": .init { .succ(String($0.first!.cast(as: Character.self))) }
         ]
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

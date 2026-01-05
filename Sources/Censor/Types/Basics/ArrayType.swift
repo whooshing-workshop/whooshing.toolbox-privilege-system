@@ -1,18 +1,18 @@
 //import ErrorHandle
 //import Foundation
 //
-//public extension Censor {
+//extension Censor {
 //    struct ArrayType: CollectionTypeDeclare {
-//        public typealias RealType = [Any]
-//        public typealias ElementType = AnyType
+//        typealias RealType = [Any]
+//        typealias ElementType = AnyType
 //        
-//        public static let name = "Array"
-//        public let nullable: Bool
-//        public let elementType: any TypeDeclare
+//        static let name = "Array"
+//        let nullable: Bool
+//        let elementType: any TypeDeclare
 //        
-//        public let properties: [String : PropertyDeclare]
+//        let properties: [String : PropertyDeclare]
 //        
-//        public static let propertyActions: [String : ExecutableAction] = [
+//        static let propertyActions: [String : ExecutableAction] = [
 //            "count": .init {
 //                .succ(Int64($0.first!.cast(as: [Any?].self).count))
 //            },
@@ -24,7 +24,7 @@
 //            }
 //        ]
 //        
-//        public func detectAndSetElementType(by types: [(any TypeDeclare)?]) -> Res<Self, Errcase> {
+//        func detectAndSetElementType(by types: [(any TypeDeclare)?]) -> Res<Self, Errcase> {
 //            var type: (any TypeDeclare)? = nil
 //            var nullable: Bool? = nil
 //            for t in types {
@@ -57,7 +57,7 @@
 //            return .success(.init(nullable: false, elementType: res.set(nullable: canBeNull)))
 //        }
 //        
-//        public init(nullable: Bool) {
+//        init(nullable: Bool) {
 //            self = Self.init(nullable: nullable, elementType: AnyType(nullable: true))
 //        }
 //        
@@ -76,21 +76,21 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct ArrayType<Element>: CollectionTypeDeclare where Element: TypeDeclare {
-        public typealias RealType = [Element.RealType]
-        public typealias ElementType = Element
+        typealias RealType = [Element.RealType]
+        typealias ElementType = Element
         
-        public static var name: String { "Array<\(Element.name)>" }
-        public let nullable: Bool
+        static var name: String { "Array<\(Element.name)>" }
+        let nullable: Bool
         
-        public let properties: [String : PropertyDeclare] = [
+        let properties: [String : PropertyDeclare] = [
             "count": .init(returns: IntegerType(nullable: false)),
             "first": .init(returns: Element(nullable: true)),
             "last": .init(returns: Element(nullable: true))
         ]
         
-        public static var propertyActions: [String : ExecutableAction] {
+        static var propertyActions: [String : ExecutableAction] {
             [
                 "count": .init {
                     .succ(Int64($0.first!.cast(as: [Any?].self).count))
@@ -104,7 +104,7 @@ public extension Censor {
             ]
         }
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

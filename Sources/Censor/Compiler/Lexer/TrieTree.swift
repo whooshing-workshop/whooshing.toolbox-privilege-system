@@ -1,7 +1,7 @@
-extension Censor.Compiler {
+extension Censor {
     class TrieNode: @unchecked Sendable {
         private(set) var children: [Character: TrieNode] = [:]
-        private(set) var symbol: Token? = nil
+        private(set) var symbol: Symbol.Define? = nil
         
         enum SpacingSign: Character, Sendable {
             case requireSpaceSign = "□"
@@ -10,19 +10,19 @@ extension Censor.Compiler {
         static var S: Character { SpacingSign.requireSpaceSign.rawValue }
         static var N: Character { SpacingSign.notSpaceSign.rawValue }
         
-        static let root = TrieNode.build(from: Token.Symbol.lexemeMap + Token.Delimiter.lexemeMap + Token.Punctuator.lexemeMap)
+        static let root = TrieNode.build(from: symbols)
         
         var isLeaf: Bool { children.isEmpty }
         
-        private init(children: [Character : TrieNode] = [:], symbol: Token? = nil) {
+        private init(children: [Character : TrieNode] = [:], symbol: Symbol.Define? = nil) {
             self.children = children
             self.symbol = symbol
         }
         
-        static func build(from symbols: [Token]) -> TrieNode {
+        static func build(from symbols: [Symbol.Define]) -> TrieNode {
             let root = TrieNode()
             
-            for Symbol in symbols {
+            for sym in symbols {
                 
                 // 每个 Symbol 的前后空格均有严格规定，设定存于 Symbol 的 spacing
                 // 中，下面列出所有处理情况：
@@ -60,7 +60,7 @@ extension Censor.Compiler {
                 let checkList: [(SpacingSign, SpacingSign)]
                 let s = SpacingSign.requireSpaceSign
                 let n = SpacingSign.notSpaceSign
-                switch Symbol.spacing {
+                switch sym.spacing {
                 case .symm(let left):
                     checkList = left == nil ? [(s, s), (n, n)] : (left! ? [(s, s)] : [(n, n)])
                 case .asym(let left):
@@ -75,12 +75,12 @@ extension Censor.Compiler {
                     var currentNode = root
                     append(character: heads.0.rawValue)
                     
-                    for char in Symbol.lexeme {
+                    for char in sym.lexeme {
                         append(character: char)
                     }
                     
                     append(character: heads.1.rawValue)
-                    currentNode.symbol = Symbol
+                    currentNode.symbol = sym
                     
                     func append(character: Character) {
                         if let node = currentNode.children[character] {
@@ -99,7 +99,7 @@ extension Censor.Compiler {
     }
 }
 
-extension Censor.Compiler.TrieNode: CustomStringConvertible {
+extension Censor.TrieNode: CustomStringConvertible {
     
     public var description: String {
         var output = "\n"
@@ -117,20 +117,23 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         
         // 按 lexeme 和 type 分组，将不同的上下文符号对 (Sign Pairs) 聚合在一起
         // Key: lexeme + type
-        var grouped: [String: (lex: String, type: String, rule: String, contexts: Set<String>)] = [:]
+        var grouped: [String: (lex: String, type: String, rule: String, repe: String, contexts: Set<String>)] = [:]
         
         for entry in allEntries {
-            let key = "\(entry.symbol.lexeme)_\(entry.symbol.content)"
+            let key = "\(entry.symbol.lexeme)_\(entry.symbol)"
             let ctxString = "\(entry.leftSign) \(entry.rightSign)"
             
             if var existing = grouped[key] {
                 existing.contexts.insert(ctxString)
                 grouped[key] = existing
             } else {
+                
+                
                 grouped[key] = (
                     "`\(entry.symbol.lexeme)`",
-                    entry.symbol.content.description,
+                    entry.symbol.description,
                     "\(entry.symbol.spacing)",
+                    entry.allowRepeating ? "●" : "",
                     [ctxString]
                 )
             }
@@ -146,23 +149,26 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         let col2Title = "Contexts"
         let col3Title = "Type"
         let col4Title = "Spacing Rule"
+        let col5Title = "R "
         
         var maxLexWidth = col1Title.count
         var maxCtxWidth = col2Title.count
         var maxTypeWidth = col3Title.count
         var maxRuleWidth = col4Title.count
+        var maxRepeWidth = col5Title.count
         
-        let processedRows: [(lex: String, ctxs: String, type: String, rule: String)] = sortedRows.map { row in
+        let processedRows: [(lex: String, ctxs: String, type: String, rule: String, repe: String)] = sortedRows.map { row in
             let ctxsJoined = row.contexts.sorted().joined(separator: ", ")
             maxLexWidth = max(maxLexWidth, row.lex.count)
             maxCtxWidth = max(maxCtxWidth, ctxsJoined.count)
             maxTypeWidth = max(maxTypeWidth, row.type.count)
             maxRuleWidth = max(maxRuleWidth, row.rule.count)
-            return (row.lex, ctxsJoined, row.type, row.rule)
+            maxRepeWidth = max(maxRepeWidth, row.repe.count)
+            return (row.lex, ctxsJoined, row.type, row.rule, row.repe)
         }
 
         // --- 构造输出字符串 ---
-        let totalWidth = maxLexWidth + maxCtxWidth + maxTypeWidth + maxRuleWidth + 13
+        let totalWidth = maxLexWidth + maxCtxWidth + maxTypeWidth + maxRuleWidth + maxRepeWidth + 13
         let thickBar = String(repeating: "━", count: totalWidth)
         let thinBar = String(repeating: "─", count: totalWidth)
         
@@ -177,7 +183,8 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         let h2 = col2Title.padding(toLength: maxCtxWidth, withPad: " ", startingAt: 0)
         let h3 = col3Title.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
         let h4 = col4Title.padding(toLength: maxRuleWidth, withPad: " ", startingAt: 0)
-        table += " \(h1) │ \(h2) │ \(h3) │ \(h4)\n"
+        let h5 = col5Title.padding(toLength: maxRepeWidth, withPad: " ", startingAt: 0)
+        table += " \(h1) │ \(h2) │ \(h3) │ \(h4) │ \(h5)\n"
         table += thinBar + "\n"
         
         // 打印数据行
@@ -186,14 +193,15 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             let r2 = row.ctxs.padding(toLength: maxCtxWidth, withPad: " ", startingAt: 0)
             let r3 = row.type.padding(toLength: maxTypeWidth, withPad: " ", startingAt: 0)
             let r4 = row.rule.padding(toLength: maxRuleWidth, withPad: " ", startingAt: 0)
-            table += " \(r1) │ \(r2) │ \(r3) │ \(r4)\n"
+            let r5 = row.repe.padding(toLength: maxRepeWidth, withPad: " ", startingAt: 0)
+            table += " \(r1) │ \(r2) │ \(r3) │ \(r4) │ \(r5)\n"
         }
         
         table += thickBar + "\n"
         return table
     }
 
-    private func describe(node: Censor.Compiler.TrieNode, prefix: String, explainedSigns: Set<Character>) -> String {
+    private func describe(node: Censor.TrieNode, prefix: String, explainedSigns: Set<Character>) -> String {
         var result = ""
         var updatedExplainedSigns = explainedSigns
         let sortedKeys = node.children.keys.sorted()
@@ -204,13 +212,13 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             let connector = isLast ? "└── " : "├── "
             
             var charDisplay: String
-            let isSign = "□■○●".contains(key)
+            let isSign = "□■".contains(key)
             
             if isSign {
                 if !updatedExplainedSigns.contains(key) {
                     switch key {
-                    case Censor.Compiler.TrieNode.SpacingSign.requireSpaceSign.rawValue:    charDisplay = "\(key) [Space]"
-                    case Censor.Compiler.TrieNode.SpacingSign.notSpaceSign.rawValue:        charDisplay = "\(key) [None]"
+                    case Censor.TrieNode.SpacingSign.requireSpaceSign.rawValue:    charDisplay = "\(key) [Space]"
+                    case Censor.TrieNode.SpacingSign.notSpaceSign.rawValue:        charDisplay = "\(key) [None]"
                         
                     default: charDisplay = "'\(key)'"
                     }
@@ -224,7 +232,7 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
             
             var symbolInfo = ""
             if let sym = child.symbol {
-                symbolInfo = " -> \(sym.content.description)(\(sym.lexeme))"
+                symbolInfo = " -> \(sym.description)(\(sym.lexeme))"
             }
             
             result += prefix + connector + charDisplay + symbolInfo + "\n"
@@ -239,17 +247,18 @@ extension Censor.Compiler.TrieNode: CustomStringConvertible {
         let leftSign: Character
         let lexeme: String
         let rightSign: Character
-        let symbol: Censor.Compiler.Token
+        let symbol: Censor.Symbol.Define
+        let allowRepeating: Bool
     }
 
-    private func collectSymbolEntries(node: Censor.Compiler.TrieNode, path: String) -> [SymbolEntry] {
+    private func collectSymbolEntries(node: Censor.TrieNode, path: String) -> [SymbolEntry] {
         var entries: [SymbolEntry] = []
         
-        func traverse(_ n: Censor.Compiler.TrieNode, currentPath: String) {
+        func traverse(_ n: Censor.TrieNode, currentPath: String) {
             if let sym = n.symbol {
                 let left = currentPath.first ?? "?"
                 let right = currentPath.last ?? "?"
-                entries.append(SymbolEntry(leftSign: left, lexeme: sym.lexeme, rightSign: right, symbol: sym))
+                entries.append(SymbolEntry(leftSign: left, lexeme: sym.lexeme, rightSign: right, symbol: sym, allowRepeating: sym.allowRepeating))
             }
             for (char, child) in n.children {
                 traverse(child, currentPath: currentPath + String(char))

@@ -1,19 +1,19 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct DecimalType: TypeDeclare {
-        public typealias RealType = Decimal
-        public static let name = "Decimal"
-        public let nullable: Bool
+        typealias RealType = Decimal
+        static let name = "Decimal"
+        let nullable: Bool
         
-        public static let properties: [String : PropertyDeclare] = [
+        static let properties: [String : PropertyDeclare] = [
             "asString": .init(returns: StringType(nullable: false)),
             "asDate": .init(returns: DateType(nullable: true)),
             "asInteger": .init(returns: IntegerType(nullable: false))
         ]
         
-        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
+        let infixOperations: [Symbol.InfixOperator : [OperationDeclare.Infix]] = [
             .plus: [
                 .init {
                     Return { DecimalType(nullable: false) }
@@ -100,7 +100,7 @@ public extension Censor {
             ]
         ]
         
-        public let prefixOperations: [Operator.Prefix : OperationDeclare.Prefix] = [
+        let prefixOperations: [Symbol.PrefixOperator : OperationDeclare.Prefix] = [
             .positive: .init {
                 Return { DecimalType(nullable: false) }
                 false
@@ -111,13 +111,13 @@ public extension Censor {
             }
         ]
         
-        public static let propertyActions: [String : Censor.ExecutableAction] = [
+        static let propertyActions: [String : Censor.ExecutableAction] = [
             "asString": .init { .succ($0.first!.cast(as: Decimal.self).description) },
             "asDate": .init { .succ(Date(timeIntervalSince1970: ($0.first!.cast(as: Decimal.self) / 1000 as NSDecimalNumber).doubleValue)) },
             "asInteger": .init { .succ(($0.first!.cast(as: Decimal.self) as NSDecimalNumber).int64Value) }
         ]
         
-        public static let infixOpActions: [Censor.Operator.Infix : [String : ExecutableAction]] = [
+        static let infixOpActions: [Censor.Symbol.InfixOperator : [String : ExecutableAction]] = [
             .plus: [
                 DecimalType.name: .init { .succ($0[0].cast(as: Decimal.self) + $0[1].cast(as: Decimal.self)) },
                 IntegerType.name: .init { .succ($0[0].cast(as: Decimal.self) + Decimal($0[1].cast(as: Int64.self))) }
@@ -148,12 +148,12 @@ public extension Censor {
             ]
         ]
         
-        public static let prefixOpActions: [Censor.Operator.Prefix : ExecutableAction] = [
+        static let prefixOpActions: [Censor.Symbol.PrefixOperator : ExecutableAction] = [
             .positive: .init { .succ($0.first!.cast(as: Decimal.self)) },
             .negetive: .init { .succ(-$0.first!.cast(as: Decimal.self)) }
         ]
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

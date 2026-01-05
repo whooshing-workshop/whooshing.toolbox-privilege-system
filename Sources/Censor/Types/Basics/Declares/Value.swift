@@ -10,7 +10,7 @@ public extension Censor {
         }
         
         public var description: String {
-            self.content == nil ? Keyword.null.rawValue : String(describing: self.content!)
+            self.content == nil ? Keyword.null.lexeme : String(describing: self.content!)
         }
         
         @Sendable public func cast<T>(as: T.Type = T.self) -> T {
@@ -105,7 +105,7 @@ extension Censor.Value: Codable {
     }
 }
 
-//public extension Expression {
+//extension Expression {
 //    static func getType(of value: Any?) -> (any TypeDeclare)? {
 //        if let v = value as? [Any?] {
 //            return ArrayType(nullable: false)

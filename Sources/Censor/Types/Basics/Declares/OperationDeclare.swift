@@ -1,10 +1,10 @@
 import ErrorHandle
 
-public extension Censor {
+extension Censor {
     struct PropertyDeclare: Sendable {
-        public let returns: @Sendable () -> any TypeDeclare
+        let returns: @Sendable () -> any TypeDeclare
         
-        public init(
+        init(
             returns: @Sendable @escaping @autoclosure () -> any TypeDeclare
         ) {
             self.returns = returns
@@ -12,8 +12,8 @@ public extension Censor {
     }
     
     struct FunctionDeclare: Sendable {
-        public let returns: @Sendable () -> any TypeDeclare
-        public let argument: ArgumentDeclare
+        let returns: @Sendable () -> any TypeDeclare
+        let argument: ArgumentDeclare
         
         fileprivate init(
             returns: @Sendable @escaping () -> any TypeDeclare,
@@ -23,14 +23,14 @@ public extension Censor {
             self.argument = argument
         }
         
-        public init(@FunctionBuilder _ content: () -> Self) {
+        init(@FunctionBuilder _ content: () -> Self) {
             self = content()
         }
     }
     
     @resultBuilder
     struct FunctionBuilder {
-        public static func buildBlock(
+        static func buildBlock(
             _ returns: @Sendable @escaping () -> any TypeDeclare,
             _ argument: ArgumentDeclare
         ) -> FunctionDeclare {
@@ -39,9 +39,9 @@ public extension Censor {
     }
 
     enum OperationDeclare {
-        public struct Prefix: Sendable {
-            public let selfNullable: Bool
-            public let returns: @Sendable () -> any TypeDeclare
+        struct Prefix: Sendable {
+            let selfNullable: Bool
+            let returns: @Sendable () -> any TypeDeclare
             
             init(
                 returns: @Sendable @escaping () -> any TypeDeclare,
@@ -51,14 +51,14 @@ public extension Censor {
                 self.selfNullable = selfNullable
             }
             
-            public init(@PrefixBuilder _ content: () -> Self) {
+            init(@PrefixBuilder _ content: () -> Self) {
                 self = content()
             }
         }
 
-        public struct Suffix: Sendable {
-            public let selfNullable: Bool
-            public let returns: @Sendable () -> any TypeDeclare
+        struct Suffix: Sendable {
+            let selfNullable: Bool
+            let returns: @Sendable () -> any TypeDeclare
             
             init(
                 returns: @Sendable @escaping () -> any TypeDeclare,
@@ -68,15 +68,15 @@ public extension Censor {
                 self.selfNullable = selfNullable
             }
             
-            public init(@SuffixBuilder _ content: () -> Self) {
+            init(@SuffixBuilder _ content: () -> Self) {
                 self = content()
             }
         }
 
-        public struct Infix: Sendable {
-            public let selfNullable: Bool
-            public let returns: @Sendable () -> any TypeDeclare
-            public let right: @Sendable () -> any TypeDeclare
+        struct Infix: Sendable {
+            let selfNullable: Bool
+            let returns: @Sendable () -> any TypeDeclare
+            let right: @Sendable () -> any TypeDeclare
             
             init(
                 returns: @Sendable @escaping () -> any TypeDeclare,
@@ -88,14 +88,14 @@ public extension Censor {
                 self.right = right
             }
             
-            public init(@InfixBuilder _ content: () -> Self) {
+            init(@InfixBuilder _ content: () -> Self) {
                 self = content()
             }
         }
         
         @resultBuilder
-        public struct InfixBuilder {
-            public static func buildBlock(
+        struct InfixBuilder {
+            static func buildBlock(
                 _ returns: @Sendable @escaping () -> any TypeDeclare,
                 _ selfNullable: Bool,
                 _ right: @Sendable @escaping () -> any TypeDeclare
@@ -105,8 +105,8 @@ public extension Censor {
         }
 
         @resultBuilder
-        public struct PrefixBuilder {
-            public static func buildBlock(
+        struct PrefixBuilder {
+            static func buildBlock(
                 _ returns: @Sendable @escaping () -> any TypeDeclare,
                 _ selfNullable: Bool
             ) -> OperationDeclare.Prefix {
@@ -115,8 +115,8 @@ public extension Censor {
         }
 
         @resultBuilder
-        public struct SuffixBuilder {
-            public static func buildBlock(
+        struct SuffixBuilder {
+            static func buildBlock(
                 _ returns: @Sendable @escaping () -> any TypeDeclare,
                 _ selfNullable: Bool
             ) -> OperationDeclare.Suffix {

@@ -1,13 +1,13 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct AnyType: TypeDeclare {
-        public typealias RealType = Sendable
-        public static let name = "Any"
-        public let nullable: Bool
+        typealias RealType = Sendable
+        static let name = "Any"
+        let nullable: Bool
         
-        public let properties: [String : PropertyDeclare] = [
+        let properties: [String : PropertyDeclare] = [
             "asString": .init(returns: StringType(nullable: true)),
             "asCharacter": .init(returns: CharacterType(nullable: true)),
             "asInteger": .init(returns: IntegerType(nullable: true)),
@@ -17,7 +17,7 @@ public extension Censor {
             "asBool": .init(returns: BoolType(nullable: true))
         ]
         
-        public static let propertyActions: [String : ExecutableAction] = [
+        static let propertyActions: [String : ExecutableAction] = [
             "asString": .init { .succ($0.first!.cast(as: Any.self) as? String) },
             "asCharacter": .init { .succ($0.first!.cast(as: Any.self) as? Character) },
             "asInteger": .init { .succ($0.first!.cast(as: Any.self) as? Int64) },
@@ -27,7 +27,7 @@ public extension Censor {
             "asBool": .init { .succ($0.first!.cast(as: Any.self) as? Bool) }
         ]
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

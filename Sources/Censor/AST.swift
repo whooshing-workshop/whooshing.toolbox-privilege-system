@@ -4,19 +4,16 @@ public extension Censor {
     indirect enum AST: Sendable {
         case value(AnyVariable)
         case trueType(String)
-        case variable(String)   // 全局变量
+        case global(String)
         case property(String)
+        case keyword(Keyword.Define)
         case function(String, args: [Self])
-        case forceCast
-        case nilCoalescing(`default`: Self)
-        case ternary(condition: Self, pass: Self, fail: Self)
         case array([Self])
         case arraySelector(index: Int)
         case chain(content: Self, next: Self)
-        case scope(domain: String, content: Self)
-        case prefix(operator: Operator.Prefix, right: Self)
-        case postfix(operator: Operator.Postfix, left: Self)
-        case infix(operator: Operator.Infix, left: Self, right: Self)
+        case prefix(operator: Symbol.PrefixOperator, right: Self)
+        case postfix(operator: Symbol.PostfixOperator, left: Self)
+        case infix(operator: Symbol.InfixOperator, left: Self, right: Self)
 
         public enum StoringType: Sendable {
             case string(String?)
@@ -32,14 +29,11 @@ public extension Censor.AST {
         case trueType = "TrueType"
         case variable = "Variable"
         case property = "Property"
+        case keyword = "Keyword"
         case function = "Function"
-        case forceCast = "ForceCast"
-        case nilCoalescing = "NilCoalescing"
-        case ternary = "Ternary"
         case array = "Array"
         case arraySelector = "ArraySelector"
         case chain = "Chain"
-        case scope = "Scope"
         case prefix = "Prefix"
         case suffix = "Suffix"
         case infix = "Infix"
@@ -74,7 +68,7 @@ public extension Censor.AST {
             acl.value = s
             return [acl]
 
-        case .variable(let s):
+        case .global(let s):
             acl.type = .variable
             acl.value = s
             return [acl]
@@ -83,7 +77,12 @@ public extension Censor.AST {
             acl.type = .property
             acl.value = s
             return [acl]
-
+            
+        case .keyword(let k):
+            acl.type = .keyword
+            acl.value = k.lexeme
+            return [acl]
+            
         case .function(let n, let args):
             acl.type = .function
             acl.value = n
@@ -98,52 +97,6 @@ public extension Censor.AST {
                     )
                 )
             }
-
-            return res
-
-        case .forceCast:
-            acl.type = .forceCast
-            return [acl]
-
-        case .nilCoalescing(let d):
-            acl.type = .nilCoalescing
-
-            var res: [ACLExp<T>] = [acl]
-            res.append(
-                contentsOf: d.toACL(
-                    parent: acl.id,
-                    rule: rule ?? acl.id,
-                    position: 0
-                )
-            )
-
-            return res
-
-        case .ternary(let c, let p, let f):
-            acl.type = .ternary
-
-            var res: [ACLExp<T>] = [acl]
-            res.append(
-                contentsOf: c.toACL(
-                    parent: acl.id,
-                    rule: rule ?? acl.id,
-                    position: 0
-                )
-            )
-            res.append(
-                contentsOf: p.toACL(
-                    parent: acl.id,
-                    rule: rule ?? acl.id,
-                    position: 1
-                )
-            )
-            res.append(
-                contentsOf: f.toACL(
-                    parent: acl.id,
-                    rule: rule ?? acl.id,
-                    position: 2
-                )
-            )
 
             return res
 
@@ -189,23 +142,9 @@ public extension Censor.AST {
 
             return res
 
-        case .scope(let d, let content):
-            acl.type = .scope
-            acl.value = d
-            var res: [ACLExp<T>] = [acl]
-            res.append(
-                contentsOf: content.toACL(
-                    parent: acl.id,
-                    rule: rule ?? acl.id,
-                    position: 0
-                )
-            )
-
-            return res
-
         case .prefix(let op, let right):
             acl.type = .prefix
-            acl.op = op.rawValue
+            acl.op = op.operator.lexeme
 
             var res: [ACLExp<T>] = [acl]
             res.append(
@@ -220,7 +159,7 @@ public extension Censor.AST {
 
         case .postfix(let op, let left):
             acl.type = .suffix
-            acl.op = op.rawValue
+            acl.op = op.operator.lexeme
 
             var res: [ACLExp<T>] = [acl]
             res.append(
@@ -235,7 +174,7 @@ public extension Censor.AST {
 
         case .infix(let op, let left, let right):
             acl.type = .infix
-            acl.op = op.rawValue
+            acl.op = op.operator.lexeme
 
             var res: [ACLExp<T>] = [acl]
             res.append(
@@ -273,26 +212,18 @@ extension Censor.AST: CustomStringConvertible {
         case .trueType(let s):
             str += "TrueType(\(s))"
 
-        case .variable(let s):
+        case .global(let s):
             str += "Variable(\(s))"
 
         case .property(let s):
             str += "Property(\(s))"
 
+        case .keyword(let k):
+            str += "Keyword(\(k.lexeme))"
+            
         case .function(let name, let args):
             str += "Function(\(name))"
             str += childrenDescription(children: args, prefix: prefix)
-
-        case .forceCast:
-            str += "ForceCast"
-
-        case .nilCoalescing(let def):
-            str += "NilCoalescing"
-            str += childrenDescription(children: [def], prefix: prefix)
-
-        case .ternary(let condition, let pass, let fail):
-            str += "Ternary"
-            str += childrenDescription(children: [condition, pass, fail], prefix: prefix)
 
         case .array(let items):
             str += "Array"
@@ -304,10 +235,6 @@ extension Censor.AST: CustomStringConvertible {
         case .chain(let content, let next):
             str += "Chain"
             str += childrenDescription(children: [content, next], prefix: prefix)
-
-        case .scope(let domain, let content):
-            str += "Scope(\(domain))"
-            str += childrenDescription(children: [content], prefix: prefix)
 
         case .prefix(let op, let right):
             str += "\(op)"

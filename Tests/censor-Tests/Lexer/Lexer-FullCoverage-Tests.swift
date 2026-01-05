@@ -44,7 +44,7 @@ struct LexerFullCoverageTests {
         ("a|b", "Symbol.Infix(|)")
     ])
     func testOperatorContexts(input: String, expected: String) {
-        let result = Censor.Compiler.Lexer(source: input).scanTokens()
+        let result = Censor.Lexer(source: input).scanTokens()
         // 找到非 ID 的那个操作符 Token 进行验证
         let target = result.tokens.first { isOperator($0) }
         guard !result.hasErrors else {
@@ -88,7 +88,7 @@ struct LexerFullCoverageTests {
         ("a1", "Literal.IDENT(a1)")
     ])
     func testLiteralEdges(input: String, expected: String) {
-        let result = Censor.Compiler.Lexer(source: input).scanTokens()
+        let result = Censor.Lexer(source: input).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false))
             print(result)
@@ -101,7 +101,7 @@ struct LexerFullCoverageTests {
     @Test("复杂语句流测试")
     func testComplexFlow() {
         let source = "(a + b) * -c / (d ?? 0) >= 100 == !false"
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         
         let types = result.tokens.map { $0.content.description }
         
@@ -116,14 +116,14 @@ struct LexerFullCoverageTests {
     @Test("极端紧凑嵌套测试")
     func testTightNesting() {
         let source = "1+(2-(3*(4/5)))"
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         
         #expect(!result.hasErrors)
     }
 }
 
 // MARK: - 辅助判定函数
-private func isOperator(_ type: Censor.Compiler.Token) -> Bool {
+private func isOperator(_ type: Censor.Token) -> Bool {
     let name = type.content.description
     return name.contains("Symbol") || name.contains("NOT") || name.contains("NIL_COAL") || name.contains("Delimiter")
 }

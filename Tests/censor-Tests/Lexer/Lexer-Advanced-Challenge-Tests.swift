@@ -26,7 +26,7 @@ struct LexerAdvancedChallengeTests {
         ])
     ])
     func testLogicFlows(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false))
             print(result)
@@ -58,7 +58,7 @@ struct LexerAdvancedChallengeTests {
         ])
     ])
     func testTightCompression(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false))
             print(result)
@@ -79,7 +79,7 @@ struct LexerAdvancedChallengeTests {
         ("1.2.3.4", ["Literal.DECIMAL", "Delimiter.DOT", "Literal.DECIMAL"])
     ])
     func testUnsupportedGrammar(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         let actualTypes = result.tokens.filter { $0.content.description != "EOF" }.map { $0.content.description }
         #expect(actualTypes == expectedTypes)
     }
@@ -88,16 +88,16 @@ struct LexerAdvancedChallengeTests {
     @Test("非法与半闭合结构")
     func testRobustness() {
         // 1. 未闭合的括号地狱
-        let res1 = Censor.Compiler.Lexer(source: "((((1+2)").scanTokens()
+        let res1 = Censor.Lexer(source: "((((1+2)").scanTokens()
         #expect(!res1.hasErrors) // Lexer 不管闭合，那是 Parser 的事
         #expect(res1.tokens.count == 9)
 
         // 2. 异常空白符混入
-        let res2 = Censor.Compiler.Lexer(source: "a\u{00A0}+\t\nb").scanTokens() // 包含不间断空格
+        let res2 = Censor.Lexer(source: "a\u{00A0}+\t\nb").scanTokens() // 包含不间断空格
         #expect(res2.tokens.filter { $0.content.description == "Symbol.Infix(+)" }.count == 1)
 
         // 3. 连续的操作符但无操作数 (!+-+!!)
-        let res3 = Censor.Compiler.Lexer(source: "!+-+!!").scanTokens()
+        let res3 = Censor.Lexer(source: "!+-+!!").scanTokens()
         // 这考验 Trie 树如何处理一串只有符号的输入
         #expect(!res3.hasErrors)
     }

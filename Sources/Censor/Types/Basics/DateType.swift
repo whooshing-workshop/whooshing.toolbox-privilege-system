@@ -1,23 +1,23 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct DateType: TypeDeclare {
-        public typealias RealType = Date
-        public static let name = "Date"
-        public static let dateFormatter = ISO8601DateFormatter()
-        public let nullable: Bool
+        typealias RealType = Date
+        static let name = "Date"
+        static let dateFormatter = ISO8601DateFormatter()
+        let nullable: Bool
         
-        public let properties: [String : PropertyDeclare] = [
+        let properties: [String : PropertyDeclare] = [
             "asString": .init(returns: StringType(nullable: false)),
             "timeIntervalSince1970": .init(returns: IntegerType(nullable: false))
         ]
         
-        public static let staticProperties: [String : PropertyDeclare] = [
+        static let staticProperties: [String : PropertyDeclare] = [
             "now": .init(returns: DateType(nullable: false))
         ]
         
-        public let functions: [String : FunctionDeclare] = [
+        let functions: [String : FunctionDeclare] = [
             "timeInterval": .init {
                 Return { IntegerType(nullable: false) }
                 ArgumentDeclare {
@@ -26,7 +26,7 @@ public extension Censor {
             }
         ]
         
-        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
+        let infixOperations: [Symbol.InfixOperator : [OperationDeclare.Infix]] = [
             .plus: [
                 .init {
                     Return { DateType(nullable: false) }
@@ -67,16 +67,16 @@ public extension Censor {
             ]
         ]
         
-        public static let propertyActions: [String : ExecutableAction] = [
+        static let propertyActions: [String : ExecutableAction] = [
             "asString": .init { .succ(Self.dateFormatter.string(from: $0.first!.cast())) },
             "timeIntervalSince1970": .init { .succ(Int64($0.first!.cast(as: Date.self).timeIntervalSince1970 * 1000)) }
         ]
         
-        public static let functionActions: [String : ExecutableAction] = [
+        static let functionActions: [String : ExecutableAction] = [
             "timeInterval": .init { .succ(Int64($0[0].cast(as: Date.self).timeIntervalSince($0[1].cast()) * 1000)) }
         ]
         
-        public static let infixOpActions: [Censor.Operator.Infix : [String : ExecutableAction]] = [
+        static let infixOpActions: [Censor.Symbol.InfixOperator : [String : ExecutableAction]] = [
             .plus: [
                 IntegerType.name: .init { .succ($0[0].cast(as: Date.self) + (Double($0[1].cast(as: Int64.self)) / 1000)) },
                 DecimalType.name: .init { .succ($0[0].cast(as: Date.self) + (($0[1].cast(as: Decimal.self) / 1000 as NSDecimalNumber).doubleValue)) }
@@ -93,11 +93,11 @@ public extension Censor {
             ]
         ]
         
-        public static let staticPropertieActions: [String : ExecutableAction] = [
+        static let staticPropertieActions: [String : ExecutableAction] = [
             "now": .init { _ in .succ(Date()) }
         ]
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

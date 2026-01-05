@@ -1,14 +1,14 @@
 import ErrorHandle
 import Foundation
 
-public extension Censor {
+extension Censor {
     struct StringType: CollectionTypeDeclare {
-        public typealias ElementType = CharacterType
-        public typealias RealType = String
-        public static let name = "String"
-        public let nullable: Bool
+        typealias ElementType = CharacterType
+        typealias RealType = String
+        static let name = "String"
+        let nullable: Bool
         
-        public let properties: [String : PropertyDeclare] = [
+        let properties: [String : PropertyDeclare] = [
             "asInteger": .init(returns: IntegerType(nullable: true)),
             "asDecimal": .init(returns: DecimalType(nullable: true)),
             "asDate": .init(returns: DateType(nullable: true)),
@@ -18,7 +18,7 @@ public extension Censor {
             "last": .init(returns: CharacterType(nullable: true))
         ]
         
-        public let functions: [String : FunctionDeclare] = [
+        let functions: [String : FunctionDeclare] = [
             "like": .init {
                 Return { BoolType(nullable: false) }
                 ArgumentDeclare {
@@ -27,7 +27,7 @@ public extension Censor {
             }
         ]
         
-        public let infixOperations: [Operator.Infix : [OperationDeclare.Infix]] = [
+        let infixOperations: [Symbol.InfixOperator : [OperationDeclare.Infix]] = [
             .plus: [
                 .init {
                     Return { StringType(nullable: false) }
@@ -88,7 +88,7 @@ public extension Censor {
             ]
         ]
         
-        public static let propertyActions: [String : ExecutableAction] = [
+        static let propertyActions: [String : ExecutableAction] = [
             "asInteger": .init { .succ(Int64($0.first!.cast(as: String.self))) },
             "asDecimal": .init { .succ(Decimal(string: $0.first!.cast())) },
             "asDate": .init { .succ(DateType.dateFormatter.date(from: $0.first!.cast())) },
@@ -98,11 +98,11 @@ public extension Censor {
             "last": .init { .succ($0.first!.cast(as: String.self).last) }
         ]
         
-        public static let functionActions: [String : ExecutableAction] = [
+        static let functionActions: [String : ExecutableAction] = [
             "like": .init { .succ($0[0].cast(as: String.self).like($0[1].cast())) }
         ]
         
-        public static let infixOpActions: [Operator.Infix : [String : ExecutableAction]] = [
+        static let infixOpActions: [Symbol.InfixOperator : [String : ExecutableAction]] = [
             .plus: [
                 StringType.name: .init { .succ($0[0].cast(as: String.self) + $0[1].cast(as: String.self)) },
                 CharacterType.name: .init { .succ($0[0].cast(as: String.self) + String($0[1].cast(as: Character.self))) },
@@ -123,7 +123,7 @@ public extension Censor {
             ]
         ]
         
-        public init(nullable: Bool) {
+        init(nullable: Bool) {
             self.nullable = nullable
         }
     }

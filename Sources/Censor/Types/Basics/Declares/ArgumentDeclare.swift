@@ -1,15 +1,15 @@
 import ErrorHandle
 
 extension Censor {
-    public struct ArgumentDeclare: Sendable {
-        public let labels: [String?]
-        public let types: [@Sendable () -> any TypeDeclare]
-        public let defaults: [Value?]
+    struct ArgumentDeclare: Sendable {
+        let labels: [String?]
+        let types: [@Sendable () -> any TypeDeclare]
+        let defaults: [Value?]
         
-        public struct Define: Sendable {
-            public let label: String?
-            public let type: @Sendable() -> any TypeDeclare
-            public let `default`: Value?
+        struct Define: Sendable {
+            let label: String?
+            let type: @Sendable() -> any TypeDeclare
+            let `default`: Value?
         }
         
         init(
@@ -51,11 +51,11 @@ extension Censor {
         }
     }
 
-    //public struct ArgumentVariable: Sendable {
-    //    public let declare: ArgumentDeclare
-    //    public let values: [Value?]
+    //struct ArgumentVariable: Sendable {
+    //    let declare: ArgumentDeclare
+    //    let values: [Value?]
     //
-    //    public let startIndex: Int = 0
+    //    let startIndex: Int = 0
     //
     //    fileprivate init(declare: ArgumentDeclare, values: [Value?]) {
     //        self.declare = declare
@@ -64,16 +64,16 @@ extension Censor {
     //}
     //
     //extension ArgumentVariable: Collection {
-    //    public var endIndex: Int { values.count }
-    //    public func index(after i: Int) -> Int { i + 1 }
+    //    var endIndex: Int { values.count }
+    //    func index(after i: Int) -> Int { i + 1 }
     //
-    //    public subscript(position: Int) -> (type: any TypeDeclare, value: Value) {
+    //    subscript(position: Int) -> (type: any TypeDeclare, value: Value) {
     //        get {
     //            (type: self.declare.types[position], value: values[position] ?? self.declare.defaults[position]!)
     //        }
     //    }
     //
-    //    public func cast<T>(of position: Int, as: T.Type = T.self) -> T {
+    //    func cast<T>(of position: Int, as: T.Type = T.self) -> T {
     //        let value = self.values[position] ?? self.declare.defaults[position]!
     //        guard let v = value as? T else {
     //            preconditionFailure("无法将 \(log: value) cast 为 \(String(describing: T.self)) 类型")
@@ -85,18 +85,18 @@ extension Censor {
 
 infix operator >-
 
-public func >- (left: (String?, @Sendable () -> any Censor.TypeDeclare), right: Censor.Value?) -> Censor.ArgumentDeclare.Define {
+func >- (left: (String?, @Sendable () -> any Censor.TypeDeclare), right: Censor.Value?) -> Censor.ArgumentDeclare.Define {
     .init(label: left.0, type: left.1, default: right)
 }
 
 @resultBuilder
-public struct ArgumentDeclareBuilder: Sendable {
-    public static func buildBlock(_ components: Censor.ArgumentDeclare.Define...) -> [Censor.ArgumentDeclare.Define] {
+struct ArgumentDeclareBuilder: Sendable {
+    static func buildBlock(_ components: Censor.ArgumentDeclare.Define...) -> [Censor.ArgumentDeclare.Define] {
         components
     }
 }
 
-public extension Result where Success == Censor.Value {
+extension Result where Success == Censor.Value {
     static func succ(_ value: Any?) -> Self {
         .success(.init(value))
     }

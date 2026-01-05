@@ -45,7 +45,7 @@ struct LexerDSLSimulationTests {
         ])
     ])
     func testMultiTypeMashup(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
@@ -87,7 +87,7 @@ struct LexerDSLSimulationTests {
         ])
     ])
     func testLayoutHell(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
@@ -110,7 +110,7 @@ struct LexerDSLSimulationTests {
         ])
     ])
     func testDataConversion(source: String, expectedTypes: [String]) {
-        let result = Censor.Compiler.Lexer(source: source).scanTokens()
+        let result = Censor.Lexer(source: source).scanTokens()
         guard !result.hasErrors else {
             #expect(Bool(false), "综合测试解析错误: \(result)")
             return
