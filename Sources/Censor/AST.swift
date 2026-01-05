@@ -9,8 +9,7 @@ public extension Censor {
         case keyword(Keyword.Define)
         case function(String, args: [Self])
         case array([Self])
-        case arraySelector(index: Int)
-        case chain(content: Self, next: Self)
+        case arraySelector(index: Int, at: Self)
         case prefix(operator: Symbol.PrefixOperator, right: Self)
         case postfix(operator: Symbol.PostfixOperator, left: Self)
         case infix(operator: Symbol.InfixOperator, left: Self, right: Self)
@@ -33,7 +32,6 @@ public extension Censor.AST {
         case function = "Function"
         case array = "Array"
         case arraySelector = "ArraySelector"
-        case chain = "Chain"
         case prefix = "Prefix"
         case suffix = "Suffix"
         case infix = "Infix"
@@ -116,27 +114,16 @@ public extension Censor.AST {
 
             return [acl]
 
-        case .arraySelector(let i):
+        case .arraySelector(let i, let a):
             acl.type = .arraySelector
             acl.value = String(i)
-            return [acl]
-
-        case .chain(let c, let n):
-            acl.type = .chain
-
+            
             var res: [ACLExp<T>] = [acl]
             res.append(
-                contentsOf: c.toACL(
+                contentsOf: a.toACL(
                     parent: acl.id,
                     rule: rule ?? acl.id,
                     position: -1
-                )
-            )
-            res.append(
-                contentsOf: n.toACL(
-                    parent: acl.id,
-                    rule: rule ?? acl.id,
-                    position: 1
                 )
             )
 
@@ -229,12 +216,9 @@ extension Censor.AST: CustomStringConvertible {
             str += "Array"
             str += childrenDescription(children: items, prefix: prefix)
 
-        case .arraySelector(let index):
+        case .arraySelector(let index, let array):
             str += "ArraySelector(\(index))"
-
-        case .chain(let content, let next):
-            str += "Chain"
-            str += childrenDescription(children: [content, next], prefix: prefix)
+            str += childrenDescription(children: [array], prefix: prefix)
 
         case .prefix(let op, let right):
             str += "\(op)"
