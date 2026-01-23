@@ -16,6 +16,8 @@ extension Censor.Rule {
 
         func parse(parser: Censor.Parser) -> Censor.AST? {
             // 1. 消费 'IN'
+            let token = parser.peek() 
+            let start = token.range.start
             parser.advance()
             
             // 2. 解析 Domain (Expression)
@@ -46,10 +48,11 @@ extension Censor.Rule {
             }
             
             // 消费右大括号 '}'
-            parser.consume(Censor.Symbol.Curly.Right.self, message: "期待 '}' 以结束 IN 代码块")
+            let endToken = parser.consume(Censor.Symbol.Curly.Right.self, message: "期待 '}' 以结束 IN 代码块")
+            let end = endToken?.range.end ?? stmt.range.end
             
             // 6. 构造 Generic Rule Node
-            return .rule(self, contents: [domainAST, stmt])
+            return .init(content: .rule(self, contents: [domainAST, stmt]), range: .init(start: start, end: end))
         }
     }
 }

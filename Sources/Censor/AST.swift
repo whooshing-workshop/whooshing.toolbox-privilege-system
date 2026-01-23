@@ -1,24 +1,37 @@
+
 import Foundation
 
 public extension Censor {
-    indirect enum AST: Sendable {
-        case value(AnyVariable)
-        case trueType(String)
-        case rule(any Rule.Define, contents: [Self])
-        case global(String)
-        case property(String)
-        case keyword(Keyword.Define)
-        case function(String, args: [Self])
-        case array([Self])
-        case arraySelector(index: Int, at: Self)
-        case prefix(operator: Symbol.PrefixOperator, right: Self)
-        case postfix(operator: Symbol.PostfixOperator, left: Self)
-        case infix(operator: Symbol.InfixOperator, left: Self, right: Self)
+    struct AST: Sendable {
+        let range: SourceRange
+        public let content: Content
+        
+        init(content: Content, range: SourceRange) {
+            self.content = content
+            self.range = range
+        }
+    
+        public typealias StoringType = Content.StoringType
 
-        public enum StoringType: Sendable {
-            case string(String?)
-            case integer(Int64?)
-            case decimal(Decimal?)
+        public indirect enum Content: Sendable {
+            case value(AnyVariable)
+            case trueType(String)
+            case rule(any Rule.Define, contents: [AST])
+            case global(String)
+            case property(String)
+            case keyword(Keyword.Define)
+            case function(String, args: [AST])
+            case array([AST])
+            case arraySelector(index: Int, at: AST)
+            case prefix(operator: Symbol.PrefixOperator, right: AST)
+            case postfix(operator: Symbol.PostfixOperator, left: AST)
+            case infix(operator: Symbol.InfixOperator, left: AST, right: AST)
+
+            public enum StoringType: Sendable {
+                case string(String?)
+                case integer(Int64?)
+                case decimal(Decimal?)
+            }
         }
     }
 }
@@ -52,7 +65,7 @@ public extension Censor.AST {
         acl.$rule.id = rule ?? acl.id!
         acl.position = position
 
-        switch self {
+        switch self.content {
         case .value(let v):
             acl.type = .value
             switch v.storingValue {
@@ -115,7 +128,7 @@ public extension Censor.AST {
                 )
             }
 
-            return [acl]
+            return res
 
         case .arraySelector(let i, let a):
             acl.type = .arraySelector
@@ -213,50 +226,55 @@ extension Censor.AST: CustomStringConvertible {
     private func describe(node: Censor.AST, prefix: String) -> String {
         var str = ""
 
-        switch node {
+        // 1. Determine node signature
+        switch node.content {
         case .value(let v):
             str += "Value(\(v))"
-
         case .trueType(let s):
             str += "TrueType(\(s))"
-
         case .global(let s):
             str += "Global(\(s))"
-
         case .property(let s):
             str += "Property(\(s))"
-
         case .keyword(let k):
             str += "Keyword(\(k.lexeme))"
-            
-        case .function(let name, let args):
+        case .function(let name, _):
             str += "Function(\(name))"
-            str += childrenDescription(children: args, prefix: prefix)
-
-        case .array(let items):
+        case .array:
             str += "Array"
-            str += childrenDescription(children: items, prefix: prefix)
-
-        case .arraySelector(let index, let array):
+        case .arraySelector(let index, _):
             str += "ArraySelector(\(index))"
-            str += childrenDescription(children: [array], prefix: prefix)
-
-        case .prefix(let op, let right):
+        case .prefix(let op, _):
             str += "\(op.operator)"
-            str += childrenDescription(children: [right], prefix: prefix)
-
-        case .postfix(let op, let left):
+        case .postfix(let op, _):
             str += "\(op.operator)"
-            str += childrenDescription(children: [left], prefix: prefix)
-
-        case .rule(let r, let c):
+        case .rule(let r, _):
             str += "\(r.description)"
-            str += childrenDescription(children: c, prefix: prefix)
-
-        case .infix(let op, let left, let right):
+        case .infix(let op, _, _):
             str += "\(op.operator)"
+        }
+        
+        // 2. Append Range
+        str += " <\(node.range)>"
+        
+        // 3. Append Children
+        switch node.content {
+        case .function(_, let args):
+            str += childrenDescription(children: args, prefix: prefix)
+        case .array(let items):
+            str += childrenDescription(children: items, prefix: prefix)
+        case .arraySelector(_, let array):
+            str += childrenDescription(children: [array], prefix: prefix)
+        case .prefix(_, let right):
+            str += childrenDescription(children: [right], prefix: prefix)
+        case .postfix(_, let left):
+            str += childrenDescription(children: [left], prefix: prefix)
+        case .rule(_, let c):
+            str += childrenDescription(children: c, prefix: prefix)
+        case .infix(_, let left, let right):
             str += childrenDescription(children: [left, right], prefix: prefix)
-            
+        default:
+            break
         }
 
         return str

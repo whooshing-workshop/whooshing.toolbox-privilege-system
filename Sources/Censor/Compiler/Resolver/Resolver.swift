@@ -13,7 +13,7 @@ extension Censor {
         }
         
         func resolve() -> Result {
-            
+            fatalError()
         }
     }
 }
