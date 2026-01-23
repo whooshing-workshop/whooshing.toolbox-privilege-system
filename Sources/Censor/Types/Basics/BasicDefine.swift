@@ -83,7 +83,7 @@ extension Censor.TypeDeclare {
         (self.nullable || !value.isNull) && (value is RealType?)
     }
     
-    static func == (lhs: Self, rhs: Self) -> Bool {
+    public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.nullable == rhs.nullable
     }
     
