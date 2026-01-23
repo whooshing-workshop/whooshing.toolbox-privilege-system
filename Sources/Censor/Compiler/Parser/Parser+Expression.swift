@@ -6,11 +6,11 @@ extension Censor.Parser {
     // MARK: - Pratt 解析核心
     
     func parseExpression(precedence: Censor.Symbol.AnyPrecedence = Censor.Symbol.Precedence.Lowest().any) -> Censor.AST? {
-        let token = peek().content
+        let token = peek()
         
         // 1. 前缀表达式
-        guard let prefixRule = getPrefixRule(for: token) else {
-            report(error: "无法解析符号: \(token)")
+        guard let prefixRule = getPrefixRule(for: token.content) else {
+            report(error: "无法解析符号: \(token.content)")
             return nil
         }
         
@@ -115,37 +115,52 @@ extension Censor.Parser {
     
     private func parseLiteral() -> Censor.AST? {
         let token = advance()
+        let range = token.range
         guard let literal = token.content as? Censor.Literal else { return nil }
         
         switch literal {
-        case .string(let v): return .value(Censor.AnyVariable(v))
-        case .character(let v): return .value(Censor.AnyVariable(v))
-        case .integer(let v): return .value(Censor.AnyVariable(v))
-        case .decimal(let v): return .value(Censor.AnyVariable(v))
-        case .date(let v): return .value(Censor.AnyVariable(v))
-        case .uuid(let v): return .value(Censor.AnyVariable(v))
-        case .bool(let v): return .value(Censor.AnyVariable(v))
-        case .trueType(let v): return .trueType(v.value ?? "") // Assuming RealType is String and value is relevant
+        case .string(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .character(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .integer(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .decimal(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .date(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .uuid(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .bool(let v): return .init(content: .value(Censor.AnyVariable(v)), range: range)
+        case .trueType(let v): return .init(content: .trueType(v.value ?? ""), range: range)
             
         case .identifier(let name):
             // 检查是否匹配基础类型
             if Censor.BasicType(rawValue: name) != nil {
-                return .trueType(name)
+                return .init(content: .trueType(name), range: range)
             }
-            return .global(name) // Renamed from variable -> global in new AST
+            return .init(content: .global(name), range: range)
         }
     }
     
     private func parseGrouping() -> Censor.AST? {
-        advance() // (
-        let expr = parseExpression()
-        consume(lexeme: ")", message: "预期在表达式后输入 ')'") // simplified: assume match can do string match if we implement it, or generic
-        // In Parser+Extensions I implemented consume(lexeme, ...)
+        let token = advance() // (
+        let start = token.range.start
+        
+        // FIXME: If parseExpression() returns nil (error), we can't form a valid range easily unless we just use '(' range or consume until ')'.
+        // But parseExpression handles its own errors. If it returns nil, we return nil.
+        guard let expr = parseExpression() else { return nil }
+        
+        let endToken = consume(lexeme: ")", message: "预期在表达式后输入 ')'") 
+        let end = endToken?.range.end ?? expr.range.end // If consume fails (and returns nil), fallback to expr end
+        
+        // The AST structure usually doesn't wrap grouping, just returns the inner expression.
+        // But if we return `expr`, we lose the parentheses information in terms of range (the returned AST has the range of the inner expr).
+        // Since `grouping` isn't an AST node itself in the enum (it's structural), we just return `expr`.
+        // However, if we wanted to reflect the grouping range, we might need a Grouping node or just accept that the AST is simplified.
+        // Current implementation: `return expr`. So range update here is moot unless we wrap it.
+        // We will stick to returning `expr` as per existing logic.
         return expr
     }
     
     private func parseArray() -> Censor.AST? {
-        advance() // [
+        let token = advance() // [
+        let start = token.range.start
+        
         var elements: [Censor.AST] = []
         if !check(lexeme: "]") {
             repeat {
@@ -154,12 +169,16 @@ extension Censor.Parser {
                 }
             } while match(lexeme: ",")
         }
-        consume(lexeme: "]", message: "预期在数组元素后输入 ']'")
-        return .array(elements)
+        
+        let endToken = consume(lexeme: "]", message: "预期在数组元素后输入 ']'")
+        let end = endToken?.range.end ?? token.range.end
+        
+        return .init(content: .array(elements), range: .init(start: start, end: end))
     }
     
     private func parsePrefixOperator() -> Censor.AST? {
         let token = advance()
+        let start = token.range.start
         guard let opStruct = token.content as? any Censor.Symbol.Operator else { return nil }
         guard let enumCase = findPrefixEnum(for: opStruct) else {
             diagnostics.append(.init(kind: .syntactic, range: token.range, message: "未知的前缀运算符", snippet: nil))
@@ -168,45 +187,52 @@ extension Censor.Parser {
         
         let precedence = opStruct.precedence
         guard let right = parseExpression(precedence: precedence) else { return nil }
-        return .prefix(operator: enumCase, right: right)
+        
+        // Range: op start -> right end
+        return .init(content: .prefix(operator: enumCase, right: right), range: .init(start: start, end: right.range.end))
     }
     
     private func parsePostfixOperator(left: Censor.AST) -> Censor.AST? {
         let token = advance()
+        let end = token.range.end
         guard let opStruct = token.content as? any Censor.Symbol.Operator else { return nil }
         guard let enumCase = findPostfixEnum(for: opStruct) else { return nil }
         
-        return .postfix(operator: enumCase, left: left)
+        // Range: left start -> op end
+        return .init(content: .postfix(operator: enumCase, left: left), range: .init(start: left.range.start, end: end))
     }
     
     private func parseInfixOperator(left: Censor.AST) -> Censor.AST? {
         let token = advance()
-        guard let opStruct = token.content as? any Censor.Symbol.Operator else { return nil }
+        // token is the operator.
+        // We need left start -> right end.
         
-        // 处理 Dot 以映射属性（如果右侧是 Identifier）
-        // 实际上，AST 需要 `infix(.dot, left, right)`. 
-        // Dot 的 `right` 应当是 `.property(name)`.
-        // 让我们先解析正常的右侧表达式。
+        guard let opStruct = token.content as? any Censor.Symbol.Operator else { return nil }
         
         let precedence = opStruct.precedence
         guard let right = parseExpression(precedence: precedence) else { return nil }
         
+        let range = Censor.SourceRange(start: left.range.start, end: right.range.end)
+        
         // 特殊处理 Dot (.) 运算符
         if opStruct is Censor.Symbol.Dot {
-            // AST 转换: .dot(left, right) -> .infix(.dot, left, .property(name))
-            if case .global(let name) = right {
-                return .infix(operator: .dot, left: left, right: .property(name))
+            if case .global(let name) = right.content {
+                // right was parsed as global(name), but in dot notation it is a property.
+                // We create a new property node using right's range.
+                let propertyNode = Censor.AST(content: .property(name), range: right.range)
+                
+                return .init(content: .infix(operator: .dot, left: left, right: propertyNode), range: range)
             }
-            // 若 right 是 .function(name, args)，保留原样即可支持链式调用
         }
         
-        // 普通中缀
         guard let enumCase = findInfixEnum(for: opStruct) else { return nil }
-        return .infix(operator: enumCase, left: left, right: right)
+        return .init(content: .infix(operator: enumCase, left: left, right: right), range: range)
     }
     
     private func parseCall(left: Censor.AST) -> Censor.AST? {
         advance() // (
+        // Start: left.range.start
+        
         var args: [Censor.AST] = []
         if !check(lexeme: ")") {
             repeat {
@@ -215,44 +241,50 @@ extension Censor.Parser {
                 }
             } while match(lexeme: ",")
         }
-        consume(lexeme: ")", message: "预期在参数列表后输入 ')'")
+        let endToken = consume(lexeme: ")", message: "预期在参数列表后输入 ')'")
+        let end = endToken?.range.end ?? left.range.end // fallback
+        let range = Censor.SourceRange(start: left.range.start, end: end)
         
-        // AST 转换逻辑:
-        // 将 `variable(name)`, `property(name)` 或点号表达式右侧转换为 `function(name, args)`
-        
-        switch left {
+        switch left.content {
         case .global(let name):
-            return .function(name, args: args)
+            return .init(content: .function(name, args: args), range: range)
         case .property(let name):
-            return .function(name, args: args)
+            return .init(content: .function(name, args: args), range: range)
         case .infix(let op, let l, let r):
             if op == .dot {
-                // 递归转换右侧为函数调用
-                if case .property(let name) = r {
-                    return .infix(operator: .dot, left: l, right: .function(name, args: args))
+                // l.r(...) -> l.func(...)
+                if case .property(let name) = r.content {
+                    // Update the property node to a function node, using the FULL range (l.start -> ) end).
+                    // Wait, the infix node covers l...r. The call covers l...r...().
+                    // New structure: infix(., l, function(name, args)) ?? 
+                    // No, existing logic was infix(., l, right: .function(name, args)). 
+                    // The 'right' node of the infix becomes the function call.
+                    // The function call's range should be 'r.start' -> ')'.end'.
+                    // The infix node's range should be 'l.start' -> ')'.end'.
+                    
+                    let funcRange = Censor.SourceRange(start: r.range.start, end: end)
+                    let funcNode = Censor.AST(content: .function(name, args: args), range: funcRange)
+                    
+                    return .init(content: .infix(operator: .dot, left: l, right: funcNode), range: range)
                 }
             }
-            // 兜底: 匿名/复杂调用不支持，返回空名函数占位
-            return .function("", args: args) 
+            return .init(content: .function("", args: args), range: range)
         default:
-             return .function("", args: args)
+             return .init(content: .function("", args: args), range: range)
         }
     }
     
     private func parseSubscript(left: Censor.AST) -> Censor.AST? {
         advance() // [
-        // AST `arraySelector(index: Int, at: Self)`
-        // This requires index to be strictly Int literal.
+        let start = left.range.start
         
         guard let indexExpr = parseExpression(), 
-              case .value(let v) = indexExpr else {
+              case .value(let v) = indexExpr.content else {
               
-              // Fallback logic inside check
               report(error: "数组下标必须是整数常量")
               return nil
         }
         
-        // Extract int value
         var index = 0
         if case .integer(let i) = v.storingValue, let distinctI = i {
             index = Int(distinctI)
@@ -261,17 +293,15 @@ extension Censor.Parser {
              return nil
         }
 
-        consume(lexeme: "]", message: "预期在下标后输入 ']'")
+        let endToken = consume(lexeme: "]", message: "预期在下标后输入 ']'")
+        let end = endToken?.range.end ?? indexExpr.range.end
         
-        return .arraySelector(index: index, at: left)
+        return .init(content: .arraySelector(index: index, at: left), range: .init(start: start, end: end))
     }
 
     // MARK: - 辅助方法：枚举映射
     
     private func findPrefixEnum(for op: any Censor.Symbol.Operator) -> Censor.Symbol.PrefixOperator? {
-        // 遍历所有用例并匹配 lexeme？
-        // 符号定义 `==` 实现匹配 lexeme 和 type。
-        // 我们可以检查相等性。
         for c in Censor.Symbol.PrefixOperator.allCases {
             if c.operator.lexeme == op.lexeme { return c }
         }
