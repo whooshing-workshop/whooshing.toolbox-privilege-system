@@ -130,7 +130,7 @@ public extension Censor {
             if let v = anyValue {
                 return String(describing: v)
             } else {
-                return Keyword.null.lexeme
+                return NullType.name
             }
         }
         

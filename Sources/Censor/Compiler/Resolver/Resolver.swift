@@ -1,13 +1,11 @@
 extension Censor {
     class Resolver {
         private let source: String
-        private let globals: [any TypeDeclare] = []
+        private let globals: [String: any TypeDeclare] = [:]
         
         private var ast: AST
-        private var current: AST
         private var errors: [Censor.Error] = []
         
-        private var current = 0
         private var diagnostics: [Censor.Error] = []
         
         init(ast: AST, source: String) {
@@ -16,7 +14,7 @@ extension Censor {
         }
         
         func resolve() -> Result {
-            resolve(ast: ast)
+//            resolve(ast: ast)
             
             return Result(content: (ast, []), diagnostics: errors, source: source)
         }
@@ -24,49 +22,69 @@ extension Censor {
 }
 
 private extension Censor.Resolver {
-    func reportError(_ message: String, start: Censor.SourceLocation, kind: Censor.Error.Kind = .semantic) {
-        let errorRange = Censor.SourceRange(start: start, end: )
+    func reportError(_ message: String, node: Censor.AST) {
+        let errorRange = node.range
         
         let error = Censor.Error(
-            kind: kind,
+            kind: .semantic,
             range: errorRange,
             message: message,
             snippet: nil
         )
         errors.append(error)
-        
-        if !atEnd { _ = advance() }
     }
 }
 
 private extension Censor.Resolver {
-    func resolve(ast: Censor.AST) -> any Censor.TypeDeclare {
-        switch ast {
-        case .value(let variable): return variable.type
-        case .trueType(let string):
-            Censor.TrueType(nullable: <#T##Bool#>, type: <#T##any Censor.TypeDeclare.Type#>)
-        case .rule(let define, let contents):
-            
-        case .global(let string):
-            
-        case .property(let string):
-            
-        case .keyword(let define):
-            
-        case .function(let string, let args):
-            
-        case .array(let array):
-            
-        case .arraySelector(let index, let at):
-            
-        case .prefix(let `operator`, let right):
-            
-        case .postfix(let `operator`, let left):
-            
-        case .infix(let `operator`, let left, let right):
-            
-        }
-        
+    func resolve(ast: Censor.AST) -> (any Censor.TypeDeclare)? {
+        nil
+//        switch ast.content {
+//        case .value(let variable): return variable.type
+//        case .trueType(let string):
+//            guard let t = Censor.BasicType(rawValue: string)?.realType else {
+//                reportError("无法解析类型 \(string)", node: ast)
+//                return nil
+//            }
+//            
+//            return t == Censor.NullType.self ? Censor.Null : Censor.TrueType(real: t)
+//        case .rule(let define, let contents):
+//            precondition(contents.count == define.declare.argument.count, "rule 的定义出错")
+//            
+//            guard
+//                let cs = (contents.map { resolve(ast: $0) }) as? [any Censor.TypeDeclare]
+//            else {
+//                return nil
+//            }
+//            
+//            for (i, (_, t, def)) in define.declare.argument.enumerated() {
+//                guard cs[i] == t else {
+//                    reportError("预期为 \(type(of: t).name)，却得到 \(type(of: cs[i]).name)", node: contents[i])
+//                    return nil
+//                }
+//            }
+//            
+//            return define.declare.returns()
+//        case .global(let string):
+//            guard let g = globals[string] else {
+//                reportError("未知的变量 \(string)", node: ast)
+//                return nil
+//            }
+//            
+//            return g
+//            
+//        case .function(let string, let args):
+//            
+//        case .array(let array):
+//            
+//        case .arraySelector(let index, let at):
+//            
+//        case .prefix(let `operator`, let right):
+//            
+//        case .postfix(let `operator`, let left):
+//            
+//        case .infix(let `operator`, let left, let right):
+//            
+//        }
     }
 }
 

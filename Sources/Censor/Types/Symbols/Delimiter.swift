@@ -4,8 +4,7 @@ extension Censor.Symbol {
     }
     
     static let delimiters: [any Define] = [
-        Comma(),
-        Dot()
+        Comma()
     ]
 }
 

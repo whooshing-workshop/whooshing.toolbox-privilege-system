@@ -9,7 +9,7 @@ struct ParserExpressionTests {
         let source = """
         IN something {
             request.name == "CLWang"
-        }    
+        }
         """
         
         let lexerRes = Censor.Lexer(source: source).scanTokens()

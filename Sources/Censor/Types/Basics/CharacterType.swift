@@ -4,7 +4,7 @@ import Foundation
 extension Censor {
     struct CharacterType: TypeDeclare {
         typealias RealType = Character
-        static let name = "Character"
+        static let name = BasicType.character.rawValue
         let nullable: Bool
         
         let properties: [String : PropertyDeclare] = [

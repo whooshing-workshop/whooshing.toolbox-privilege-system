@@ -82,7 +82,7 @@ struct LexerFullCoverageTests {
         // --- 标识符与关键字 ---
         ("true", "Literal.BOOL"),
         ("false", "Literal.BOOL"),
-        ("nil", "Keyword.NULL"),
+        ("nil", "Literal.IDENT(nil)"),
         ("IN", "Keyword.IN"),
         ("_temp", "Literal.IDENT(_temp)"),
         ("a1", "Literal.IDENT(a1)")

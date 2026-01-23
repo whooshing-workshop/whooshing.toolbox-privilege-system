@@ -10,7 +10,7 @@ public extension Censor {
         }
         
         public var description: String {
-            self.content == nil ? Keyword.null.lexeme : String(describing: self.content!)
+            self.content == nil ? NullType.name : String(describing: self.content!)
         }
         
         @Sendable public func cast<T>(as: T.Type = T.self) -> T {

@@ -9,6 +9,7 @@ extension Censor {
         case date               = "Date"
         case uuid               = "UUID"
         case bool               = "Bool"
+        case null               = "nil"
         
         var realType: any TypeDeclare.Type {
             switch self {
@@ -19,6 +20,7 @@ extension Censor {
             case .date:             DateType.self
             case .uuid:             UUIDType.self
             case .bool:             BoolType.self
+            case .null:             NullType.self
             }
         }
         

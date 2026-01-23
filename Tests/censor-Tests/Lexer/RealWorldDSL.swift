@@ -27,7 +27,7 @@ struct LexerDSLSimulationTests {
         ("data?.items[count-1] ? \"has_data\" : nil", [
             "Literal.IDENT(data)", "Symbol.OP_CHAIN", "Symbol.Infix(.)", "Literal.IDENT(items)",
             "Punctuator.SQUARE_L", "Literal.IDENT(count)", "Symbol.Infix(-)", "Literal.INT", "Punctuator.SQUARE_R",
-            "Symbol.TERNARY_QUEST", "Literal.STRING", "Symbol.TERNARY_COLON", "Keyword.NULL"
+            "Symbol.TERNARY_QUEST", "Literal.STRING", "Symbol.TERNARY_COLON", "Literal.IDENT(nil)"
         ]),
         
         // 4. UUID 与标识符碰撞
@@ -106,7 +106,7 @@ struct LexerDSLSimulationTests {
         // 模拟日期计算：'2026-01-01'.toDate() > nil
         ("\"2026-01-01\".toDate() > nil", [
             "Literal.STRING", "Symbol.Infix(.)", "Literal.IDENT(toDate)",
-            "Punctuator.PAREN_L", "Punctuator.PAREN_R", "Symbol.Infix(>)", "Keyword.NULL"
+            "Punctuator.PAREN_L", "Punctuator.PAREN_R", "Symbol.Infix(>)", "Literal.IDENT(nil)"
         ])
     ])
     func testDataConversion(source: String, expectedTypes: [String]) {

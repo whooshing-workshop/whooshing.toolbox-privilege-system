@@ -4,7 +4,7 @@ import Foundation
 extension Censor {
     struct DecimalType: TypeDeclare {
         typealias RealType = Decimal
-        static let name = "Decimal"
+        static let name = BasicType.decimal.rawValue
         let nullable: Bool
         
         static let properties: [String : PropertyDeclare] = [

@@ -11,8 +11,14 @@ extension Censor.Rule {
     struct In: Define {
         let keyword: Censor.Keyword.Define = Censor.Keyword.IN()
         let name = "IN"
-        // 无状态规则定义
-        var description: String { "Rule(IN)" }
+        let description = "Rule(IN)"
+        let declare = Censor.FunctionDeclare {
+            Censor.Return { Censor.Null }
+            Censor.ArgumentDeclare {
+                (nil, { Censor.StringType(nullable: false) }) >- nil
+                (nil, { Censor.BoolType(nullable: false) }) >- nil
+            }
+        }
 
         func parse(parser: Censor.Parser) -> Censor.AST? {
             // 1. 消费 'IN'

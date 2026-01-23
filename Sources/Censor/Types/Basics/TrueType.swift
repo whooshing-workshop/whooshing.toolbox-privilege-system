@@ -17,12 +17,17 @@ extension Censor {
         }
         
         init(nullable: Bool) {
-            self = Self.init(nullable: nullable, type: AnyType.self)
+            fatalError("不应直接创建 TrueType")
         }
         
-        init(nullable: Bool, type: any TypeDeclare.Type) {
-            self.nullable = nullable
-            self.type = type
+        init(real: any TypeDeclare.Type) {
+            self.nullable = false
+            self.type = real
+        }
+        
+        init<T: TypeDeclare>(type: T) {
+            self.nullable = false
+            self.type = T.self
         }
     }
 }

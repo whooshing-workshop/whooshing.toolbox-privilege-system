@@ -4,7 +4,7 @@ import Foundation
 extension Censor {
     struct IntegerType: TypeDeclare {
         typealias RealType = Int64
-        static let name = "Int"
+        static let name = BasicType.integer.rawValue
         let nullable: Bool
         
         let properties: [String : PropertyDeclare] = [

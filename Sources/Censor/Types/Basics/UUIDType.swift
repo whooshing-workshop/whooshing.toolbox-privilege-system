@@ -4,7 +4,7 @@ import Foundation
 extension Censor {
     struct UUIDType: TypeDeclare {
         typealias RealType = UUID
-        static let name = "UUID"
+        static let name = BasicType.uuid.rawValue
         let nullable: Bool
         
         let properties: [String : PropertyDeclare] = [

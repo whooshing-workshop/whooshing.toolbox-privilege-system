@@ -4,7 +4,7 @@ import Foundation
 extension Censor {
     struct DateType: TypeDeclare {
         typealias RealType = Date
-        static let name = "Date"
+        static let name = BasicType.date.rawValue
         static let dateFormatter = ISO8601DateFormatter()
         let nullable: Bool
         

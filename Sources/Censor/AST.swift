@@ -16,10 +16,8 @@ public extension Censor {
         public indirect enum Content: Sendable {
             case value(AnyVariable)
             case trueType(String)
-            case rule(any Rule.Define, contents: [AST])
-            case global(String)
-            case property(String)
-            case keyword(Keyword.Define)
+            case rule(AnyRule, contents: [AST])
+            case identifier(String)
             case function(String, args: [AST])
             case array([AST])
             case arraySelector(index: Int, at: AST)
@@ -32,6 +30,10 @@ public extension Censor {
                 case integer(Int64?)
                 case decimal(Decimal?)
             }
+            
+            static func rule<R: Rule.Define>(_ rule: R, contents: [AST]) -> Self {
+                return .rule(.init(rule), contents: contents)
+            }
         }
     }
 }
@@ -41,9 +43,7 @@ public extension Censor.AST {
         case value = "Value"
         case trueType = "TrueType"
         case rule = "Rule"
-        case global = "Global"
-        case property = "Property"
-        case keyword = "Keyword"
+        case identifier = "Identifier"
         case function = "Function"
         case array = "Array"
         case arraySelector = "ArraySelector"
@@ -82,19 +82,9 @@ public extension Censor.AST {
             acl.value = s
             return [acl]
 
-        case .global(let s):
-            acl.type = .global
+        case .identifier(let s):
+            acl.type = .identifier
             acl.value = s
-            return [acl]
-
-        case .property(let s):
-            acl.type = .property
-            acl.value = s
-            return [acl]
-            
-        case .keyword(let k):
-            acl.type = .keyword
-            acl.value = k.lexeme
             return [acl]
             
         case .function(let n, let args):
@@ -180,6 +170,7 @@ public extension Censor.AST {
             acl.value = r.name
             
             var res: [ACLExp<T>] = [acl]
+            
             for (i, child) in c.enumerated() {
                 res.append(
                     contentsOf: child.toACL(
@@ -232,12 +223,8 @@ extension Censor.AST: CustomStringConvertible {
             str += "Value(\(v))"
         case .trueType(let s):
             str += "TrueType(\(s))"
-        case .global(let s):
-            str += "Global(\(s))"
-        case .property(let s):
-            str += "Property(\(s))"
-        case .keyword(let k):
-            str += "Keyword(\(k.lexeme))"
+        case .identifier(let s):
+            str += "Identifier(\(s))"
         case .function(let name, _):
             str += "Function(\(name))"
         case .array:

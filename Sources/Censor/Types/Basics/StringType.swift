@@ -5,7 +5,7 @@ extension Censor {
     struct StringType: CollectionTypeDeclare {
         typealias ElementType = CharacterType
         typealias RealType = String
-        static let name = "String"
+        static let name = BasicType.string.rawValue
         let nullable: Bool
         
         let properties: [String : PropertyDeclare] = [

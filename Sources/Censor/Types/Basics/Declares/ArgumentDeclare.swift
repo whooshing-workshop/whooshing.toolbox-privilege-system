@@ -28,59 +28,26 @@ extension Censor {
             self.types = types
             self.defaults = defaults
         }
-        
-        func validate(_ values: [Value?]) -> Res<[Value], Censor.Errcase> {
-            guard values.count == labels.count else {
-                return .failure(.argumentValueAssignFailed, "参数个数不正确，预期为 \(labels.count) 个，却得到 \(values.count) 个", category: .external)
-            }
-            
-            var res: [Value] = []
-            
-            for (i, value) in values.enumerated() {
-                guard let v = value ?? defaults[i] else {
-                    return .failure(.argumentValueAssignFailed, "第 \(i) 参数未赋值", category: .external)
-                }
-                
-                guard types[i]().isMatch(value: v) else {
-                    return .failure(.argumentValueAssignFailed, "无法将 \(log: v) 赋值与 \(types[i]())", category: .external)
-                }
-                
-                res.append(v)
-            }
-            return .success(res)
-        }
     }
+}
 
-    //struct ArgumentVariable: Sendable {
-    //    let declare: ArgumentDeclare
-    //    let values: [Value?]
-    //
-    //    let startIndex: Int = 0
-    //
-    //    fileprivate init(declare: ArgumentDeclare, values: [Value?]) {
-    //        self.declare = declare
-    //        self.values = values
-    //    }
-    //}
-    //
-    //extension ArgumentVariable: Collection {
-    //    var endIndex: Int { values.count }
-    //    func index(after i: Int) -> Int { i + 1 }
-    //
-    //    subscript(position: Int) -> (type: any TypeDeclare, value: Value) {
-    //        get {
-    //            (type: self.declare.types[position], value: values[position] ?? self.declare.defaults[position]!)
-    //        }
-    //    }
-    //
-    //    func cast<T>(of position: Int, as: T.Type = T.self) -> T {
-    //        let value = self.values[position] ?? self.declare.defaults[position]!
-    //        guard let v = value as? T else {
-    //            preconditionFailure("无法将 \(log: value) cast 为 \(String(describing: T.self)) 类型")
-    //        }
-    //        return v
-    //    }
-    //}
+extension Censor.ArgumentDeclare: Collection {
+    var startIndex: Int { types.startIndex }
+    var endIndex: Int { types.endIndex }
+    
+    func index(after i: Int) -> Int { types.index(after: i) }
+    
+    subscript(position: Int) -> (label: String?, type: any Censor.TypeDeclare, def: Censor.Value?) {
+        (
+            labels[position],
+            types[position](),
+            defaults[position]
+        )
+    }
+    
+    func validate(types: [any Censor.TypeDeclare]) -> Bool {
+        self.enumerated().allSatisfy { types[$0.offset] == $0.element.type }
+    }
 }
 
 infix operator >-

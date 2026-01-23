@@ -214,17 +214,6 @@ extension Censor.Parser {
         
         let range = Censor.SourceRange(start: left.range.start, end: right.range.end)
         
-        // 特殊处理 Dot (.) 运算符
-        if opStruct is Censor.Symbol.Dot {
-            if case .global(let name) = right.content {
-                // right was parsed as global(name), but in dot notation it is a property.
-                // We create a new property node using right's range.
-                let propertyNode = Censor.AST(content: .property(name), range: right.range)
-                
-                return .init(content: .infix(operator: .dot, left: left, right: propertyNode), range: range)
-            }
-        }
-        
         guard let enumCase = findInfixEnum(for: opStruct) else { return nil }
         return .init(content: .infix(operator: enumCase, left: left, right: right), range: range)
     }
@@ -246,9 +235,7 @@ extension Censor.Parser {
         let range = Censor.SourceRange(start: left.range.start, end: end)
         
         switch left.content {
-        case .global(let name):
-            return .init(content: .function(name, args: args), range: range)
-        case .property(let name):
+        case .identifier(let name):
             return .init(content: .function(name, args: args), range: range)
         case .infix(let op, let l, let r):
             if op == .dot {

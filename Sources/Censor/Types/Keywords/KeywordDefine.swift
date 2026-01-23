@@ -7,8 +7,7 @@ public extension Censor {
     }
     
     static let keywords: [Keyword.Define] = [
-        Keyword.IN(),
-        Keyword.NULL()
+        Keyword.IN()
     ]
 }
 
