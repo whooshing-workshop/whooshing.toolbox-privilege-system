@@ -1,13 +1,22 @@
 {
-  "originHash" : "dd0ac6373f50fcebbacd2908595f3a5f7f1cf83afac731cdd50675b5d7d3f1c9",
+  "originHash" : "fb387af3c39bea0eaad30adbaf8425509154513336ed30b22d791c717db77907",
   "pins" : [
+    {
+      "identity" : "anycodable",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Flight-School/AnyCodable",
+      "state" : {
+        "revision" : "862808b2070cd908cb04f9aafe7de83d35f81b05",
+        "version" : "0.6.7"
+      }
+    },
     {
       "identity" : "async-http-client",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-server/async-http-client.git",
       "state" : {
-        "revision" : "efb14fec9f79f3f8d4f2a6c0530303efb6fe6533",
-        "version" : "1.29.1"
+        "revision" : "4b99975677236d13f0754339864e5360142ff5a1",
+        "version" : "1.30.3"
       }
     },
     {
@@ -323,6 +332,15 @@
       "state" : {
         "revision" : "6cab3308295423f109a505d2f73aeec5ef726d69",
         "version" : "1.0.7"
+      }
+    },
+    {
+      "identity" : "whooshing.toolbox-opa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SJJC-Team/whooshing.toolbox-opa",
+      "state" : {
+        "revision" : "01bf1b4c236e03505d8eef2e14fbf15c084debd6",
+        "version" : "1.0.1"
       }
     }
   ],

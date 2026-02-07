@@ -1,7 +1,7 @@
-import Censor
+import Policy
 
 let DataModels: [any TdeMIG.Type] = [
-    Privilege.ACL.MIG.self,
+    PrivilegePolicy.MIG.self,
     Privilege.MIG.self,
     LabelResourcePivot.MIG.self,
     PrivilegeResourcePivot.MIG.self

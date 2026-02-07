@@ -17,6 +17,10 @@ public extension PrivilegeSystem {
         case userInfoUpdateFailed = "用户信息数据更新失败"
         case userInfoQueryFailed = "用户信息查询失败"
         
+        // 权限策略相关错误
+        case policyCreateFailed = "权限策略创建失败"
+        case policyDeleteFailed = "权限策略删除失败"
+        
         // 角色相关错误
         case roleCreateFailed = "角色数据创建失败"
         case roleDeleteFailed = "角色数据删除失败"

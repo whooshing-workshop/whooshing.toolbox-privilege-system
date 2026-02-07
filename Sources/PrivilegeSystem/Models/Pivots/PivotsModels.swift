@@ -1,4 +1,4 @@
-import Censor
+import Policy
 
 let PivotModels: [any TdeMIG.Type] = [
     DomainGroupPivot.MIG.self,

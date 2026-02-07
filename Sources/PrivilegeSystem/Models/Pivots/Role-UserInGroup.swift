@@ -1,5 +1,6 @@
 import PgSQL
-import Censor
+import Policy
+import Fluent
 
 typealias RoleUserInGroupPivot = Pivot<Pivots.RoleUserInGroup>
 
@@ -10,5 +11,7 @@ extension Pivots {
         
         static let foreignPrimaryName = "role"
         static let foreignSecondaryName = "user_in_group"
+        
+        static let foreignPrimaryType = DatabaseSchema.DataType.int64
     }
 }

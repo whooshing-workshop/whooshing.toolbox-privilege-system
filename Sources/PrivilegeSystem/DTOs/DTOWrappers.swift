@@ -57,7 +57,7 @@ protocol DTOUpdater: Sendable {
     associatedtype PreparedDTO: Sendable
     associatedtype QueriedDTO: Sendable
     associatedtype DBModel: PGModel & Sendable
-    var id: UUID { get }
+    var id: DBModel.IDValue { get }
     var updates: [
         PartialKeyPath<PreparedDTO>:
         (QueryBuilder<DBModel>, QueriedDTO?) throws -> QueryBuilder<DBModel>

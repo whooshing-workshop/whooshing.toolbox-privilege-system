@@ -1,8 +1,9 @@
 import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
+import OPA
 
-public struct PrivilegeSystem: Sendable {
+public final class PrivilegeSystem: Sendable {
     
     public typealias PGDatabase = Database & PostgresDatabase & SQLDatabase
     

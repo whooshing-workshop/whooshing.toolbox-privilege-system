@@ -1,7 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
-import Censor
+import Policy
 
 final class UGroup: PGModel, @unchecked Sendable {
     

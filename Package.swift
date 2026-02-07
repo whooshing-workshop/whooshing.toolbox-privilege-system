@@ -20,47 +20,41 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
 //        .package(url: "https://github.com/Flight-School/AnyCodable", from: "0.6.7"),
-//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", .upToNextMajor(from: "1.4.4")),
+//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", from: "1.5.0"),
         .package(path: "/Users/clwang/GitHub/whooshing.toolbox-basic"),
-//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-pgsql.git", .upToNextMajor(from: "1.0.5"))
-        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-pgsql")
+//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-pgsql.git", from: "1.0.5")
+        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-pgsql"),
+        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-opa", from: "1.0.1")
     ],
     targets: [
         .target(
             name: "ResourceMacros",
             dependencies: [
                 .target(name: "MacroImplements"),
-                .target(name: "Executor")
+            ]
+        ),
+        .target(
+            name: "Policy",
+            dependencies: [
+                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
             ]
         ),
         .target(
             name: "PrivilegeSystem",
             dependencies: [
-                .target(name: "Censor"),
+                .target(name: "Policy"),
                 .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
+                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
+                .product(name: "OPA", package: "whooshing.toolbox-opa")
             ]
         ),
         .target(
             name: "PrivilegeModule",
             dependencies: [
+                .target(name: "Policy"),
                 .target(name: "ResourceMacros"),
-                .target(name: "Executor"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
-            ]
-        ),
-        .target(
-            name: "Executor",
-            dependencies: [
-                .target(name: "Censor"),
-                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic")
-            ]
-        ),
-        .target(
-            name: "Censor",
-            dependencies: [
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
             ]
         ),
@@ -69,13 +63,6 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
-            ]
-        ),
-        .testTarget(
-            name: "censor-tests",
-            dependencies: [
-                .target(name: "Censor"),
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),
         .testTarget(

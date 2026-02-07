@@ -1,5 +1,0 @@
-extension Censor {
-    class Executor {
-        
-    }
-}

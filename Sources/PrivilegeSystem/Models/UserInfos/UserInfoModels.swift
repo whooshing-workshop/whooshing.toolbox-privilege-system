@@ -1,4 +1,4 @@
-import Censor
+import Policy
 
 let UserInfosModels: [any TdeMIG.Type] = [
     User.MIG.self,

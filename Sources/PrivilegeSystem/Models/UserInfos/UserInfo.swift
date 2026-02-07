@@ -1,6 +1,6 @@
 import PgSQL
 import Foundation
-import Censor
+import Policy
 
 extension User {
     final class Info: PGModel, @unchecked Sendable {

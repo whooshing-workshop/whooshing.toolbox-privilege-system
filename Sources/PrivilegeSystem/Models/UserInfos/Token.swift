@@ -1,6 +1,6 @@
 import PgSQL
 import Foundation
-import Censor
+import Policy
 import Cryptos
 import Fluent
 

@@ -8,7 +8,7 @@ import NIOAdvanced
 
 extension PrivilegeSystem {
     /// 权限服务层，提供权限相关的业务接口
-    public struct AccountController: Controller {
+    public final class AccountController: Controller {
         let db: PrivilegeSystem.PGDatabase
         let eventLoop: EventLoop
         
@@ -23,11 +23,11 @@ extension PrivilegeSystem {
             eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
                 try user.raw().get()
             }.flatMap { user in
-                user.save(on: db)
+                user.save(on: self.db)
                     .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internal)
                     .map { user.id }
             }.flatMap { id in
-                User.find(id, on: db)
+                User.find(id, on: self.db)
                     .withError(Errcase.userRegisterFailed, "重新加载用户失败", category: .internal)
                     .flatMapThrowing
                 { res throws(Errcase.ErrType) in
@@ -73,11 +73,11 @@ extension PrivilegeSystem {
                 return (user, userId, token)
             }.flatMap { (user, id, token) in
                 // 删除原有的 token (若有)
-                Token.query(on: db).filter(\.$user.$id == id).delete()
+                Token.query(on: self.db).filter(\.$user.$id == id).delete()
                     .withError(Errcase.userLoginFailed, "删除用户 token 时失败，用户: \(user)")
                     .map { (user, id, token) }
             }.flatMap { (user, id, token) in
-                token.save(on: db)
+                token.save(on: self.db)
                     .withError(Errcase.userLoginFailed, "用户 Token 写入数据库失败，用户: \(user)，token: \(token)")
                     .flatMapThrowing { () throws(Errcase.ErrType) in
                         try required(throws: Errcase.userLoginFailed, category: .internal) {
@@ -96,7 +96,7 @@ extension PrivilegeSystem {
                     throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes，而得到 \(tokenEncrypted.count) bytes", category: .external)
                 }
             }.flatMap {
-                Token.query(on: db)
+                Token.query(on: self.db)
                     .filter(\.$credential == credential)
                     .first()
                     .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败，凭据: \(credential)", category: .internal)
@@ -107,7 +107,7 @@ extension PrivilegeSystem {
                 return t
             }.flatMap { token in
                 token.$user
-                    .load(on: db)
+                    .load(on: self.db)
                     .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(credential)", category: .internal)
                     .map { @Sendable in token }
             }.flatMapThrowing { token throws(Errcase.ErrType) in
@@ -174,7 +174,7 @@ extension PrivilegeSystem {
                 return user
             }.flatMap { (user: User) -> EventLoopRes<User, Errcase> in
                 return user
-                    .update(on: db)
+                    .update(on: self.db)
                     .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)
                     .map { user }
             }.flatMapThrowing { user throws(Errcase.ErrType) in

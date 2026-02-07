@@ -5,7 +5,7 @@ import ErrorHandle
 import NIOAdvanced
 
 extension PrivilegeSystem {
-    public struct UserInfoController: Controller {
+    public final class UserInfoController: Controller {
         let db: PrivilegeSystem.PGDatabase
         let eventLoop: EventLoop
         
@@ -27,7 +27,7 @@ extension PrivilegeSystem {
                     .flatMap
                 {
                     let tasks: [EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase>] = raws.enumerated().map { i, raw in
-                        eventLoop.submitResult { () throws(Errcase.ErrType) in
+                        self.eventLoop.submitResult { () throws(Errcase.ErrType) in
                             let infoId = try required(throws: Errcase.userInfoAddFailed, "获取用户信息 ID 失败", category: .internal) {
                                 try raw.requireID()
                             }
@@ -64,7 +64,7 @@ extension PrivilegeSystem {
                     }
                     
                     return tasks.map{ $0.wrapped }
-                        .flatten(on: eventLoop)
+                        .flatten(on: self.eventLoop)
                         .withError(Errcase.userInfoAddFailed, "执行用户信息插入任务时失败", category: .internal)
                 }
             }

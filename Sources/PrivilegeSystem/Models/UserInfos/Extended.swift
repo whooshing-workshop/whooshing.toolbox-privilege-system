@@ -1,7 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
-import Censor
+import Policy
 
 extension User.Info {
     final class Extended<T: User.Info.Model>: PGModel, @unchecked Sendable {

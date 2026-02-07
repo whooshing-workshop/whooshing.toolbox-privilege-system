@@ -1,12 +1,12 @@
 import Fluent
-import Censor
+import Policy
 import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
 
 extension PrivilegeSystem {
-    public struct GroupController: Controller {
+    public final class GroupController: Controller {
         let db: PrivilegeSystem.PGDatabase
         let eventLoop: EventLoop
         
@@ -62,31 +62,17 @@ extension PrivilegeSystem {
         }
         
         public func join(
-            @RelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-            _ content: @Sendable @escaping () -> [Relation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+            @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
         ) -> EventLoopRes<Void, Errcase> {
-            __manyToMany(
-                content(),
-                action: .attach,
-                label: "用户组与用户",
-                errThrowing: .userJoinGroupFailed,
-                siblingBuilder: { $0.model.$groups },
-                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
-            )
+            join(relations: content())
         }
         
         public func kick(
-            @RelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-            _ content: @Sendable @escaping () -> [Relation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+            @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
+            _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
         ) -> EventLoopRes<Void, Errcase> {
-            __manyToMany(
-                content(),
-                action: .detach,
-                label: "用户组与用户",
-                errThrowing: .userKickGroupFailed,
-                siblingBuilder: { $0.model.$groups },
-                modelsBuilder: { db.eventLoop.makeSucceededResult($0.map { $0.model }) }
-            )
+            kick(relations: content())
         }
         
         public func query(
@@ -119,5 +105,33 @@ extension PrivilegeSystem {
                 return rs
             }
         }
+    }
+}
+
+public extension PrivilegeSystem.GroupController {
+    func join(
+        relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        __manyToMany(
+            relations,
+            action: .attach,
+            label: "用户组与用户",
+            errThrowing: .userJoinGroupFailed,
+            siblingBuilder: { $0.model.$groups },
+            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+        )
+    }
+    
+    func kick(
+        relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        __manyToMany(
+            relations,
+            action: .detach,
+            label: "用户组与用户",
+            errThrowing: .userKickGroupFailed,
+            siblingBuilder: { $0.model.$groups },
+            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+        )
     }
 }

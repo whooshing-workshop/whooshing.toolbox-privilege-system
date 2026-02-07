@@ -1,8 +1,8 @@
-import Censor
+import Policy
 
 let DataModels: [any TdeMIG.Type] = [
     UserInfosModels,
     GroupModels,
-    ACLModels,
+    PolicyModels,
     PivotModels
 ].flatMap { $0 }

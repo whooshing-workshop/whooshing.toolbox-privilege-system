@@ -1,5 +1,6 @@
 import PgSQL
-import Censor
+import Policy
+import Fluent
 
 typealias UserDomainPivot = Pivot<Pivots.UserDomain>
 
@@ -10,5 +11,7 @@ extension Pivots {
         
         static let foreignPrimaryName = "user"
         static let foreignSecondaryName = "domain"
+        
+        static let foreignSecondaryType = DatabaseSchema.DataType.int64
     }
 }

@@ -3,47 +3,33 @@ import NIOAdvanced
 import PgSQL
 import Vapor
 import ErrorHandle
-import Censor
+import Policy
 
-protocol Controller: Sendable {
+protocol Controller: AnyObject, Sendable {
     var db: PrivilegeSystem.PGDatabase { get }
     var eventLoop: EventLoop { get }
 }
 
 extension Controller {
-    func __createWithACL<T, G, M: PGModel>(
-        models: [T],
+    
+    
+    func __create<T, G, M: PGModel>(
+        dtos: [T],
         label: String,
         errThrowing: PrivilegeSystem.Errcase,
-        aclBuilder: @Sendable @escaping (T) -> [ACLExp<M>],
-        modelBuilder: @Sendable @escaping (T, UUID) -> M,
+        modelBuilder: @Sendable @escaping (T) -> M,
         dtoBuilder: @Sendable @escaping (M) -> Res<G, PrivilegeSystem.Errcase>
     ) -> EventLoopRes<[G], PrivilegeSystem.Errcase> {
-        let orgAcls = models.map { aclBuilder($0) }
+        let models = dtos.map { modelBuilder($0) }
         
-        var aclIds: [UUID] = []
-        for a in orgAcls {
-            guard let aclId = a.first?.id else {
-                return db.eventLoop.makeFailedResult(errThrowing.d("传入的 AST 没有任何结构", category: .external))
-            }
-            aclIds.append(aclId)
-        }
-        
-        let acls = orgAcls.flatMap { $0 }
-        let r = models.enumerated().map { modelBuilder($0.element, aclIds[$0.offset]) }
-        
-        return db.trans { db in
-            acls
-                .create(on: db)
-                .withError(errThrowing, "插入 ACL 记录失败", category: .internal)
-                .flatMap
-            {
-                r.create(on: db).withError(errThrowing, "插入\(label)失败", category: .internal)
-            }.flatMapThrowing { () throws(PrivilegeSystem.Errcase.ErrType) in
-                try required(throws: errThrowing, category: .internal) {
-                    try r.map {
-                        try dtoBuilder($0).get()
-                    }
+        return models
+            .create(on: db)
+            .withError(errThrowing, "插入\(label)失败", category: .internal)
+            .flatMapThrowing
+        { () throws(PrivilegeSystem.Errcase.ErrType) in
+            try required(throws: errThrowing, category: .internal) {
+                try models.map {
+                    try dtoBuilder($0).get()
                 }
             }
         }
@@ -51,7 +37,7 @@ extension Controller {
     
     func __delete<T: PGModel>(
         _ model: T.Type = T.self,
-        ids: Set<UUID>,
+        ids: Set<T.IDValue>,
         allSatisfy: Bool = true,
         label: String,
         errThrowing: PrivilegeSystem.Errcase,
@@ -143,7 +129,7 @@ extension Controller {
     }
     
     func __manyToMany<Left, Right, LM, RM, TM>(
-        _ relations: [Relation<Left, Right>],
+        _ relations: [MTMRelation<Left, Right>],
         action: ManyToManyAction,
         label: String,
         errThrowing: PrivilegeSystem.Errcase,

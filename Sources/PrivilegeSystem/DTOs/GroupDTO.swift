@@ -1,6 +1,6 @@
 import Fluent
 import Foundation
-import Censor
+import Policy
 import ErrorHandle
 
 public extension DTO {

@@ -1,5 +1,6 @@
 import PgSQL
-import Censor
+import Policy
+import Fluent
 
 typealias DomainGroupPivot = Pivot<Pivots.DomainGroup>
 
@@ -10,5 +11,7 @@ extension Pivots {
         
         static let foreignPrimaryName = "domain"
         static let foreignSecondaryName = "group"
+        
+        static let foreignPrimaryType = DatabaseSchema.DataType.int64
     }
 }
