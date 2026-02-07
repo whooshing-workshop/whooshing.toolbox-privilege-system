@@ -23,13 +23,13 @@
 
 ![11.模块分布式认证系统](diagrams/11.模块分布式认证系统.png)
 
-#### 权限表达式
+#### OPA 模块
 
-![12.权限表达式](diagrams/12.权限表达式.png)
+![12.OPA模块](diagrams/12.OPA模块.png)
 
 #### 数据结构 - ERD
 
-![14.SQL数据结构-ERD](diagrams/14.SQL数据结构-ERD.png)
+![15.SQL数据结构-ERD](diagrams/15.SQL数据结构-ERD.png)
 
 要了解详细结构，请见[所有设计图](diagrams)
 
