@@ -2,6 +2,7 @@ import Vapor
 import Fluent
 import ErrorHandle
 import Cryptos
+import PrivilegeModule
 
 typealias TokenModel = Token
 

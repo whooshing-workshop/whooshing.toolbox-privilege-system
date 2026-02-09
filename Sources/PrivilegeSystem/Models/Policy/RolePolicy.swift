@@ -1,8 +1,9 @@
 import Policy
 
 extension Role: PolicyType {
-    typealias Model = Role
-    static var namePrefix: String { "role" }
+    package typealias Model = Role
+    package static var namePrefix: String { "role" }
+    package static var typeId: String { "role" }
 }
 
 typealias RolePolicy = PolicyExp<Role>

@@ -2,23 +2,23 @@ import PgSQL
 import Foundation
 import Policy
 
-final class Role: PGModel, @unchecked Sendable {
+package final class Role: PGModel, @unchecked Sendable {
     
-    static let name = "roles"
+    package static let name = "roles"
     
-    struct Fields: PGFields {
+    package struct Fields: PGFields {
         let id = PGField("id", .int64)                          .primary
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
         let createdAt = PGField("create_at", .string)           .required
         let updateAt = PGField("update_at", .string)            .required
         
-        init() {}
+        package init() {}
     }
     
-    static let fields = Fields()
+    package static let fields = Fields()
     
-    @ID(custom: fields.id.key)                      var id: Int64?
+    @ID(custom: fields.id.key)                      package var id: Int64?
     
     @Field(fields.name)                             var name: String
     @Field(fields.description)                      var description: String?
@@ -45,7 +45,7 @@ final class Role: PGModel, @unchecked Sendable {
     @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
     @Timestamp(fields.updateAt, on: .update)        var updatedAt: Date!
     
-    init() {}
+    package init() {}
     
-    typealias MIG = DefaultMIG<Role>
+    package typealias MIG = DefaultMIG<Role>
 }

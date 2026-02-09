@@ -2,6 +2,7 @@ import Fluent
 import Foundation
 import Policy
 import ErrorHandle
+import PrivilegeModule
 
 public extension DTO {
     struct Policy<T: Status>: Sendable {

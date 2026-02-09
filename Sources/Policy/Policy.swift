@@ -5,6 +5,7 @@ import Foundation
 public protocol PolicyType: Sendable {
     associatedtype Model: PGModel
     static var namePrefix: String { get }
+    static var typeId: String { get }
 }
 
 public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {

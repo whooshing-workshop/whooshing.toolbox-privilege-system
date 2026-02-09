@@ -2,11 +2,9 @@ import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
 import OPA
+import AsyncHTTPClient
 
 public final class PrivilegeSystem: Sendable {
-    
-    public typealias PGDatabase = Database & PostgresDatabase & SQLDatabase
-    
     @frozen
     public struct Debuging: Sendable {
         /// 是否启用 PostgreSQL tde 加密功能
@@ -24,10 +22,12 @@ public final class PrivilegeSystem: Sendable {
     public let eventLoop: EventLoop
     let dbs: Databases
     let db: PGDatabase
+    let opa: OPA
     
     public init(
         eventLoop: EventLoop,
         dbConfigure: SQLPostgresConfiguration,
+        opaConfigure: OPAConfiguration,
         logger: Logger,
         debuging: Debuging? = nil
     ) async throws(BscError<Errcase>) {
@@ -50,6 +50,7 @@ public final class PrivilegeSystem: Sendable {
                 on: eventLoop,
                 migrationLogLevel: logger.logLevel
             )
+            
             try await mig.setupIfNeeded().get()
             try await mig.prepareBatch().get()
         } catch {
@@ -66,6 +67,39 @@ public final class PrivilegeSystem: Sendable {
             throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internal)
         }
         
+        self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: logger.derive(subId: "opa")))
         self.db = db
+    }
+}
+
+public extension PrivilegeSystem {
+    struct OPAConfiguration: Sendable {
+        public let scheme: OPA.ConnectionArgument.Scheme
+        public let host: String
+        public let port: Int
+        public let proxy: HTTPClient.Configuration.Proxy?
+        
+        init(
+            scheme: OPA.ConnectionArgument.Scheme = .http,
+            host: String = "localhost",
+            port: Int = 8181,
+            proxy: HTTPClient.Configuration.Proxy? = nil
+        ) {
+            self.scheme = scheme
+            self.host = host
+            self.port = port
+            self.proxy = proxy
+        }
+        
+        func conf(eventLoop: EventLoop, logger: Logger) -> OPA.ConnectionArgument {
+            .init(
+                eventLoop: eventLoop,
+                scheme: scheme,
+                host: host,
+                port: port,
+                logger: logger,
+                proxy: proxy
+            )
+        }
     }
 }

@@ -18,6 +18,7 @@ public extension PrivilegeSystem {
         case userInfoQueryFailed = "用户信息查询失败"
         
         // 权限策略相关错误
+        case policyCheckFailed = "权限策略检查失败"
         case policyCreateFailed = "权限策略创建失败"
         case policyDeleteFailed = "权限策略删除失败"
         

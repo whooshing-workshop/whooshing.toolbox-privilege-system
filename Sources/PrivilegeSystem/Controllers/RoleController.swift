@@ -4,11 +4,12 @@ import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
+import PrivilegeModule
 
 extension PrivilegeSystem {
-    public final class RoleController: Controller {
-        let db: PrivilegeSystem.PGDatabase
-        let eventLoop: EventLoop
+    public final class RoleController: SystemController {
+        package let db: PGDatabase
+        package let eventLoop: EventLoop
         let groupController: GroupController
         let policyController: PolicyController
         
@@ -49,7 +50,7 @@ extension PrivilegeSystem {
         }
         
         public func delete(
-            roleIds: Set<Int64>,
+            roleIds: [Int64],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
@@ -64,7 +65,7 @@ extension PrivilegeSystem {
         }
         
         public func update(
-            info updater: DTO.Role<DTO.Prepare>.Updater
+            with updater: DTO.Role<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {
             __update(
                 updater: updater,

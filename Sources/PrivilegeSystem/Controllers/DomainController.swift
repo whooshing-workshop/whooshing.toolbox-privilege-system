@@ -4,11 +4,12 @@ import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
+import PrivilegeModule
 
 extension PrivilegeSystem {
-    public final class DomainController: Controller {
-        let db: PrivilegeSystem.PGDatabase
-        let eventLoop: EventLoop
+    public final class DomainController: SystemController {
+        package let db: PGDatabase
+        package let eventLoop: EventLoop
         let policyController: PolicyController
         
         init(
@@ -23,14 +24,14 @@ extension PrivilegeSystem {
         public func create(
             @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
-        ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        ) -> EventLoopRes<Void, Errcase> {
             self.create(relations: content())
         }
         
         public func createWithReturning(
             @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
-        ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
+        ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], Errcase> {
             self.createWithReturning(relations: content())
         }
         
@@ -46,7 +47,7 @@ extension PrivilegeSystem {
         }
         
         public func delete(
-            roleIds: Set<Int64>,
+            roleIds: [Int64],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
@@ -61,7 +62,7 @@ extension PrivilegeSystem {
         }
         
         public func update(
-            info updater: DTO.Role<DTO.Prepare>.Updater
+            with updater: DTO.Role<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {
             __update(
                 updater: updater,

@@ -1,16 +1,18 @@
 import Foundation
 import Cryptos
 import Fluent
+import PgSQL
 import Vapor
 import DataConvertable
 import ErrorHandle
 import NIOAdvanced
+import PrivilegeModule
 
 extension PrivilegeSystem {
     /// 权限服务层，提供权限相关的业务接口
-    public final class AccountController: Controller {
-        let db: PrivilegeSystem.PGDatabase
-        let eventLoop: EventLoop
+    public final class AccountController: SystemController {
+        package let db: PGDatabase
+        package let eventLoop: EventLoop
         
         init(system: PrivilegeSystem) {
             self.db = system.db

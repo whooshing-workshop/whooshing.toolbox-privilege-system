@@ -2,6 +2,8 @@ import Fluent
 import Foundation
 import Policy
 import ErrorHandle
+import Collections
+import PrivilegeModule
 
 typealias DomainModel = Domain
 
@@ -74,13 +76,13 @@ extension DTO.Domain where T == DTO.Prepare {
 public extension DTO.Domain where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let domainId: Int64
-        var id: Int64 { domainId }
+        package var id: Int64 { domainId }
         
-        private(set) var updates: [
-            PartialKeyPath<DTO.Domain<DTO.Prepare>>:
+        package private(set) var updates: OrderedDictionary<
+            PartialKeyPath<DTO.Domain<DTO.Prepare>>,
             (QueryBuilder<Domain>, DTO.Domain<DTO.Queried>?) throws -> QueryBuilder<Domain>
-        ] = [:]
-        private(set) var needsPeek = false
+        > = [:]
+        package private(set) var needsPeek = false
         
         public init(domainId: Int64) {
             self.domainId = domainId

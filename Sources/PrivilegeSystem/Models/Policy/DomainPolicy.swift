@@ -1,8 +1,9 @@
 import Policy
 
 extension Domain: PolicyType {
-    typealias Model = Domain
-    static var namePrefix: String { "domain" }
+    package typealias Model = Domain
+    package static var namePrefix: String { "domain" }
+    package static var typeId: String { "domain" }
 }
 
 typealias DomainPolicy = PolicyExp<Domain>

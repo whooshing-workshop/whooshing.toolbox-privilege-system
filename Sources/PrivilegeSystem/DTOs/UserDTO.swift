@@ -3,6 +3,7 @@ import Fluent
 import DataConvertable
 import ErrorHandle
 import Cryptos
+import PrivilegeModule
 
 typealias UserModel = User
 
@@ -85,10 +86,10 @@ extension DTO.User where T == DTO.Prepare {
 }
 
 extension User: ModelAuthenticatable {
-    static let usernameKey: KeyPath<User, Field<String>> = \User.$email
-    static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPasswd
+    package static let usernameKey: KeyPath<User, Field<String>> = \User.$email
+    package static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPasswd
     
-    func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+    package func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果
         let passwd = try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
             try Base64String(password).dataRes.get()

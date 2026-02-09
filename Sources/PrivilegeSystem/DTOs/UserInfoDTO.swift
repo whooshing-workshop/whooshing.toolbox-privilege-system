@@ -3,6 +3,8 @@ import Fluent
 import DataConvertable
 import ErrorHandle
 import Cryptos
+import Collections
+import PrivilegeModule
 
 public extension DTO {
     struct UserInfo<T: Status>: Sendable {
@@ -113,13 +115,13 @@ extension DTO.UserInfo where T == DTO.Prepare {
 public extension DTO.UserInfo where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let userId: UUID
-        var id: UUID { userId }
+        package var id: UUID { userId }
         
-        private(set) var updates: [
-            PartialKeyPath<DTO.UserInfo<DTO.Prepare>>:
+        package private(set) var updates: OrderedDictionary<
+            PartialKeyPath<DTO.UserInfo<DTO.Prepare>>,
             (QueryBuilder<User.Info>, DTO.UserInfo<DTO.Queried>?) throws -> QueryBuilder<User.Info>
-        ] = [:]
-        private(set) var needsPeek = false
+        > = [:]
+        package private(set) var needsPeek = false
         
         public init(userId: UUID) {
             self.userId = userId
@@ -285,13 +287,13 @@ extension DTO.UserExtendedInfo where G == DTO.Prepare, T.Value == String {
 public extension DTO.UserExtendedInfo where T.Value == String, G == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let userInfoId: UUID
-        var id: UUID { userInfoId }
+        package var id: UUID { userInfoId }
         
-        private(set) var updates: [
-            PartialKeyPath<DTO.UserExtendedInfo<T, DTO.Prepare>>:
+        package private(set) var updates: OrderedDictionary<
+            PartialKeyPath<DTO.UserExtendedInfo<T, DTO.Prepare>>,
             (QueryBuilder<User.Info.Extended<T.Model>>, DTO.UserExtendedInfo<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
-        ] = [:]
-        private(set)  var needsPeek = false
+        > = [:]
+        package private(set) var needsPeek = false
         
         public init(userInfoId: UUID) {
             self.userInfoId = userInfoId

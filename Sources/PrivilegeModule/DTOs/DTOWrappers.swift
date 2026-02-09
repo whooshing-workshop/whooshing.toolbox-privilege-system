@@ -1,3 +1,8 @@
+import Foundation
+import Fluent
+import PgSQL
+import Collections
+
 public enum DTO {}
 
 public extension DTO {
@@ -18,7 +23,7 @@ public extension DTO {
             set { value = newValue }
         }
         
-        public internal(set) var projectedValue: T? {
+        public package(set) var projectedValue: T? {
             get { value }
             set { value = newValue }
         }
@@ -39,7 +44,7 @@ public extension DTO {
             set { value = newValue }
         }
         
-        public internal(set) var projectedValue: T? {
+        public package(set) var projectedValue: T? {
             get { value }
             set { value = newValue }
         }
@@ -49,22 +54,18 @@ public extension DTO {
     }
 }
 
-import Foundation
-import Fluent
-import PgSQL
-
-protocol DTOUpdater: Sendable {
-    associatedtype PreparedDTO: Sendable
+package protocol DTOUpdater: Sendable {
     associatedtype QueriedDTO: Sendable
     associatedtype DBModel: PGModel & Sendable
+    associatedtype KeyPathType: AnyKeyPath
     var id: DBModel.IDValue { get }
-    var updates: [
-        PartialKeyPath<PreparedDTO>:
+    var updates: OrderedDictionary<
+        KeyPathType,
         (QueryBuilder<DBModel>, QueriedDTO?) throws -> QueryBuilder<DBModel>
-    ] { get }
+    > { get }
     var needsPeek: Bool { get }
 }
 
-extension DTOUpdater {
-    public var all: [PartialKeyPath<PreparedDTO>] { .init(updates.keys) }
+package extension DTOUpdater {
+    var all: [KeyPathType] { .init(updates.keys) }
 }

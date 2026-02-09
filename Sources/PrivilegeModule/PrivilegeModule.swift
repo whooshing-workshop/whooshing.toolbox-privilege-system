@@ -4,8 +4,6 @@ import FluentPostgresDriver
 import ResourceMacros
 
 public struct PrivilegeModule: Sendable {
-    public typealias PGDatabase = Database & PostgresDatabase & SQLDatabase
-    
     @frozen
     public struct Debuging: Sendable {
         /// 是否启用 PostgreSQL tde 加密功能
@@ -25,11 +23,11 @@ public struct PrivilegeModule: Sendable {
     let db: PGDatabase
     
     public init(
+        moduleId: UUID,
         eventLoop: EventLoop,
         dbConfigure: SQLPostgresConfiguration,
         logger: Logger,
-        debuging: Debuging? = nil,
-        migrationConfigure: ([Migration]) -> [Migration] = { $0 }
+        debuging: Debuging? = nil
     ) async throws(BscError<Errcase>) {
         self.eventLoop = eventLoop
         self.dbs = Databases(threadPool: .singleton, on: eventLoop)

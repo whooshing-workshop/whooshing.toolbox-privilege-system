@@ -4,11 +4,12 @@ import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
+import PrivilegeModule
 
 extension PrivilegeSystem {
-    public final class GroupController: Controller {
-        let db: PrivilegeSystem.PGDatabase
-        let eventLoop: EventLoop
+    public final class GroupController: SystemController {
+        package let db: PGDatabase
+        package let eventLoop: EventLoop
         
         init(system: PrivilegeSystem) {
             self.db = system.db
@@ -35,7 +36,7 @@ extension PrivilegeSystem {
         }
         
         public func delete(
-            groupIds: Set<UUID>,
+            groupIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
@@ -50,7 +51,7 @@ extension PrivilegeSystem {
         }
         
         public func update(
-            info updater: DTO.Group<DTO.Prepare>.Updater
+            with updater: DTO.Group<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Group<DTO.Queried>, Errcase> {
             __update(
                 updater: updater,

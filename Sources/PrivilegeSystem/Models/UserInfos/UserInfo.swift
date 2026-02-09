@@ -2,11 +2,11 @@ import PgSQL
 import Foundation
 import Policy
 
-extension User {
+package extension User {
     final class Info: PGModel, @unchecked Sendable {
-        static let name: String = "user_infos"
+        package static let name: String = "user_infos"
         
-        struct Fields: PGFields {
+        package struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
             let userId = PGField("user_id", .uuid)                      .required.unique.foreign(User.self, \.id, onDelete: .cascade)
             let idNumber = PGField("id_number", .string)                .required.unique
@@ -14,11 +14,13 @@ extension User {
             let other = PGField("other", .string)
             let createdAt = PGField("create_at", .string)               .required
             let updateAt = PGField("update_at", .string)                .required
+            
+            package init() {}
         }
         
-        static let fields = Fields()
+        package static let fields = Fields()
         
-        @ID(key: .id)                                           var id: UUID?
+        @ID(key: .id)                                           package var id: UUID?
         
         @Parent(fields.userId)                                  var user: User
         @Field(fields.idNumber)                                 var identifier: String
@@ -32,8 +34,8 @@ extension User {
         @Timestamp(fields.createdAt, on: .create)               var createdAt: Date!
         @Timestamp(fields.updateAt, on: .update)                var updateAt: Date!
         
-        init() {}
+        package init() {}
         
-        typealias MIG = DefaultMIG<Info>
+        package typealias MIG = DefaultMIG<Info>
     }
 }

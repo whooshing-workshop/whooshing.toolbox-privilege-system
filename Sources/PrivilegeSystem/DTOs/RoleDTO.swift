@@ -2,6 +2,8 @@ import Fluent
 import Foundation
 import Policy
 import ErrorHandle
+import Collections
+import PrivilegeModule
 
 typealias RoleModel = Role
 
@@ -74,13 +76,13 @@ extension DTO.Role where T == DTO.Prepare {
 public extension DTO.Role where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let roleId: Int64
-        var id: Int64 { roleId }
+        package var id: Int64 { roleId }
         
-        private(set) var updates: [
-            PartialKeyPath<DTO.Role<DTO.Prepare>>:
+        package private(set) var updates: OrderedDictionary<
+            PartialKeyPath<DTO.Role<DTO.Prepare>>,
             (QueryBuilder<Role>, DTO.Role<DTO.Queried>?) throws -> QueryBuilder<Role>
-        ] = [:]
-        private(set) var needsPeek = false
+        > = [:]
+        package private(set) var needsPeek = false
         
         public init(roleId: Int64) {
             self.roleId = roleId

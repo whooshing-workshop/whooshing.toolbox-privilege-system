@@ -2,6 +2,8 @@ import Fluent
 import Foundation
 import Policy
 import ErrorHandle
+import Collections
+import PrivilegeModule
 
 public extension DTO {
     struct Group<T: Status>: Sendable {
@@ -77,13 +79,13 @@ extension DTO.Group where T == DTO.Prepare {
 public extension DTO.Group where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let groupId: UUID
-        var id: UUID { groupId }
+        package var id: UUID { groupId }
         
-        private(set) var updates: [
-            PartialKeyPath<DTO.Group<DTO.Prepare>>:
+        package private(set) var updates: OrderedDictionary<
+            PartialKeyPath<DTO.Group<DTO.Prepare>>,
             (QueryBuilder<UGroup>, DTO.Group<DTO.Queried>?) throws -> QueryBuilder<UGroup>
-        ] = [:]
-        private(set) var needsPeek = false
+        > = [:]
+        package private(set) var needsPeek = false
         
         public init(groupId: UUID) {
             self.groupId = groupId

@@ -3,11 +3,11 @@ import Fluent
 import Foundation
 import Policy
 
-extension User.Info {
+package extension User.Info {
     final class Extended<T: User.Info.Model>: PGModel, @unchecked Sendable {
-        static var name: String { "user_info_" + T.tableExtendedName }
+        package static var name: String { "user_info_" + T.tableExtendedName }
         
-        struct Fields: PGFields {
+        package struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
             let userInfoId = PGField("user_info_id", .uuid)             .required.unique.foreign(User.Info.self, \.id, onDelete: .cascade)
             let value = PGField(T.valueFieldName, .string)              .required
@@ -15,11 +15,13 @@ extension User.Info {
             let description = PGField("description", .string)
             let createdAt = PGField("create_at", .string)               .required
             let updateAt = PGField("update_at", .string)                .required
+            
+            package init() {}
         }
         
-        let fields = Fields()
+        package let fields = Fields()
         
-        @ID(key: .id)                                   var id: UUID?
+        @ID(key: .id)                                   package var id: UUID?
         
         @Parent(fields.userInfoId)                      var userInfo: User.Info
         @Field(fields.value)                            var value: String
@@ -29,13 +31,13 @@ extension User.Info {
         @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
         @Timestamp(fields.updateAt, on: .update)        var updateAt: Date!
         
-        init() {}
+        package init() {}
         
-        typealias MIG = DefaultMIG<Extended<T>>
+        package typealias MIG = DefaultMIG<Extended<T>>
     }
 }
 
-extension User.Info {
+package extension User.Info {
     typealias Model = UserInfoExtends.Model
     typealias Address = UserInfoExtends.Address
     typealias AlternateEmail = UserInfoExtends.AlternateEmail
