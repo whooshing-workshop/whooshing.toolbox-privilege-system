@@ -3,7 +3,12 @@ import ErrorHandle
 import FluentPostgresDriver
 import ResourceMacros
 
-public struct PrivilegeModule: Sendable {
+public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable
+where Self.RawValue == String {}
+
+public typealias PM = PrivilegeModule
+
+public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
     @frozen
     public struct Debuging: Sendable {
         /// 是否启用 PostgreSQL tde 加密功能
@@ -37,7 +42,7 @@ public struct PrivilegeModule: Sendable {
             
             let migs = Migrations()
             
-            for model in DataModels {
+            for model in Self.DataModels {
                 migs.add(model.init(tdeEncrypt: debuging?.tdeEncrypt ?? true))
             }
             

@@ -6,7 +6,9 @@ import ErrorHandle
 import NIOAdvanced
 
 public extension PrivilegeModule {
-    final class ResourceController: ModuleController {
+    final class ResourceController: Controller {
+        package typealias E = Errcase
+        
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
@@ -19,14 +21,14 @@ public extension PrivilegeModule {
         }
         
         public func create<T: Resource>(
-            resources: [DTO.Resource<T, DTO.Prepare>]
-        ) -> EventLoopRes<[DTO.Resource<T, DTO.Queried>], Errcase> {
+            resources: [ResourceDTO<T, DTO.Prepare>]
+        ) -> EventLoopRes<[ResourceDTO<T, DTO.Queried>], Errcase> {
             __create(
                 dtos: resources,
                 label: "资源",
                 errThrowing: .resourceCreateFailed,
                 modelBuilder: { $0.raw() },
-                dtoBuilder: { DTO.Resource<T, DTO.Queried>.make(from: $0) })
+                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) })
         }
         
         public func delete(
@@ -34,7 +36,7 @@ public extension PrivilegeModule {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
-                ResourceModel<AnyResource>.self,
+                AnyResource.self,
                 ids: ids,
                 allSatisfy: allSatisfy,
                 label: "资源",
@@ -45,14 +47,14 @@ public extension PrivilegeModule {
         }
         
         public func update<T: Resource>(
-            with updater: DTO.Resource<T, DTO.Prepare>.Updater
-        ) -> EventLoopRes<DTO.Resource<T, DTO.Queried>, Errcase> {
+            with updater: ResourceDTO<T, DTO.Prepare>.Updater
+        ) -> EventLoopRes<ResourceDTO<T, DTO.Queried>, Errcase> {
             __update(
                 updater: updater,
                 label: "资源",
                 errThrowing: .resourceUpdateFailed,
                 filterBuilder: { $0.filter(\.$id == updater.resourceId) },
-                dtoBuilder: { DTO.Resource<T, DTO.Queried>.make(from: $0) }
+                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) }
             )
         }
     }

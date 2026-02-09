@@ -1,21 +1,41 @@
 public struct OTORelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
     public let left: Left
     public let right: Right
+    
+    public init(left: Left, right: Right) {
+        self.left = left
+        self.right = right
+    }
 }
 
 public struct MTORelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
     public let left: [Left]
     public let right: Right
+    
+    public init(left: [Left], right: Right) {
+        self.left = left
+        self.right = right
+    }
 }
 
 public struct OTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
     public let left: Left
     public let right: [Right]
+    
+    public init(left: Left, right: [Right]) {
+        self.left = left
+        self.right = right
+    }
 }
 
 public struct MTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
     public let left: [Left]
     public let right: [Right]
+    
+    public init(left: [Left], right: [Right]) {
+        self.left = left
+        self.right = right
+    }
 }
 
 extension OTORelation: Hashable, Equatable where Left: Hashable, Right: Hashable {}
