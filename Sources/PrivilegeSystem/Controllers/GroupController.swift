@@ -61,55 +61,12 @@ extension PrivilegeSystem {
                 dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
             )
         }
-        
-        public func join(
-            @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-            _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
-        ) -> EventLoopRes<Void, Errcase> {
-            join(relations: content())
-        }
-        
-        public func kick(
-            @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-            _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
-        ) -> EventLoopRes<Void, Errcase> {
-            kick(relations: content())
-        }
-        
-        public func query(
-            relations: [DTO.UserInGroupRelation<DTO.Prepare>]
-        ) -> EventLoopRes<[DTO.UserInGroupRelation<DTO.Queried>], Errcase> {
-            __query(relations: relations)
-                .flatMapThrowing
-            { rs throws(Errcase.ErrType) in
-                try required(throws: Errcase.userGroupRelationQueryFailed, category: .internal) {
-                    try rs.map {
-                        try .make(from: $0).get()
-                    }
-                }
-            }
-        }
-        
-        func __query(
-            relations: [DTO.UserInGroupRelation<DTO.Prepare>]
-        ) -> EventLoopRes<[UserGroupPivot], Errcase> {
-            UserGroupPivot.query(on: db)
-                .filter(\.$primaryModel.$id ~~ relations.map { $0.user.id })
-                .filter(\.$secondaryModel.$id ~~ relations.map { $0.group.id })
-                .all()
-                .withError(Errcase.userGroupRelationQueryFailed, "数据库查询时出错", category: .internal)
-                .flatMapThrowing
-            { rs throws(Errcase.ErrType) in
-                guard rs.count == relations.count else {
-                    throw Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external)
-                }
-                return rs
-            }
-        }
     }
 }
 
 public extension PrivilegeSystem.GroupController {
+    // MARK: - 加入群组
+    
     func join(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -123,6 +80,8 @@ public extension PrivilegeSystem.GroupController {
         )
     }
     
+    // MARK: - 移出群组
+    
     func kick(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -134,5 +93,60 @@ public extension PrivilegeSystem.GroupController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
         )
+    }
+}
+
+public extension PrivilegeSystem.GroupController {
+    // MARK: - 加入群组
+    
+    func join(
+        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
+        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        join(relations: content())
+    }
+    
+    // MARK: - 移出群组
+    
+    func kick(
+        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
+        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        kick(relations: content())
+    }
+}
+
+public extension PrivilegeSystem.GroupController {
+    func query(
+        relations: [DTO.UserInGroupRelation<DTO.Prepare>]
+    ) -> EventLoopRes<[DTO.UserInGroupRelation<DTO.Queried>], PrivilegeSystem.Errcase> {
+        __query(relations: relations)
+            .flatMapThrowing
+        { rs throws(PrivilegeSystem.Errcase.ErrType) in
+            try required(throws: PrivilegeSystem.Errcase.userGroupRelationQueryFailed, category: .internal) {
+                try rs.map {
+                    try .make(from: $0).get()
+                }
+            }
+        }
+    }
+}
+ 
+extension PrivilegeSystem.GroupController {
+    func __query(
+        relations: [DTO.UserInGroupRelation<DTO.Prepare>]
+    ) -> EventLoopRes<[UserGroupPivot], PrivilegeSystem.Errcase> {
+        UserGroupPivot.query(on: db)
+            .filter(\.$primaryModel.$id ~~ relations.map { $0.user.id })
+            .filter(\.$secondaryModel.$id ~~ relations.map { $0.group.id })
+            .all()
+            .withError(PrivilegeSystem.Errcase.userGroupRelationQueryFailed, "数据库查询时出错", category: .internal)
+            .flatMapThrowing
+        { rs throws(PrivilegeSystem.Errcase.ErrType) in
+            guard rs.count == relations.count else {
+                throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external)
+            }
+            return rs
+        }
     }
 }

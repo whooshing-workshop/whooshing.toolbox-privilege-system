@@ -23,10 +23,18 @@ open class Pivot<T: PivotType>: PGModel, @unchecked Sendable {
     public static var name: String { T.foreignPrimaryName + "_" + T.foreignSecondaryName + "_map" }
     
     public struct Fields: PGFields {
-        public let id = PGField("id", .uuid)                                                            .primary
-        public let foreignPrimary = PGField(T.foreignPrimaryName + "_id", T.foreignPrimaryType)         .required.unique(composite: name + ".pivot").foreign(T.PrimaryModel.self, .id, onDelete: .cascade)
-        public let foreignSecondary = PGField(T.foreignSecondaryName + "_id", T.foreignSecondaryType)   .required.unique(composite: name + ".pivot").foreign(T.SecondaryModel.self, .id, onDelete: .cascade)
-        public let createdAt = PGField("create_at", .string)                                            .required
+        public let id = PGField("id", .uuid)                            .primary
+        public let foreignPrimary = PGField(
+            T.foreignPrimaryName + "_id", T.foreignPrimaryType
+        )                                                               .required
+                                                                        .unique(composite: name + ".pivot")
+                                                                        .foreign(T.PrimaryModel.self, .id, onDelete: .cascade)
+        public let foreignSecondary = PGField(
+            T.foreignSecondaryName + "_id", T.foreignSecondaryType
+        )                                                               .required
+                                                                        .unique(composite: name + ".pivot")
+                                                                        .foreign(T.SecondaryModel.self, .id, onDelete: .cascade)
+        public let createdAt = PGField("create_at", .string)            .required
         
         public init() {}
     }

@@ -34,7 +34,7 @@ public extension DTO {
 public extension DTO.Role where T == DTO.Prepare {
     init(
         name: String,
-        description: String?
+        description: String? = nil
     ) {
         self = Self.init(_name: name, _description: description, _model: nil)
     }

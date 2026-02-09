@@ -26,6 +26,7 @@ extension PM {
         
         @Field(fields.name)                         var name: String
         @Field(fields.type)                         var type: ResourceList
+        @Field(fields.data)                         var data: [String: AnyCodable]
         
         @Siblings(
             through: PrivilegeResourcePivot.self,
@@ -42,6 +43,7 @@ extension PM {
             self.id = resource.id
             self.name = resource.name
             self.type = resource.type
+            self.data = resource.data.json
             self.createdAt = resource.createdAt
             self.updatedAt = resource.updatedAt
         }

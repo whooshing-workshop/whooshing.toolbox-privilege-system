@@ -8,6 +8,7 @@ public extension PM {
     struct PrivilegeDTO<T: DTO.Status>: Sendable {
         let name: String?
         let description: String?
+        let policy: String
         
         @DTO.Passive() public internal(set) var id: Int64
         @DTO.Passive() public internal(set) var createdAt: Date
@@ -19,10 +20,12 @@ public extension PM {
         init(
             _name: String?,
             _description: String?,
+            _policy: String,
             _model: AssociatedModel?
         ) {
             self.name = _name
             self.description = _description
+            self.policy = _policy
             self.m = _model
         }
     }
@@ -30,10 +33,11 @@ public extension PM {
 
 public extension PM.PrivilegeDTO where T == DTO.Prepare {
     init(
-        name: String?,
-        description: String?
+        name: String? = nil,
+        description: String? = nil,
+        policy: String
     ) {
-        self = Self.init(_name: name, _description: description, _model: nil)
+        self = Self.init(_name: name, _description: description, _policy: policy, _model: nil)
     }
 }
 
@@ -50,6 +54,7 @@ extension PM.PrivilegeDTO where T == DTO.Queried {
             var n = Self.init(
                 _name: model.name,
                 _description: model.description,
+                _policy: model.policy,
                 _model: model
             )
             n.$id = try model.requireID()
@@ -65,6 +70,7 @@ extension PM.PrivilegeDTO where T == DTO.Prepare {
         let privilege = PM<ResourceList>.Privilege()
         privilege.name = name
         privilege.description = description
+        privilege.policy = policy
         return privilege
     }
 }
@@ -76,7 +82,10 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         
         package private(set) var updates: OrderedDictionary<
             PartialKeyPath<PM<ResourceList>.PrivilegeDTO<DTO.Prepare>>,
-            (QueryBuilder<PM<ResourceList>.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<PM<ResourceList>.Privilege>
+            (
+                QueryBuilder<PM<ResourceList>.Privilege>,
+                PM<ResourceList>.PrivilegeDTO<DTO.Queried>?
+            ) throws -> QueryBuilder<PM<ResourceList>.Privilege>
         > = [:]
         package private(set) var needsPeek = false
         

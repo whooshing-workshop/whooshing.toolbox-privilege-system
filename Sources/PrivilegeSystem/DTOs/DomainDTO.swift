@@ -33,8 +33,8 @@ public extension DTO {
 
 public extension DTO.Domain where T == DTO.Prepare {
     init(
-        name: String?,
-        description: String?
+        name: String? = nil,
+        description: String? = nil
     ) {
         self = Self.init(_name: name, _description: description, _model: nil)
     }
