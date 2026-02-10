@@ -2,7 +2,7 @@ import PgSQL
 import Fluent
 import Foundation
 
-public protocol PolicyType: Sendable {
+public protocol PolicyType: Sendable where Model.IDValue == Int64 {
     associatedtype Model: PGModel
     static var namePrefix: String { get }
     static var typeId: String { get }

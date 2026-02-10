@@ -4,7 +4,7 @@ import PgSQL
 import Vapor
 import ErrorHandle
 
-package protocol Controller: AnyObject, Sendable {
+package protocol Controller: AnyObject, Sendable where E.ErrType == BscError<E> {
     associatedtype E: ErrList
     var db: PGDatabase { get }
     var eventLoop: EventLoop { get }
@@ -17,7 +17,7 @@ package extension Controller {
         errThrowing: E,
         modelBuilder: @Sendable @escaping (T) -> M,
         dtoBuilder: @Sendable @escaping (M) -> Res<G, E>
-    ) -> EventLoopRes<[G], E> where E.ErrType == BscError<E> {
+    ) -> EventLoopRes<[G], E> {
         let models = dtos.map { modelBuilder($0) }
         
         return models
@@ -41,7 +41,7 @@ package extension Controller {
         errThrowing: E,
         fieldBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>,
         filterBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>
-    ) -> EventLoopRes<Void, E> where E.ErrType == BscError<E> {
+    ) -> EventLoopRes<Void, E> {
         guard !ids.isEmpty else {
             return db.eventLoop.makeSucceededVoidResult()
         }
@@ -76,7 +76,7 @@ package extension Controller {
         errThrowing: E,
         filterBuilder: @Sendable @escaping (QueryBuilder<T.DBModel>) -> QueryBuilder<T.DBModel>,
         dtoBuilder: @Sendable @escaping (T.DBModel) -> Res<T.QueriedDTO, E>
-    ) -> EventLoopRes<T.QueriedDTO, E> where E.ErrType == BscError<E> {
+    ) -> EventLoopRes<T.QueriedDTO, E> {
         guard updater.updates.count > 0 else {
             return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external))
         }

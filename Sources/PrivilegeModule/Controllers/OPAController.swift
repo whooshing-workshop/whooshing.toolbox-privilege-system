@@ -1,0 +1,168 @@
+import Fluent
+import NIOAdvanced
+import PgSQL
+import Vapor
+import ErrorHandle
+import Policy
+import OPA
+import NIOConcurrencyHelpers
+
+package protocol OPAController: Controller {
+    var opa: OPA { get }
+}
+
+package extension OPAController {
+    func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel>(
+        relations: [Pr],
+        policyType: String,
+        label: String,
+        errThrowing: E,
+        policies: (Pr) -> [P],
+        moduleId: @Sendable (P) -> UUID,
+        policyKey: KeyPath<P, String>,
+        modelId:(Pr, P) -> Int64,
+        modelBuilder: (P, Int64) -> M
+    ) -> EventLoopRes<[M], E> {
+        var psData: [(id: String, content: String)] = []
+        
+        let ps = relations.flatMap { relation in
+            policies(relation).map { (policy: P) in
+                let path = getPolicyPath(
+                    moduleId: moduleId(policy),
+                    policyType: policyType,
+                    modelId: modelId(relation, policy)
+                )
+                
+                let policyStr = "package rules.\(path)\ndefault allow := false\n\n\(policy[keyPath: policyKey])"
+                
+                psData.append((path, policyStr))
+                
+                return modelBuilder(policy, modelId(relation, policy))
+            }
+        }
+        
+        let progress = ProgressBox()
+        let policies = psData
+        
+        // 在 SQL 事务中，先执行 SQL 插入，保持该事务会话
+        // 只有当 OPA 也插入成功后才提交事务
+        // 否则，无论 SQL 或 OPA 插入失败，数据库与 OPA 都会进行回滚
+        // 其中 OPA 回滚是通过删除已增加的策略实现的
+        return db.trans { db in
+            ps
+                .create(on: db)
+                .withError(errThrowing, "\(policyType)数据库插入\(label)策略失败", category: .internal)
+                .flatMap
+            {
+                let target = db.eventLoop.makeTarget(of: Void.self, throws: E.ErrType.self)
+                
+                // 并行执行批量创建任务
+                Task {
+                    do {
+                        try await withThrowingTaskGroup { group in
+                            for (i, (id, content)) in policies.enumerated() {
+                                group.addTask {
+                                    _ = try await required(throws: errThrowing, "\(policyType) 类型 OPA \(label)策略插入失败", category: .internal) {
+                                        try await self.opa.policy.save(by: id, content: content)
+                                    }
+                                    
+                                    progress.append(index: i)
+                                }
+                            }
+                            try await group.waitForAll()
+                        }
+                        
+                        target.succeed()
+                    } catch let err {
+                        let error = errThrowing.d("\(policyType) 类型 OPA \(label)策略并行任务时插入失败", category: .internal).subErr(err)
+                        target.fail(error)
+                    }
+                }
+                
+                return target.futureResult.map { ps }
+            }.flatMapError { error in
+                // 任何一条失败将停止任务，且进行回滚
+                undo(policies: policies, progress: progress).flatMap {
+                    self.eventLoop.makeFailedResult(error)
+                }
+            }
+        }
+        
+        // 回滚操作，并行删除先前所创建的，并且忽略错误
+        // 但若回滚失败，会 log critical 错误到日志系统
+        @Sendable func undo(
+            policies: [(id: String, content: String)],
+            progress: ProgressBox
+        ) -> EventLoopRes<Void, E> {
+            .whenAllComplete(
+                progress.indexes.reversed().map {
+                    let (id, _) = policies[$0]
+                    return self.opa.policy.delete(of: id)
+                        .errCast(errThrowing, "\(policyType) 类型 OPA 回退失败，产生\(label)策略残留", category: .internal)
+                        .map { _ in }
+                },
+                on: eventLoop
+            )
+            .map { _ in }
+            .flatMapError { _ in
+                self.eventLoop.makeSucceededVoidResult()
+            }
+        }
+    }
+    
+    func __deletePolicy<P: Sendable, M: PGModel>(
+        policy: P,
+        policyType: String,
+        label: String,
+        errThrowing: E,
+        filterBuilder: @escaping @Sendable (PGDatabase) -> QueryBuilder<M>,
+        moduleId: @Sendable (P) -> UUID,
+        modelIdKey: KeyPath<P, Int64>
+    ) -> EventLoopRes<Void, E> {
+        let path = getPolicyPath(
+            moduleId: moduleId(policy),
+            policyType: policyType,
+            modelId: policy[keyPath: modelIdKey]
+        )
+        
+        // 在 SQL 事务中，先执行 SQL 删除，保持该事务会话
+        // 只有当 OPA 也删除成功后才提交事务
+        // 否则，无论 SQL 或 OPA 删除失败，数据库会进行回滚
+        // 而 OPA 无需进行回滚，因为仅处理一条策略数据，
+        // 删除失败意味着其仍在 OPA 中
+        return db.trans { db in
+            filterBuilder(db)
+                .delete()
+                .withError(errThrowing, "从\(policyType)数据库中删除\(label)失败", category: .internal)
+                .flatMap
+            {
+                self.opa.policy.delete(of: path)
+                    .errCast(errThrowing, "从 OPA 删除\(policyType)类型的\(label)失败", category: .internal)
+                    .map { _ in }
+            }
+        }
+    }
+    
+    func getPolicyPath(
+        moduleId: UUID,
+        policyType: String,
+        modelId: Int64
+    ) -> String {
+        "m\(moduleId.hexString).\(policyType).id_\(modelId)"
+    }
+}
+
+package final class ProgressBox: @unchecked Sendable {
+    private let lock = NIOLock()
+    private var _value: [Int] = []
+    
+    package var indexes: [Int] {
+        lock.withLock { _value }
+    }
+    
+    package func append(index: Int) {
+        lock.withLock {
+            _value.append(index)
+        }
+    }
+}

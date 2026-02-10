@@ -30,10 +30,6 @@ public extension PrivilegeModule {
         @Timestamp(fields.createdAt, on: .create)       public var createdAt: Date!
         @Timestamp(fields.updateAt, on: .update)        public var updatedAt: Date!
         
-        @Children(
-            for: \PrivilegePolicy.$parent
-        )                                               var policies: [PrivilegePolicy]
-        
         @Siblings(
             through: PrivilegeResourcePivot.self,
             from: \.$primaryModel,

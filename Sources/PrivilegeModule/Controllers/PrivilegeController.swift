@@ -4,45 +4,82 @@ import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
+import OPA
 
 public extension PrivilegeModule {
-    final class PrivilegeController: Controller {
+    final class PrivilegeController: OPAController {
         package typealias E = Errcase
         
         package let db: PGDatabase
         package let eventLoop: EventLoop
+        package let opa: OPA
+        let moduleId: UUID
         
         init(
             db: PGDatabase,
+            opa: OPA,
+            moduleId: UUID,
             eventLoop: EventLoop
         ) {
             self.db = db
             self.eventLoop = eventLoop
+            self.opa = opa
+            self.moduleId = moduleId
         }
         
         public func create(
             privileges: [PrivilegeDTO<DTO.Prepare>]
-        ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
-            __create(
-                dtos: privileges,
+        ) -> EventLoopRes<Void, Errcase> {
+            __createPolicy(
+                relations: privileges,
+                policyType: "privilege",
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
-                modelBuilder: { $0.raw() },
-                dtoBuilder: { PrivilegeDTO<DTO.Queried>.make(from: $0) })
+                policies: { [$0] },
+                moduleId: { _ in moduleId } ,
+                policyKey: \.policy,
+                modelId: { _, p in p.id },
+                modelBuilder: { p, _ in p.raw() }
+            ).map { _ in }
+        }
+        
+        public func createWithReturning(
+            privileges: [PrivilegeDTO<DTO.Prepare>]
+        ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
+            __createPolicy(
+                relations: privileges,
+                policyType: "privilege",
+                label: "资源权限",
+                errThrowing: .privilegeCreateFailed,
+                policies: { [$0] },
+                moduleId: { _ in moduleId } ,
+                policyKey: \.policy,
+                modelId: { _, p in p.id },
+                modelBuilder: { p, _ in p.raw() }
+            ).flatMapThrowing { ps throws(Errcase.ErrType) in
+                try required(throws: Errcase.privilegeCreateFailed, "Returning 解包失败", category: .internal) {
+                    try ps.map {
+                        try PrivilegeDTO<DTO.Queried>.make(from: $0).get()
+                    }
+                }
+            }
         }
         
         public func delete(
-            ids: [Int64],
-            allSatisfy: Bool = true
+            policy: PrivilegeDTO<DTO.Queried>
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
-                Privilege.self,
-                ids: ids,
-                allSatisfy: allSatisfy,
+            __deletePolicy(
+                policy: policy,
+                policyType: "privilege",
                 label: "资源权限",
                 errThrowing: .privilegeDeleteFailed,
-                fieldBuilder: { $0.field(\.$id) },
-                filterBuilder: { $0.filter(\.$id ~~ ids) }
+                filterBuilder: {
+                    Privilege
+                        .query(on: $0)
+                        .filter(\.$id == policy.id)
+                },
+                moduleId: { _ in moduleId },
+                modelIdKey: \.id
             )
         }
         
