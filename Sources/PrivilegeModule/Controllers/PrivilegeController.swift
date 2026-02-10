@@ -2,6 +2,7 @@ import Fluent
 import Policy
 import Vapor
 import PgSQL
+import SQLKit
 import ErrorHandle
 import NIOAdvanced
 import OPA
@@ -86,13 +87,62 @@ public extension PrivilegeModule {
         public func update(
             with updater: PrivilegeDTO<DTO.Prepare>.Updater
         ) -> EventLoopRes<PrivilegeDTO<DTO.Queried>, Errcase> {
-            __update(
-                updater: updater,
-                label: "资源权限",
-                errThrowing: .privilegeUpdateFailed,
-                filterBuilder: { $0.filter(\.$id == updater.privilegeId) },
-                dtoBuilder: { PrivilegeDTO<DTO.Queried>.make(from: $0) }
-            )
+            guard updater.updates.count > 0 else {
+                return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external)
+            }
+            
+            // 在 SQL 事务中，先执行 SQL 更新，保持该事务会话
+            // 只有当 OPA 也更新成功后才提交事务
+            // 否则，无论 SQL 或 OPA 更新失败，数据库会进行回滚
+            // 而 OPA 无需进行回滚，因为仅处理一条策略数据，
+            // 更新失败意味着其仍保留原数据在 OPA 中
+            return db.trans { db in
+                // 先对一般字段进行更新: name, description
+                // 这些字段无需额外的评估
+                self.__update(
+                    updater: updater,
+                    allowEmpty: true,
+                    label: "资源权限",
+                    errThrowing: .privilegeUpdateFailed,
+                    filterBuilder: { $0.filter(\.$id == updater.privilegeId) },
+                    dtoBuilder: { PrivilegeDTO<DTO.Queried>.make(from: $0) }
+                ).flatMap { updateRes in
+                    guard let policyUpdater = updater.policyUpdate else {
+                        return self.eventLoop.makeSucceededResult(updateRes)
+                    }
+                    
+                    // 对进行策略进行修改，如果授意如此的话
+                    // 如果此处策略修改失败，抛出错误导致数据库事务失败
+                    // 则数据库也会回滚，而 OPA 无需进行回滚
+                    // 更新失败意味着其仍保留原数据在 OPA 中
+                    // 保证了数据库与 OPA 数据完全同步
+                    let policy: String
+                    do {
+                        policy = try policyUpdater(updater.needsPeek ? updateRes : nil)
+                    } catch {
+                        return self.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "取得要更新的 Policy 失败", category: .external)
+                    }
+                    
+                    return Privilege
+                        .query(on: db)
+                        .filter(\.$id == updater.privilegeId)
+                        .set(\.$policy, to: policy)
+                        .update()
+                        .withError(Errcase.privilegeUpdateFailed, "资源权限策略 SQL 更新失败", category: .internal)
+                        .flatMap
+                    {
+                        let path = self.getPolicyPath(
+                            moduleId: self.moduleId,
+                            policyType: "privilege",
+                            modelId: updater.privilegeId
+                        )
+                        
+                        return self.opa.policy.save(by: path, content: policy)
+                            .errCast(Errcase.privilegeUpdateFailed, "资源权限策略 OPA 更新失败", category: .internal)
+                            .map { _ in updateRes }
+                    }
+                }
+            }
         }
     }
 }

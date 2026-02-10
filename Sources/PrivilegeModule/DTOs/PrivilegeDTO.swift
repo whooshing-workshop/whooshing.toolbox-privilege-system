@@ -80,6 +80,8 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         public let privilegeId: Int64
         package var id: Int64 { privilegeId }
         
+        private(set) var policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil
+        
         package private(set) var updates: OrderedDictionary<
             PartialKeyPath<PM<ResourceList>.PrivilegeDTO<DTO.Prepare>>,
             (
@@ -88,6 +90,10 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
             ) throws -> QueryBuilder<PM<ResourceList>.Privilege>
         > = [:]
         package private(set) var needsPeek = false
+        
+        var isEmpty: Bool {
+            self.updates.count == 0 && policyUpdate == nil
+        }
         
         public init(privilegeId: Int64) {
             self.privilegeId = privilegeId
@@ -111,6 +117,13 @@ public extension PM.PrivilegeDTO.Updater {
             builder.set(\.$description, to: try description())
         }
     }
+    
+    mutating
+    func update(policy: @escaping @autoclosure () throws -> String) {
+        policyUpdate = { _ in
+            try policy()
+        }
+    }
 }
 
 public extension PM.PrivilegeDTO.Updater {
@@ -129,6 +142,15 @@ public extension PM.PrivilegeDTO.Updater {
         updates[\.description] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
+        }
+    }
+    
+    mutating
+    func update(policy: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String) {
+        needsPeek = true
+        policyUpdate = { query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return try policy(q)
         }
     }
 }
