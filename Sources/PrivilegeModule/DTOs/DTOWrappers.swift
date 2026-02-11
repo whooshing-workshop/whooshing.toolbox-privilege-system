@@ -2,55 +2,94 @@ import Foundation
 import Fluent
 import PgSQL
 import Collections
+import NIOConcurrencyHelpers
 
 public enum DTO {}
 
 public extension DTO {
-    protocol Status {}
+    protocol Status: Sendable {}
     
     enum Prepare: Status {}
     enum Queried: Status {}
     
     @propertyWrapper
-    struct Passive<T>: @unchecked Sendable {
+    struct Passive<T: Sendable & Codable>: @unchecked Sendable, Codable {
         private var value: T?
+        private let lock = NIOLock()
         
         public var wrappedValue: T {
             get {
-                guard let v = value else { fatalError("该属性值未被赋值，不可获取未被赋值的属性值") }
-                return v
+                lock.withLock {
+                    guard let v = value else { fatalError("该属性值未被赋值，不可获取未被赋值的属性值") }
+                    return v
+                }
             }
-            set { value = newValue }
+            set {
+                lock.withLock { value = newValue }
+            }
         }
         
         public package(set) var projectedValue: T? {
-            get { value }
-            set { value = newValue }
+            get {
+                lock.withLock { value }
+            }
+            set {
+                lock.withLock { value = newValue }
+            }
         }
         
-        public init(wrappedValue: T) { self.value = wrappedValue }
-        public init() { self.value = nil }
+        public init(wrappedValue: T) {
+            self.value = wrappedValue
+        }
+        
+        public init() {
+            self.value = nil
+        }
+        
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            self.value = try container.decode(T.self)
+        }
+        
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(wrappedValue)
+        }
     }
     
     @propertyWrapper
-    struct Protect<T>: @unchecked Sendable {
+    struct Protect<T: Sendable>: @unchecked Sendable {
         private var value: T?
+        private let lock = NIOLock()
         
         public var wrappedValue: T {
             get {
-                guard let v = value else { fatalError("该属性值被保护(隐藏)，不可获取") }
-                return v
+                lock.withLock {
+                    guard let v = value else { fatalError("该属性值被保护(隐藏)，不可获取") }
+                    return v
+                }
             }
-            set { value = newValue }
+            set {
+                lock.withLock { value = newValue }
+            }
         }
         
         public package(set) var projectedValue: T? {
-            get { value }
-            set { value = newValue }
+            get {
+                lock.withLock { value }
+            }
+            set {
+                lock.withLock { value = newValue }
+            }
         }
         
-        public init(wrappedValue: T) { self.value = wrappedValue }
-        public init() { self.value = nil }
+        public init(wrappedValue: T) {
+            self.value = wrappedValue
+        }
+        
+        public init() {
+            self.value = nil
+        }
     }
 }
 

@@ -14,11 +14,12 @@ extension PrivilegeSystem {
         package let opa: OPA
         
         init(
-            system: PrivilegeSystem,
+            db: PGDatabase,
+            eventLoop: EventLoop,
             opa: OPA
         ) {
-            self.db = system.db
-            self.eventLoop = system.eventLoop
+            self.db = db
+            self.eventLoop = eventLoop
             self.opa = opa
         }
         

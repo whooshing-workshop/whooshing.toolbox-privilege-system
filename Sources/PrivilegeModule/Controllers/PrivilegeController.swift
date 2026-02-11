@@ -111,7 +111,7 @@ public extension PrivilegeModule {
                         return self.eventLoop.makeSucceededResult(updateRes)
                     }
                     
-                    // 对进行策略进行修改，如果授意如此的话
+                    // 对策略进行修改，如果授意如此的话
                     // 如果此处策略修改失败，抛出错误导致数据库事务失败
                     // 则数据库也会回滚，而 OPA 无需进行回滚
                     // 更新失败意味着其仍保留原数据在 OPA 中
@@ -131,7 +131,7 @@ public extension PrivilegeModule {
                         .withError(Errcase.privilegeUpdateFailed, "资源权限策略 SQL 更新失败", category: .internal)
                         .flatMap
                     {
-                        let path = self.getPolicyPath(
+                        let path = self.policyPath(
                             moduleId: self.moduleId,
                             policyType: "privilege",
                             modelId: updater.privilegeId

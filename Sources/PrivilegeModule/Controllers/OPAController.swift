@@ -27,7 +27,7 @@ package extension OPAController {
         
         let ps = relations.flatMap { relation in
             policies(relation).map { (policy: P) in
-                let path = getPolicyPath(
+                let path = policyPath(
                     moduleId: moduleId(policy),
                     policyType: policyType,
                     modelId: modelId(relation, policy)
@@ -119,7 +119,7 @@ package extension OPAController {
         moduleId: @Sendable (P) -> UUID,
         modelIdKey: KeyPath<P, Int64>
     ) -> EventLoopRes<Void, E> {
-        let path = getPolicyPath(
+        let path = policyPath(
             moduleId: moduleId(policy),
             policyType: policyType,
             modelId: policy[keyPath: modelIdKey]
@@ -143,7 +143,7 @@ package extension OPAController {
         }
     }
     
-    func getPolicyPath(
+    func policyPath(
         moduleId: UUID,
         policyType: String,
         modelId: Int64

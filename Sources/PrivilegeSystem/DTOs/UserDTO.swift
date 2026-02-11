@@ -101,3 +101,12 @@ extension User: ModelAuthenticatable {
         }
     }
 }
+
+extension DTO.User: Encodable where T == DTO.Queried {
+    enum CodingKeys: CodingKey {
+        case email
+        case id
+        case createdAt
+        case updateAt
+    }
+}

@@ -14,9 +14,12 @@ extension PrivilegeSystem {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
-        init(system: PrivilegeSystem) {
-            self.db = system.db
-            self.eventLoop = system.eventLoop
+        init(
+            db: PGDatabase,
+            eventLoop: EventLoop
+        ) {
+            self.db = db
+            self.eventLoop = eventLoop
         }
         
         public func register(

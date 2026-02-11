@@ -13,11 +13,12 @@ extension PrivilegeSystem {
         let policyController: PolicyController
         
         init(
-            system: PrivilegeSystem,
+            db: PGDatabase,
+            eventLoop: EventLoop,
             policyController: PolicyController
         ) {
-            self.db = system.db
-            self.eventLoop = system.eventLoop
+            self.db = db
+            self.eventLoop = eventLoop
             self.policyController = policyController
         }
         

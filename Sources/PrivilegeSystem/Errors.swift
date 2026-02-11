@@ -59,5 +59,8 @@ public extension PrivilegeSystem {
         case domainDTOFailed = "域权限数据 DTO 处理失败"
         case userInGroupDTOFailed = "用户群组关系数据 DTO 处理失败"
         case censorDTOFailed = "Censor DTO 处理失败"
+        
+        // 仲裁相关错误
+        case arbitrateFailed = "权限仲裁失败"
     }
 }
