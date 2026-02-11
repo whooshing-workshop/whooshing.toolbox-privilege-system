@@ -21,40 +21,30 @@ public extension PrivilegeModule {
         }
         
         public func create<T: Resource>(
-            resources: [ResourceDTO<T, DTO.Prepare>]
-        ) -> EventLoopRes<[ResourceDTO<T, DTO.Queried>], Errcase> {
+            resources: [T]
+        ) -> EventLoopRes<Void, Errcase> where T.T == ResourceList {
             __create(
                 dtos: resources,
                 label: "资源",
                 errThrowing: .resourceCreateFailed,
-                modelBuilder: { $0.raw() },
-                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) })
+                modelBuilder: { $0 },
+                dtoBuilder: { .success($0) }
+            ).map { _ in }
         }
         
-        public func delete(
-            ids: [UUID],
-            allSatisfy: Bool = true
-        ) -> EventLoopRes<Void, Errcase> {
+        public func delete<T: Resource>(
+            ids: [T.IDValue],
+            allSatisfy: Bool = true,
+            of type: T.Type = T.self
+        ) -> EventLoopRes<Void, Errcase> where T.T == ResourceList {
             __delete(
-                AnyResource.self,
+                T.self,
                 ids: ids,
                 allSatisfy: allSatisfy,
                 label: "资源",
                 errThrowing: .resourceDeleteFailed,
-                fieldBuilder: { $0.field(\.$id) },
-                filterBuilder: { $0.filter(\.$id ~~ ids) }
-            )
-        }
-        
-        public func update<T: Resource>(
-            with updater: ResourceDTO<T, DTO.Prepare>.Updater
-        ) -> EventLoopRes<ResourceDTO<T, DTO.Queried>, Errcase> {
-            __update(
-                updater: updater,
-                label: "资源",
-                errThrowing: .resourceUpdateFailed,
-                filterBuilder: { $0.filter(\.$id == updater.resourceId) },
-                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) }
+                fieldBuilder: { $0.field(T.idKey) },
+                filterBuilder: { $0.filter(T.idKey ~~ ids) }
             )
         }
     }

@@ -1,17 +1,55 @@
 import PgSQL
-import Policy
 import Fluent
+import Foundation
+import Policy
 
 extension PrivilegeModule {
-    typealias PrivilegeResourcePivot = Pivot<PrivilegeResource>
-    
-    struct PrivilegeResource: PivotType {
-        typealias PrimaryModel = Privilege
-        typealias SecondaryModel = AnyResource
+    final class PrivilegeResourcePivot: PGModel, @unchecked Sendable {
+        static var name: String { "resource_privilege_map" }
         
-        static var foreignPrimaryName: String { "privilege" }
-        static var foreignSecondaryName: String { "resource" }
+        struct Fields: PGFields {
+            let id = PGField("id", .uuid)                           .primary
+            let privilegeId = PGField("privilege_id", .int64)       .required
+                                                                    .unique(composite: name + ".pivot")
+            let resourceId = PGField("resource_id", .uuid)          .required
+                                                                    .unique(composite: name + ".pivot")
+                                                                    .foreign(Privilege.self, .id, onDelete: .cascade)
+            let type = PGField("type",
+                .enum(
+                    ResourceList.self,
+                    as: "resource_privilege_map.type"
+                )
+            )                                                       .required
+                                                                    .unique(composite: name + ".pivot")
+            let createdAt = PGField("create_at", .string)           .required
+            let updateAt = PGField("update_at", .string)            .required
+            
+            init() {}
+        }
         
-        static var foreignPrimaryType: DatabaseSchema.DataType { .int64 }
+        let fields = Fields()
+        
+        @ID(custom: fields.id.key)                      var id: UUID?
+        
+        @Parent(fields.privilegeId)                     var privilege: Privilege
+        @Field(fields.resourceId)                       var resourceId: UUID
+        @Enum(fields.type)                              var type: ResourceList
+        
+        @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
+        @Timestamp(fields.updateAt, on: .update)        var updatedAt: Date!
+        
+        required init() {}
+        
+        init(
+            privilegeId: Privilege.IDValue,
+            resourceId: UUID,
+            resourceType: ResourceList
+        ) {
+            self.$privilege.id = privilegeId
+            self.resourceId = resourceId
+            self.type = resourceType
+        }
+        
+        typealias MIG = DefaultMIG<PrivilegeResourcePivot>
     }
 }

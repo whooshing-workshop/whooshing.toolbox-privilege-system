@@ -16,6 +16,8 @@ public extension PrivilegeModule {
         package let opa: OPA
         let moduleId: UUID
         
+        public typealias S = PM<ResourceList>
+        
         init(
             db: PGDatabase,
             opa: OPA,
@@ -147,55 +149,170 @@ public extension PrivilegeModule {
     }
 }
 
+// 资源权限的附加和解除
+// 这些 API 不会进行存在性检测
+// 需要调用者保证关系两端的记录均存在
+public extension PrivilegeModule.PrivilegeController {
+    // MARK: - 资源权限附加
+    
+    func attach<T: Resource>(
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, T>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
+    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+        attach(relations: content())
+    }
+    
+    // MARK: - 资源权限解除
+    
+    func detach<T: Resource>(
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, T>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
+    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+        detach(relations: content())
+    }
+}
+
 public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
     func attach(
-        @MTMRelationBuilder<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase> {
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResource>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResource>]
+    ) -> EventLoopRes<Void, S.Errcase> {
         attach(relations: content())
     }
     
     // MARK: - 资源权限解除
     
     func detach(
-        @MTMRelationBuilder<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase>  {
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResource>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResource>]
+    ) -> EventLoopRes<Void, S.Errcase> {
         detach(relations: content())
     }
 }
 
-
 public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
-    func attach(
-        relations: [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase> {
-        __manyToMany(
-            relations,
-            action: .attach,
-            label: "资源权限与资源",
-            errThrowing: .privilegeAttachResourceFailed,
-            siblingBuilder: { $0.model.$resources },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
-        )
+    /// 附加权限动作要求资源与权限都必须已存在与数据库中
+    /// 任一不存在都会导致失败
+    func attach<T: Resource>(
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
+    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+        db.trans { db in
+            do {
+                return try relations.map { relation in
+                    try relation.left.flatMap { l in
+                        try relation.right.map { r in
+                            S.PrivilegeResourcePivot(
+                                privilegeId: l.id,
+                                resourceId: try required(throws: S.Errcase.privilegeAttachResourceFailed, "从 Resource 中获取 ID 失败", category: .external) {
+                                    guard r._$idExists else {
+                                        throw S.Errcase.privilegeAttachResourceFailed.d("该 Resource Id 不存在", category: .external)
+                                    }
+                                    return try r.requireID()
+                                },
+                                resourceType: T.type
+                            )
+                        }
+                    }
+                    .create(on: db)
+                    .withError(S.Errcase.privilegeAttachResourceFailed, "创建 SQL 中间映射表失败", category: .internal)
+                }.flatten(on: db.eventLoop)
+            } catch {
+                return self.eventLoop.makeFailedResult(error as! S.Errcase.ErrType)
+            }
+        }
     }
     
     // MARK: - 资源权限解除
     
+    /// 解除权限动作的 Resource 无需从数据库中查得
+    /// 可以实例化 T 类型的 Resource 并赋值 UUID
+    func detach<T: Resource>(
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
+    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+        db.trans { db in
+            do {
+                return try relations.flatMap { relation in
+                    try relation.left.map { l in
+                        guard !relation.right.isEmpty else {
+                            return db.eventLoop.makeSucceededVoidResult()
+                        }
+                        
+                        let ids = try relation.right.map { r in
+                            try required(throws: S.Errcase.privilegeAttachResourceFailed, "从 Resource 中获取 ID 失败，该 Resource 并未经过数据库查询", category: .external) {
+                                try r.requireID()
+                            }
+                        }
+                        
+                        return S.PrivilegeResourcePivot
+                            .query(on: db)
+                            .filter(\.$privilege.$id == l.id)
+                            .filter(\.$resourceId ~~ ids)
+                            .filter(\.$type == T.type)
+                            .delete()
+                            .withError(S.Errcase.privilegeDetachResourceFailed, "删除 SQL 中间映射表失败", category: .internal)
+                    }
+                }.flatten(on: db.eventLoop)
+            } catch {
+                return self.eventLoop.makeFailedResult(error as! S.Errcase.ErrType)
+            }
+        }
+    }
+}
+
+public extension PrivilegeModule.PrivilegeController {
+    // MARK: - 资源权限附加
+    
+    /// 附加权限动作要求资源与权限都必须已存在与数据库中
+    /// 任一不存在都会导致失败
+    func attach(
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResource>]
+    ) -> EventLoopRes<Void, S.Errcase> {
+        db.trans { db in
+            relations.map { relation in
+                relation.left.flatMap { l in
+                    relation.right.map { r in
+                        S.PrivilegeResourcePivot(
+                            privilegeId: l.id,
+                            resourceId: r.id,
+                            resourceType: r.type
+                        )
+                    }
+                }
+                .create(on: db)
+                .withError(S.Errcase.privilegeAttachResourceFailed, "创建 SQL 中间映射表失败", category: .internal)
+            }.flatten(on: db.eventLoop)
+        }
+    }
+    
+    // MARK: - 资源权限解除
+    
+    /// 解除权限动作的 Resource 无需从数据库中查得
+    /// 可以实例化 AnyResource 类型的 Resource 并赋值 UUID
     func detach(
-        relations: [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase>  {
-        __manyToMany(
-            relations,
-            action: .detach,
-            label: "资源权限与资源",
-            errThrowing: .privilegeDetachResourceFailed,
-            siblingBuilder: { $0.model.$resources },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
-        )
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResource>]
+    ) -> EventLoopRes<Void, S.Errcase> {
+        db.trans { db in
+            relations.flatMap { relation in
+                relation.right.map { r in
+                    guard !relation.left.isEmpty else {
+                        return db.eventLoop.makeSucceededVoidResult()
+                    }
+                    
+                    let ids = relation.left.map { $0.id }
+                    
+                    return S.PrivilegeResourcePivot
+                        .query(on: db)
+                        .filter(\.$privilege.$id ~~ ids)
+                        .filter(\.$resourceId == r.id)
+                        .filter(\.$type == r.type)
+                        .delete()
+                        .withError(S.Errcase.privilegeDetachResourceFailed, "删除 SQL 中间映射表失败", category: .internal)
+                }
+            }.flatten(on: db.eventLoop)
+        }
     }
 }
