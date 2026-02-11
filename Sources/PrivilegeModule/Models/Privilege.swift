@@ -14,7 +14,7 @@ package extension PrivilegeModule {
             package let description = PGField("description", .string)
             package let policy = PGField("policy", .string)                 .required
             package let createdAt = PGField("create_at", .string)           .required
-            package let updateAt = PGField("update_at", .string)            .required
+            package let updatedAt = PGField("update_at", .string)           .required
             
             package init() {}
         }
@@ -28,7 +28,7 @@ package extension PrivilegeModule {
         @Field(fields.policy)                           package var policy: String
         
         @Timestamp(fields.createdAt, on: .create)       package var createdAt: Date!
-        @Timestamp(fields.updateAt, on: .update)        package var updatedAt: Date!
+        @Timestamp(fields.updatedAt, on: .update)       package var updatedAt: Date!
         
         package init() { }
         

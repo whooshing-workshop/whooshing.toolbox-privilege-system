@@ -15,7 +15,7 @@ package final class User: PGModel, @unchecked Sendable {
         let key = PGField("key", .data)                             .required
         let salt = PGField("salt", .data)                           .required
         let createdAt = PGField("create_at", .string)               .required
-        let updateAt = PGField("update_at", .string)                .required
+        let updatedAt = PGField("update_at", .string)               .required
         
         package init() {}
     }
@@ -47,7 +47,7 @@ package final class User: PGModel, @unchecked Sendable {
     )                                           var domains: [Domain]
     
     @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
-    @Timestamp(fields.updateAt, on: .update)    var updateAt: Date!
+    @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
     
     package init() {}
     

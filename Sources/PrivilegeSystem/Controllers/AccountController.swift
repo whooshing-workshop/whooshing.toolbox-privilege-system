@@ -174,7 +174,7 @@ extension PrivilegeSystem {
                     try DTO.User<DTO.Prepare>.doubleEncode(hashedPasswd: hashedPasswd).get()
                 }
                 user.createdAt = nil
-                user.updateAt = nil
+                user.updatedAt = nil
                 
                 return user
             }.flatMap { (user: User) -> EventLoopRes<User, Errcase> in

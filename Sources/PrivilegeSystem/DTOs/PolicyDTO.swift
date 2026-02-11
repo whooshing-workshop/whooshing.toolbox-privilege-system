@@ -11,7 +11,7 @@ public extension DTO {
         
         @Passive() public internal(set) var id: UUID
         @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updateAt: Date
+        @Passive() public internal(set) var updatedAt: Date
         
         init(
             _moduleId: UUID,

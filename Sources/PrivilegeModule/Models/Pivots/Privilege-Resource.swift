@@ -22,7 +22,7 @@ extension PrivilegeModule {
             )                                                       .required
                                                                     .unique(composite: name + ".pivot")
             let createdAt = PGField("create_at", .string)           .required
-            let updateAt = PGField("update_at", .string)            .required
+            let updatedAt = PGField("update_at", .string)           .required
             
             init() {}
         }
@@ -36,7 +36,7 @@ extension PrivilegeModule {
         @Enum(fields.type)                              var type: ResourceList
         
         @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
-        @Timestamp(fields.updateAt, on: .update)        var updatedAt: Date!
+        @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
         
         required init() {}
         

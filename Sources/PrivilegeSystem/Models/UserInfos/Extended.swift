@@ -14,7 +14,7 @@ package extension User.Info {
             let order = PGField("order", .int16)                        .required
             let description = PGField("description", .string)
             let createdAt = PGField("create_at", .string)               .required
-            let updateAt = PGField("update_at", .string)                .required
+            let updatedAt = PGField("update_at", .string)               .required
             
             package init() {}
         }
@@ -29,7 +29,7 @@ package extension User.Info {
         @Field(fields.description)                      var description: String?
         
         @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
-        @Timestamp(fields.updateAt, on: .update)        var updateAt: Date!
+        @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
         
         package init() {}
         
