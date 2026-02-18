@@ -20,10 +20,34 @@ public extension PrivilegeModule {
             self.eventLoop = eventLoop
         }
         
+        public func register<T: Resource>(
+            type: T.Type
+        ) -> EventLoopRes<Void, Errcase> where T.TypeList == ResourceList {
+            T.Act.allCases.map {
+                Action(
+                    type: T.type,
+                    name: $0.name,
+                    description: $0.description,
+                    code: $0.rawValue
+                )
+            }
+            .create(on: db)
+            .withError(Errcase.resourceRegisterFailed, "创建 Actions 时失败", category: .internal)
+        }
+        
+        public func unregister<T: Resource>(
+            type: T.Type
+        ) -> EventLoopRes<Void, Errcase> where T.TypeList == ResourceList {
+            Action.query(on: db)
+                .filter(\.$type == T.type)
+                .delete()
+            .withError(Errcase.resourceUnregisterFailed, "删除 Actions 时失败", category: .internal)
+        }
+        
         public func create<T: Resource>(
             resources: [T]
-        ) -> EventLoopRes<Void, Errcase> where T.T == ResourceList {
-            __create(
+        ) -> EventLoopRes<Void, Errcase> where T.TypeList == ResourceList {
+            self.__create(
                 dtos: resources,
                 label: "资源",
                 errThrowing: .resourceCreateFailed,
@@ -36,15 +60,15 @@ public extension PrivilegeModule {
             ids: [T.IDValue],
             allSatisfy: Bool = true,
             of type: T.Type = T.self
-        ) -> EventLoopRes<Void, Errcase> where T.T == ResourceList {
+        ) -> EventLoopRes<Void, Errcase> where T.TypeList == ResourceList {
             __delete(
                 T.self,
                 ids: ids,
                 allSatisfy: allSatisfy,
                 label: "资源",
                 errThrowing: .resourceDeleteFailed,
-                fieldBuilder: { $0.field(T.idKey) },
-                filterBuilder: { $0.filter(T.idKey ~~ ids) }
+                fieldBuilder: { $0.field(\._$id) },
+                filterBuilder: { $0.filter(\._$id ~~ ids) }
             )
         }
     }

@@ -127,3 +127,13 @@ public extension DTO.Role.Updater {
         }
     }
 }
+
+extension DTO.Role: Encodable where T == DTO.Queried {
+    enum CodingKeys: CodingKey {
+        case name
+        case description
+        case id
+        case createdAt
+        case updatedAt
+    }
+}

@@ -10,9 +10,13 @@ public extension PrivilegeModule {
         case privilegeAttachResourceFailed = "资源权限附加到资源失败"
         case privilegeDetachResourceFailed = "资源权限从资源解除失败"
         
+        case resourceRegisterFailed = "资源类型注册失败"
+        case resourceUnregisterFailed = "资源类型注销失败"
         case resourceCreateFailed = "资源创建失败"
         case resourceDeleteFailed = "资源删除失败"
         case resourceUpdateFailed = "资源更新失败"
+        
+        case actionCastFailed = "资源动作解包失败，类型不匹配"
         
         case privilegeDTOFailed = "资源权限数据 DTO 处理失败"
         

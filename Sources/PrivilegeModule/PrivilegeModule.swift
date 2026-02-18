@@ -4,11 +4,6 @@ import ErrorHandle
 import FluentPostgresDriver
 import ResourceMacros
 
-public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable
-where Self.RawValue == String {
-    var migration: any TdeMIG.Type { get }
-}
-
 public typealias PM = PrivilegeModule
 
 public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {

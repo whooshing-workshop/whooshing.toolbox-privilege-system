@@ -8,6 +8,10 @@ public protocol PolicyType: Sendable where Model.IDValue == Int64 {
     static var typeId: String { get }
 }
 
+package extension PolicyType {
+    static var regoHead: String { "" }
+}
+
 public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     public static var name: String { T.namePrefix + "_policies" }

@@ -5,11 +5,9 @@ import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import OPA
-import PrivilegeModule
-@preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
-    public final class Arbitration: SystemOPAController {
+    public final class Arbitrator: SystemOPAController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         package let opa: OPA
@@ -25,10 +23,10 @@ extension PrivilegeSystem {
         }
         
         func arbitrate(
-            policyPaths: [String],
-            input: ForwardData
+            paths: [String],
+            input: QueryData
         ) -> EventLoopRes<Bool, Errcase> {
-            policyPaths.map {
+            paths.map {
                 opa.query.data(
                     from: $0,
                     input: input,
@@ -44,27 +42,6 @@ extension PrivilegeSystem {
                 }
                 return self.eventLoop.makeSucceededResult(result)
             }
-        }
-    }
-}
-
-extension PrivilegeSystem.Arbitration {
-    struct ForwardData: Encodable, Sendable {
-        let resource: [String: AnyCodable]
-        let action: String
-        let user: DTO.User<DTO.Queried>
-        let group: [String: AnyCodable]?
-        
-        init(
-            resource: [String : AnyCodable],
-            action: String,
-            user: DTO.User<DTO.Queried>,
-            group: [String : AnyCodable]? = nil
-        ) {
-            self.resource = resource
-            self.action = action
-            self.user = user
-            self.group = group
         }
     }
 }

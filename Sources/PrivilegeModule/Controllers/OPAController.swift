@@ -19,6 +19,7 @@ package extension OPAController {
         errThrowing: E,
         policies: (Pr) -> [P],
         moduleId: @Sendable (P) -> UUID,
+        regoHead: @Sendable (P) -> String?,
         policyKey: KeyPath<P, String>,
         modelId:(Pr, P) -> Int64,
         modelBuilder: (P, Int64) -> M
@@ -33,7 +34,17 @@ package extension OPAController {
                     modelId: modelId(relation, policy)
                 )
                 
-                let policyStr = "package rules.\(path)\ndefault allow := false\n\n\(policy[keyPath: policyKey])"
+                let policyStr = """
+                package rules.\(path)
+                default allow := false
+                default preCheck := false
+                
+                preCheck if {
+                    \(regoHead(policy) ?? "true")
+                }
+
+                \(policy[keyPath: policyKey])
+                """
                 
                 psData.append((path, policyStr))
                 

@@ -103,6 +103,7 @@ public extension PrivilegeSystem.PolicyController {
             errThrowing: .policyCreateFailed,
             policies: \.left,
             moduleId: \.moduleId,
+            regoHead: { _ in T.regoHead },
             policyKey: \.policy,
             modelId: { pr, _ in pr.right },
             modelBuilder: { $0.raw(parentId: $1, as: model) }
@@ -120,6 +121,7 @@ public extension PrivilegeSystem.PolicyController {
             errThrowing: .policyCreateFailed,
             policies: \.left,
             moduleId: \.moduleId,
+            regoHead: { _ in T.regoHead },
             policyKey: \.policy,
             modelId: { pr, _ in pr.right },
             modelBuilder: { $0.raw(parentId: $1, as: model) }

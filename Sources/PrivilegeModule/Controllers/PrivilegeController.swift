@@ -158,7 +158,7 @@ public extension PrivilegeModule.PrivilegeController {
     func attach<T: Resource>(
         @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, T>
         _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
-    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+    ) -> EventLoopRes<Void, S.Errcase> where T.TypeList == ResourceList {
         attach(relations: content())
     }
     
@@ -167,7 +167,7 @@ public extension PrivilegeModule.PrivilegeController {
     func detach<T: Resource>(
         @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, T>
         _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
-    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+    ) -> EventLoopRes<Void, S.Errcase> where T.TypeList == ResourceList {
         detach(relations: content())
     }
 }
@@ -199,7 +199,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 任一不存在都会导致失败
     func attach<T: Resource>(
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
-    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+    ) -> EventLoopRes<Void, S.Errcase> where T.TypeList == ResourceList {
         db.trans { db in
             do {
                 return try relations.map { relation in
@@ -232,7 +232,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 可以实例化 T 类型的 Resource 并赋值 UUID
     func detach<T: Resource>(
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, T>]
-    ) -> EventLoopRes<Void, S.Errcase> where T.T == ResourceList {
+    ) -> EventLoopRes<Void, S.Errcase> where T.TypeList == ResourceList {
         db.trans { db in
             do {
                 return try relations.flatMap { relation in

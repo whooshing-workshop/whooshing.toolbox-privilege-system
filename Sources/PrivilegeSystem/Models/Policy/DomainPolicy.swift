@@ -2,8 +2,9 @@ import Policy
 
 extension Domain: PolicyType {
     package typealias Model = Domain
-    package static var namePrefix: String { "domain" }
-    package static var typeId: String { "domain" }
+    package static let namePrefix = "domain"
+    package static let typeId = "domain"
+    package static let regoHead = "asdf"
 }
 
 typealias DomainPolicy = PolicyExp<Domain>

@@ -183,4 +183,14 @@ public extension DTO.UserInfo.Updater {
     }
 }
 
-extension DTO.UserInfo: Encodable where T == DTO.Queried {}
+extension DTO.UserInfo: Encodable where T == DTO.Queried {
+    enum CodingKeys: CodingKey {
+        case id
+        case userId
+        case identifier
+        case birthday
+        case other
+        case createdAt
+        case updatedAt
+    }
+}

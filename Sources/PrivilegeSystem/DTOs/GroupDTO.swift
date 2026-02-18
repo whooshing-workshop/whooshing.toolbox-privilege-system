@@ -146,3 +146,14 @@ public extension DTO.Group.Updater {
         }
     }
 }
+
+extension DTO.Group: Encodable where T == DTO.Queried {
+    enum CodingKeys: CodingKey {
+        case parentId
+        case name
+        case description
+        case id
+        case createdAt
+        case updatedAt
+    }
+}
