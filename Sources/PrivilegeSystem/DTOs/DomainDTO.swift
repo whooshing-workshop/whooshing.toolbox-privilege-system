@@ -14,7 +14,7 @@ public extension DTO {
         
         @Passive() public internal(set) var id: Int64
         @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updateAt: Date
+        @Passive() public internal(set) var updatedAt: Date
         
         typealias AssociatedModel = DomainModel
         private let m: AssociatedModel?
@@ -57,7 +57,7 @@ extension DTO.Domain where T == DTO.Queried {
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
-            n.$updateAt = model.updatedAt
+            n.$updatedAt = model.updatedAt
             return n
         }
     }

@@ -12,7 +12,7 @@ public extension PM {
         
         @DTO.Passive() public internal(set) var id: Int64
         @DTO.Passive() public internal(set) var createdAt: Date
-        @DTO.Passive() public internal(set) var updateAt: Date
+        @DTO.Passive() public internal(set) var updatedAt: Date
         
         package typealias AssociatedModel = Privilege
         private let m: AssociatedModel?
@@ -59,7 +59,7 @@ extension PM.PrivilegeDTO where T == DTO.Queried {
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
-            n.$updateAt = model.updatedAt
+            n.$updatedAt = model.updatedAt
             return n
         }
     }

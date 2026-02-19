@@ -19,7 +19,7 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
         public let moduleId = PGField("module_id", .uuid)               .required
         public let policy = PGField("policy", .string)                  .required
         public let createdAt = PGField("create_at", .string)            .required
-        public let updateAt = PGField("update_at", .string)             .required
+        public let updatedAt = PGField("update_at", .string)            .required
         
         public init() {}
     }
@@ -32,7 +32,7 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     @Field(fields.moduleId)                         public var moduleId: UUID
     @Field(fields.policy)                           public var policy: String
     @Timestamp(fields.createdAt, on: .create)       public var createdAt: Date!
-    @Timestamp(fields.updateAt, on: .update)        public var updatedAt: Date!
+    @Timestamp(fields.updatedAt, on: .update)       public var updatedAt: Date!
     
     public init() {}
     

@@ -9,12 +9,12 @@ public extension PrivilegeModule {
         public static var name: String { "privileges" }
         
         public struct Fields: PGFields {
-            public let id = PGField("id", .int64)                           .primary
+            public let id = PGField("id", .int64)                          .primary
             public let name = PGField("name", .string)
             public let description = PGField("description", .string)
-            public let policy = PGField("policy", .string)                  .required
-            public let createdAt = PGField("create_at", .string)            .required
-            public let updateAt = PGField("update_at", .string)             .required
+            public let policy = PGField("policy", .string)                 .required
+            public let createdAt = PGField("create_at", .string)           .required
+            public let updatedAt = PGField("update_at", .string)           .required
             
             public init() {}
         }
@@ -24,11 +24,11 @@ public extension PrivilegeModule {
         @ID(custom: fields.id.key)                      public var id: Int64?
         
         @Field(fields.name)                             public var name: String?
-        @Field(fields.description)                      public var description: String?
-        @Field(fields.policy)                           public var policy: String
+        @Field(fields.description)                      var description: String?
+        @Field(fields.policy)                           var policy: String
         
-        @Timestamp(fields.createdAt, on: .create)       public var createdAt: Date!
-        @Timestamp(fields.updateAt, on: .update)        public var updatedAt: Date!
+        @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
+        @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
         
         @Siblings(
             through: PrivilegeResourcePivot.self,

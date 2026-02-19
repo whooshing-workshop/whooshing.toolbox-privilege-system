@@ -11,7 +11,7 @@ package final class Role: PGModel, @unchecked Sendable {
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
         let createdAt = PGField("create_at", .string)           .required
-        let updateAt = PGField("update_at", .string)            .required
+        let updatedAt = PGField("update_at", .string)           .required
         
         package init() {}
     }
@@ -43,7 +43,7 @@ package final class Role: PGModel, @unchecked Sendable {
     )                                               var policies: [RolePolicy]
     
     @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
-    @Timestamp(fields.updateAt, on: .update)        var updatedAt: Date!
+    @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
     
     package init() {}
     

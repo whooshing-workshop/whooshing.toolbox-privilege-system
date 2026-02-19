@@ -21,7 +21,7 @@ public extension DTO {
         @Passive() public internal(set) var id: UUID
         @Passive() public internal(set) var userInfoId: UUID
         @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updateAt: Date
+        @Passive() public internal(set) var updatedAt: Date
         
         typealias AssociatedModel = UserModel.Info.Extended<T.Model>
         private let m: AssociatedModel?
@@ -88,7 +88,7 @@ extension DTO.UserExtendedInfo where G == DTO.Queried, T.Value == String {
             n.$id = try model.requireID()
             n.$userInfoId = model.$userInfo.id
             n.$createdAt = model.createdAt
-            n.$updateAt = model.updateAt
+            n.$updatedAt = model.updatedAt
             return n
         }
     }
@@ -184,6 +184,6 @@ extension DTO.UserExtendedInfo: Encodable where G == DTO.Queried {
         case id
         case userInfoId
         case createdAt
-        case updateAt
+        case updatedAt
     }
 }
