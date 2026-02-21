@@ -17,7 +17,7 @@ public extension DTO {
         private var value: T?
         private let lock = NIOLock()
         
-        public var wrappedValue: T {
+        public package(set) var wrappedValue: T {
             get {
                 lock.withLock {
                     guard let v = value else { fatalError("该属性值未被赋值，不可获取未被赋值的属性值") }

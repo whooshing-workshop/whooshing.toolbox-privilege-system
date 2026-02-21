@@ -14,6 +14,7 @@ public extension PrivilegeModule {
         case resourceDeleteFailed = "资源删除失败"
         case resourceUpdateFailed = "资源更新失败"
         
+        case privilegeDTOFailed = "资源权限数据 DTO 处理失败"
         case resourceDTOFailed = "资源数据 DTO 处理失败"
     }
 }

@@ -3,27 +3,27 @@ import Fluent
 import Foundation
 import Policy
 
-public extension PrivilegeModule {
+package extension PrivilegeModule {
     final class Privilege: PGModel, @unchecked Sendable {
         
-        public static var name: String { "privileges" }
+        package static var name: String { "privileges" }
         
-        public struct Fields: PGFields {
-            public let id = PGField("id", .int64)                          .primary
-            public let name = PGField("name", .string)
-            public let description = PGField("description", .string)
-            public let policy = PGField("policy", .string)                 .required
-            public let createdAt = PGField("create_at", .string)           .required
-            public let updatedAt = PGField("update_at", .string)           .required
+        package struct Fields: PGFields {
+            let id = PGField("id", .int64)                          .primary
+            let name = PGField("name", .string)
+            let description = PGField("description", .string)
+            let policy = PGField("policy", .string)                 .required
+            let createdAt = PGField("create_at", .string)           .required
+            let updatedAt = PGField("update_at", .string)           .required
             
-            public init() {}
+            package init() {}
         }
         
-        public let fields = Fields()
+        package let fields = Fields()
         
-        @ID(custom: fields.id.key)                      public var id: Int64?
+        @ID(custom: fields.id.key)                      package var id: Int64?
         
-        @Field(fields.name)                             public var name: String?
+        @Field(fields.name)                             var name: String?
         @Field(fields.description)                      var description: String?
         @Field(fields.policy)                           var policy: String
         
@@ -36,8 +36,8 @@ public extension PrivilegeModule {
             to: \.$secondaryModel
         )                                               var resources: [AnyResource]
         
-        public init() { }
+        package init() { }
         
-        public typealias MIG = DefaultMIG<Privilege>
+        package typealias MIG = DefaultMIG<Privilege>
     }
 }

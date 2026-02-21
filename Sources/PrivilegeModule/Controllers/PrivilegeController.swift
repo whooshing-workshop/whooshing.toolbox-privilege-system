@@ -16,6 +16,8 @@ public extension PrivilegeModule {
         package let opa: OPA
         let moduleId: UUID
         
+        public typealias S = PM<ResourceList>
+        
         init(
             db: PGDatabase,
             opa: OPA,
@@ -151,18 +153,18 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
     func attach(
-        @MTMRelationBuilder<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase> {
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+    ) -> EventLoopRes<Void, S.Errcase> {
         attach(relations: content())
     }
     
     // MARK: - 资源权限解除
     
     func detach(
-        @MTMRelationBuilder<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase>  {
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+    ) -> EventLoopRes<Void, S.Errcase>  {
         detach(relations: content())
     }
 }
@@ -171,9 +173,11 @@ public extension PrivilegeModule.PrivilegeController {
 public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
+    /// 附加权限动作要求资源与权限都必须已存在与数据库中
+    /// 任一不存在都会导致失败
     func attach(
-        relations: [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase> {
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+    ) -> EventLoopRes<Void, S.Errcase> {
         __manyToMany(
             relations,
             action: .attach,
@@ -186,9 +190,11 @@ public extension PrivilegeModule.PrivilegeController {
     
     // MARK: - 资源权限解除
     
+    /// 解除权限动作的 Resource 无需从数据库中查得
+    /// 可以实例化 AnyResource 类型的 Resource 并赋值 UUID
     func detach(
-        relations: [MTMRelation<PM<ResourceList>.PrivilegeDTO<DTO.Queried>, PM<ResourceList>.AnyResourceDTO>]
-    ) -> EventLoopRes<Void, PM<ResourceList>.Errcase>  {
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+    ) -> EventLoopRes<Void, S.Errcase>  {
         __manyToMany(
             relations,
             action: .detach,

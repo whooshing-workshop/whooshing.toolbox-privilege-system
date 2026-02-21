@@ -50,7 +50,7 @@ extension PM.PrivilegeDTO where T == DTO.Queried {
     }
     
     static func make(from model: PM<ResourceList>.Privilege) -> Res<Self, PM<ResourceList>.Errcase> {
-        .init(throws: .resourceDTOFailed, category: .internal) {
+        .init(throws: .privilegeDTOFailed, category: .internal) {
             var n = Self.init(
                 _name: model.name,
                 _description: model.description,
