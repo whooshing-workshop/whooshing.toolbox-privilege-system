@@ -11,7 +11,7 @@ public extension DTO {
     struct Token<T: Status>: Sendable {
         public let credential: String
         
-        @Protect public var tokenEncrypted: Data
+        @Protect public internal(set) var tokenEncrypted: Data
         
         @Passive public internal(set) var id: UUID
         @Passive public internal(set) var token: String

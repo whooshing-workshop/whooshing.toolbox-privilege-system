@@ -12,9 +12,9 @@ public extension DTO {
         public let name: String?
         public let description: String?
         
-        @Passive() public internal(set) var id: Int64
-        @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updatedAt: Date
+        @Passive public internal(set) var id: Int64
+        @Passive public internal(set) var createdAt: Date
+        @Passive public internal(set) var updatedAt: Date
         
         typealias AssociatedModel = DomainModel
         private let m: AssociatedModel?

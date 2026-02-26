@@ -11,11 +11,12 @@ typealias UserModel = User
 public extension DTO {
     struct User<T: Status>: Sendable {
         public let email: String
-        @Protect() public var hashedPasswd: String
         
-        @Passive() public internal(set) var id: UUID
-        @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updatedAt: Date
+        @Protect public internal(set) var hashedPasswd: String
+        
+        @Passive public internal(set) var id: UUID
+        @Passive public internal(set) var createdAt: Date
+        @Passive public internal(set) var updatedAt: Date
         
         typealias AssociatedModel = UserModel
         private let m: AssociatedModel?

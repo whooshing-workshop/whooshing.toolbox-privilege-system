@@ -8,8 +8,8 @@ public extension DTO {
         public let user: User<Queried>
         public let group: Group<Queried>
         
-        @Passive() public internal(set) var id: UUID
-        @Passive() public internal(set) var createdAt: Date
+        @Passive public internal(set) var id: UUID
+        @Passive public internal(set) var createdAt: Date
         
         typealias AssociatedModel = UserGroupPivot
         private let m: AssociatedModel?

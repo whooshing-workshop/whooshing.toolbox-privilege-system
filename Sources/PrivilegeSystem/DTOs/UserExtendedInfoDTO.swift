@@ -19,10 +19,10 @@ public extension DTO {
         public let order: Int16
         public let description: String?
         
-        @Passive() public internal(set) var id: UUID
-        @Passive() public internal(set) var userInfoId: UUID
-        @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updatedAt: Date
+        @Passive public internal(set) var id: UUID
+        @Passive public internal(set) var userInfoId: UUID
+        @Passive public internal(set) var createdAt: Date
+        @Passive public internal(set) var updatedAt: Date
         
         typealias AssociatedModel = UserModel.Info.Extended<T.Model>
         private let m: AssociatedModel?

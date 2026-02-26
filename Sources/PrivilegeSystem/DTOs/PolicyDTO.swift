@@ -9,9 +9,9 @@ public extension DTO {
         public let moduleId: UUID
         public let policy: String
         
-        @Passive() public internal(set) var id: UUID
-        @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updatedAt: Date
+        @Passive public internal(set) var id: UUID
+        @Passive public internal(set) var createdAt: Date
+        @Passive public internal(set) var updatedAt: Date
         
         init(
             _moduleId: UUID,
