@@ -10,10 +10,11 @@ package extension User {
             let id = PGField("id", .uuid)                               .primary
             let userId = PGField("user_id", .uuid)                      .required.unique.foreign(User.self, \.id, onDelete: .cascade)
             let idNumber = PGField("id_number", .string)                .required.unique
+            let nickname = PGField("nickname", .string)                 .required
             let birthday = PGField("birthday", .date)                   .required
             let other = PGField("other", .string)
-            let createdAt = PGField("created_at", .datetime)               .required
-            let updatedAt = PGField("updated_at", .datetime)               .required
+            let createdAt = PGField("created_at", .datetime)            .required
+            let updatedAt = PGField("updated_at", .datetime)            .required
             
             package init() {}
         }
@@ -23,6 +24,7 @@ package extension User {
         @ID(key: .id)                                           package var id: UUID?
         
         @Parent(fields.userId)                                  var user: User
+        @Field(fields.nickname)                                 var nickname: String
         @Field(fields.idNumber)                                 var identifier: String
         @Field(fields.birthday)                                 var birthday: Date
         @Field(fields.other)                                    var other: String?

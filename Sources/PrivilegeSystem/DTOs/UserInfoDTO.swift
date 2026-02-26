@@ -9,6 +9,7 @@ import PrivilegeModule
 
 public extension DTO {
     struct UserInfo<T: Status>: Sendable {
+        public let nickname: String
         public let identifier: String
         public let birthday: Date
         public let other: String?
@@ -22,11 +23,13 @@ public extension DTO {
         private let m: AssociatedModel?
         
         init(
+            _nickname: String,
             _identifier: String,
             _birthday: Date,
             _other: String?,
             _model: AssociatedModel?
         ) {
+            self.nickname = _nickname
             self.identifier = _identifier
             self.birthday = _birthday
             self.other = _other
@@ -37,11 +40,13 @@ public extension DTO {
 
 public extension DTO.UserInfo where T == DTO.Prepare {
     init(
+        nickname: String,
         identifier: String,
         birthday: Date,
         other: String? = nil,
     ) {
         self = Self.init(
+            _nickname: nickname,
             _identifier: identifier,
             _birthday: birthday,
             _other: other,
@@ -63,6 +68,7 @@ extension DTO.UserInfo where T == DTO.Queried {
     ) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
             var n = Self.init(
+                _nickname: model.nickname,
                 _identifier: model.identifier,
                 _birthday: model.birthday,
                 _other: model.other,
@@ -81,6 +87,7 @@ extension DTO.UserInfo where T == DTO.Prepare {
     func raw(for userId: UUID) -> User.Info {
         let info = User.Info()
         info.$user.id = userId
+        info.nickname = nickname
         info.identifier = identifier
         info.birthday = birthday
         info.other = other
@@ -116,6 +123,13 @@ public extension DTO.UserInfo.Updater {
     }
     
     mutating
+    func update(nickname: @escaping @autoclosure () throws -> String) {
+        updates[\.nickname] = { builder, _ in
+            builder.set(\.$nickname, to: try nickname())
+        }
+    }
+    
+    mutating
     func update(birthday: @escaping @autoclosure () throws -> Date) {
         updates[\.birthday] = { builder, _ in
             builder.set(\.$birthday, to: try birthday())
@@ -141,6 +155,15 @@ public extension DTO.UserInfo.Updater {
     }
     
     mutating
+    func update(nickname: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) {
+        needsPeek = true
+        updates[\.nickname] = { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$nickname, to: try nickname(q))
+        }
+    }
+    
+    mutating
     func update(birthday: @escaping (DTO.UserInfo<DTO.Queried>) throws -> Date) {
         needsPeek = true
         updates[\.birthday] = { builder, query in
@@ -162,6 +185,7 @@ public extension DTO.UserInfo.Updater {
 extension DTO.UserInfo: Encodable where T == DTO.Queried {
     enum CodingKeys: String, CodingKey {
         case userId
+        case nickname
         case identifier
         case birthday
         case other
@@ -174,6 +198,7 @@ extension DTO.UserInfo: Encodable where T == DTO.Queried {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(userId, forKey: .userId)
+        try container.encode(nickname, forKey: .nickname)
         try container.encode(identifier, forKey: .identifier)
         try container.encode(birthday, forKey: .birthday)
         try container.encode(other, forKey: .other)
