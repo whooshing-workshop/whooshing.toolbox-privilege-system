@@ -64,5 +64,6 @@ public extension PrivilegeSystem {
         
         // 仲裁相关错误
         case arbitrateFailed = "权限仲裁失败"
+        case arbitrationDataCollectFailed = "仲裁数据收集失败"
     }
 }

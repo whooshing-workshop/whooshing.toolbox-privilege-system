@@ -2,6 +2,7 @@ import Vapor
 import Fluent
 import DataConvertable
 import ErrorHandle
+import Policy
 import Cryptos
 import Collections
 import PrivilegeModule
@@ -183,4 +184,31 @@ public extension DTO.UserInfo.Updater {
     }
 }
 
-extension DTO.UserInfo: Encodable where T == DTO.Queried {}
+extension DTO.UserInfo: Encodable where T == DTO.Queried {
+    enum CodingKeys: String, CodingKey {
+        case userId
+        case identifier
+        case birthday
+        case other
+        case addresses
+        case alternateEmails = "alternate_emails"
+        case phones
+        case id
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(userId, forKey: .userId)
+        try container.encode(identifier, forKey: .identifier)
+        try container.encode(birthday, forKey: .birthday)
+        try container.encode(other, forKey: .other)
+        try container.encode(addresses, forKey: .addresses)
+        try container.encode(alternateEmails, forKey: .alternateEmails)
+        try container.encode(phones, forKey: .phones)
+        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    }
+}

@@ -3,6 +3,7 @@ import Fluent
 import DataConvertable
 import ErrorHandle
 import Cryptos
+import Policy
 import PrivilegeModule
 
 typealias UserModel = User
@@ -103,10 +104,18 @@ extension User: ModelAuthenticatable {
 }
 
 extension DTO.User: Encodable where T == DTO.Queried {
-    enum CodingKeys: CodingKey {
+    enum CodingKeys: String, CodingKey {
         case email
         case id
-        case createdAt
-        case updatedAt
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(email, forKey: .email)
+        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
     }
 }

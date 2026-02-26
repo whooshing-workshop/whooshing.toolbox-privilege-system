@@ -3,6 +3,7 @@ import Fluent
 import DataConvertable
 import ErrorHandle
 import Cryptos
+import Policy
 import Collections
 import PrivilegeModule
 
@@ -177,13 +178,23 @@ public extension DTO.UserExtendedInfo.Updater {
 }
 
 extension DTO.UserExtendedInfo: Encodable where G == DTO.Queried {
-    enum CodingKeys: CodingKey {
+    enum CodingKeys: String, CodingKey {
         case value
         case order
         case description
         case id
-        case userInfoId
-        case createdAt
-        case updatedAt
+        case userInfoId = "user_info_id"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(value, forKey: .value)
+        try container.encode(order, forKey: .order)
+        try container.encode(description, forKey: .description)
+        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
     }
 }

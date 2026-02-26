@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import OPA
 import PrivilegeModule
+import Collections
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
@@ -24,24 +25,102 @@ extension PrivilegeSystem {
             self.opa = opa
         }
         
-        func arbitrate(
-            policyPaths: [String],
-            input: ForwardData
-        ) -> EventLoopRes<Bool, Errcase> {
-            policyPaths.map {
+        public func arbitrate(
+            moduleId: UUID,
+            user: DTO.User<DTO.Queried>,
+            role: DTO.Role<DTO.Queried>,
+            resource: [String: AnyCodable],
+            operation: String,
+            privilegeIds: [Int64]
+        ) -> EventLoopRes<Result, Errcase> {
+            user.model.groups.map { group in
+                group.$domains.load(on: db)
+                    .withError(Errcase.arbitrationDataCollectFailed, "数据库加载组域权限失败", category: .internal)
+                    .flatMapThrowing
+                { () throws(Errcase.ErrType) in
+                    try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
+                        try group.domains.map { domain in
+                            DomainData(
+                                domainId: try domain.requireID(),
+                                resource: resource,
+                                operation: operation,
+                                user: user,
+                                group: try .make(from: group).get()
+                            )
+                        }
+                    }
+                }
+            }.flatten(on: eventLoop).flatMap { domainDatas in
+                self.__arbitrate(
+                    input: ArbitrateData(
+                        moduleId: moduleId,
+                        domains: domainDatas.flatMap { $0 },
+                        role: .init(
+                            roleId: role.id,
+                            resource: resource,
+                            operation: operation,
+                            user: user
+                        ),
+                        privileges: privilegeIds.map {
+                            .init(
+                                privilegeId: $0,
+                                resource: resource,
+                                operation: operation,
+                                user: user
+                            )
+                        }
+                    )
+                )
+            }
+        }
+        
+        func __arbitrate(
+            input: ArbitrateData
+        ) -> EventLoopRes<Result, Errcase> {
+            ([
                 opa.query.data(
-                    from: $0,
-                    input: input,
-                    as: ForwardData.self,
+                    from: "/rules/\(input.moduleId.hexString)/role/\(input.role.roleId)/allow",
+                    input: input.role,
+                    as: RoleData.self,
                     to: Bool.self
-                ).errCast(Errcase.arbitrateFailed, "OPA Query 失败", category: .internal)
-            }.flatten(on: eventLoop).flatMap { (res: [OPA.Answer<Bool?>]) in
-                var result: Bool = true
-                for r in res {
+                )
+                .errCast(Errcase.arbitrateFailed, "OPA Query 用户身份 失败", category: .internal)
+                .map {
+                    (Result.IdKey(type: .role, id: input.role.roleId), $0)
+                }
+            ] + input.domains.map { domainData in
+                opa.query.data(
+                    from: "/rules/\(input.moduleId.hexString)/domain/\(domainData.domainId)/allow",
+                    input: domainData,
+                    as: DomainData.self,
+                    to: Bool.self
+                )
+                .errCast(Errcase.arbitrateFailed, "OPA Query 域权限 失败", category: .internal)
+                .map { res in
+                    (Result.IdKey(type: .domain, id: domainData.domainId), res)
+                }
+            } + input.privileges.map { privilegeData in
+                opa.query.data(
+                    from: "/rules/\(input.moduleId.hexString)/privilege/\(privilegeData.privilegeId)/allow",
+                    input: privilegeData,
+                    as: PrivilegeData.self,
+                    to: Bool.self
+                )
+                .errCast(Errcase.arbitrateFailed, "OPA Query 资源权限 失败", category: .internal)
+                .map { res in
+                    (Result.IdKey(type: .domain, id: privilegeData.privilegeId), res)
+                }
+            })
+            
+            // 并行执行所有的权限判断
+            .flatten(on: eventLoop).flatMap { (res: [(Result.IdKey, OPA.Answer<Bool?>)]) in
+                var result = Result(result: true, reports: [:])
+                for (k, r) in res {
                     guard let r = r.result else {
                         return self.eventLoop.makeFailedResult(Errcase.arbitrateFailed, "OPA 查询异常，Path 路径未找到", category: .internal)
                     }
-                    result = result && r
+                    result.and(result: r)
+                    result.append(id: k, value: r)
                 }
                 return self.eventLoop.makeSucceededResult(result)
             }
@@ -50,22 +129,55 @@ extension PrivilegeSystem {
 }
 
 extension PrivilegeSystem.Arbitration {
-    struct ForwardData: Encodable, Sendable {
-        let resource: [String: AnyCodable]
-        let action: String
-        let user: DTO.User<DTO.Queried>
-        let group: [String: AnyCodable]?
-        
-        init(
-            resource: [String : AnyCodable],
-            action: String,
-            user: DTO.User<DTO.Queried>,
-            group: [String : AnyCodable]? = nil
-        ) {
-            self.resource = resource
-            self.action = action
-            self.user = user
-            self.group = group
+    public struct Result: Sendable {
+        public struct IdKey: Sendable, Hashable {
+            public enum T: Sendable, Hashable {
+                case role
+                case domain
+                case privilege
+            }
+            public let type: T
+            public let id: Int64
         }
+        
+        public private(set) var result: Bool
+        public private(set) var reports: OrderedDictionary<IdKey, Bool>
+        
+        mutating func and(result: Bool) {
+            self.result = self.result && result
+        }
+        
+        mutating func append(id: IdKey, value: Bool) {
+            self.reports[id] = value
+        }
+    }
+    
+    struct ArbitrateData: Encodable, Sendable {
+        let moduleId: UUID
+        let domains: [DomainData]
+        let role: RoleData
+        let privileges: [PrivilegeData]
+    }
+    
+    struct RoleData: Encodable, Sendable {
+        let roleId: Int64
+        let resource: [String: AnyCodable]
+        let operation: String
+        let user: DTO.User<DTO.Queried>
+    }
+    
+    struct DomainData: Encodable, Sendable {
+        let domainId: Int64
+        let resource: [String: AnyCodable]
+        let operation: String
+        let user: DTO.User<DTO.Queried>
+        let group: DTO.Group<DTO.Queried>
+    }
+    
+    struct PrivilegeData: Encodable, Sendable {
+        let privilegeId: Int64
+        let resource: [String: AnyCodable]
+        let operation: String
+        let user: DTO.User<DTO.Queried>
     }
 }

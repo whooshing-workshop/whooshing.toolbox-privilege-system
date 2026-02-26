@@ -154,3 +154,14 @@ public extension PM.PrivilegeDTO.Updater {
         }
     }
 }
+
+extension PM.PrivilegeDTO: Encodable where T == DTO.Queried {
+    enum CodingKeys: CodingKey {
+        case name
+        case description
+        case policy
+        case id
+        case createdAt
+        case updatedAt
+    }
+}
