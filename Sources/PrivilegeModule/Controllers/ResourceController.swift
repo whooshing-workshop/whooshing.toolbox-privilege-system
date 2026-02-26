@@ -24,6 +24,7 @@ public extension PrivilegeModule {
             resources: [ResourceDTO<T, DTO.Prepare>]
         ) -> EventLoopRes<[ResourceDTO<T, DTO.Queried>], Errcase> {
             __create(
+                on: db,
                 dtos: resources,
                 label: "资源",
                 errThrowing: .resourceCreateFailed,

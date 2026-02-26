@@ -7,34 +7,34 @@ import Cryptos
 import NIOFileSystem
 import Foundation
 @testable import PrivilegeSystem
-
-enum TestingData {
-    case string(String)
-    case random(Int)
-}
+@testable import PrivilegeModule
 
 struct TestingShared {
 
     enum TestStage {
-        case entryBasics
-        case directory
-        case fileAppending
-        case fileInsertion
-        case fileRemoving
-        case fileReplacemeng
+        case account
+        case userInfo
     }
      
     static let dbHost = ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_HOST"] ?? "localhost"
-    static let dbPort = 5432
+    static let dbPort = Int(ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_PORT"] ?? "5432")!
     static let dbListening = try! isPortOpen(host: dbHost, port: dbPort)
     
-    @MainActor static var priviligeSystem: PrivilegeSystem? = nil
-    @MainActor static var testStage: TestStage = .entryBasics
+    static let opaHost = ProcessInfo.processInfo.environment["GITHUB_OPA_TESTING_HOST"] ?? "localhost"
+    static let opaPort = Int(ProcessInfo.processInfo.environment["GITHUB_OPA_TESTING_PORT"] ?? "8181")!
+    static let opaListening = try! isPortOpen(host: opaHost, port: opaPort)
+    
+    @MainActor static var privilegeSystem: PrivilegeSystem? = nil
+    @MainActor static var privilegeModule: PrivilegeModule<ResourceList>? = nil
+    @MainActor static var testStage: TestStage = .account
     
     @MainActor
-    static func getSystem() async throws -> PrivilegeSystem {
-        if let system = priviligeSystem {
-            return system
+    static func getSystem() async throws -> (PrivilegeSystem, PrivilegeModule<ResourceList>) {
+        if
+            let system = privilegeSystem,
+            let module = privilegeModule
+        {
+            return (system, module)
         }
         
         let pool = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
@@ -43,14 +43,30 @@ struct TestingShared {
         let s = try await PrivilegeSystem(
             eventLoop: eventLoop,
             dbConfigure: .init(hostname: dbHost, port: dbPort, username: "clwang", password: "testing", database: "privilege_system", tls: .disable),
-            opaConfigure: .init(),
+            opaConfigure: .init(host: opaHost, port: opaPort),
             logger: .init(label: "Privilege-System-Testing"),
             debuging: .init(tdeEncrypt: false)
         )
+        
+        let m = try await PrivilegeModule<ResourceList>(
+            moduleId: UUID(uuidString: "B7E2A9D0-4F3B-4C1E-8D2A-9B7C6E5F4D32")!,
+            eventLoop: eventLoop,
+            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "clwang", password: "testing", database: "privilege_module", tls: .disable),
+            opaConfigure: .init(host: opaHost, port: opaPort),
+            logger: .init(label: "Privilege-Module-Testing"),
+            debuging: .init(tdeEncrypt: false)
+        )
 
-        self.priviligeSystem = s
-        return s
+        self.privilegeSystem = s
+        self.privilegeModule = m
+        return (s, m)
     }
+}
+
+enum ResourceList: String, ResourceTypeList {
+    case file
+    case directory
+    case alias
 }
 
 func randomBuffer(size: Int) -> ByteBuffer {

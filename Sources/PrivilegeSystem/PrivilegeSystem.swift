@@ -21,6 +21,7 @@ public final class PrivilegeSystem: Sendable {
     
     public let account: AccountController
     public let userInfo: UserInfoController
+    public let userExtendedInfo: UserExtendedInfoController
     public let group: GroupController
     
     public let role: RoleController
@@ -81,7 +82,8 @@ public final class PrivilegeSystem: Sendable {
         self.db = db
         
         self.account = .init(db: db, eventLoop: eventLoop)
-        self.userInfo = .init(db: db, eventLoop: eventLoop)
+        self.userExtendedInfo = .init(db: db, eventLoop: eventLoop)
+        self.userInfo = .init(db: db, eventLoop: eventLoop, userExtendedInfoController: self.userExtendedInfo)
         self.group = .init(db: db, eventLoop: eventLoop)
         self.policy = .init(db: db, eventLoop: eventLoop, opa: opa)
         self.role = .init(db: db, eventLoop: eventLoop, groupController: self.group, policyController: self.policy)

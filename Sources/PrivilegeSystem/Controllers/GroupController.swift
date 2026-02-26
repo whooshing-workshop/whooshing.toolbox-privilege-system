@@ -22,20 +22,14 @@ extension PrivilegeSystem {
         public func create(
             groups: [DTO.Group<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
-            db.trans { db in
-                let gs = groups.map { $0.raw() }
-                return gs
-                    .create(on: db)
-                    .withError(Errcase.groupCreateFailed, "创建群组时失败", category: .internal)
-                    .flatMapThrowing
-                { () throws(Errcase.ErrType) in
-                    try gs.map { g throws(Errcase.ErrType) in
-                        try required(throws: Errcase.groupCreateFailed, category: .internal) {
-                            try DTO.Group<DTO.Queried>.make(from: g).get()
-                        }
-                    }
-                }
-            }
+            __create(
+                on: db,
+                dtos: groups,
+                label: "群组",
+                errThrowing: .userInfoCreateFailed,
+                modelBuilder: { $0.raw() },
+                dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
+            )
         }
         
         public func delete(
@@ -79,7 +73,7 @@ public extension PrivilegeSystem.GroupController {
             label: "用户组与用户",
             errThrowing: .userJoinGroupFailed,
             siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -94,7 +88,7 @@ public extension PrivilegeSystem.GroupController {
             label: "用户组与用户",
             errThrowing: .userKickGroupFailed,
             siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
 }
@@ -123,7 +117,7 @@ public extension PrivilegeSystem.GroupController {
     func query(
         relations: [DTO.UserInGroupRelation<DTO.Prepare>]
     ) -> EventLoopRes<[DTO.UserInGroupRelation<DTO.Queried>], PrivilegeSystem.Errcase> {
-        __query(relations: relations)
+        __query(on: db, relations: relations)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
             try required(throws: PrivilegeSystem.Errcase.userGroupRelationQueryFailed, category: .internal) {
@@ -137,6 +131,7 @@ public extension PrivilegeSystem.GroupController {
  
 extension PrivilegeSystem.GroupController {
     func __query(
+        on db: PGDatabase,
         relations: [DTO.UserInGroupRelation<DTO.Prepare>]
     ) -> EventLoopRes<[UserGroupPivot], PrivilegeSystem.Errcase> {
         UserGroupPivot.query(on: db)

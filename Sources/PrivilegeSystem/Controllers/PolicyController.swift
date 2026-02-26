@@ -96,7 +96,25 @@ public extension PrivilegeSystem.PolicyController {
         to model: T.Type,
         relations: [MTORelation<DTO.Policy<DTO.Prepare>, T.Model.IDValue>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        __create(on: db, to: model, relations: relations)
+    }
+    
+    func createWithReturning<T: PolicyType>(
+        to model: T.Type,
+        relations: [MTORelation<DTO.Policy<DTO.Prepare>, T.Model.IDValue>]
+    ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
+        __createWithReturning(on: db, to: model, relations: relations)
+    }
+}
+
+extension PrivilegeSystem.PolicyController {
+    func __create<T: PolicyType>(
+        on db: PGDatabase,
+        to model: T.Type,
+        relations: [MTORelation<DTO.Policy<DTO.Prepare>, T.Model.IDValue>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __createPolicy(
+            on: db,
             relations: relations,
             policyType: T.self,
             label: "权限策略",
@@ -109,11 +127,13 @@ public extension PrivilegeSystem.PolicyController {
         ).map { _ in }
     }
     
-    func createWithReturning<T: PolicyType>(
+    func __createWithReturning<T: PolicyType>(
+        on db: PGDatabase,
         to model: T.Type,
         relations: [MTORelation<DTO.Policy<DTO.Prepare>, T.Model.IDValue>]
     ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
         __createPolicy(
+            on: db,
             relations: relations,
             policyType: T.self,
             label: "权限策略",

@@ -28,26 +28,21 @@ extension PrivilegeSystem {
         public func create(
             @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-        ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-            self.create(relations: content())
+        ) -> EventLoopRes<Void, Errcase> {
+            create(relations: content())
         }
         
         public func createWithReturning(
             @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-        ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
-            self.createWithReturning(relations: content())
+        ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], Errcase> {
+            createWithReturning(relations: content())
         }
         
         public func create(
             roles: [DTO.Role<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Role<DTO.Queried>], Errcase> {
-            __create(
-                dtos: roles,
-                label: "角色",
-                errThrowing: .roleCreateFailed,
-                modelBuilder: { $0.raw() },
-                dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) })
+            __create(on: db, roles: roles)
         }
         
         public func delete(
@@ -84,8 +79,9 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         db.trans { db in
-            self.create(roles: relations.map { $0.right }).flatMap { _ in
-                self.policyController.create(
+            self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
+                self.policyController.__create(
+                    on: db,
                     to: Role.self,
                     relations: relations.map { .init(left: $0.left, right: $0.right.id) }
                 )
@@ -97,8 +93,9 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
         db.trans { db in
-            self.create(roles: relations.map { $0.right }).flatMap { _ in
-                self.policyController.createWithReturning(
+            self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
+                self.policyController.__createWithReturning(
+                    on: db,
                     to: Role.self,
                     relations: relations.map { .init(left: $0.left, right: $0.right.id) }
                 )
@@ -169,7 +166,7 @@ public extension PrivilegeSystem.RoleController {
     }
 }
 
-extension PrivilegeSystem.RoleController {
+public extension PrivilegeSystem.RoleController {
     // MARK: - 角色任命
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
@@ -180,7 +177,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与用户",
             errThrowing: .roleAppointUserFailed,
             siblingBuilder: { $0.model.$users },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -193,7 +190,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与用户组",
             errThrowing: .roleAppointGroupFailed,
             siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -206,7 +203,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
             siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -219,7 +216,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
             siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.groupController.__query(relations: $0) }
+            modelsBuilder: { self.groupController.__query(on: $0, relations: $1) }
         )
     }
     
@@ -233,7 +230,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与用户",
             errThrowing: .roleDismissUserFailed,
             siblingBuilder: { $0.model.$users },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -246,7 +243,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与用户组",
             errThrowing: .roleDismissGroupFailed,
             siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -259,7 +256,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
             siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -272,7 +269,23 @@ extension PrivilegeSystem.RoleController {
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
             siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.groupController.__query(relations: $0) }
+            modelsBuilder: { self.groupController.__query(on: $0, relations: $1) }
+        )
+    }
+}
+
+extension PrivilegeSystem.RoleController {
+    public func __create(
+        on db: PGDatabase,
+        roles: [DTO.Role<DTO.Prepare>]
+    ) -> EventLoopRes<[DTO.Role<DTO.Queried>], PrivilegeSystem.Errcase> {
+        __create(
+            on: db,
+            dtos: roles,
+            label: "角色",
+            errThrowing: .roleCreateFailed,
+            modelBuilder: { $0.raw() },
+            dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
         )
     }
 }

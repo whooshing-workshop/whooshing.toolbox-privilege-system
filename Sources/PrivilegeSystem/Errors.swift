@@ -15,10 +15,16 @@ public extension PrivilegeSystem {
         case userPasswordChangeFailed = "用户密码修改失败"
         
         // 用户信息相关错误
-        case userInfoAddFailed = "用户信息数据创建失败"
+        case userInfoCreateFailed = "用户信息数据创建失败"
         case userInfoDeleteFailed = "用户信息数据删除失败"
         case userInfoUpdateFailed = "用户信息数据更新失败"
         case userInfoQueryFailed = "用户信息查询失败"
+        
+        // 用户扩展信息相关错误
+        case userExtendedInfoCreateFailed = "用户扩展信息数据创建失败"
+        case userExtendedInfoDeleteFailed = "用户扩展信息数据删除失败"
+        case userExtendedInfoUpdateFailed = "用户扩展信息数据更新失败"
+        case userExtendedInfoQueryFailed = "用户扩展信息查询失败"
         
         // 权限策略相关错误
         case policyCheckFailed = "权限策略检查失败"

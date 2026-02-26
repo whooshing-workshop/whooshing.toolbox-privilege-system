@@ -9,121 +9,39 @@ extension PrivilegeSystem {
     public final class UserInfoController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
+        let userExtendedInfoController: UserExtendedInfoController
         
         init(
             db: PGDatabase,
-            eventLoop: EventLoop
+            eventLoop: EventLoop,
+            userExtendedInfoController: UserExtendedInfoController
         ) {
             self.db = db
             self.eventLoop = eventLoop
+            self.userExtendedInfoController = userExtendedInfoController
         }
         
         // MARK: - 增
         
+        public struct Extended<T: DTO.Status>: Sendable {
+            let addresses: [DTO.UserExtendedInfo<DTO.Address, T>]
+            let alternateEmails: [DTO.UserExtendedInfo<DTO.AlternateEmail, T>]
+            let phones: [DTO.UserExtendedInfo<DTO.Phone, T>]
+        }
+        
         public func create(
-            infos: [DTO.UserInfo<DTO.Prepare>]
-        ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], Errcase> {
-            let raws = infos.map { $0.raw() }
-            
-            return db.trans { db in
-                raws.create(on: db)
-                    .withError(Errcase.userInfoAddFailed, category: .internal)
-                    .flatMap
-                {
-                    let tasks: [EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase>] = raws.enumerated().map { i, raw in
-                        self.eventLoop.submitResult { () throws(Errcase.ErrType) in
-                            let infoId = try required(throws: Errcase.userInfoAddFailed, "获取用户信息 ID 失败", category: .internal) {
-                                try raw.requireID()
-                            }
-                            return ExtendedInfos(
-                                addresses: getRaws(userInfoId: infoId, dto: infos[i].addresses),
-                                altMails: getRaws(userInfoId: infoId, dto: infos[i].alternateEmails),
-                                phones: getRaws(userInfoId: infoId, dto: infos[i].phones)
-                            )
-                        }.flatMap { info in
-                            info.addresses
-                                .create(on: db)
-                                .withError(Errcase.userInfoAddFailed, "用户地址插入失败", category: .internal)
-                                .map { @Sendable in info }
-                        }.flatMap { info in
-                            info.altMails
-                                .create(on: db)
-                                .withError(Errcase.userInfoAddFailed, "用户次选邮箱插入失败", category: .internal)
-                                .map { @Sendable in info }
-                        }.flatMap { info in
-                            info.phones
-                                .create(on: db)
-                                .withError(Errcase.userInfoAddFailed, "用户手机号码插入失败", category: .internal)
-                                .map { @Sendable in info }
-                        }.flatMapThrowing { info throws(Errcase.ErrType) in
-                            try required(throws: Errcase.userInfoAddFailed, category: .internal) {
-                                try DTO.UserInfo<DTO.Queried>.make(
-                                    from: raw,
-                                    addresses: info.addresses,
-                                    alternateEmails: info.altMails,
-                                    phones: info.phones
-                                ).get()
-                            }
-                        }
-                    }
-                    
-                    return tasks.map{ $0.wrapped }
-                        .flatten(on: self.eventLoop)
-                        .withError(Errcase.userInfoAddFailed, "执行用户信息插入任务时失败", category: .internal)
-                }
-            }
-            
-            struct ExtendedInfos: Sendable {
-                let addresses: [User.Info.Extended<User.Info.Address>]
-                let altMails: [User.Info.Extended<User.Info.AlternateEmail>]
-                let phones: [User.Info.Extended<User.Info.Phone>]
-            }
-            
-            @Sendable
-            func getRaws<T: DTO.UserInfoModel>(
-                userInfoId: User.Info.IDValue, dto: [DTO.UserExtendedInfo<T, DTO.Prepare>]
-            ) -> [User.Info.Extended<T.Model>] where T.Value == String {
-                dto.map { $0.raw(for: userInfoId) }
-            }
+            for userId: UUID,
+            @OTORelationBuilder<DTO.UserInfo<DTO.Prepare>, Extended<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [OTORelation<DTO.UserInfo<DTO.Prepare>, Extended<DTO.Prepare>>]
+        ) -> EventLoopRes<Void, Errcase> {
+            create(for: userId, relations: content())
         }
         
-        public func add(
+        public func create(
+            for userId: UUID,
             infos: [DTO.UserInfo<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], Errcase> {
-            let raws = infos.map { $0.raw() }
-            return raws
-                .create(on: db)
-                .withError(Errcase.userInfoAddFailed, "用户信息插入失败", category: .internal)
-                .flatMapThrowing
-            { () throws(Errcase.ErrType) in
-                try required(throws: Errcase.userInfoAddFailed, "整理用户信息插入结果时出错", category: .internal) {
-                    try raws.map { i throws(Errcase.ErrType) in
-                        try required(throws: Errcase.userInfoAddFailed, category: .internal) {
-                            try .make(from: i, addresses: [], alternateEmails: [], phones: []).get()
-                        }
-                    }
-                }
-            }
-        }
-        
-        public func add<T: DTO.UserInfoModel>(
-            extendedInfos: [DTO.UserExtendedInfo<T, DTO.Prepare>],
-            to userInfoId: UUID
-        ) -> EventLoopRes<[DTO.UserExtendedInfo<T, DTO.Queried>], Errcase> where T.Value == String {
-            let raws = extendedInfos.map { $0.raw(for: userInfoId) }
-            return raws
-                .create(on: db)
-                .withError(Errcase.userInfoAddFailed, "用户\(T.description)插入失败", category: .internal)
-                .flatMapThrowing
-            { () throws(Errcase.ErrType) in
-                try required(throws: Errcase.userInfoAddFailed, "整理\(T.description)插入结果时出错", category: .internal) {
-                    try required(throws: Errcase.userInfoAddFailed, category: .internal) {
-                        try raws.map {
-                            try .make(from: $0).get()
-                        }
-                    }
-                }
-            }
+            __create(on: db, for: userId, infos: infos)
         }
         
         // MARK: - 删
@@ -143,59 +61,6 @@ extension PrivilegeSystem {
             )
         }
         
-        public func delete<T: DTO.UserInfoModel>(
-            extendedType: T.Type = T.self,
-            extendedInfos: [UUID: [UUID]],
-            allSatisfy: Bool = true
-        ) -> EventLoopRes<Void, Errcase> {
-            let allCounts = extendedInfos.values.reduce(0) { $0 + $1.count }
-            
-            guard !extendedInfos.isEmpty && allCounts > 0 else {
-                return db.eventLoop.makeSucceededVoidResult()
-            }
-            
-            return db.trans { db in
-                let r: EventLoopRes<Void, Errcase>
-                if allSatisfy {
-                    r = whereCondition(
-                        builder: User.Info.Extended<T.Model>
-                            .query(on: db)
-                            .field(\.$id)
-                    )
-                    .all()
-                    .withError(Errcase.userInfoDeleteFailed, "查询用户\(T.description) ID 时出错", category: .internal)
-                    .flatMapThrowing
-                    { info throws(Errcase.ErrType) in
-                        guard info.count == allCounts else {
-                            throw Errcase.userInfoDeleteFailed.d("所提供的 ID 中有不存在项", category: .external)
-                        }
-                    }
-                } else {
-                    r = db.eventLoop.makeSucceededVoidResult()
-                }
-                
-                return r.flatMap {
-                    whereCondition(builder: User.Info.Extended<T.Model>.query(on: db))
-                        .delete()
-                        .withError(Errcase.userInfoDeleteFailed, category: .internal)
-                }
-            }
-            
-            @Sendable
-            func whereCondition(
-                builder: QueryBuilder<User.Info.Extended<T.Model>>
-            ) -> QueryBuilder<User.Info.Extended<T.Model>> {
-                builder.group(.or) { or in
-                    for (infoId, ids) in extendedInfos {
-                        or.group(.and) { and in
-                            and.filter(\.$id ~~ ids)
-                            and.filter(\.$userInfo.$id == infoId)
-                        }
-                    }
-                }
-            }
-        }
-        
         // MARK: - 改
         public func update(
             with updater: DTO.UserInfo<DTO.Prepare>.Updater
@@ -205,19 +70,7 @@ extension PrivilegeSystem {
                 label: "用户信息",
                 errThrowing: .userInfoUpdateFailed,
                 filterBuilder: { $0.filter(\.$id == updater.userId) },
-                dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0, addresses: $0.addresses, alternateEmails: $0.alternateEmails, phones: $0.phones) }
-            )
-        }
-        
-        public func update<T>(
-            extendedInfo updater: DTO.UserExtendedInfo<T, DTO.Prepare>.Updater
-        ) -> EventLoopRes<DTO.UserExtendedInfo<T, DTO.Queried>, Errcase> where T.Value == String {
-            __update(
-                updater: updater,
-                label: "用户额外信息",
-                errThrowing: .userInfoUpdateFailed,
-                filterBuilder: { $0.filter(\.$id == updater.userInfoId) },
-                dtoBuilder: { DTO.UserExtendedInfo<T, DTO.Queried>.make(from: $0) }
+                dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
             )
         }
         
@@ -234,18 +87,61 @@ extension PrivilegeSystem {
             { infos throws(Errcase.ErrType) in
                 try infos.map { i throws(Errcase.ErrType) in
                     try required(throws: Errcase.userInfoQueryFailed, category: .internal) {
-                        try .make(from: i, addresses: i.addresses, alternateEmails: i.alternateEmails, phones: i.phones).get()
+                        try .make(from: i).get()
                     }
                 }
             }
         }
-        
-        //    public func query(
-        //        keywords: [String],
-        //        paginate: (Int, Int),
-        //        order: String
-        //    ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], Errcase> {
-        //
-        //    }
+    }
+}
+
+public extension PrivilegeSystem.UserInfoController {
+    func create(
+        for userId: UUID,
+        relations: [OTORelation<DTO.UserInfo<DTO.Prepare>, Extended<DTO.Prepare>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        db.trans { db in
+            self.__create(on: db, for: userId, infos: relations.map { $0.left }).flatMap { _ in
+                relations.flatMap { relation in
+                    [
+                        self.userExtendedInfoController.__create(
+                            on: db,
+                            for: relation.left.id,
+                            extendedInfos: relation.right.addresses
+                        ).map { _ in },
+                        
+                        self.userExtendedInfoController.__create(
+                            on: db,
+                            for: relation.left.id,
+                            extendedInfos: relation.right.alternateEmails
+                        ).map { _ in },
+                        
+                        self.userExtendedInfoController.__create(
+                            on: db,
+                            for: relation.left.id,
+                            extendedInfos: relation.right.phones
+                        ).map { _ in }
+                    ]
+                }
+                .flatten(on: db.eventLoop)
+            }
+        }
+    }
+}
+
+extension PrivilegeSystem.UserInfoController {
+    func __create(
+        on db: PGDatabase,
+        for userId: UUID,
+        infos: [DTO.UserInfo<DTO.Prepare>]
+    ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], PrivilegeSystem.Errcase> {
+        __create(
+            on: db,
+            dtos: infos,
+            label: "用户信息",
+            errThrowing: .userInfoCreateFailed,
+            modelBuilder: { $0.raw(for: userId) },
+            dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
+        )
     }
 }

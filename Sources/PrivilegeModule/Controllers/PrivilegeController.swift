@@ -34,6 +34,7 @@ public extension PrivilegeModule {
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<Void, Errcase> {
             __createPolicy(
+                on: db,
                 relations: privileges,
                 policyType: Privilege.self,
                 label: "资源权限",
@@ -50,6 +51,7 @@ public extension PrivilegeModule {
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
             __createPolicy(
+                on: db,
                 relations: privileges,
                 policyType: Privilege.self,
                 label: "资源权限",
@@ -185,7 +187,7 @@ public extension PrivilegeModule.PrivilegeController {
             label: "资源权限与资源",
             errThrowing: .privilegeAttachResourceFailed,
             siblingBuilder: { $0.model.$resources },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -202,7 +204,7 @@ public extension PrivilegeModule.PrivilegeController {
             label: "资源权限与资源",
             errThrowing: .privilegeDetachResourceFailed,
             siblingBuilder: { $0.model.$resources },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
 }

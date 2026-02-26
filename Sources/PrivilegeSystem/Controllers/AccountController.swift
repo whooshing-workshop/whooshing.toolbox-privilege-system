@@ -25,23 +25,25 @@ extension PrivilegeSystem {
         public func register(
             for user: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
-            eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
-                try user.raw().get()
-            }.flatMap { user in
-                user.save(on: self.db)
-                    .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internal)
-                    .map { user.id }
-            }.flatMap { id in
-                User.find(id, on: self.db)
-                    .withError(Errcase.userRegisterFailed, "重新加载用户失败", category: .internal)
-                    .flatMapThrowing
-                { res throws(Errcase.ErrType) in
-                    guard let user = res else {
-                        throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internal)
-                    }
-                    return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
-                        try required(throws: Errcase.userRegisterFailed, category: .internal) {
-                            try DTO.User.make(from: user).get()
+            db.trans { db in
+                db.eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
+                    try user.raw().get()
+                }.flatMap { user in
+                    user.save(on: db)
+                        .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internal)
+                        .map { user.id }
+                }.flatMap { id in
+                    User.find(id, on: db)
+                        .withError(Errcase.userRegisterFailed, "重新加载用户失败", category: .internal)
+                        .flatMapThrowing
+                    { res throws(Errcase.ErrType) in
+                        guard let user = res else {
+                            throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internal)
+                        }
+                        return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
+                            try required(throws: Errcase.userRegisterFailed, category: .internal) {
+                                try DTO.User.make(from: user).get()
+                            }
                         }
                     }
                 }
@@ -51,140 +53,149 @@ extension PrivilegeSystem {
         public func login(
             by userData: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.Token<DTO.Queried>, Errcase> {
-            User.query(on: db)
-                .filter(\.$email == userData.email)
-                .first()
-                .withError(Errcase.userLoginFailed, "用户不存在", category: .external)
-                .flatMapThrowing
-            { (res) throws(Errcase.ErrType) -> (User, UUID, Token) in
-                guard let user = res else {
-                    throw Errcase.userLoginFailed.d("用户不存在", category: .external)
-                }
-                
-                guard
-                    try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internal, {
-                        try user.verify(password: userData.hashedPasswd)
-                    })
-                else {
-                    throw Errcase.userLoginFailed.d("用户密码不正确", category: .external)
-                }
-                
-                let userId = try required(throws: Errcase.userLoginFailed, "获取用户 ID 失败", category: .internal) {
-                    try user.requireID()
-                }
-                
-                let token = DTO.Token<DTO.Prepare>(for: userId).raw()
-                
-                return (user, userId, token)
-            }.flatMap { (user, id, token) in
-                // 删除原有的 token (若有)
-                Token.query(on: self.db).filter(\.$user.$id == id).delete()
-                    .withError(Errcase.userLoginFailed, "删除用户 token 时失败，用户: \(user)")
-                    .map { (user, id, token) }
-            }.flatMap { (user, id, token) in
-                token.save(on: self.db)
-                    .withError(Errcase.userLoginFailed, "用户 Token 写入数据库失败，用户: \(user)，token: \(token)")
-                    .flatMapThrowing { () throws(Errcase.ErrType) in
+            db.trans { db in
+                User.query(on: db)
+                    .filter(\.$email == userData.email)
+                    .first()
+                    .withError(Errcase.userLoginFailed, "用户不存在", category: .external)
+                    .flatMapThrowing
+                { (res) throws(Errcase.ErrType) -> (User, UUID, Token) in
+                    guard let user = res else {
+                        throw Errcase.userLoginFailed.d("用户不存在", category: .external)
+                    }
+                    
+                    guard
+                        try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internal, {
+                            try user.verify(password: userData.hashedPasswd)
+                        })
+                    else {
+                        throw Errcase.userLoginFailed.d("用户密码不正确", category: .external)
+                    }
+                    
+                    let userId = try required(throws: Errcase.userLoginFailed, "获取用户 ID 失败", category: .internal) {
+                        try user.requireID()
+                    }
+                    
+                    let token = try required(throws: Errcase.userLoginFailed, "创建 Token 时失败", category: .internal) {
+                        try DTO.Token<DTO.Prepare>(for: userId).raw()
+                    }
+                    
+                    return (user, userId, token)
+                }.flatMap { (user, id, token) in
+                    // 删除原有的 token (若有)
+                    Token.query(on: db).filter(\.$user.$id == id).delete()
+                        .withError(Errcase.userLoginFailed, "删除用户 token 时失败，用户: \(user)")
+                        .map { (user, id, token) }
+                }.flatMap { (user, id, token) in
+                    token.save(on: db)
+                        .withError(Errcase.userLoginFailed, "用户 Token 写入数据库失败，用户: \(user)，token: \(token)")
+                        .flatMapThrowing
+                    { () throws(Errcase.ErrType) in
                         try required(throws: Errcase.userLoginFailed, category: .internal) {
                             try .make(from: token).get()
                         }
                     }
+                }
             }
         }
 
         public func authenticate(
-            credential: String,
-            tokenEncrypted: Data
+            token: DTO.Token<DTO.Prepare>
         ) -> EventLoopRes<Crypto.Symm.Key, Errcase> {
-            eventLoop.submitResult { () throws(Errcase.ErrType) in
-                guard tokenEncrypted.count == 60 else {
-                    throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes，而得到 \(tokenEncrypted.count) bytes", category: .external)
-                }
-            }.flatMap {
-                Token.query(on: self.db)
-                    .filter(\.$credential == credential)
-                    .first()
-                    .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败，凭据: \(credential)", category: .internal)
-            }.flatMapThrowing { token throws(Errcase.ErrType) in
-                guard let t = token else {
-                    throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external)
-                }
-                return t
-            }.flatMap { token in
-                token.$user
-                    .load(on: self.db)
-                    .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(credential)", category: .internal)
-                    .map { @Sendable in token }
-            }.flatMapThrowing { token throws(Errcase.ErrType) in
-                // 检查是否有效
-                guard token.valid == true else {
-                    throw .init(.userAuthenticateFailed, "用户口令无效", category: .external)
-                }
-                
-                // 检查是否已过期
-                let expireDate = token.createdAt.addingTimeInterval(TimeInterval(token.expireAfter * 60))
-                guard Date() < expireDate else {
-                    throw .init(.userAuthenticateFailed, "用户凭据已过期", category: .external)
-                }
-                
-                // 检查口令是否正确
-                let keyData = try required(throws: Errcase.userAuthenticateFailed, "密钥字节解析失败", category: .external) {
-                    try Base64String(token.token).dataRes.get()                                                             // 取得密钥的字节码
-                }
-                
-                let key = Crypto.Symm.Key.new(data: keyData)                                                                // 转为 AES 密钥类型
-                let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户 Token 失败", category: .external) {
-                    try Crypto.Symm.decrypt(tokenEncrypted, key: key).get()                                                 // 解密 tokenEncrypted
-                }
+            db.trans { db in
+                db.eventLoop.submitResult { () throws(Errcase.ErrType) in
+                    guard token.tokenEncrypted.count == 60 else {
+                        throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes，而得到 \(token.tokenEncrypted.count) bytes", category: .external)
+                    }
+                }.flatMap {
+                    Token.query(on: db)
+                        .filter(\.$credential == token.credential)
+                        .first()
+                        .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败，凭据: \(token.credential)", category: .internal)
+                }.flatMapThrowing { token throws(Errcase.ErrType) in
+                    guard let t = token else {
+                        throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external)
+                    }
+                    return t
+                }.flatMap { token in
+                    token.$user
+                        .load(on: db)
+                        .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(token.credential)", category: .internal)
+                        .map { @Sendable in token }
+                }.flatMapThrowing { tokenResult throws(Errcase.ErrType) in
+                    // 检查是否有效
+                    guard tokenResult.valid == true else {
+                        throw .init(.userAuthenticateFailed, "用户口令无效", category: .external)
+                    }
+                    
+                    // 检查是否已过期
+                    let expireDate = tokenResult.createdAt.addingTimeInterval(TimeInterval(tokenResult.expireAfter * 60))
+                    guard Date() < expireDate else {
+                        throw .init(.userAuthenticateFailed, "用户凭据已过期", category: .external)
+                    }
+                    
+                    // 检查口令是否正确
+                    let keyData = try required(throws: Errcase.userAuthenticateFailed, "密钥字节解析失败", category: .external) {
+                        try Base64String(tokenResult.token).dataRes.get()                                                             // 取得密钥的字节码
+                    }
+                    
+                    let key = Crypto.Symm.Key.new(data: keyData)                                                                // 转为 AES 密钥类型
+                    let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户 Token 失败", category: .external) {
+                        try Crypto.Symm.decrypt(token.tokenEncrypted, key: key).get()                                                 // 解密 tokenEncrypted
+                    }
 
-                guard keyData == authData else {
-                    throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external)                               // key 是否一致
+                    guard keyData == authData else {
+                        throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external)                               // key 是否一致
+                    }
+                    return key
                 }
-                return key
             }
+        }
+        
+        public func changePassword(
+            for userData: DTO.User<DTO.Prepare>,
+            to hashedPasswd: Data
+        ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
+            changePassword(for: userData, to: hashedPasswd.base64EncodedString())
         }
         
         public func changePassword(
             for userData: DTO.User<DTO.Prepare>,
             to hashedPasswd: String
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
-            User.query(on: db)
-                .filter(\.$email == userData.email)
-                .first()
-                .withError(Errcase.userPasswordChangeFailed, "用户不存在", category: .external)
-                .flatMapThrowing
-            { (res) throws(Errcase.ErrType) in
-                guard let user = res else {
-                    throw Errcase.userPasswordChangeFailed.d("用户不存在", category: .external)
-                }
-                
-                guard
-                    try required(throws: Errcase.userPasswordChangeFailed, "密码验证失败", category: .internal, {
-                        try user.verify(password: userData.hashedPasswd)
-                    })
-                else {
-                    throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external)
-                }
-                
-                _ = try required(throws: Errcase.userPasswordChangeFailed, "获取用户 ID 失败", category: .internal) {
-                    try user.requireID()
-                }
-                
-                (user.salt, user.hashedPasswd) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
-                    try DTO.User<DTO.Prepare>.doubleEncode(hashedPasswd: hashedPasswd).get()
-                }
-                user.createdAt = nil
-                user.updatedAt = nil
-                
-                return user
-            }.flatMap { (user: User) -> EventLoopRes<User, Errcase> in
-                return user
-                    .update(on: self.db)
-                    .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)
-                    .map { user }
-            }.flatMapThrowing { user throws(Errcase.ErrType) in
-                try required(throws: Errcase.userPasswordChangeFailed, category: .internal) {
-                    try .make(from: user).get()
+            db.trans { db in
+                User.query(on: db)
+                    .filter(\.$email == userData.email)
+                    .first()
+                    .withError(Errcase.userPasswordChangeFailed, "用户不存在", category: .external)
+                    .flatMapThrowing
+                { (res) throws(Errcase.ErrType) in
+                    guard let user = res else {
+                        throw Errcase.userPasswordChangeFailed.d("用户不存在", category: .external)
+                    }
+                    
+                    guard (
+                        try required(throws: Errcase.userPasswordChangeFailed, "用户密码认证失败", category: .internal) {
+                            try user.verify(password: userData.hashedPasswd)
+                        } == true
+                    ) else {
+                        throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external)
+                    }
+                    
+                    (user.salt, user.hashedPasswd) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
+                        try DTO.User<DTO.Prepare>.doubleEncode(hashedPasswd: hashedPasswd).get()
+                    }
+                    
+                    return user
+                }.flatMap { (user: User) -> EventLoopRes<User, Errcase> in
+                    return user
+                        .update(on: db)
+                        .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)
+                        .map { user }
+                }.flatMapThrowing { user throws(Errcase.ErrType) in
+                    try required(throws: Errcase.userPasswordChangeFailed, category: .internal) {
+                        try .make(from: user).get()
+                    }
                 }
             }
         }

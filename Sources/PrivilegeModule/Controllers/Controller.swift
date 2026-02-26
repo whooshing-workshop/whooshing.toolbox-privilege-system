@@ -12,6 +12,7 @@ package protocol Controller: AnyObject, Sendable where E.ErrType == BscError<E> 
 
 package extension Controller {
     func __create<T, G, M: PGModel>(
+        on db: PGDatabase,
         dtos: [T],
         label: String,
         errThrowing: E,
@@ -135,14 +136,14 @@ package extension Controller {
         label: String,
         errThrowing: E,
         siblingBuilder: @Sendable @escaping (Left) -> SiblingsProperty<LM, RM, TM>,
-        modelsBuilder: @Sendable @escaping ([Right]) -> EventLoopRes<[RM], E>,
+        modelsBuilder: @Sendable @escaping (PGDatabase, [Right]) -> EventLoopRes<[RM], E>,
     ) -> EventLoopRes<Void, E>
         where LM: PGModel, RM: PGModel, E.ErrType == BscError<E>
     {
         db.trans { db in
             relations.flatMap { relation in
                 relation.left.map { l in
-                    modelsBuilder(relation.right).flatMap { rs in
+                    modelsBuilder(db, relation.right).flatMap { rs in
                         let builder = siblingBuilder(l)
                         switch action {
                         case .attach:

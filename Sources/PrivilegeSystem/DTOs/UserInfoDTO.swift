@@ -9,38 +9,27 @@ import PrivilegeModule
 
 public extension DTO {
     struct UserInfo<T: Status>: Sendable {
-        public let userId: UUID
         public let identifier: String
         public let birthday: Date
         public let other: String?
-        public let addresses: [UserExtendedInfo<Address, T>]
-        public let alternateEmails: [UserExtendedInfo<AlternateEmail, T>]
-        public let phones: [UserExtendedInfo<Phone, T>]
         
-        @Passive() public internal(set) var id: UUID
-        @Passive() public internal(set) var createdAt: Date
-        @Passive() public internal(set) var updatedAt: Date
+        @Passive public internal(set) var id: UUID
+        @Passive public internal(set) var userId: UUID
+        @Passive public internal(set) var createdAt: Date
+        @Passive public internal(set) var updatedAt: Date
         
         typealias AssociatedModel = UserModel.Info
         private let m: AssociatedModel?
         
         init(
-            _userId: UUID,
             _identifier: String,
             _birthday: Date,
             _other: String?,
-            _addresses: [DTO.UserExtendedInfo<DTO.Address, T>],
-            _alternateEmails: [DTO.UserExtendedInfo<DTO.AlternateEmail, T>],
-            _phones: [DTO.UserExtendedInfo<DTO.Phone, T>],
             _model: AssociatedModel?
         ) {
-            self.userId = _userId
             self.identifier = _identifier
             self.birthday = _birthday
             self.other = _other
-            self.addresses = _addresses
-            self.alternateEmails = _alternateEmails
-            self.phones = _phones
             self.m = _model
         }
     }
@@ -48,22 +37,14 @@ public extension DTO {
 
 public extension DTO.UserInfo where T == DTO.Prepare {
     init(
-        userId: UUID,
         identifier: String,
         birthday: Date,
         other: String? = nil,
-        addresses: [DTO.UserExtendedInfo<DTO.Address, T>] = [],
-        alternateEmails: [DTO.UserExtendedInfo<DTO.AlternateEmail, T>] = [],
-        phones: [DTO.UserExtendedInfo<DTO.Phone, T>] = []
     ) {
         self = Self.init(
-            _userId: userId,
             _identifier: identifier,
             _birthday: birthday,
             _other: other,
-            _addresses: addresses,
-            _alternateEmails: alternateEmails,
-            _phones: phones,
             _model: nil
         )
     }
@@ -78,22 +59,16 @@ extension DTO.UserInfo where T == DTO.Queried {
     }
     
     static func make(
-        from model: User.Info,
-        addresses: [User.Info.Extended<User.Info.Address>],
-        alternateEmails: [User.Info.Extended<User.Info.AlternateEmail>],
-        phones: [User.Info.Extended<User.Info.Phone>],
+        from model: User.Info
     ) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
-            var n = try Self.init(
-                _userId: model.$user.id,
+            var n = Self.init(
                 _identifier: model.identifier,
                 _birthday: model.birthday,
                 _other: model.other,
-                _addresses: addresses.map { try .make(from: $0).get() },
-                _alternateEmails: alternateEmails.map { try .make(from: $0).get() },
-                _phones: phones.map { try .make(from: $0).get() },
                 _model: model
             )
+            n.$userId = model.$user.id
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
             n.$updatedAt = model.updatedAt
@@ -103,7 +78,7 @@ extension DTO.UserInfo where T == DTO.Queried {
 }
 
 extension DTO.UserInfo where T == DTO.Prepare {
-    func raw() -> User.Info {
+    func raw(for userId: UUID) -> User.Info {
         let info = User.Info()
         info.$user.id = userId
         info.identifier = identifier
@@ -190,9 +165,6 @@ extension DTO.UserInfo: Encodable where T == DTO.Queried {
         case identifier
         case birthday
         case other
-        case addresses
-        case alternateEmails = "alternate_emails"
-        case phones
         case id
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -205,9 +177,6 @@ extension DTO.UserInfo: Encodable where T == DTO.Queried {
         try container.encode(identifier, forKey: .identifier)
         try container.encode(birthday, forKey: .birthday)
         try container.encode(other, forKey: .other)
-        try container.encode(addresses, forKey: .addresses)
-        try container.encode(alternateEmails, forKey: .alternateEmails)
-        try container.encode(phones, forKey: .phones)
         try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
     }

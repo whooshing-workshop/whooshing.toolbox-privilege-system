@@ -13,6 +13,7 @@ package protocol OPAController: Controller {
 
 package extension OPAController {
     func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel, PT: PolicyType>(
+        on db: PGDatabase,
         relations: [Pr],
         policyType: PT.Type,
         label: String,

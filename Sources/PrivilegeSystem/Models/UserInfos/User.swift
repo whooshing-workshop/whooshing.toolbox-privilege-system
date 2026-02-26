@@ -14,8 +14,8 @@ package final class User: PGModel, @unchecked Sendable {
         let hashedPasswd = PGField("hashed_passwd", .string)        .required
         let key = PGField("key", .data)                             .required
         let salt = PGField("salt", .data)                           .required
-        let createdAt = PGField("created_at", .datetime)               .required
-        let updatedAt = PGField("updated_at", .datetime)               .required
+        let createdAt = PGField("created_at", .datetime)            .required
+        let updatedAt = PGField("updated_at", .datetime)            .required
         
         package init() {}
     }

@@ -36,6 +36,10 @@ public extension DTO.User where T == DTO.Prepare {
         self = Self.init(_email: email, _model: nil)
         self.hashedPasswd = hashedPasswd
     }
+    
+    init(email: String, hashedPasswd: Data) {
+        self = Self.init(email: email, hashedPasswd: hashedPasswd.base64EncodedString())
+    }
 }
 
 extension DTO.User where T == DTO.Queried {

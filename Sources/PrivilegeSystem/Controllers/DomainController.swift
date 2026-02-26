@@ -39,12 +39,7 @@ extension PrivilegeSystem {
         public func create(
             domains: [DTO.Domain<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Domain<DTO.Queried>], Errcase> {
-            __create(
-                dtos: domains,
-                label: "域权限",
-                errThrowing: .roleCreateFailed,
-                modelBuilder: { $0.raw() },
-                dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) })
+            __create(on: db, domains: domains)
         }
         
         public func delete(
@@ -81,8 +76,9 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         db.trans { db in
-            self.create(domains: relations.map { $0.right }).flatMap { _ in
-                self.policyController.create(
+            self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
+                self.policyController.__create(
+                    on: db,
                     to: Role.self,
                     relations: relations.map { .init(left: $0.left, right: $0.right.id) }
                 )
@@ -94,8 +90,9 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
     ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
         db.trans { db in
-            self.create(domains: relations.map { $0.right }).flatMap { _ in
-                self.policyController.createWithReturning(
+            self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
+                self.policyController.__createWithReturning(
+                    on: db,
                     to: Role.self,
                     relations: relations.map { .init(left: $0.left, right: $0.right.id) }
                 )
@@ -150,7 +147,7 @@ public extension PrivilegeSystem.DomainController {
             label: "域权限与用户",
             errThrowing: .domainAssignUserFailed,
             siblingBuilder: { $0.model.$users },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -163,7 +160,7 @@ public extension PrivilegeSystem.DomainController {
             label: "域权限与用户组",
             errThrowing: .domainAssignGroupFailed,
             siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -178,7 +175,7 @@ public extension PrivilegeSystem.DomainController {
             label: "域权限与用户",
             errThrowing: .domainUnassignUserFailed,
             siblingBuilder: { $0.model.$users },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -191,7 +188,23 @@ public extension PrivilegeSystem.DomainController {
             label: "域权限与用户组",
             errThrowing: .domainUnassignGroupFailed,
             siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { self.db.eventLoop.makeSucceededResult($0.map { $0.model }) }
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+        )
+    }
+}
+
+extension PrivilegeSystem.DomainController {
+    func __create(
+        on db: PGDatabase,
+        domains: [DTO.Domain<DTO.Prepare>]
+    ) -> EventLoopRes<[DTO.Domain<DTO.Queried>], PrivilegeSystem.Errcase> {
+        __create(
+            on: db,
+            dtos: domains,
+            label: "域权限",
+            errThrowing: .roleCreateFailed,
+            modelBuilder: { $0.raw() },
+            dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
         )
     }
 }

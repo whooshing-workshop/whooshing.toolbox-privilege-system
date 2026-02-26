@@ -3,46 +3,74 @@ import Fluent
 import ErrorHandle
 import Cryptos
 import PrivilegeModule
+import DataConvertable
 
 typealias TokenModel = Token
 
 public extension DTO {
     struct Token<T: Status>: Sendable {
         public let credential: String
-        public let token: String
-        public let userId: UUID
         
-        @Passive() public internal(set) var id: UUID
-        @Passive() public internal(set) var valid: Bool
-        @Passive() public internal(set) var expireAfter: Int
-        @Passive() public internal(set) var createdAt: Date
+        @Protect public var tokenEncrypted: Data
+        
+        @Passive public internal(set) var id: UUID
+        @Passive public internal(set) var token: String
+        @Passive public internal(set) var userId: UUID
+        @Passive public internal(set) var valid: Bool
+        @Passive public internal(set) var expireAfter: Int
+        @Passive public internal(set) var createdAt: Date
         
         typealias AssociatedModel = TokenModel
         private let m: AssociatedModel?
         
         init(
             _credential: String,
-            _token: String,
-            _userId: UUID,
             _model: AssociatedModel?
         ) {
             self.credential = _credential
-            self.token = _token
-            self.userId = _userId
             self.m = _model
+            self.expireAfter = 7 * 24 * 60      // 7 days, minute as unit
+        }
+    }
+}
+
+public extension DTO.Token where T == DTO.Prepare {
+    init(
+        credential: String,
+        tokenEncrypted: Data
+    ) {
+        self = Self.init(_credential: credential, _model: nil)
+        self.tokenEncrypted = tokenEncrypted
+    }
+}
+
+public extension DTO.Token where T == DTO.Queried {
+    func toPrepare() -> Res<DTO.Token<DTO.Prepare>, PrivilegeSystem.Errcase> {
+        .init { () throws(PrivilegeSystem.Errcase.ErrType) in
+            let keyData = try required(throws: PrivilegeSystem.Errcase.tokenDTOFailed, "密钥字节解析失败", category: .external) {
+                try Base64String(self.token).dataRes.get()
+            }
+            let key = Crypto.Symm.Key.new(data: keyData)
+            return .init(
+                credential: self.credential,
+                tokenEncrypted: try required(throws: PrivilegeSystem.Errcase.tokenDTOFailed, "密钥加密失败", category: .external) {
+                    try Crypto.Symm.encrypt(key, key: key).get()
+                }
+            )
         }
     }
 }
 
 extension DTO.Token where T == DTO.Prepare {
-    init(for userId: UUID) {
+    init(for userId: UUID) throws(PrivilegeSystem.Errcase.ErrType) {
+        let tokenKey = Crypto.Symm.makeKey()
         self = Self.init(
             _credential: Crypto.randomDataGenerate(length: 16).base64EncodedString(),
-            _token: Crypto.Symm.makeKey().data.base64EncodedString(),
-            _userId: userId,
             _model: nil
         )
-        self.expireAfter = 7 * 24 * 60      // 7 days, minute as unit
+        
+        self.token = tokenKey.data.base64EncodedString()
+        self.userId = userId
     }
 }
 
@@ -58,11 +86,11 @@ extension DTO.Token where T == DTO.Queried {
         .init(throws: .tokenDTOFailed, category: .internal) {
             var n = Self.init(
                 _credential: model.credential,
-                _token: model.token,
-                _userId: model.$user.id,
                 _model: model
             )
             n.$id = try model.requireID()
+            n.$token = model.token
+            n.$userId = model.$user.id
             n.$valid = model.valid
             n.$expireAfter = model.expireAfter
             n.$createdAt = model.createdAt
@@ -78,6 +106,7 @@ extension DTO.Token where T == DTO.Prepare {
         token.credential = credential
         token.token = self.token
         token.expireAfter = expireAfter
+        token.valid = true
         return token
     }
 }
