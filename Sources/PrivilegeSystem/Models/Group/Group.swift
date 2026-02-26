@@ -12,8 +12,8 @@ package final class UGroup: PGModel, @unchecked Sendable {
         let parentId = PGField("parent_id", .uuid)              .foreign(UGroup.self, .id, onDelete: .cascade)
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
-        let createdAt = PGField("create_at", .string)           .required
-        let updatedAt = PGField("update_at", .string)           .required
+        let createdAt = PGField("created_at", .datetime)           .required
+        let updatedAt = PGField("updated_at", .datetime)           .required
         
         package init() {}
     }

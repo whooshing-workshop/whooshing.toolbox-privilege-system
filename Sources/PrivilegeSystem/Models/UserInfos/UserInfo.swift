@@ -12,8 +12,8 @@ package extension User {
             let idNumber = PGField("id_number", .string)                .required.unique
             let birthday = PGField("birthday", .date)                   .required
             let other = PGField("other", .string)
-            let createdAt = PGField("create_at", .string)               .required
-            let updatedAt = PGField("update_at", .string)               .required
+            let createdAt = PGField("created_at", .datetime)               .required
+            let updatedAt = PGField("updated_at", .datetime)               .required
             
             package init() {}
         }

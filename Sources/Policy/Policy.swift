@@ -18,8 +18,8 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
                                                                         .foreign(T.Model.self, .id, onDelete: .cascade)
         public let moduleId = PGField("module_id", .uuid)               .required
         public let policy = PGField("policy", .string)                  .required
-        public let createdAt = PGField("create_at", .string)            .required
-        public let updatedAt = PGField("update_at", .string)            .required
+        public let createdAt = PGField("created_at", .datetime)            .required
+        public let updatedAt = PGField("updated_at", .datetime)            .required
         
         public init() {}
     }

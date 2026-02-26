@@ -14,8 +14,8 @@ extension PM {
                 .enum(ResourceList.self, as: "resource_type")
             )                                                       .required
             let data = PGField("data", .json)                       .required
-            let createdAt = PGField("create_at", .string)           .required
-            let updatedAt = PGField("update_at", .string)           .required
+            let createdAt = PGField("created_at", .datetime)           .required
+            let updatedAt = PGField("updated_at", .datetime)           .required
             
             package init() {}
         }
@@ -61,8 +61,8 @@ extension PM {
                 .enum(ResourceList.self, as: "resource_type")
             )                                                       .required
             let data = PGField("data", .json)                       .required
-            let createdAt = PGField("create_at", .string)           .required
-            let updatedAt = PGField("update_at", .string)           .required
+            let createdAt = PGField("created_at", .datetime)           .required
+            let updatedAt = PGField("updated_at", .datetime)           .required
             
             package init() {}
         }

@@ -42,7 +42,7 @@ struct TestingShared {
         
         let s = try await PrivilegeSystem(
             eventLoop: eventLoop,
-            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "testing", password: "testing", database: "privilege_system", tls: .disable),
+            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "clwang", password: "testing", database: "privilege_system", tls: .disable),
             opaConfigure: .init(),
             logger: .init(label: "Privilege-System-Testing"),
             debuging: .init(tdeEncrypt: false)

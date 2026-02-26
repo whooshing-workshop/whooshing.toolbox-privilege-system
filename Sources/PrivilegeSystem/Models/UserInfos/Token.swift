@@ -17,7 +17,7 @@ final class Token: PGModel, @unchecked Sendable {
         let token = PGField("token", .string)                       .required.unique
         let valid = PGField("valid", .bool)                         .required.def(true)     // 是否有效
         let expireAfter = PGField("expire_after", .int)             .required               // 过期时间，单位为分
-        let createdAt = PGField("create_at", .string)               .required
+        let createdAt = PGField("created_at", .datetime)               .required
     }
     
     static let fields: Fields = Fields()

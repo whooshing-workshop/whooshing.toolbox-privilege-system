@@ -13,8 +13,8 @@ package extension User.Info {
             let value = PGField(T.valueFieldName, .string)              .required
             let order = PGField("order", .int16)                        .required
             let description = PGField("description", .string)
-            let createdAt = PGField("create_at", .string)               .required
-            let updatedAt = PGField("update_at", .string)               .required
+            let createdAt = PGField("created_at", .datetime)               .required
+            let updatedAt = PGField("updated_at", .datetime)               .required
             
             package init() {}
         }

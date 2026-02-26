@@ -32,7 +32,8 @@ extension PrivilegeSystem {
                 opa.query.data(
                     from: $0,
                     input: input,
-                    as: Bool.self
+                    as: ForwardData.self,
+                    to: Bool.self
                 ).errCast(Errcase.arbitrateFailed, "OPA Query 失败", category: .internal)
             }.flatten(on: eventLoop).flatMap { (res: [OPA.Answer<Bool?>]) in
                 var result: Bool = true

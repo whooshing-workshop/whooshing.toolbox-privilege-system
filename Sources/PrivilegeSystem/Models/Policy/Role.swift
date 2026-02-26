@@ -10,8 +10,8 @@ package final class Role: PGModel, @unchecked Sendable {
         let id = PGField("id", .int64)                          .primary
         let name = PGField("name", .string)                     .required
         let description = PGField("description", .string)
-        let createdAt = PGField("create_at", .string)           .required
-        let updatedAt = PGField("update_at", .string)           .required
+        let createdAt = PGField("created_at", .datetime)           .required
+        let updatedAt = PGField("updated_at", .datetime)           .required
         
         package init() {}
     }
