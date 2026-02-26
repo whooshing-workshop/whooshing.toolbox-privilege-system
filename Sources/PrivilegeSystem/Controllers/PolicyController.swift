@@ -45,7 +45,7 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             __deletePolicy(
                 policy: policy,
-                policyType: T.typeId,
+                policyType: T.self,
                 label: "权限策略",
                 errThrowing: .policyDeleteFailed,
                 filterBuilder: {
@@ -98,7 +98,7 @@ public extension PrivilegeSystem.PolicyController {
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __createPolicy(
             relations: relations,
-            policyType: T.typeId,
+            policyType: T.self,
             label: "权限策略",
             errThrowing: .policyCreateFailed,
             policies: \.left,
@@ -115,7 +115,7 @@ public extension PrivilegeSystem.PolicyController {
     ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
         __createPolicy(
             relations: relations,
-            policyType: T.typeId,
+            policyType: T.self,
             label: "权限策略",
             errThrowing: .policyCreateFailed,
             policies: \.left,

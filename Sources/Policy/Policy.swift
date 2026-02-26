@@ -38,3 +38,40 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     public typealias MIG = DefaultMIG<PolicyExp<T>>
 }
+
+package enum PathFormat: Sendable {
+    case path
+    case route
+    
+    var prefix: String {
+        switch self {
+        case .path: "/"
+        case .route: ""
+        }
+    }
+    
+    var sign: String {
+        switch self {
+        case .path: "/"
+        case .route: "."
+        }
+    }
+}
+
+package func policyPath<PT: PolicyType>(
+    moduleId: UUID,
+    modelId: Int64,
+    type: PT.Type = PT.self,
+    format: PathFormat
+) -> String {
+    policyPath(moduleId: moduleId, modelId: modelId, type: PT.typeId, format: format)
+}
+
+package func policyPath(
+    moduleId: UUID,
+    modelId: Int64,
+    type: String,
+    format: PathFormat
+) -> String {
+    "\(format.prefix)m\(moduleId.hexString)\(format.sign)\(type)\(format.sign)id_\(modelId)"
+}

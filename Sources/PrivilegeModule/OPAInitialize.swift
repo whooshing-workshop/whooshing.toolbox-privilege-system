@@ -1,4 +1,5 @@
 import OPA
+import Policy
 import ErrorHandle
 
 extension PrivilegeModule {
@@ -6,7 +7,7 @@ extension PrivilegeModule {
         let policies = try await required(throws: Errcase.opaInitFailed, "取得资源权限数据失败", category: .internal) {
             try await Privilege.query(on: db).all().map {
                 (
-                    "/rules/\(moduleId)/privilege/\(try $0.requireID())",
+                    policyPath(moduleId: moduleId, modelId: try $0.requireID(), type: Privilege.self, format: .path),
                     $0.policy
                 )
             }

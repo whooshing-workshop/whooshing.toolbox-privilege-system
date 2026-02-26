@@ -1,4 +1,5 @@
 import OPA
+import Policy
 import ErrorHandle
 
 extension PrivilegeSystem {
@@ -6,7 +7,7 @@ extension PrivilegeSystem {
         let rolePolicies = try await required(throws: Errcase.opaInitFailed, "取得角色权限数据失败", category: .internal) {
             try await RolePolicy.query(on: db).all().map {
                 (
-                    "/rules/\($0.moduleId.hexString)/role/\(try $0.parent.requireID())",
+                    policyPath(moduleId: $0.moduleId, modelId: try $0.parent.requireID(), type: Role.self, format: .path),
                     $0.policy
                 )
             }
@@ -15,7 +16,7 @@ extension PrivilegeSystem {
         let domainPolicies = try await required(throws: Errcase.opaInitFailed, "取得域权限数据失败", category: .internal) {
             try await DomainPolicy.query(on: db).all().map {
                 (
-                    "/rules/\($0.moduleId.hexString)/domain/\(try $0.parent.requireID())",
+                    policyPath(moduleId: $0.moduleId, modelId: try $0.parent.requireID(), type: Domain.self, format: .path),
                     $0.policy
                 )
             }

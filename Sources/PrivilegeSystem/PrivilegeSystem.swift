@@ -92,4 +92,3 @@ public final class PrivilegeSystem: Sendable {
         try await opaInitialize()
     }
 }
-

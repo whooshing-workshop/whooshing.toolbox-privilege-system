@@ -35,7 +35,7 @@ public extension PrivilegeModule {
         ) -> EventLoopRes<Void, Errcase> {
             __createPolicy(
                 relations: privileges,
-                policyType: "privilege",
+                policyType: Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
                 policies: { [$0] },
@@ -51,7 +51,7 @@ public extension PrivilegeModule {
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
             __createPolicy(
                 relations: privileges,
-                policyType: "privilege",
+                policyType: Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
                 policies: { [$0] },
@@ -73,7 +73,7 @@ public extension PrivilegeModule {
         ) -> EventLoopRes<Void, Errcase> {
             __deletePolicy(
                 policy: policy,
-                policyType: "privilege",
+                policyType: Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeDeleteFailed,
                 filterBuilder: {
@@ -133,10 +133,11 @@ public extension PrivilegeModule {
                         .withError(Errcase.privilegeUpdateFailed, "资源权限策略 SQL 更新失败", category: .internal)
                         .flatMap
                     {
-                        let path = self.policyPath(
+                        let path = policyPath(
                             moduleId: self.moduleId,
-                            policyType: "privilege",
-                            modelId: updater.privilegeId
+                            modelId: updater.privilegeId,
+                            type: Privilege.self,
+                            format: .route
                         )
                         
                         return self.opa.policy.save(by: path, content: policy)

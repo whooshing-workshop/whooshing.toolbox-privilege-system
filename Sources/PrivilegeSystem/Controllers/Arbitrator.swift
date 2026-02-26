@@ -79,7 +79,7 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<Result, Errcase> {
             ([
                 opa.query.data(
-                    from: "/rules/\(input.moduleId.hexString)/role/\(input.role.roleId)/allow",
+                    from: policyPath(moduleId: input.moduleId, modelId: input.role.roleId, type: Role.self, format: .path),
                     input: input.role,
                     as: RoleData.self,
                     to: Bool.self
@@ -90,7 +90,7 @@ extension PrivilegeSystem {
                 }
             ] + input.domains.map { domainData in
                 opa.query.data(
-                    from: "/rules/\(input.moduleId.hexString)/domain/\(domainData.domainId)/allow",
+                    from: policyPath(moduleId: input.moduleId, modelId: domainData.domainId, type: Domain.self, format: .path),
                     input: domainData,
                     as: DomainData.self,
                     to: Bool.self
@@ -101,7 +101,7 @@ extension PrivilegeSystem {
                 }
             } + input.privileges.map { privilegeData in
                 opa.query.data(
-                    from: "/rules/\(input.moduleId.hexString)/privilege/\(privilegeData.privilegeId)/allow",
+                    from: policyPath(moduleId: input.moduleId, modelId: privilegeData.privilegeId, type: "privilege", format: .path),
                     input: privilegeData,
                     as: PrivilegeData.self,
                     to: Bool.self

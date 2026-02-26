@@ -12,9 +12,9 @@ package protocol OPAController: Controller {
 }
 
 package extension OPAController {
-    func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel>(
+    func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel, PT: PolicyType>(
         relations: [Pr],
-        policyType: String,
+        policyType: PT.Type,
         label: String,
         errThrowing: E,
         policies: (Pr) -> [P],
@@ -29,8 +29,9 @@ package extension OPAController {
             policies(relation).map { (policy: P) in
                 let path = policyPath(
                     moduleId: moduleId(policy),
-                    policyType: policyType,
-                    modelId: modelId(relation, policy)
+                    modelId: modelId(relation, policy),
+                    type: PT.self,
+                    format: .route
                 )
                 
                 let policyStr = """
@@ -116,9 +117,9 @@ package extension OPAController {
         }
     }
     
-    func __deletePolicy<P: Sendable, M: PGModel>(
+    func __deletePolicy<P: Sendable, M: PGModel, PT: PolicyType>(
         policy: P,
-        policyType: String,
+        policyType: PT.Type,
         label: String,
         errThrowing: E,
         filterBuilder: @escaping @Sendable (PGDatabase) -> QueryBuilder<M>,
@@ -127,8 +128,9 @@ package extension OPAController {
     ) -> EventLoopRes<Void, E> {
         let path = policyPath(
             moduleId: moduleId(policy),
-            policyType: policyType,
-            modelId: policy[keyPath: modelIdKey]
+            modelId: policy[keyPath: modelIdKey],
+            type: PT.self,
+            format: .route
         )
         
         // 在 SQL 事务中，先执行 SQL 删除，保持该事务会话
@@ -147,14 +149,6 @@ package extension OPAController {
                     .map { _ in }
             }
         }
-    }
-    
-    func policyPath(
-        moduleId: UUID,
-        policyType: String,
-        modelId: Int64
-    ) -> String {
-        "m\(moduleId.hexString).\(policyType).id_\(modelId)"
     }
 }
 

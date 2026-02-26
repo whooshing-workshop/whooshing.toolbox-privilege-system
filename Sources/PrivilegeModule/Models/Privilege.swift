@@ -3,7 +3,7 @@ import Fluent
 import Foundation
 import Policy
 
-package extension PrivilegeModule {
+package extension PM {
     final class Privilege: PGModel, @unchecked Sendable {
         
         package static var name: String { "privileges" }
@@ -40,4 +40,10 @@ package extension PrivilegeModule {
         
         package typealias MIG = DefaultMIG<Privilege>
     }
+}
+
+extension PM.Privilege: PolicyType {
+    package typealias Model = PrivilegeModule.Privilege
+    package static var namePrefix: String { "privilege" }
+    package static var typeId: String { "privilege" }
 }
