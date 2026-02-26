@@ -1,7 +1,9 @@
+import OPA
 import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
 import ResourceMacros
+import AsyncHTTPClient
 
 public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable
 where Self.RawValue == String {}
@@ -23,14 +25,20 @@ public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
         }
     }
     
+    public let privilege: PrivilegeController
+    public let resource: ResourceController
+    
     public let eventLoop: EventLoop
+    public let moduleId: UUID
     let dbs: Databases
     let db: PGDatabase
+    let opa: OPA
     
     public init(
         moduleId: UUID,
         eventLoop: EventLoop,
         dbConfigure: SQLPostgresConfiguration,
+        opaConfigure: OPAConfiguration,
         logger: Logger,
         debuging: Debuging? = nil
     ) async throws(BscError<Errcase>) {
@@ -69,6 +77,45 @@ public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
             throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internal)
         }
         
+        self.moduleId = moduleId
+        self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: logger.derive(subId: "opa")))
         self.db = db
+        
+        self.privilege = .init(db: db, opa: opa, moduleId: moduleId, eventLoop: eventLoop)
+        self.resource = .init(db: db, eventLoop: eventLoop)
+        
+        try await required(throws: Errcase.opaInitFailed) {
+            try await opaInitialize()
+        }
+    }
+}
+
+public struct OPAConfiguration: Sendable {
+    public let scheme: OPA.ConnectionArgument.Scheme
+    public let host: String
+    public let port: Int
+    public let proxy: HTTPClient.Configuration.Proxy?
+    
+    public init(
+        scheme: OPA.ConnectionArgument.Scheme = .http,
+        host: String = "localhost",
+        port: Int = 8181,
+        proxy: HTTPClient.Configuration.Proxy? = nil
+    ) {
+        self.scheme = scheme
+        self.host = host
+        self.port = port
+        self.proxy = proxy
+    }
+    
+    package func conf(eventLoop: EventLoop, logger: Logger) -> OPA.ConnectionArgument {
+        .init(
+            eventLoop: eventLoop,
+            scheme: scheme,
+            host: host,
+            port: port,
+            logger: logger,
+            proxy: proxy
+        )
     }
 }

@@ -2,7 +2,7 @@ import OPA
 import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
-import AsyncHTTPClient
+import PrivilegeModule
 
 public final class PrivilegeSystem: Sendable {
     @frozen
@@ -18,6 +18,16 @@ public final class PrivilegeSystem: Sendable {
             self.tdeEncrypt = tdeEncrypt
         }
     }
+    
+    public let account: AccountController
+    public let userInfo: UserInfoController
+    public let group: GroupController
+    
+    public let role: RoleController
+    public let domain: DomainController
+    public let policy: PolicyController
+    
+    public let arbitrator: Arbitrator
     
     public let eventLoop: EventLoop
     let dbs: Databases
@@ -70,38 +80,16 @@ public final class PrivilegeSystem: Sendable {
         self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: logger.derive(subId: "opa")))
         self.db = db
         
+        self.account = .init(db: db, eventLoop: eventLoop)
+        self.userInfo = .init(db: db, eventLoop: eventLoop)
+        self.group = .init(db: db, eventLoop: eventLoop)
+        self.policy = .init(db: db, eventLoop: eventLoop, opa: opa)
+        self.role = .init(db: db, eventLoop: eventLoop, groupController: self.group, policyController: self.policy)
+        self.domain = .init(db: db, eventLoop: eventLoop, policyController: self.policy)
+        self.arbitrator = .init(db: db, eventLoop: eventLoop, opa: opa)
+        
         try await systemInitialize(dbConfigure: dbConfigure)
+        try await opaInitialize()
     }
 }
 
-public extension PrivilegeSystem {
-    struct OPAConfiguration: Sendable {
-        public let scheme: OPA.ConnectionArgument.Scheme
-        public let host: String
-        public let port: Int
-        public let proxy: HTTPClient.Configuration.Proxy?
-        
-        public init(
-            scheme: OPA.ConnectionArgument.Scheme = .http,
-            host: String = "localhost",
-            port: Int = 8181,
-            proxy: HTTPClient.Configuration.Proxy? = nil
-        ) {
-            self.scheme = scheme
-            self.host = host
-            self.port = port
-            self.proxy = proxy
-        }
-        
-        func conf(eventLoop: EventLoop, logger: Logger) -> OPA.ConnectionArgument {
-            .init(
-                eventLoop: eventLoop,
-                scheme: scheme,
-                host: host,
-                port: port,
-                logger: logger,
-                proxy: proxy
-            )
-        }
-    }
-}

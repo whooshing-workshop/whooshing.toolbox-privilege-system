@@ -26,7 +26,7 @@ extension PrivilegeSystem {
             throw Errcase.databaseInitFailed.d("连接参数缺失，无法初始化 REGO", category: .external)
         }
         
-        // REGO 基本命令注入
+        // REGO 数据库连接参数注入
         try await required(throws: Errcase.databaseInitFailed, "写入 OPA data 时失败", category: .internal) {
             _ = try await opa.data.save(
                 on: "/",
@@ -39,8 +39,8 @@ extension PrivilegeSystem {
             )
         }
         
+        // REGO 基本命令注入
         for (path, content) in regos {
-            print(path)
             try await required(throws: Errcase.databaseInitFailed, "写入 OPA policy 时失败", category: .internal) {
                 _ = try await opa.policy.save(by: path, content: content)
             }

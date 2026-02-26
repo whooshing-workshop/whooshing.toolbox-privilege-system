@@ -64,7 +64,8 @@ let package = Package(
                 .target(name: "ResourceMacros"),
                 .product(name: "Collections", package: "swift-collections"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
+                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
+                .product(name: "OPA", package: "whooshing.toolbox-opa")
             ]
         ),
         .macro(

@@ -3,6 +3,7 @@ import ErrorHandle
 public extension PrivilegeModule {
     enum Errcase: String, ErrList {
         case databaseInitFailed = "数据库初始化失败"
+        case opaInitFailed = "OPA 初始化失败"
         
         case privilegeCreateFailed = "资源权限创建失败"
         case privilegeDeleteFailed = "资源权限删除失败"

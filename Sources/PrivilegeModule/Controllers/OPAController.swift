@@ -33,7 +33,13 @@ package extension OPAController {
                     modelId: modelId(relation, policy)
                 )
                 
-                let policyStr = "package rules.\(path)\ndefault allow := false\n\n\(policy[keyPath: policyKey])"
+                let policyStr = """
+                package rules.\(path)
+                import data.utils.pg
+                default allow := false
+                
+                \(policy[keyPath: policyKey])    
+                """
                 
                 psData.append((path, policyStr))
                 

@@ -3,6 +3,7 @@ import ErrorHandle
 public extension PrivilegeSystem {
     enum Errcase: String, ErrList {
         case databaseInitFailed = "数据库初始化失败"
+        case opaInitFailed = "OPA 初始化失败"
         case regoLoadFailed = "REGO 策略加载失败"
         case sqlLoadFailed = " SQL 函数加载失败"
         

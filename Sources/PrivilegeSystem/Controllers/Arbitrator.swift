@@ -10,7 +10,7 @@ import Collections
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
-    public final class Arbitration: SystemOPAController {
+    public final class Arbitrator: SystemOPAController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         package let opa: OPA
@@ -25,7 +25,7 @@ extension PrivilegeSystem {
             self.opa = opa
         }
         
-        public func arbitrate(
+        public func judge(
             moduleId: UUID,
             user: DTO.User<DTO.Queried>,
             role: DTO.Role<DTO.Queried>,
@@ -34,12 +34,12 @@ extension PrivilegeSystem {
             privilegeIds: [Int64]
         ) -> EventLoopRes<Result, Errcase> {
             user.model.groups.map { group in
-                group.$domains.load(on: db)
+                group.$domains.get(on: db)
                     .withError(Errcase.arbitrationDataCollectFailed, "数据库加载组域权限失败", category: .internal)
                     .flatMapThrowing
-                { () throws(Errcase.ErrType) in
+                { domains throws(Errcase.ErrType) in
                     try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
-                        try group.domains.map { domain in
+                        try domains.map { domain in
                             DomainData(
                                 domainId: try domain.requireID(),
                                 resource: resource,
@@ -51,7 +51,7 @@ extension PrivilegeSystem {
                     }
                 }
             }.flatten(on: eventLoop).flatMap { domainDatas in
-                self.__arbitrate(
+                self.__judge(
                     input: ArbitrateData(
                         moduleId: moduleId,
                         domains: domainDatas.flatMap { $0 },
@@ -74,7 +74,7 @@ extension PrivilegeSystem {
             }
         }
         
-        func __arbitrate(
+        func __judge(
             input: ArbitrateData
         ) -> EventLoopRes<Result, Errcase> {
             ([
@@ -128,7 +128,7 @@ extension PrivilegeSystem {
     }
 }
 
-extension PrivilegeSystem.Arbitration {
+extension PrivilegeSystem.Arbitrator {
     public struct Result: Sendable {
         public struct IdKey: Sendable, Hashable {
             public enum T: Sendable, Hashable {
