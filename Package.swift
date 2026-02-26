@@ -51,6 +51,10 @@ let package = Package(
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
                 .product(name: "OPA", package: "whooshing.toolbox-opa")
+            ],
+            resources: [
+                .copy("SQLFunctions"),
+                .copy("Regos")
             ]
         ),
         .target(

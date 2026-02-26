@@ -1,7 +1,7 @@
+import OPA
 import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
-import OPA
 import AsyncHTTPClient
 
 public final class PrivilegeSystem: Sendable {
@@ -69,6 +69,8 @@ public final class PrivilegeSystem: Sendable {
         
         self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: logger.derive(subId: "opa")))
         self.db = db
+        
+        try await systemInitialize(dbConfigure: dbConfigure)
     }
 }
 
@@ -79,7 +81,7 @@ public extension PrivilegeSystem {
         public let port: Int
         public let proxy: HTTPClient.Configuration.Proxy?
         
-        init(
+        public init(
             scheme: OPA.ConnectionArgument.Scheme = .http,
             host: String = "localhost",
             port: Int = 8181,
