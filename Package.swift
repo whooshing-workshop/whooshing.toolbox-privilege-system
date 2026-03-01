@@ -42,8 +42,16 @@ let package = Package(
             ]
         ),
         .target(
+            name: "Query",
+            dependencies: [
+                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
+                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
+            ]
+        ),
+        .target(
             name: "PrivilegeSystem",
             dependencies: [
+                .target(name: "Query"),
                 .target(name: "Policy"),
                 .target(name: "PrivilegeModule"),
                 .product(name: "Collections", package: "swift-collections"),
@@ -60,6 +68,7 @@ let package = Package(
         .target(
             name: "PrivilegeModule",
             dependencies: [
+                .target(name: "Query"),
                 .target(name: "Policy"),
                 .target(name: "ResourceMacros"),
                 .product(name: "Collections", package: "swift-collections"),

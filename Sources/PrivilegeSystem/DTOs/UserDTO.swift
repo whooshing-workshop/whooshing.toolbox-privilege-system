@@ -124,3 +124,43 @@ extension DTO.User: Encodable where T == DTO.Queried {
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
     }
 }
+
+//import PgSQL
+//import Fluent
+//
+//public extension DTO.User {
+//    struct Querier {
+//        private let builder: QueryBuilder<User>
+//        
+//        internal init(db: PGDatabase) {
+//            self.builder = UserModel.query(on: db)
+//        }
+//        
+//        private let pathMap: [PartialKeyPath<DTO.User<DTO.Queried>>: PartialKeyPath<User>] = [
+//            \.email: \.$email,
+//            \.id: \.$id
+//        ]
+//        
+//        /// 核心过滤方法：支持 DTO KeyPath
+//        package func filter<V: Encodable>(
+//            _ dtoPath: KeyPath<DTO.User<DTO.Queried>, V>,
+//            _ op: DatabaseQuery.Filter.Method,
+//            _ value: V
+//        ) -> Self {
+//            // 查找映射关系
+//            guard let modelPath = pathMap[dtoPath] as? KeyPath<User, IDProperty<User, User.IDValue>> else {
+//                // 如果没映射，说明这个字段不允许外部查询
+//                return self
+//            }
+//            
+//            // 执行真正的 Fluent 过滤
+//            builder.filter(modelPath, op, value as! User.IDValue)
+//            return self
+//        }
+//
+//        package func all() async throws -> [DTO.User<DTO.Queried>] {
+//            let models = try await builder.all()
+//            return models.map { try! DTO.User<DTO.Queried>.make(from: $0).get() }
+//        }
+//    }
+//}
