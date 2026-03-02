@@ -2,30 +2,35 @@ import Fluent
 import Foundation
 
 public extension Query.Builder {
+    @discardableResult
     func field<Value>(
         _ field: KeyPath<Model, Value>
     ) -> Self where Value: Codable & Sendable {
         castCodableField(field)!
     }
     
+    @discardableResult
     func field<Value>(
         _ field: KeyPath<Model, Value?>
     ) -> Self where Value: Codable & Sendable {
         castOptionalCodableField(field)!
     }
     
+    @discardableResult
     func field<Value>(
         _ field: KeyPath<Model, Value>
     ) -> Self where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
         castEnumField(field)!
     }
     
+    @discardableResult
     func field<Value>(
         _ field: KeyPath<Model, Value?>
     ) -> Self where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
         castOptionalEnumField(field)!
     }
     
+    @discardableResult
     func field(
         _ field: KeyPath<Model, Date>
     ) -> Self {
@@ -34,6 +39,7 @@ public extension Query.Builder {
 }
 
 public extension Query.Builder {
+    @discardableResult
     func field<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value>
@@ -41,6 +47,7 @@ public extension Query.Builder {
         castJoinedCodableField(field)!
     }
     
+    @discardableResult
     func field<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value?>
@@ -48,6 +55,7 @@ public extension Query.Builder {
         castJoinedOptionalCodableField(field)!
     }
     
+    @discardableResult
     func field<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value>
@@ -55,6 +63,7 @@ public extension Query.Builder {
         castJoinedEnumField(field)!
     }
     
+    @discardableResult
     func field<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value?>
@@ -62,6 +71,7 @@ public extension Query.Builder {
         castJoinedOptionalEnumField(field)!
     }
     
+    @discardableResult
     func field<Joined>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Date>

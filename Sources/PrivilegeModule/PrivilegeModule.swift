@@ -4,6 +4,7 @@ import ErrorHandle
 import FluentPostgresDriver
 import ResourceMacros
 import AsyncHTTPClient
+import Query
 
 public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable
 where Self.RawValue == String {}
@@ -117,5 +118,11 @@ public struct OPAConfiguration: Sendable {
             logger: logger,
             proxy: proxy
         )
+    }
+}
+
+public extension PrivilegeModule {
+    func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
+        .init(query: T.Model.query(on: db))
     }
 }

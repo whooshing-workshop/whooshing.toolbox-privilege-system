@@ -3,12 +3,14 @@ import NIOAdvanced
 import Foundation
 
 public extension Query.Builder {
+    @discardableResult
     func sort(_ sort: DatabaseQuery.Sort) -> Self {
         .init(query: query.sort(sort))
     }
 }
 
 public extension Query.Builder {
+    @discardableResult
     func sort<Value>(
         _ field: KeyPath<Model, Value>,
         _ direction: DatabaseQuery.Sort.Direction = .ascending
@@ -16,6 +18,7 @@ public extension Query.Builder {
         castCodableSort(field, direction)!
     }
     
+    @discardableResult
     func sort<Value>(
         _ field: KeyPath<Model, Value?>,
         _ direction: DatabaseQuery.Sort.Direction = .ascending
@@ -23,6 +26,7 @@ public extension Query.Builder {
         castOptionalCodableSort(field, direction)!
     }
     
+    @discardableResult
     func sort<Value>(
         _ field: KeyPath<Model, Value>,
         _ direction: DatabaseQuery.Sort.Direction = .ascending
@@ -30,6 +34,7 @@ public extension Query.Builder {
         castEnumSort(field, direction)!
     }
     
+    @discardableResult
     func sort<Value>(
         _ field: KeyPath<Model, Value?>,
         _ direction: DatabaseQuery.Sort.Direction = .ascending
@@ -37,6 +42,7 @@ public extension Query.Builder {
         castOptionalEnumSort(field, direction)!
     }
     
+    @discardableResult
     func sort(
         _ field: KeyPath<Model, Date>,
         _ direction: DatabaseQuery.Sort.Direction = .ascending
@@ -46,6 +52,7 @@ public extension Query.Builder {
 }
 
 public extension Query.Builder {
+    @discardableResult
     func sort<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value>,
@@ -55,6 +62,7 @@ public extension Query.Builder {
         castJoinedCodableSort(joined, field, direction, alias: alias)!
     }
     
+    @discardableResult
     func sort<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value?>,
@@ -64,6 +72,7 @@ public extension Query.Builder {
         castJoinedOptionalCodableSort(joined, field, direction, alias: alias)!
     }
     
+    @discardableResult
     func sort<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value>,
@@ -73,6 +82,7 @@ public extension Query.Builder {
         castJoinedEnumSort(joined, field, direction, alias: alias)!
     }
     
+    @discardableResult
     func sort<Joined, Value>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Value?>,
@@ -82,6 +92,7 @@ public extension Query.Builder {
         castJoinedOptionalEnumSort(joined, field, direction, alias: alias)!
     }
     
+    @discardableResult
     func sort<Joined>(
         _ joined: Joined.Type,
         _ field: KeyPath<Joined, Date>,

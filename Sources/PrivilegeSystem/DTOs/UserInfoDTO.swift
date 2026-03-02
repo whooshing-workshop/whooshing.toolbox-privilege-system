@@ -7,6 +7,7 @@ import Cryptos
 import Collections
 import PrivilegeModule
 import Query
+import LoggingAdvanced
 
 public extension DTO {
     struct UserInfo<T: Status>: Sendable {
@@ -232,5 +233,34 @@ extension DTO.UserInfo: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$user.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+extension DTO.UserInfo: CustomStringConvertible, Loggerable {
+    public var description: String {
+        let isQueried = T.self == DTO.Queried.self
+        let idVal = isQueried ? "\"\(self.id)\"" : "null"
+        let userIdVal = isQueried ? "\"\(self.userId)\"" : "null"
+        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+
+        let otherStr = self.other.map { "\"\($0)\"" } ?? "null"
+
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": \(idVal),
+                "user_id": \(userIdVal),
+                "nickname": "\(self.nickname)",
+                "identifier": "\(self.identifier)",
+                "birthday": "\(self.birthday)",
+                "other": \(otherStr),
+                "created_at": \(createdVal),
+                "updated_at": \(updatedVal)
+            }
+        }
+        """
     }
 }

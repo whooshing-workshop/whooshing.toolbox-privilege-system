@@ -4,6 +4,7 @@ import ErrorHandle
 import NIOCore
 import AsyncAlgorithms
 import Foundation
+import Query
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -35,7 +36,7 @@ struct AccountTesting {
         (5, "uhalskjdf")
     ]
     
-    @Test("Tests", arguments: oldPasswords)
+    @Test("User 创建测试", arguments: oldPasswords)
     func create(i: Int, password: String) async throws {
         let email = Self.users[i].0
         let newPassword = Self.users[i].1
@@ -96,6 +97,23 @@ struct AccountTesting {
                 )
             ).get()
         }
+    }
+    
+    @Test("User 查询测试")
+    func query() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let res = try await s.query(DTO.User<DTO.Queried>.self)
+            .group(.or) { g in
+                g
+                    .filter(\.email == "user6@example.com")
+                    .filter(\.email == "user5@example.com")
+            }
+            .all()
+            .get()
+        
+        print("result: ")
+        print(res)
     }
     
     @MainActor

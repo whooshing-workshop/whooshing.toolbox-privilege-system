@@ -3,6 +3,7 @@ import PgSQL
 import ErrorHandle
 import FluentPostgresDriver
 import PrivilegeModule
+import Query
 
 public final class PrivilegeSystem: Sendable {
     @frozen
@@ -92,5 +93,11 @@ public final class PrivilegeSystem: Sendable {
         
         try await systemInitialize(dbConfigure: dbConfigure)
         try await opaInitialize()
+    }
+}
+
+public extension PrivilegeSystem {
+    func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
+        .init(query: T.Model.query(on: db))
     }
 }

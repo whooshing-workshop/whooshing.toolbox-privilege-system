@@ -5,6 +5,7 @@ import ErrorHandle
 import Collections
 import PrivilegeModule
 import Query
+import LoggingAdvanced
 
 typealias DomainModel = Domain
 
@@ -166,5 +167,31 @@ extension DTO.Domain: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+extension DTO.Domain: Loggerable {
+    public var logDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        let idVal = isQueried ? "\(self.id)" : "null"
+        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+
+        let nameStr = self.name.map { "\"\($0)\"" } ?? "null"
+        let descStr = self.description.map { "\"\($0)\"" } ?? "null"
+
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": \(idVal),
+                "name": \(nameStr),
+                "description": \(descStr),
+                "created_at": \(createdVal),
+                "updated_at": \(updatedVal)
+            }
+        }
+        """
     }
 }

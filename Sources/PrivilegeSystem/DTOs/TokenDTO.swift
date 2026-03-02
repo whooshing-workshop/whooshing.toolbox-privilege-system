@@ -5,6 +5,7 @@ import Cryptos
 import PrivilegeModule
 import DataConvertable
 import Query
+import LoggingAdvanced
 
 typealias TokenModel = Token
 
@@ -134,5 +135,42 @@ extension DTO.Token: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$valid)
             .field(Model.self, \.$expireAfter)
             .field(Model.self, \.$createdAt)
+    }
+}
+
+extension DTO.Token: CustomStringConvertible, Loggerable {
+    public var description: String {
+        // 1. 状态标签
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        // 2. 状态分流判断
+        let isQueried = T.self == DTO.Queried.self
+        
+        // 3. 字段安全提取
+        // 注意：credential 虽然是 public，但通常不建议在日志中全显，这里保留前 4 位
+        let credPrefix = String(self.credential.prefix(4))
+        let credDisplay = "\(credPrefix)****"
+        
+        let idVal = isQueried ? "\"\(self.id)\"" : "null"
+        let userIdVal = isQueried ? "\"\(self.userId)\"" : "null"
+        let validVal = isQueried ? "\(self.valid)" : "null"
+        let expireVal = isQueried ? "\(self.expireAfter)" : "\(self.expireAfter)" // Prepare 阶段已有默认值
+        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": \(idVal),
+                "user_id": \(userIdVal),
+                "credential": "\(credDisplay)",
+                "token": "[PROTECTED_KEY]",
+                "token_encrypted": "[BINARY_DATA]",
+                "valid": \(validVal),
+                "expire_after": \(expireVal),
+                "created_at": \(createdVal)
+            }
+        }
+        """
     }
 }

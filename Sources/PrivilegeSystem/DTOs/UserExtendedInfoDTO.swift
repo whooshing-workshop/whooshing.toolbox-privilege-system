@@ -7,6 +7,7 @@ import Policy
 import Collections
 import PrivilegeModule
 import Query
+import LoggingAdvanced
 
 public extension DTO {
     protocol UserInfoModel: Sendable {
@@ -222,5 +223,33 @@ extension DTO.UserExtendedInfo: Query.Queriable where G == DTO.Queried, T.Value 
             .field(Model.self, \.$userInfo.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+extension DTO.UserExtendedInfo: Loggerable {
+    public var logDescription: String {
+        let isQueried = G.self == DTO.Queried.self
+        let idVal = isQueried ? "\"\(self.id)\"" : "null"
+        let userInfoIdVal = isQueried ? "\"\(self.userInfoId)\"" : "null"
+        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
+        let statusLabel = "\(G.self)".components(separatedBy: ".").last ?? "\(G.self)"
+
+        let descStr = self.description.map { "\"\($0)\"" } ?? "null"
+        
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": \(idVal),
+                "user_info_id": \(userInfoIdVal),
+                "value": "[PROTECTED]",
+                "order": \(self.order),
+                "description": \(descStr),
+                "created_at": \(createdVal),
+                "updated_at": \(updatedVal)
+            }
+        }
+        """
     }
 }

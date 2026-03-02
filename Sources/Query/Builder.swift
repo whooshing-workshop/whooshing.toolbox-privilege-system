@@ -15,18 +15,21 @@ public enum Query {
     public struct Builder<Model: Queriable> {
         let query: QueryBuilder<Model.Model>
         
-        init(query: QueryBuilder<Model.Model>) {
+        package init(query: QueryBuilder<Model.Model>) {
             self.query = query
         }
         
+        @discardableResult
         public func fields<Joined>(for model: Joined.Type) -> Self where Joined: Queriable {
             .init(query: Joined.buildAllFields(query))
         }
         
+        @discardableResult
         public func filter<Value>(_ filter: ValueFilter<Model, Value>) -> Self {
             .init(query: query.filter(filter.filter))
         }
         
+        @discardableResult
         public func join<Foreign>(
             _ foreign: Foreign.Type,
             on filter: JoinFilter<Model, Foreign>,
@@ -35,6 +38,7 @@ public enum Query {
             .init(query: query.join(Foreign.Model.self, on: filter.joinFilter, method: method))
         }
         
+        @discardableResult
         public func join<Foreign>(
             _ foreign: Foreign.Type,
             on filter: JoinFilterGroup<Model, Foreign>,
@@ -43,6 +47,7 @@ public enum Query {
             .init(query: query.join(Foreign.Model.self, on: filter.wrapped, method: method))
         }
         
+        @discardableResult
         public func group(
             _ relation: DatabaseQuery.Filter.Relation = .and,
             _ closure: (Builder<Model>) throws -> ()
@@ -53,7 +58,8 @@ public enum Query {
         }
         
         public func first() -> EventLoopRes<Model?, Errcase> {
-            query.first()
+            query
+                .first()
                 .withError(Errcase.fetchResultFailed, category: .internal)
                 .flatMapThrowing
             { res throws(Errcase.ErrType) in
@@ -85,7 +91,8 @@ public enum Query {
         }
         
         public func page(with index: Int, size: Int) -> EventLoopRes<Page<Model>, Errcase> {
-            query.page(withIndex: index, size: size)
+            query
+                .page(withIndex: index, size: size)
                 .withError(Errcase.fetchResultFailed, category: .internal)
                 .flatMapThrowing
             { res throws(Errcase.ErrType) in
@@ -98,7 +105,8 @@ public enum Query {
         }
         
         public func paginate(_ request: PageRequest) -> EventLoopRes<Page<Model>, Errcase> {
-            query.paginate(request)
+            query
+                .paginate(request)
                 .withError(Errcase.fetchResultFailed, category: .internal)
                 .flatMapThrowing
             { res throws(Errcase.ErrType) in

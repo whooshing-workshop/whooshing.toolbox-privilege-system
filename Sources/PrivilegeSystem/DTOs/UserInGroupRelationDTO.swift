@@ -2,6 +2,7 @@ import Fluent
 import Foundation
 import ErrorHandle
 import PrivilegeModule
+import LoggingAdvanced
 
 public extension DTO {
     struct UserInGroupRelation<T: Status>: Sendable {
@@ -64,4 +65,25 @@ public func ~> (
     right: DTO.Group<DTO.Queried>
 ) -> DTO.UserInGroupRelation<DTO.Prepare> {
     .init(user: left, group: right)
+}
+
+extension DTO.UserInGroupRelation: CustomStringConvertible, Loggerable {
+    public var description: String {
+        let isQueried = T.self == DTO.Queried.self
+        let idVal = isQueried ? "\"\(self.id)\"" : "null"
+        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": \(idVal),
+                "user_id": "\(self.user.id)",
+                "group_id": "\(self.group.id)",
+                "created_at": \(createdVal)
+            }
+        }
+        """
+    }
 }

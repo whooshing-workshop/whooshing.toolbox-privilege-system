@@ -4,6 +4,7 @@ import Policy
 import ErrorHandle
 import PrivilegeModule
 import Query
+import LoggingAdvanced
 
 public extension DTO {
     struct Policy<G: PolicyType, T: Status>: Sendable {
@@ -78,5 +79,28 @@ extension DTO.Policy: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+extension DTO.Policy: CustomStringConvertible, Loggerable {
+    public var description: String {
+        let isQueried = T.self == DTO.Queried.self
+        let idVal = isQueried ? "\"\(self.id)\"" : "null"
+        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": \(idVal),
+                "module_id": "\(self.moduleId)",
+                "policy": "\(self.policy)",
+                "created_at": \(createdVal),
+                "updated_at": \(updatedVal)
+            }
+        }
+        """
     }
 }

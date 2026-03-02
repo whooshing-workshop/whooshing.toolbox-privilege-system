@@ -6,6 +6,7 @@ import Cryptos
 import Policy
 import PrivilegeModule
 import Query
+import LoggingAdvanced
 
 typealias UserModel = User
 
@@ -142,5 +143,27 @@ extension DTO.User: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+extension DTO.User: Loggerable, CustomStringConvertible {
+    public var description: String {
+        let idString = T.self == DTO.Queried.self ? "\(self.id)" : "null (pre-save)"
+        let createdString = T.self == DTO.Queried.self ? "\(self.createdAt)" : "null"
+        let updatedString = T.self == DTO.Queried.self ? "\(self.updatedAt)" : "null"
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+
+        return """
+        {
+            "status": "\(statusLabel)",
+            "data": {
+                "id": "\(idString)",
+                "email": "\(self.email)",
+                "hashed_passwd": "[PROTECTED]",
+                "created_at": "\(createdString)",
+                "updated_at": "\(updatedString)"
+            }
+        }
+        """
     }
 }
