@@ -5,6 +5,7 @@ import ErrorHandle
 import Cryptos
 import Policy
 import PrivilegeModule
+import Query
 
 typealias UserModel = User
 
@@ -51,7 +52,7 @@ extension DTO.User where T == DTO.Queried {
         return m
     }
     
-    static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internal) {
             var n = Self.init(
                 _email: model.email,
@@ -92,10 +93,10 @@ extension DTO.User where T == DTO.Prepare {
 }
 
 extension User: ModelAuthenticatable {
-    package static let usernameKey: KeyPath<User, Field<String>> = \User.$email
-    package static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPasswd
+    public static let usernameKey: KeyPath<User, Field<String>> = \User.$email
+    public static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPasswd
     
-    package func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+    public func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果
         let passwd = try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
             try Base64String(password).dataRes.get()
@@ -122,5 +123,24 @@ extension DTO.User: Encodable where T == DTO.Queried {
         try container.encode(email, forKey: .email)
         try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension DTO.User: Query.Queriable where T == DTO.Queried {
+    public typealias Model = User
+    public typealias ErrorType = PrivilegeSystem.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.email: \.$email,
+        \.id: \.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$email)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
     }
 }

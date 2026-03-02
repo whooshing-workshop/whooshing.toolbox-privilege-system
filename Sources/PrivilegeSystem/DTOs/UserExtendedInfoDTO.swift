@@ -6,6 +6,7 @@ import Cryptos
 import Policy
 import Collections
 import PrivilegeModule
+import Query
 
 public extension DTO {
     protocol UserInfoModel: Sendable {
@@ -78,7 +79,7 @@ extension DTO.UserExtendedInfo where G == DTO.Queried, T.Value == String {
         return m
     }
     
-    static func make(from model: User.Info.Extended<T.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: User.Info.Extended<T.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
             var n = Self.init(
                 _value: model.value,     // 暂时使用强制解包，因为目前用户 Info Value 字段均为 String
@@ -196,5 +197,30 @@ extension DTO.UserExtendedInfo: Encodable where G == DTO.Queried {
         try container.encode(description, forKey: .description)
         try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension DTO.UserExtendedInfo: Query.Queriable where G == DTO.Queried, T.Value == String {
+    public typealias Model = User.Info.Extended<T.Model>
+    public typealias ErrorType = PrivilegeSystem.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.value: \.$value,
+        \.order: \.$order,
+        \.description: \.$description,
+        \.id: \.$id,
+        \.userInfoId: \.$userInfo.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$value)
+            .field(Model.self, \.$order)
+            .field(Model.self, \.$description)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$userInfo.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
     }
 }

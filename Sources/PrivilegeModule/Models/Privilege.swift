@@ -3,12 +3,12 @@ import Fluent
 import Foundation
 import Policy
 
-package extension PM {
+public extension PM {
     final class Privilege: PGModel, @unchecked Sendable {
         
-        package static var name: String { "privileges" }
+        public static var name: String { "privileges" }
         
-        package struct Fields: PGFields {
+        public struct Fields: PGFields {
             let id = PGField("id", .int64)                          .primary
             let name = PGField("name", .string)
             let description = PGField("description", .string)
@@ -16,12 +16,12 @@ package extension PM {
             let createdAt = PGField("created_at", .datetime)           .required
             let updatedAt = PGField("updated_at", .datetime)           .required
             
-            package init() {}
+            public init() {}
         }
         
-        package let fields = Fields()
+        public let fields = Fields()
         
-        @ID(custom: fields.id.key)                      package var id: Int64?
+        @ID(custom: fields.id.key)                      public var id: Int64?
         
         @Field(fields.name)                             var name: String?
         @Field(fields.description)                      var description: String?
@@ -36,14 +36,14 @@ package extension PM {
             to: \.$secondaryModel
         )                                               var resources: [AnyResource]
         
-        package init() { }
+        public init() { }
         
-        package typealias MIG = DefaultMIG<Privilege>
+        public typealias MIG = DefaultMIG<Privilege>
     }
 }
 
 extension PM.Privilege: PolicyType {
-    package typealias Model = PrivilegeModule.Privilege
-    package static var namePrefix: String { "privilege" }
-    package static var typeId: String { "privilege" }
+    public typealias Model = PrivilegeModule.Privilege
+    public static var namePrefix: String { "privilege" }
+    public static var typeId: String { "privilege" }
 }

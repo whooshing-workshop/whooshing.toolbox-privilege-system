@@ -4,6 +4,7 @@ import ErrorHandle
 import Cryptos
 import PrivilegeModule
 import DataConvertable
+import Query
 
 typealias TokenModel = Token
 
@@ -82,7 +83,7 @@ extension DTO.Token where T == DTO.Queried {
         return m
     }
     
-    static func make(from model: Token) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: Token) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .tokenDTOFailed, category: .internal) {
             var n = Self.init(
                 _credential: model.credential,
@@ -108,5 +109,30 @@ extension DTO.Token where T == DTO.Prepare {
         token.expireAfter = expireAfter
         token.valid = true
         return token
+    }
+}
+
+extension DTO.Token: Query.Queriable where T == DTO.Queried {
+    public typealias Model = Token
+    public typealias ErrorType = PrivilegeSystem.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.credential: \.$credential,
+        \.id: \.$id,
+        \.token: \.$token,
+        \.userId: \.$user.$id,
+        \.valid: \.$valid,
+        \.expireAfter: \.$expireAfter,
+        \.createdAt: \.$createdAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$credential)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$token)
+            .field(Model.self, \.$user.$id)
+            .field(Model.self, \.$valid)
+            .field(Model.self, \.$expireAfter)
+            .field(Model.self, \.$createdAt)
     }
 }

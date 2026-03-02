@@ -26,16 +26,16 @@ extension PrivilegeSystem {
         }
         
         public func create(
-            @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>
-            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
+            @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
         ) -> EventLoopRes<Void, Errcase> {
             create(relations: content())
         }
         
         public func createWithReturning(
-            @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>
-            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-        ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], Errcase> {
+            @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
+        ) -> EventLoopRes<[Int64: [DTO.Policy<Role, DTO.Queried>]], Errcase> {
             createWithReturning(relations: content())
         }
         
@@ -76,7 +76,7 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.RoleController {
     func create(
-        relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
+        relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
@@ -90,8 +90,8 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func createWithReturning(
-        relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-    ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
+        relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
+    ) -> EventLoopRes<[Int64: [DTO.Policy<Role, DTO.Queried>]], PrivilegeSystem.Errcase> {
         db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(

@@ -4,6 +4,7 @@ import Policy
 import ErrorHandle
 import Collections
 import PrivilegeModule
+import Query
 
 public extension DTO {
     struct Group<T: Status>: Sendable {
@@ -50,7 +51,7 @@ extension DTO.Group where T == DTO.Queried {
         return m
     }
     
-    static func make(from model: UGroup) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: UGroup) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .groupDTOFailed, category: .internal) {
             var n = Self.init(
                 _parentId: model.$parent.id,
@@ -163,5 +164,28 @@ extension DTO.Group: Encodable where T == DTO.Queried {
         try container.encode(id, forKey: .id)
         try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension DTO.Group: Query.Queriable where T == DTO.Queried {
+    public typealias Model = UGroup
+    public typealias ErrorType = PrivilegeSystem.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.parentId: \.$parent.$id,
+        \.name: \.$name,
+        \.description: \.$description,
+        \.id: \.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt,
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$parent.$id)
+            .field(Model.self, \.$name)
+            .field(Model.self, \.$description)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
     }
 }

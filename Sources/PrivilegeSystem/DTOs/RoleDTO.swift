@@ -4,6 +4,7 @@ import Policy
 import ErrorHandle
 import Collections
 import PrivilegeModule
+import Query
 
 typealias RoleModel = Role
 
@@ -48,7 +49,7 @@ extension DTO.Role where T == DTO.Queried {
         return m
     }
     
-    static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .roleDTOFailed, category: .internal) {
             var n = Self.init(
                 _name: model.name,
@@ -144,5 +145,26 @@ extension DTO.Role: Encodable where T == DTO.Queried {
         try container.encode(id, forKey: .id)
         try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension DTO.Role: Query.Queriable where T == DTO.Queried {
+    public typealias Model = Role
+    public typealias ErrorType = PrivilegeSystem.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.name: \.$name,
+        \.description: \.$description,
+        \.id: \.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$name)
+            .field(Model.self, \.$description)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
     }
 }

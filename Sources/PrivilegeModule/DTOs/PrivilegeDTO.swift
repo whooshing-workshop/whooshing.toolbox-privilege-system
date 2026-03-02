@@ -3,6 +3,7 @@ import Foundation
 import ErrorHandle
 import Collections
 import SQLKit
+import Query
 
 public extension PM {
     struct PrivilegeDTO<T: DTO.Status>: Sendable {
@@ -14,6 +15,7 @@ public extension PM {
         @DTO.Passive() public internal(set) var createdAt: Date
         @DTO.Passive() public internal(set) var updatedAt: Date
         
+        public typealias S = PM<ResourceList>
         package typealias AssociatedModel = Privilege
         private let m: AssociatedModel?
         
@@ -49,7 +51,7 @@ extension PM.PrivilegeDTO where T == DTO.Queried {
         return m
     }
     
-    static func make(from model: PM<ResourceList>.Privilege) -> Res<Self, PM<ResourceList>.Errcase> {
+    public static func make(from model: PM<ResourceList>.Privilege) -> Res<Self, S.Errcase> {
         .init(throws: .privilegeDTOFailed, category: .internal) {
             var n = Self.init(
                 _name: model.name,
@@ -83,11 +85,11 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         private(set) var policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil
         
         package private(set) var updates: OrderedDictionary<
-            PartialKeyPath<PM<ResourceList>.PrivilegeDTO<DTO.Prepare>>,
+            PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
             (
-                QueryBuilder<PM<ResourceList>.Privilege>,
+                QueryBuilder<S.Privilege>,
                 PM<ResourceList>.PrivilegeDTO<DTO.Queried>?
-            ) throws -> QueryBuilder<PM<ResourceList>.Privilege>
+            ) throws -> QueryBuilder<S.Privilege>
         > = [:]
         package private(set) var needsPeek = false
         
@@ -163,5 +165,28 @@ extension PM.PrivilegeDTO: Encodable where T == DTO.Queried {
         case id
         case createdAt
         case updatedAt
+    }
+}
+
+extension PM.PrivilegeDTO: Query.Queriable where T == DTO.Queried {
+    public typealias Model = S.Privilege
+    public typealias ErrorType = S.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.name: \.$name,
+        \.description: \.$description,
+        \.policy: \.$policy,
+        \.id: \.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$name)
+            .field(Model.self, \.$description)
+            .field(Model.self, \.$policy)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
     }
 }

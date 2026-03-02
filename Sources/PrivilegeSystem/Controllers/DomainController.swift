@@ -23,16 +23,16 @@ extension PrivilegeSystem {
         }
         
         public func create(
-            @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>
-            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
+            @MTORelationBuilder<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
         ) -> EventLoopRes<Void, Errcase> {
             self.create(relations: content())
         }
         
         public func createWithReturning(
-            @MTORelationBuilder<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>
-            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
-        ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], Errcase> {
+            @MTORelationBuilder<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
+        ) -> EventLoopRes<[Int64: [DTO.Policy<Domain, DTO.Queried>]], Errcase> {
             self.createWithReturning(relations: content())
         }
         
@@ -73,13 +73,13 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.DomainController {
     func create(
-        relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
+        relations: [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__create(
                     on: db,
-                    to: Role.self,
+                    to: Domain.self,
                     relations: relations.map { .init(left: $0.left, right: $0.right.id) }
                 )
             }
@@ -87,13 +87,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func createWithReturning(
-        relations: [MTORelation<DTO.Policy<DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
-    ) -> EventLoopRes<[Int64: [DTO.Policy<DTO.Queried>]], PrivilegeSystem.Errcase> {
+        relations: [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
+    ) -> EventLoopRes<[Int64: [DTO.Policy<Domain, DTO.Queried>]], PrivilegeSystem.Errcase> {
         db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(
                     on: db,
-                    to: Role.self,
+                    to: Domain.self,
                     relations: relations.map { .init(left: $0.left, right: $0.right.id) }
                 )
             }

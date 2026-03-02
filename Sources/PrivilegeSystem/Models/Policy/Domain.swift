@@ -1,24 +1,25 @@
 import PgSQL
 import Foundation
 import Policy
+import Fluent
 
-package final class Domain: PGModel, @unchecked Sendable {
+public final class Domain: PGModel, @unchecked Sendable {
     
-    package static let name = "domains"
+    public static let name = "domains"
     
-    package struct Fields: PGFields {
+    public struct Fields: PGFields {
         let id = PGField("id", .int64)                          .primary
         let name = PGField("name", .string)
         let description = PGField("description", .string)
         let createdAt = PGField("created_at", .datetime)           .required
         let updatedAt = PGField("updated_at", .datetime)           .required
         
-        package init() {}
+        public init() {}
     }
     
-    package static let fields = Fields()
+    public static let fields = Fields()
     
-    @ID(custom: fields.id.key)                      package var id: Int64?
+    @ID(custom: fields.id.key)                      public var id: Int64?
     
     @Field(fields.name)                             var name: String?
     @Field(fields.description)                      var description: String?
@@ -40,7 +41,7 @@ package final class Domain: PGModel, @unchecked Sendable {
     @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
     @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
     
-    package init() {}
+    public init() {}
     
-    package typealias MIG = DefaultMIG<Domain>
+    public typealias MIG = DefaultMIG<Domain>
 }

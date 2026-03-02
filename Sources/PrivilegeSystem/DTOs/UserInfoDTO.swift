@@ -6,6 +6,7 @@ import Policy
 import Cryptos
 import Collections
 import PrivilegeModule
+import Query
 
 public extension DTO {
     struct UserInfo<T: Status>: Sendable {
@@ -63,7 +64,7 @@ extension DTO.UserInfo where T == DTO.Queried {
         return m
     }
     
-    static func make(
+    public static func make(
         from model: User.Info
     ) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
@@ -204,5 +205,32 @@ extension DTO.UserInfo: Encodable where T == DTO.Queried {
         try container.encode(other, forKey: .other)
         try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
         try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension DTO.UserInfo: Query.Queriable where T == DTO.Queried {
+    public typealias Model = User.Info
+    public typealias ErrorType = PrivilegeSystem.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.nickname: \.$nickname,
+        \.identifier: \.$identifier,
+        \.birthday: \.$birthday,
+        \.other: \.$other,
+        \.id: \.$id,
+        \.userId: \.$user.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$nickname)
+            .field(Model.self, \.$identifier)
+            .field(Model.self, \.$birthday)
+            .field(Model.self, \.$other)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$user.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
     }
 }

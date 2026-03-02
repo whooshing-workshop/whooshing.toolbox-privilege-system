@@ -3,11 +3,11 @@ import Fluent
 import Foundation
 import Policy
 
-package extension User.Info {
+public extension User.Info {
     final class Extended<T: User.Info.Model>: PGModel, @unchecked Sendable {
-        package static var name: String { "user_info_" + T.tableExtendedName }
+        public static var name: String { "user_info_" + T.tableExtendedName }
         
-        package struct Fields: PGFields {
+        public struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
             let userInfoId = PGField("user_info_id", .uuid)             .required.unique.foreign(User.Info.self, \.id, onDelete: .cascade)
             let value = PGField(T.valueFieldName, .string)              .required
@@ -16,12 +16,12 @@ package extension User.Info {
             let createdAt = PGField("created_at", .datetime)            .required
             let updatedAt = PGField("updated_at", .datetime)            .required
             
-            package init() {}
+            public init() {}
         }
         
-        package let fields = Fields()
+        public let fields = Fields()
         
-        @ID(key: .id)                                   package var id: UUID?
+        @ID(key: .id)                                   public var id: UUID?
         
         @Parent(fields.userInfoId)                      var userInfo: User.Info
         @Field(fields.value)                            var value: String
@@ -31,13 +31,13 @@ package extension User.Info {
         @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
         
-        package init() {}
+        public init() {}
         
-        package typealias MIG = DefaultMIG<Extended<T>>
+        public typealias MIG = DefaultMIG<Extended<T>>
     }
 }
 
-package extension User.Info {
+public extension User.Info {
     typealias Model = UserInfoExtends.Model
     typealias Address = UserInfoExtends.Address
     typealias AlternateEmail = UserInfoExtends.AlternateEmail

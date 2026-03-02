@@ -1,13 +1,14 @@
 import PgSQL
 import Foundation
 import Policy
+import Fluent
 @preconcurrency import AnyCodable
 
 extension PM {
-    package final class AnyResource: PGModel, @unchecked Sendable  {
-        package static var name: String { "resources" }
+    public final class AnyResource: PGModel, @unchecked Sendable  {
+        public static var name: String { "resources" }
         
-        package struct Fields: PGFields {
+        public struct Fields: PGFields {
             let id = PGField("id", .uuid)                           .primary
             let name = PGField("name", .string)                     .required
             let type = PGField("type",
@@ -17,12 +18,12 @@ extension PM {
             let createdAt = PGField("created_at", .datetime)           .required
             let updatedAt = PGField("updated_at", .datetime)           .required
             
-            package init() {}
+            public init() {}
         }
         
         let fields = Fields()
         
-        @ID(key: .id)                               package var id: UUID?
+        @ID(key: .id)                               public var id: UUID?
         
         @Field(fields.name)                         var name: String
         @Field(fields.type)                         var type: ResourceList
@@ -37,7 +38,7 @@ extension PM {
         @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
         
-        package init() {}
+        public init() {}
         
         init<T>(from resource: ResourceModel<T>) {
             self.id = resource.id
@@ -48,13 +49,13 @@ extension PM {
             self.updatedAt = resource.updatedAt
         }
         
-        package typealias MIG = DefaultMIG<AnyResource>
+        public typealias MIG = DefaultMIG<AnyResource>
     }
 
-    package final class ResourceModel<T: Resource>: PGModel, @unchecked Sendable where T.ResourceType == ResourceList  {
-        package static var name: String { "resources" }
+    public final class ResourceModel<T: Resource>: PGModel, @unchecked Sendable where T.ResourceType == ResourceList  {
+        public static var name: String { "resources" }
         
-        package struct Fields: PGFields {
+        public struct Fields: PGFields {
             let id = PGField("id", .uuid)                           .primary
             let name = PGField("name", .string)                     .required
             let type = PGField("type",
@@ -64,12 +65,12 @@ extension PM {
             let createdAt = PGField("created_at", .datetime)           .required
             let updatedAt = PGField("updated_at", .datetime)           .required
             
-            package init() {}
+            public init() {}
         }
         
         let fields = Fields()
         
-        @ID(key: .id)                               package var id: UUID?
+        @ID(key: .id)                               public var id: UUID?
         
         @Field(fields.name)                         var name: String
         @Field(fields.type)                         var type: ResourceList
@@ -78,7 +79,7 @@ extension PM {
         @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
         
-        package init() {}
+        public init() {}
         
         init(from resource: T) {
             self.type = T.type
@@ -92,6 +93,6 @@ extension PM {
             T.type == type && data.name == name
         }
         
-        package typealias MIG = DefaultMIG<AnyResource>
+        public typealias MIG = DefaultMIG<AnyResource>
     }
 }

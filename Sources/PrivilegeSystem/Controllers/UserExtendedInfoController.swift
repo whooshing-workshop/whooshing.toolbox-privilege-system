@@ -18,16 +18,12 @@ extension PrivilegeSystem {
             self.eventLoop = eventLoop
         }
         
-        // MARK: - 增
-        
         public func create<T>(
             for infoId: UUID,
             extendedInfos: [DTO.UserExtendedInfo<T, DTO.Prepare>]
         ) -> EventLoopRes<[DTO.UserExtendedInfo<T, DTO.Queried>], Errcase> where T.Value == String {
             __create(on: db, for: infoId, extendedInfos: extendedInfos)
         }
-        
-        // MARK: - 删
         
         public func delete<T: DTO.UserInfoModel>(
             infoIds: [UUID],
@@ -45,7 +41,6 @@ extension PrivilegeSystem {
             )
         }
         
-        // MARK: - 改
         public func update<T>(
             with updater: DTO.UserExtendedInfo<T, DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.UserExtendedInfo<T, DTO.Queried>, Errcase> {

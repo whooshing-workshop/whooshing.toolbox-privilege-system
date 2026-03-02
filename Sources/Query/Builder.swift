@@ -74,7 +74,9 @@ public enum Query {
                             } catch {
                                 return Res<Model, Errcase>.failure(.chunkResultFailed, "查询结果转为 DTO 失败", category: .internal, subErr: error)
                             }
-                        case .failure(let failure): return Res<Model, Errcase>.failure(.chunkResultFailed, category: .external)
+                            
+                        case .failure(let failure):
+                            return Res<Model, Errcase>.failure(.chunkResultFailed, category: .external, subErr: failure)
                         }
                     }
                 )

@@ -21,8 +21,6 @@ extension PrivilegeSystem {
             self.userExtendedInfoController = userExtendedInfoController
         }
         
-        // MARK: - 增
-        
         public struct Extended<T: DTO.Status>: Sendable {
             let addresses: [DTO.UserExtendedInfo<DTO.Address, T>]
             let alternateEmails: [DTO.UserExtendedInfo<DTO.AlternateEmail, T>]
@@ -44,8 +42,6 @@ extension PrivilegeSystem {
             __create(on: db, for: userId, infos: infos)
         }
         
-        // MARK: - 删
-        
         public func delete(
             infoIds: [UUID],
             allSatisfy: Bool = true
@@ -61,7 +57,6 @@ extension PrivilegeSystem {
             )
         }
         
-        // MARK: - 改
         public func update(
             with updater: DTO.UserInfo<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase> {
@@ -72,25 +67,6 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.userId) },
                 dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
             )
-        }
-        
-        // MARK: - 查
-        public func fetch(
-            infoIds: [UUID]
-        ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], Errcase> {
-            User.Info.query(on: db)
-                .filter(\.$id ~~ infoIds)
-                .sort(.custom(SortingSQL(uuids: infoIds)))
-                .all()
-                .withError(Errcase.userInfoQueryFailed, "查询出错", category: .internal)
-                .flatMapThrowing
-            { infos throws(Errcase.ErrType) in
-                try infos.map { i throws(Errcase.ErrType) in
-                    try required(throws: Errcase.userInfoQueryFailed, category: .internal) {
-                        try .make(from: i).get()
-                    }
-                }
-            }
         }
     }
 }

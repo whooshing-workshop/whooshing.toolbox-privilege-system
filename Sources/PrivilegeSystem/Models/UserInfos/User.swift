@@ -1,14 +1,15 @@
 import PgSQL
 import Foundation
 import Policy
+import Fluent
 
 /// 数据库表 users 的映射类型
 /// 记录所有已注册的用户
 
-package final class User: PGModel, @unchecked Sendable {
-    package static let name: String = "users"
+public final class User: PGModel, @unchecked Sendable {
+    public static let name: String = "users"
     
-    package struct Fields: PGFields {
+    public struct Fields: PGFields {
         let id = PGField("id", .uuid)                               .primary
         let email = PGField("email", .string)                       .required.unique
         let hashedPasswd = PGField("hashed_passwd", .string)        .required
@@ -17,12 +18,12 @@ package final class User: PGModel, @unchecked Sendable {
         let createdAt = PGField("created_at", .datetime)            .required
         let updatedAt = PGField("updated_at", .datetime)            .required
         
-        package init() {}
+        public init() {}
     }
     
-    package static let fields = Fields()
+    public static let fields = Fields()
     
-    @ID(key: .id)                               package var id: UUID?
+    @ID(key: .id)                               public var id: UUID?
     
     @Field(fields.email)                        var email: String
     @Field(fields.hashedPasswd)                 var hashedPasswd: String
@@ -49,7 +50,7 @@ package final class User: PGModel, @unchecked Sendable {
     @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
     @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
     
-    package init() {}
+    public init() {}
     
-    package typealias MIG = DefaultMIG<User>
+    public typealias MIG = DefaultMIG<User>
 }

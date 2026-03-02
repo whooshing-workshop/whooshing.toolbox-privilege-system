@@ -3,23 +3,25 @@ import Foundation
 import ErrorHandle
 import Collections
 import SQLKit
+import Query
 
 public extension PM {
     struct ResourceDTO<G: Resource, T: DTO.Status>: Sendable where G.ResourceType == ResourceList {
-        let resource: G
+        let data: G
         
         @DTO.Passive() public internal(set) var id: UUID
         @DTO.Passive() public internal(set) var createdAt: Date
-        @DTO.Passive() public internal(set) var updateAt: Date
+        @DTO.Passive() public internal(set) var updatedAt: Date
         
-        package typealias AssociatedModel = PM<ResourceList>.ResourceModel<G>
+        public typealias S = PM<ResourceList>
+        package typealias AssociatedModel = ResourceModel<G>
         private let m: AssociatedModel?
         
         init(
-            _resource: G,
+            _data: G,
             _model: AssociatedModel?
         ) {
-            self.resource = _resource
+            self.data = _data
             self.m = _model
         }
     }
@@ -27,9 +29,9 @@ public extension PM {
 
 public extension PM.ResourceDTO where T == DTO.Prepare {
     init(
-        resource: G
+        data: G
     ) {
-        self = Self.init(_resource: resource, _model: nil)
+        self = Self.init(_data: data, _model: nil)
     }
 }
 
@@ -41,15 +43,15 @@ extension PM.ResourceDTO where T == DTO.Queried {
         return m
     }
     
-    static func make(from model: PM<ResourceList>.ResourceModel<G>) -> Res<Self, PrivilegeModule.Errcase> {
+    public static func make(from model: PM<ResourceList>.ResourceModel<G>) -> Res<Self, PrivilegeModule.Errcase> {
         .init(throws: .resourceDTOFailed, category: .internal) {
             var n = Self.init(
-                _resource: model.data,
+                _data: model.data,
                 _model: model
             )
             n.$id = try model.requireID()
             n.$createdAt = model.createdAt
-            n.$updateAt = model.updatedAt
+            n.$updatedAt = model.updatedAt
             return n
         }
     }
@@ -57,7 +59,7 @@ extension PM.ResourceDTO where T == DTO.Queried {
 
 extension PM.ResourceDTO where T == DTO.Prepare {
     func raw() -> PM<ResourceList>.ResourceModel<G> {
-        .init(from: resource)
+        .init(from: data)
     }
 }
 
@@ -102,7 +104,7 @@ public extension PM.ResourceDTO.Updater {
     
     mutating
     func update(data: @escaping @autoclosure () throws -> G) {
-        updates[\PM.ResourceDTO<G, T>.resource] = { builder, _ in
+        updates[\PM.ResourceDTO<G, T>.data] = { builder, _ in
             builder.set(\.$data, to: try data())
         }
     }
@@ -132,7 +134,7 @@ public extension PM.ResourceDTO.Updater {
     mutating
     func update(data: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> G) {
         needsPeek = true
-        updates[\PM.ResourceDTO<G, T>.resource] = { builder, _data in
+        updates[\PM.ResourceDTO<G, T>.data] = { builder, _data in
             guard let d = _data else { fatalError("应当提供 Data 结果，却没有提供") }
             return builder.set(\.$data, to: try data(d))
         }
@@ -146,4 +148,23 @@ func jsonbSetSql<V: Encodable>(field: String, path: [String], value: V) throws -
     let pathArray = "{\(path.joined(separator: ","))}"
     
     return .init("jsonb_set(\(field), '\(pathArray)', '\(jsonString)')")
+}
+
+extension PM.ResourceDTO: Query.Queriable where T == DTO.Queried {
+    public typealias Model = S.ResourceModel<G>
+    public typealias ErrorType = S.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.id: \.$id,
+        \.data: \.$data,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$data)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
+    }
 }

@@ -3,11 +3,11 @@ import Fluent
 import Foundation
 import Policy
 
-package final class UGroup: PGModel, @unchecked Sendable {
+public final class UGroup: PGModel, @unchecked Sendable {
     
-    package static let name = "groups"
+    public static let name = "groups"
     
-    package struct Fields: PGFields {
+    public struct Fields: PGFields {
         let id = PGField("id", .uuid)                           .primary
         let parentId = PGField("parent_id", .uuid)              .foreign(UGroup.self, .id, onDelete: .cascade)
         let name = PGField("name", .string)                     .required
@@ -15,13 +15,13 @@ package final class UGroup: PGModel, @unchecked Sendable {
         let createdAt = PGField("created_at", .datetime)           .required
         let updatedAt = PGField("updated_at", .datetime)           .required
         
-        package init() {}
+        public init() {}
     }
     
     
-    package static let fields = Fields()
+    public static let fields = Fields()
     
-    @ID(custom: fields.id.key)                      package var id: UUID?
+    @ID(custom: fields.id.key)                      public var id: UUID?
     
     @OptionalParent(fields.parentId)                var parent: UGroup?
     
@@ -49,7 +49,7 @@ package final class UGroup: PGModel, @unchecked Sendable {
     @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
     @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
     
-    package init() {}
+    public init() {}
     
-    package typealias MIG = DefaultMIG<UGroup>
+    public typealias MIG = DefaultMIG<UGroup>
 }
