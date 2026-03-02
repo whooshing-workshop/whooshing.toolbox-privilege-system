@@ -15,10 +15,6 @@ public enum Query {
     public struct Builder<Model: Queriable> {
         let query: QueryBuilder<Model.Model>
         
-        // Todo:
-        //  all
-        //  aggregate
-        
         init(query: QueryBuilder<Model.Model>) {
             self.query = query
         }
@@ -67,22 +63,23 @@ public enum Query {
             }
         }
         
-        public func all() -> EventLoopRes<[Model], Errcase> {
-            query.all()
-                .withError(Errcase.fetchResultFailed, category: .internal)
-                .flatMapThrowing
-            { res throws(Errcase.ErrType) in
-                try required(throws: Errcase.fetchResultFailed, "查询结果转为 DTO 失败", category: .internal) {
-                    try res.map {
-                        try .make(from: $0).get()
+        public func chunk(max: Int, closure: @escaping @Sendable ([Res<Model, Errcase>]) -> ()) -> EventLoopRes<Void, Errcase> {
+            query.chunk(max: max) { res in
+                closure(
+                    res.map { r in
+                        switch r {
+                        case .success(let success):
+                            do {
+                                return try Res<Model, Errcase>.success(Model.make(from: success).get())
+                            } catch {
+                                return Res<Model, Errcase>.failure(.chunkResultFailed, "查询结果转为 DTO 失败", category: .internal, subErr: error)
+                            }
+                        case .failure(let failure): return Res<Model, Errcase>.failure(.chunkResultFailed, category: .external)
+                        }
                     }
-                }
+                )
             }
-        }
-        
-        public func count() -> EventLoopRes<Int, Errcase> {
-            query.count()
-                .withError(Errcase.countResultFailed, category: .internal)
+            .withError(Errcase.chunkResultFailed, category: .internal)
         }
         
         public func page(with index: Int, size: Int) -> EventLoopRes<Page<Model>, Errcase> {
