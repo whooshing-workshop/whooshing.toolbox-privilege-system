@@ -6,6 +6,9 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 
+public typealias PPolicy<G: PolicyType> = DTO.Policy<G, DTO.Prepare>
+public typealias QPolicy<G: PolicyType> = DTO.Policy<G, DTO.Queried>
+
 public extension DTO {
     struct Policy<G: PolicyType, T: Status>: Sendable {
         public let moduleId: UUID

@@ -4,6 +4,9 @@ import ErrorHandle
 import PrivilegeModule
 import LoggingAdvanced
 
+public typealias PUserInGroupRelation = DTO.UserInGroupRelation<DTO.Prepare>
+public typealias QUserInGroupRelation = DTO.UserInGroupRelation<DTO.Queried>
+
 public extension DTO {
     struct UserInGroupRelation<T: Status>: Sendable {
         public let user: User<Queried>

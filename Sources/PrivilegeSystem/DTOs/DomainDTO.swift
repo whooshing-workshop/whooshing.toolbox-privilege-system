@@ -9,8 +9,11 @@ import LoggingAdvanced
 
 typealias DomainModel = Domain
 
+public typealias PDomain = DTO.Domain<DTO.Prepare>
+public typealias QDomain = DTO.Domain<DTO.Queried>
+
 public extension DTO {
-    struct Domain<T: Status>: Sendable {
+    struct Domain<T: Status>: Sendable, Equatable {
         public let name: String?
         public let description: String?
         

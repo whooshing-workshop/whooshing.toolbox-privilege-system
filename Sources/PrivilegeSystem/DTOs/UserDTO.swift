@@ -10,6 +10,9 @@ import LoggingAdvanced
 
 typealias UserModel = User
 
+public typealias PUser = DTO.User<DTO.Prepare>
+public typealias QUser = DTO.User<DTO.Queried>
+
 public extension DTO {
     struct User<T: Status>: Sendable {
         public let email: String
@@ -165,5 +168,11 @@ extension DTO.User: Loggerable, CustomStringConvertible {
             }
         }
         """
+    }
+}
+
+public extension Query.Queriable {
+    static func query(on system: PrivilegeSystem) -> Query.Builder<Self> {
+        system.query()
     }
 }

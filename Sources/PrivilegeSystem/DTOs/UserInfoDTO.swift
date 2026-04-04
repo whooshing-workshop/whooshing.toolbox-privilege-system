@@ -9,6 +9,9 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 
+public typealias PUserInfo = DTO.UserInfo<DTO.Prepare>
+public typealias QUserInfo = DTO.UserInfo<DTO.Queried>
+
 public extension DTO {
     struct UserInfo<T: Status>: Sendable {
         public let nickname: String

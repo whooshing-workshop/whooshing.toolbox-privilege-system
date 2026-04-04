@@ -45,3 +45,13 @@ public final class Domain: PGModel, @unchecked Sendable {
     
     public typealias MIG = DefaultMIG<Domain>
 }
+
+extension Domain: Equatable {
+    public static func == (lhs: Domain, rhs: Domain) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+}

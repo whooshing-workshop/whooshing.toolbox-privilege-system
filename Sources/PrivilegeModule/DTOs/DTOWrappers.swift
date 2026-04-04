@@ -3,6 +3,7 @@ import Fluent
 import PgSQL
 import Collections
 import NIOConcurrencyHelpers
+@preconcurrency import AnyCodable
 
 public enum DTO {}
 
@@ -107,4 +108,28 @@ package protocol DTOUpdater: Sendable {
 
 package extension DTOUpdater {
     var all: [KeyPathType] { .init(updates.keys) }
+}
+
+package func formatQuery(_ query: [String: AnyCodable]) -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    
+    do {
+        let data = try encoder.encode(query)
+        return String(data: data, encoding: .utf8) ?? "\(query)"
+    } catch {
+        return "\(query)"
+    }
+}
+
+extension DTO.Passive: Equatable where T: Equatable {
+    public static func == (lhs: DTO.Passive<T>, rhs: DTO.Passive<T>) -> Bool {
+        lhs.value == rhs.value
+    }
+}
+
+extension DTO.Protect: Equatable where T: Equatable {
+    public static func == (lhs: DTO.Protect<T>, rhs: DTO.Protect<T>) -> Bool {
+        lhs.value == rhs.value
+    }
 }

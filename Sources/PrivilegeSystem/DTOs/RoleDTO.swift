@@ -9,6 +9,9 @@ import LoggingAdvanced
 
 typealias RoleModel = Role
 
+public typealias PRole = DTO.Role<DTO.Prepare>
+public typealias QRole = DTO.Role<DTO.Queried>
+
 public extension DTO {
     struct Role<T: Status>: Sendable {
         public let name: String

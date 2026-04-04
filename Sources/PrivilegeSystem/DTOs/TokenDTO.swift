@@ -9,6 +9,9 @@ import LoggingAdvanced
 
 typealias TokenModel = Token
 
+public typealias PToken = DTO.Token<DTO.Prepare>
+public typealias QToken = DTO.Token<DTO.Queried>
+
 public extension DTO {
     struct Token<T: Status>: Sendable {
         public let credential: String

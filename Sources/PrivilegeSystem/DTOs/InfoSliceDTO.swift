@@ -9,6 +9,22 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 
+public typealias EIAddress = DTO.Address
+public typealias EIAlternateEmail = DTO.AlternateEmail
+public typealias EIPhone = DTO.Phone
+
+public typealias PAddressSlice = DTO.InfoSlice<DTO.Address, DTO.Prepare>
+public typealias QAddressSlice = DTO.InfoSlice<DTO.Address, DTO.Queried>
+
+public typealias PAlternateEmailSlice = DTO.InfoSlice<DTO.AlternateEmail, DTO.Prepare>
+public typealias QAlternateEmailSlice = DTO.InfoSlice<DTO.AlternateEmail, DTO.Queried>
+
+public typealias PPhoneSlice = DTO.InfoSlice<DTO.Phone, DTO.Prepare>
+public typealias QPhoneSlice = DTO.InfoSlice<DTO.Phone, DTO.Queried>
+
+public typealias PExtendedSlice<T: DTO.UserInfoModel> = DTO.InfoSlice<T, DTO.Prepare>
+public typealias QExtendedSlice<T: DTO.UserInfoModel> = DTO.InfoSlice<T, DTO.Queried>
+
 public extension DTO {
     protocol UserInfoModel: Sendable {
         associatedtype Value: Sendable & Codable
@@ -16,7 +32,7 @@ public extension DTO {
         static var description: String { get }
     }
     
-    struct UserExtendedInfo<T: UserInfoModel, G: Status>: Sendable {
+    struct InfoSlice<T: UserInfoModel, G: Status>: Sendable {
         public let value: T.Value
         public let order: Int16
         public let description: String?
@@ -61,8 +77,8 @@ public extension DTO {
     }
 }
 
-public extension DTO.UserExtendedInfo where G == DTO.Prepare {
-    init(value: T.Value, order: Int16, description: String?) {
+public extension DTO.InfoSlice where G == DTO.Prepare {
+    init(value: T.Value, order: Int16, description: String? = nil) {
         self = Self.init(
             _value: value,
             _order: order,
@@ -72,7 +88,7 @@ public extension DTO.UserExtendedInfo where G == DTO.Prepare {
     }
 }
 
-extension DTO.UserExtendedInfo where G == DTO.Queried, T.Value == String {
+extension DTO.InfoSlice where G == DTO.Queried, T.Value == String {
     var model: User.Info.Extended<T.Model> {
         guard let m = m else {
             fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
@@ -97,7 +113,7 @@ extension DTO.UserExtendedInfo where G == DTO.Queried, T.Value == String {
     }
 }
 
-extension DTO.UserExtendedInfo where G == DTO.Prepare, T.Value == String {
+extension DTO.InfoSlice where G == DTO.Prepare, T.Value == String {
     func raw(for userInfoId: UUID) -> User.Info.Extended<T.Model> {
         let info = User.Info.Extended<T.Model>()
         info.$userInfo.id = userInfoId
@@ -108,14 +124,14 @@ extension DTO.UserExtendedInfo where G == DTO.Prepare, T.Value == String {
     }
 }
 
-public extension DTO.UserExtendedInfo where T.Value == String, G == DTO.Prepare {
+public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let userInfoId: UUID
         package var id: UUID { userInfoId }
         
         package private(set) var updates: OrderedDictionary<
-            PartialKeyPath<DTO.UserExtendedInfo<T, DTO.Prepare>>,
-            (QueryBuilder<User.Info.Extended<T.Model>>, DTO.UserExtendedInfo<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
+            PartialKeyPath<DTO.InfoSlice<T, DTO.Prepare>>,
+            (QueryBuilder<User.Info.Extended<T.Model>>, DTO.InfoSlice<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
         > = [:]
         package private(set) var needsPeek = false
         
@@ -125,9 +141,9 @@ public extension DTO.UserExtendedInfo where T.Value == String, G == DTO.Prepare 
     }
 }
 
-extension DTO.UserExtendedInfo.Updater: DTOUpdater {}
+extension DTO.InfoSlice.Updater: DTOUpdater {}
 
-public extension DTO.UserExtendedInfo.Updater {
+public extension DTO.InfoSlice.Updater {
     mutating
     func update(value: @escaping @autoclosure () throws -> T.Value) {
         updates[\.value] = { builder, _ in
@@ -150,9 +166,9 @@ public extension DTO.UserExtendedInfo.Updater {
     }
 }
 
-public extension DTO.UserExtendedInfo.Updater {
+public extension DTO.InfoSlice.Updater {
     mutating
-    func update(value: @escaping (DTO.UserExtendedInfo<T, DTO.Queried>) throws -> T.Value) {
+    func update(value: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> T.Value) {
         needsPeek = true
         updates[\.value] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
@@ -161,7 +177,7 @@ public extension DTO.UserExtendedInfo.Updater {
     }
     
     mutating
-    func update(order: @escaping (DTO.UserExtendedInfo<T, DTO.Queried>) throws -> Int16) {
+    func update(order: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> Int16) {
         needsPeek = true
         updates[\.order] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
@@ -170,7 +186,7 @@ public extension DTO.UserExtendedInfo.Updater {
     }
     
     mutating
-    func update(description: @escaping (DTO.UserExtendedInfo<T, DTO.Queried>) throws -> String?) {
+    func update(description: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> String?) {
         needsPeek = true
         updates[\.description] = { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
@@ -179,7 +195,7 @@ public extension DTO.UserExtendedInfo.Updater {
     }
 }
 
-extension DTO.UserExtendedInfo: Encodable where G == DTO.Queried {
+extension DTO.InfoSlice: Encodable where G == DTO.Queried {
     enum CodingKeys: String, CodingKey {
         case value
         case order
@@ -201,7 +217,7 @@ extension DTO.UserExtendedInfo: Encodable where G == DTO.Queried {
     }
 }
 
-extension DTO.UserExtendedInfo: Query.Queriable where G == DTO.Queried, T.Value == String {
+extension DTO.InfoSlice: Query.Queriable where G == DTO.Queried, T.Value == String {
     public typealias Model = User.Info.Extended<T.Model>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -226,7 +242,7 @@ extension DTO.UserExtendedInfo: Query.Queriable where G == DTO.Queried, T.Value 
     }
 }
 
-extension DTO.UserExtendedInfo: Loggerable {
+extension DTO.InfoSlice: Loggerable {
     public var logDescription: String {
         let isQueried = G.self == DTO.Queried.self
         let idVal = isQueried ? "\"\(self.id)\"" : "null"

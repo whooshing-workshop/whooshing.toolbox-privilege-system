@@ -7,8 +7,8 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 
-import LoggingAdvanced
-
+public typealias PGroup = DTO.Group<DTO.Prepare>
+public typealias QGroup = DTO.Group<DTO.Queried>
 
 public extension DTO {
     struct Group<T: Status>: Sendable {

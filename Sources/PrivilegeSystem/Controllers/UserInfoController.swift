@@ -9,37 +9,23 @@ extension PrivilegeSystem {
     public final class UserInfoController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
-        let userExtendedInfoController: UserExtendedInfoController
+        let infoSliceController: InfoSliceController
         
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
-            userExtendedInfoController: UserExtendedInfoController
+            infoSliceController: InfoSliceController
         ) {
             self.db = db
             self.eventLoop = eventLoop
-            self.userExtendedInfoController = userExtendedInfoController
-        }
-        
-        public struct Extended<T: DTO.Status>: Sendable {
-            let addresses: [DTO.UserExtendedInfo<DTO.Address, T>]
-            let alternateEmails: [DTO.UserExtendedInfo<DTO.AlternateEmail, T>]
-            let phones: [DTO.UserExtendedInfo<DTO.Phone, T>]
+            self.infoSliceController = infoSliceController
         }
         
         public func create(
-            for userId: UUID,
-            @OTORelationBuilder<DTO.UserInfo<DTO.Prepare>, Extended<DTO.Prepare>>
-            _ content: @Sendable @escaping () -> [OTORelation<DTO.UserInfo<DTO.Prepare>, Extended<DTO.Prepare>>]
+            @OTOChainRelationBuilder<UUID, DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>
+            _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
         ) -> EventLoopRes<Void, Errcase> {
-            create(for: userId, relations: content())
-        }
-        
-        public func create(
-            for userId: UUID,
-            infos: [DTO.UserInfo<DTO.Prepare>]
-        ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], Errcase> {
-            __create(on: db, for: userId, infos: infos)
+            create(relations: content())
         }
         
         public func delete(
@@ -73,51 +59,38 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.UserInfoController {
     func create(
-        for userId: UUID,
-        relations: [OTORelation<DTO.UserInfo<DTO.Prepare>, Extended<DTO.Prepare>>]
+        relations: [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         db.trans { db in
-            self.__create(on: db, for: userId, infos: relations.map { $0.left }).flatMap { _ in
-                relations.flatMap { relation in
+            let infos = relations.map { $0.right.left.raw(for: $0.left) }
+            return infos
+                .create(on: db)
+                .withError(PrivilegeSystem.Errcase.userInfoCreateFailed, "数据库执行创建失败", category: .internal)
+                .flatMap
+            { _ in
+                relations.enumerated().flatMap { (i, relation) in
                     [
-                        self.userExtendedInfoController.__create(
+                        self.infoSliceController.__create(
                             on: db,
-                            for: relation.left.id,
-                            extendedInfos: relation.right.addresses
+                            for: try! infos[i].requireID(),
+                            extendedInfos: relation.right.right.addresses
                         ).map { _ in },
                         
-                        self.userExtendedInfoController.__create(
+                        self.infoSliceController.__create(
                             on: db,
-                            for: relation.left.id,
-                            extendedInfos: relation.right.alternateEmails
+                            for: try! infos[i].requireID(),
+                            extendedInfos: relation.right.right.alternateEmails
                         ).map { _ in },
                         
-                        self.userExtendedInfoController.__create(
+                        self.infoSliceController.__create(
                             on: db,
-                            for: relation.left.id,
-                            extendedInfos: relation.right.phones
+                            for: try! infos[i].requireID(),
+                            extendedInfos: relation.right.right.phones
                         ).map { _ in }
                     ]
                 }
                 .flatten(on: db.eventLoop)
             }
         }
-    }
-}
-
-extension PrivilegeSystem.UserInfoController {
-    func __create(
-        on db: PGDatabase,
-        for userId: UUID,
-        infos: [DTO.UserInfo<DTO.Prepare>]
-    ) -> EventLoopRes<[DTO.UserInfo<DTO.Queried>], PrivilegeSystem.Errcase> {
-        __create(
-            on: db,
-            dtos: infos,
-            label: "用户信息",
-            errThrowing: .userInfoCreateFailed,
-            modelBuilder: { $0.raw(for: userId) },
-            dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
-        )
     }
 }

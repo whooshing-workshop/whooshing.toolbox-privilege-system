@@ -8,6 +8,8 @@ import Query
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
+typealias AT = AccountTesting
+
 @Suite("账号 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct AccountTesting {
     
@@ -35,6 +37,8 @@ struct AccountTesting {
         (4, "ds8aoikda"),
         (5, "uhalskjdf")
     ]
+    
+    nonisolated(unsafe) static var ids: [UUID] = []
     
     @Test("User 创建测试", arguments: oldPasswords)
     func create(i: Int, password: String) async throws {
@@ -103,6 +107,8 @@ struct AccountTesting {
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
+        #expect(try await s.query(DTO.User<DTO.Queried>.self).count().get() == Self.users.count);
+        
         let res = try await s.query(DTO.User<DTO.Queried>.self)
             .group(.or) { g in
                 g
@@ -112,8 +118,24 @@ struct AccountTesting {
             .all()
             .get()
         
-        print("result: ")
-        print(res)
+        #expect(res.count == 2)
+        #expect(res.contains { $0.email == "user6@example.com" })
+        #expect(res.contains { $0.email == "user5@example.com" })
+        
+        Self.ids = []
+        
+        for user in Self.users {
+            let u = try #require(
+                try await s.query(QUser.self)
+                    .filter(\.email == user.0)
+                    .first()
+                    .get()
+            )
+            
+            Self.ids.append(u.id)
+        }
+        
+        #expect(Self.ids.count == Self.users.count)
     }
     
     @MainActor
