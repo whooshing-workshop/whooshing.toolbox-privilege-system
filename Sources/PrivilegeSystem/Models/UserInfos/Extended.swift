@@ -37,6 +37,28 @@ public extension User.Info {
     }
 }
 
+extension User.Info.Extended: Hashable {
+    public static func == (lhs: User.Info.Extended<T>, rhs: User.Info.Extended<T>) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.$userInfo.id == rhs.$userInfo.id &&
+        lhs.value == rhs.value &&
+        lhs.order == rhs.order &&
+        lhs.description == rhs.description &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine($userInfo.id)
+        hasher.combine(value)
+        hasher.combine(order)
+        hasher.combine(description)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+}
+
 public extension User.Info {
     typealias Model = UserInfoExtends.Model
     typealias Address = UserInfoExtends.Address

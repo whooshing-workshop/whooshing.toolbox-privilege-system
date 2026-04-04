@@ -3,12 +3,13 @@ import Foundation
 import ErrorHandle
 import PrivilegeModule
 import LoggingAdvanced
+import AnyCodable
 
 public typealias PUserInGroupRelation = DTO.UserInGroupRelation<DTO.Prepare>
 public typealias QUserInGroupRelation = DTO.UserInGroupRelation<DTO.Queried>
 
 public extension DTO {
-    struct UserInGroupRelation<T: Status>: Sendable {
+    struct UserInGroupRelation<T: Status>: Sendable, Hashable {
         public let user: User<Queried>
         public let group: Group<Queried>
         
@@ -73,20 +74,36 @@ public func ~> (
 extension DTO.UserInGroupRelation: CustomStringConvertible, Loggerable {
     public var description: String {
         let isQueried = T.self == DTO.Queried.self
-        let idVal = isQueried ? "\"\(self.id)\"" : "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
+            "user_id": AnyCodable("\(self.user.id)"),
+            "group_id": AnyCodable("\(self.group.id)"),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil)
+        ]
 
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "user_id": "\(self.user.id)",
-                "group_id": "\(self.group.id)",
-                "created_at": \(createdVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PUserInGroupRelation, rhs: QUserInGroupRelation) -> Bool {
+    lhs.user == rhs.user &&
+    lhs.group == rhs.group
+}
+
+public func == (lhs: QUserInGroupRelation, rhs: PUserInGroupRelation) -> Bool {
+    lhs.user == rhs.user &&
+    lhs.group == rhs.group
+}
+
+public func == (lhs: [PUserInGroupRelation], rhs: [QUserInGroupRelation]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QUserInGroupRelation], rhs: [PUserInGroupRelation]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

@@ -8,7 +8,7 @@ import NIOConcurrencyHelpers
 public enum DTO {}
 
 public extension DTO {
-    protocol Status: Sendable {}
+    protocol Status: Sendable, Hashable {}
     
     enum Prepare: Status {}
     enum Queried: Status {}
@@ -128,8 +128,20 @@ extension DTO.Passive: Equatable where T: Equatable {
     }
 }
 
+extension DTO.Passive: Hashable where T: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(value)
+    }
+}
+
 extension DTO.Protect: Equatable where T: Equatable {
     public static func == (lhs: DTO.Protect<T>, rhs: DTO.Protect<T>) -> Bool {
         lhs.value == rhs.value
+    }
+}
+
+extension DTO.Protect: Hashable where T: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(value)
     }
 }

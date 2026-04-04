@@ -6,6 +6,7 @@ import Collections
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 typealias DomainModel = Domain
 
@@ -13,7 +14,7 @@ public typealias PDomain = DTO.Domain<DTO.Prepare>
 public typealias QDomain = DTO.Domain<DTO.Queried>
 
 public extension DTO {
-    struct Domain<T: Status>: Sendable, Equatable {
+    struct Domain<T: Status>: Sendable, Hashable {
         public let name: String?
         public let description: String?
         
@@ -176,25 +177,37 @@ extension DTO.Domain: Query.Queriable where T == DTO.Queried {
 extension DTO.Domain: Loggerable {
     public var logDescription: String {
         let isQueried = T.self == DTO.Queried.self
-        let idVal = isQueried ? "\(self.id)" : "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
-        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? self.id : nil),
+            "name": AnyCodable(self.name),
+            "description": AnyCodable(self.description),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
 
-        let nameStr = self.name.map { "\"\($0)\"" } ?? "null"
-        let descStr = self.description.map { "\"\($0)\"" } ?? "null"
-
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "name": \(nameStr),
-                "description": \(descStr),
-                "created_at": \(createdVal),
-                "updated_at": \(updatedVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PDomain, rhs: QDomain) -> Bool {
+    lhs.name == rhs.name &&
+    lhs.description == rhs.description
+}
+
+public func == (lhs: QDomain, rhs: PDomain) -> Bool {
+    lhs.name == rhs.name &&
+    lhs.description == rhs.description
+}
+
+public func == (lhs: [PDomain], rhs: [QDomain]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QDomain], rhs: [PDomain]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

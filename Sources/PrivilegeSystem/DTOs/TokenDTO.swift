@@ -6,6 +6,7 @@ import PrivilegeModule
 import DataConvertable
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 typealias TokenModel = Token
 
@@ -13,7 +14,7 @@ public typealias PToken = DTO.Token<DTO.Prepare>
 public typealias QToken = DTO.Token<DTO.Queried>
 
 public extension DTO {
-    struct Token<T: Status>: Sendable {
+    struct Token<T: Status>: Sendable, Hashable {
         public let credential: String
         
         @Protect public internal(set) var tokenEncrypted: Data
@@ -143,37 +144,44 @@ extension DTO.Token: Query.Queriable where T == DTO.Queried {
 
 extension DTO.Token: CustomStringConvertible, Loggerable {
     public var description: String {
-        // 1. 状态标签
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        
-        // 2. 状态分流判断
         let isQueried = T.self == DTO.Queried.self
         
-        // 3. 字段安全提取
-        // 注意：credential 虽然是 public，但通常不建议在日志中全显，这里保留前 4 位
         let credPrefix = String(self.credential.prefix(4))
         let credDisplay = "\(credPrefix)****"
         
-        let idVal = isQueried ? "\"\(self.id)\"" : "null"
-        let userIdVal = isQueried ? "\"\(self.userId)\"" : "null"
-        let validVal = isQueried ? "\(self.valid)" : "null"
-        let expireVal = isQueried ? "\(self.expireAfter)" : "\(self.expireAfter)" // Prepare 阶段已有默认值
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
+            "user_id": AnyCodable(isQueried ? "\(self.userId)" : nil),
+            "credential": AnyCodable(credDisplay),
+            "token": AnyCodable("[PROTECTED_KEY]"),
+            "token_encrypted": AnyCodable("[BINARY_DATA]"),
+            "valid": AnyCodable(isQueried ? self.valid : nil),
+            "expire_after": AnyCodable(self.expireAfter),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil)
+        ]
 
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "user_id": \(userIdVal),
-                "credential": "\(credDisplay)",
-                "token": "[PROTECTED_KEY]",
-                "token_encrypted": "[BINARY_DATA]",
-                "valid": \(validVal),
-                "expire_after": \(expireVal),
-                "created_at": \(createdVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PToken, rhs: QToken) -> Bool {
+    lhs.credential == rhs.credential &&
+    lhs.expireAfter == rhs.expireAfter
+}
+
+public func == (lhs: QToken, rhs: PToken) -> Bool {
+    lhs.credential == rhs.credential &&
+    lhs.expireAfter == rhs.expireAfter
+}
+
+public func == (lhs: [PToken], rhs: [QToken]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QToken], rhs: [PToken]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

@@ -6,6 +6,7 @@ import Collections
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 typealias RoleModel = Role
 
@@ -13,7 +14,7 @@ public typealias PRole = DTO.Role<DTO.Prepare>
 public typealias QRole = DTO.Role<DTO.Queried>
 
 public extension DTO {
-    struct Role<T: Status>: Sendable {
+    struct Role<T: Status>: Sendable, Hashable {
         public let name: String
         public let description: String?
         
@@ -176,24 +177,37 @@ extension DTO.Role: Query.Queriable where T == DTO.Queried {
 extension DTO.Role: Loggerable {
     public var logDescription: String {
         let isQueried = T.self == DTO.Queried.self
-        let idVal = isQueried ? "\(self.id)" : "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
-        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? self.id : nil),
+            "name": AnyCodable(self.name),
+            "description": AnyCodable(self.description),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
 
-        let descStr = self.description.map { "\"\($0)\"" } ?? "null"
-
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "name": "\(self.name)",
-                "description": \(descStr),
-                "created_at": \(createdVal),
-                "updated_at": \(updatedVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PRole, rhs: QRole) -> Bool {
+    lhs.name == rhs.name &&
+    lhs.description == rhs.description
+}
+
+public func == (lhs: QRole, rhs: PRole) -> Bool {
+    lhs.name == rhs.name &&
+    lhs.description == rhs.description
+}
+
+public func == (lhs: [PRole], rhs: [QRole]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QRole], rhs: [PRole]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

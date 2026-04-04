@@ -5,12 +5,13 @@ import ErrorHandle
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 public typealias PPolicy<G: PolicyType> = DTO.Policy<G, DTO.Prepare>
 public typealias QPolicy<G: PolicyType> = DTO.Policy<G, DTO.Queried>
 
 public extension DTO {
-    struct Policy<G: PolicyType, T: Status>: Sendable {
+    struct Policy<G: PolicyType, T: Status>: Sendable, Hashable {
         public let moduleId: UUID
         public let policy: String
         
@@ -88,22 +89,37 @@ extension DTO.Policy: Query.Queriable where T == DTO.Queried {
 extension DTO.Policy: CustomStringConvertible, Loggerable {
     public var description: String {
         let isQueried = T.self == DTO.Queried.self
-        let idVal = isQueried ? "\"\(self.id)\"" : "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
-        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
+            "module_id": AnyCodable("\(self.moduleId)"),
+            "policy": AnyCodable(self.policy),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
 
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "module_id": "\(self.moduleId)",
-                "policy": "\(self.policy)",
-                "created_at": \(createdVal),
-                "updated_at": \(updatedVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == <G: PolicyType>(lhs: PPolicy<G>, rhs: QPolicy<G>) -> Bool {
+    lhs.moduleId == rhs.moduleId &&
+    lhs.policy == rhs.policy
+}
+
+public func == <G: PolicyType>(lhs: QPolicy<G>, rhs: PPolicy<G>) -> Bool {
+    lhs.moduleId == rhs.moduleId &&
+    lhs.policy == rhs.policy
+}
+
+public func == <G: PolicyType>(lhs: [PPolicy<G>], rhs: [QPolicy<G>]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == <G: PolicyType>(lhs: [QPolicy<G>], rhs: [PPolicy<G>]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

@@ -2,7 +2,7 @@ import PgSQL
 import Fluent
 import Foundation
 
-public protocol PivotType {
+public protocol PivotType: Hashable, Sendable {
     associatedtype PrimaryModel: PGModel
     associatedtype SecondaryModel: PGModel
     
@@ -51,6 +51,22 @@ open class Pivot<T: PivotType>: PGModel, @unchecked Sendable {
     public required init() {}
     
     public typealias MIG = DefaultMIG<Pivot<T>>
+}
+
+extension Pivot: Hashable {
+    public static func == (lhs: Pivot<T>, rhs: Pivot<T>) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.$primaryModel.id == rhs.$primaryModel.id &&
+        lhs.$secondaryModel.id == rhs.$secondaryModel.id &&
+        lhs.createdAt == rhs.createdAt
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine($primaryModel.id)
+        hasher.combine($secondaryModel.id)
+        hasher.combine(createdAt)
+    }
 }
 
 public enum Pivots {}

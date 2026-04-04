@@ -6,12 +6,13 @@ import Collections
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 public typealias PGroup = DTO.Group<DTO.Prepare>
 public typealias QGroup = DTO.Group<DTO.Queried>
 
 public extension DTO {
-    struct Group<T: Status>: Sendable {
+    struct Group<T: Status>: Sendable, Hashable {
         public let parentId: UUID?
         public let name: String
         public let description: String?
@@ -197,26 +198,40 @@ extension DTO.Group: Query.Queriable where T == DTO.Queried {
 extension DTO.Group: Loggerable {
     public var logDescription: String {
         let isQueried = T.self == DTO.Queried.self
-        let idVal = isQueried ? "\"\(self.id)\"" : "null"
-        let parentIdVal = self.parentId.map { "\"\($0)\"" } ?? "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
-        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
+            "parent_id": AnyCodable(self.parentId.map { "\($0)" }),
+            "name": AnyCodable(self.name),
+            "description": AnyCodable(self.description),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
 
-        let descStr = self.description.map { "\"\($0)\"" } ?? "null"
-
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "parent_id": \(parentIdVal),
-                "name": "\(self.name)",
-                "description": \(descStr),
-                "created_at": \(createdVal),
-                "updated_at": \(updatedVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PGroup, rhs: QGroup) -> Bool {
+    lhs.parentId == rhs.parentId &&
+    lhs.name == rhs.name &&
+    lhs.description == rhs.description
+}
+
+public func == (lhs: QGroup, rhs: PGroup) -> Bool {
+    lhs.parentId == rhs.parentId &&
+    lhs.name == rhs.name &&
+    lhs.description == rhs.description
+}
+
+public func == (lhs: [PGroup], rhs: [QGroup]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QGroup], rhs: [PGroup]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

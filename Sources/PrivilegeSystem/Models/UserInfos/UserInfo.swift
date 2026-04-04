@@ -42,3 +42,27 @@ public extension User {
         public typealias MIG = DefaultMIG<Info>
     }
 }
+
+extension User.Info: Hashable {
+    public static func == (lhs: User.Info, rhs: User.Info) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.$user.id == rhs.$user.id &&
+        lhs.nickname == rhs.nickname &&
+        lhs.identifier == rhs.identifier &&
+        lhs.birthday == rhs.birthday &&
+        lhs.other == rhs.other &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine($user.id)
+        hasher.combine(nickname)
+        hasher.combine(identifier)
+        hasher.combine(birthday)
+        hasher.combine(other)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+}

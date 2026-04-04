@@ -8,6 +8,7 @@ import Collections
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 public typealias EIAddress = DTO.Address
 public typealias EIAlternateEmail = DTO.AlternateEmail
@@ -27,12 +28,12 @@ public typealias QExtendedSlice<T: DTO.UserInfoModel> = DTO.InfoSlice<T, DTO.Que
 
 public extension DTO {
     protocol UserInfoModel: Sendable {
-        associatedtype Value: Sendable & Codable
+        associatedtype Value: Sendable & Codable & Hashable
         associatedtype Model: UserInfoExtends.Model
         static var description: String { get }
     }
     
-    struct InfoSlice<T: UserInfoModel, G: Status>: Sendable {
+    struct InfoSlice<T: UserInfoModel, G: Status>: Sendable, Hashable {
         public let value: T.Value
         public let order: Int16
         public let description: String?
@@ -245,27 +246,41 @@ extension DTO.InfoSlice: Query.Queriable where G == DTO.Queried, T.Value == Stri
 extension DTO.InfoSlice: Loggerable {
     public var logDescription: String {
         let isQueried = G.self == DTO.Queried.self
-        let idVal = isQueried ? "\"\(self.id)\"" : "null"
-        let userInfoIdVal = isQueried ? "\"\(self.userInfoId)\"" : "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
-        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
         let statusLabel = "\(G.self)".components(separatedBy: ".").last ?? "\(G.self)"
-
-        let descStr = self.description.map { "\"\($0)\"" } ?? "null"
         
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "user_info_id": \(userInfoIdVal),
-                "value": "[PROTECTED]",
-                "order": \(self.order),
-                "description": \(descStr),
-                "created_at": \(createdVal),
-                "updated_at": \(updatedVal)
-            }
-        }
-        """
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
+            "user_info_id": AnyCodable(isQueried ? "\(self.userInfoId)" : nil),
+            "value": AnyCodable("[PROTECTED]"),
+            "order": AnyCodable(self.order),
+            "description": AnyCodable(self.description),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
+
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == <T: DTO.UserInfoModel>(lhs: DTO.InfoSlice<T, DTO.Prepare>, rhs: DTO.InfoSlice<T, DTO.Queried>) -> Bool {
+    lhs.value == rhs.value &&
+    lhs.order == rhs.order &&
+    lhs.description == rhs.description
+}
+
+public func == <T: DTO.UserInfoModel>(lhs: DTO.InfoSlice<T, DTO.Queried>, rhs: DTO.InfoSlice<T, DTO.Prepare>) -> Bool {
+    lhs.value == rhs.value &&
+    lhs.order == rhs.order &&
+    lhs.description == rhs.description
+}
+
+public func == <T: DTO.UserInfoModel>(lhs: [DTO.InfoSlice<T, DTO.Prepare>], rhs: [DTO.InfoSlice<T, DTO.Queried>]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == <T: DTO.UserInfoModel>(lhs: [DTO.InfoSlice<T, DTO.Queried>], rhs: [DTO.InfoSlice<T, DTO.Prepare>]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

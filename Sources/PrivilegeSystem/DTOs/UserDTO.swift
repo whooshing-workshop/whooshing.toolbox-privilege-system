@@ -7,6 +7,7 @@ import Policy
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 typealias UserModel = User
 
@@ -14,7 +15,7 @@ public typealias PUser = DTO.User<DTO.Prepare>
 public typealias QUser = DTO.User<DTO.Queried>
 
 public extension DTO {
-    struct User<T: Status>: Sendable {
+    struct User<T: Status>: Sendable, Hashable {
         public let email: String
         
         @Protect public internal(set) var hashedPasswd: String
@@ -151,24 +152,38 @@ extension DTO.User: Query.Queriable where T == DTO.Queried {
 
 extension DTO.User: Loggerable, CustomStringConvertible {
     public var description: String {
-        let idString = T.self == DTO.Queried.self ? "\(self.id)" : "null (pre-save)"
-        let createdString = T.self == DTO.Queried.self ? "\(self.createdAt)" : "null"
-        let updatedString = T.self == DTO.Queried.self ? "\(self.updatedAt)" : "null"
+        let isQueried = T.self == DTO.Queried.self
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? String(describing: self.id) : "null (pre-save)"),
+            "email": AnyCodable(self.email),
+            "hashed_passwd": AnyCodable("[PROTECTED]"),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
 
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": "\(idString)",
-                "email": "\(self.email)",
-                "hashed_passwd": "[PROTECTED]",
-                "created_at": "\(createdString)",
-                "updated_at": "\(updatedString)"
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PUser, rhs: QUser) -> Bool {
+    lhs.email == rhs.email
+}
+
+public func == (lhs: QUser, rhs: PUser) -> Bool {
+    lhs.email == rhs.email
+}
+
+public func == (lhs: [PUser], rhs: [QUser]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QUser], rhs: [PUser]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }
 
 public extension Query.Queriable {

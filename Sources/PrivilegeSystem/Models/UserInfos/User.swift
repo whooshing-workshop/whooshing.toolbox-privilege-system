@@ -54,3 +54,25 @@ public final class User: PGModel, @unchecked Sendable {
     
     public typealias MIG = DefaultMIG<User>
 }
+
+extension User: Hashable {
+    public static func == (lhs: User, rhs: User) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.email == rhs.email &&
+        lhs.hashedPasswd == rhs.hashedPasswd &&
+        lhs.key == rhs.key &&
+        lhs.salt == rhs.salt &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(email)
+        hasher.combine(hashedPasswd)
+        hasher.combine(key)
+        hasher.combine(salt)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+}

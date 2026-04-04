@@ -8,12 +8,13 @@ import Collections
 import PrivilegeModule
 import Query
 import LoggingAdvanced
+import AnyCodable
 
 public typealias PUserInfo = DTO.UserInfo<DTO.Prepare>
 public typealias QUserInfo = DTO.UserInfo<DTO.Queried>
 
 public extension DTO {
-    struct UserInfo<T: Status>: Sendable {
+    struct UserInfo<T: Status>: Sendable, Hashable {
         public let nickname: String
         public let identifier: String
         public let birthday: Date
@@ -242,28 +243,44 @@ extension DTO.UserInfo: Query.Queriable where T == DTO.Queried {
 extension DTO.UserInfo: CustomStringConvertible, Loggerable {
     public var description: String {
         let isQueried = T.self == DTO.Queried.self
-        let idVal = isQueried ? "\"\(self.id)\"" : "null"
-        let userIdVal = isQueried ? "\"\(self.userId)\"" : "null"
-        let createdVal = isQueried ? "\"\(self.createdAt)\"" : "null"
-        let updatedVal = isQueried ? "\"\(self.updatedAt)\"" : "null"
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let data: [String: AnyCodable] = [
+            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
+            "user_id": AnyCodable(isQueried ? "\(self.userId)" : nil),
+            "nickname": AnyCodable(self.nickname),
+            "identifier": AnyCodable(self.identifier),
+            "birthday": AnyCodable("\(self.birthday)"),
+            "other": AnyCodable(self.other),
+            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
+            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
+        ]
 
-        let otherStr = self.other.map { "\"\($0)\"" } ?? "null"
-
-        return """
-        {
-            "status": "\(statusLabel)",
-            "data": {
-                "id": \(idVal),
-                "user_id": \(userIdVal),
-                "nickname": "\(self.nickname)",
-                "identifier": "\(self.identifier)",
-                "birthday": "\(self.birthday)",
-                "other": \(otherStr),
-                "created_at": \(createdVal),
-                "updated_at": \(updatedVal)
-            }
-        }
-        """
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(data)
+        ])
     }
+}
+
+public func == (lhs: PUserInfo, rhs: QUserInfo) -> Bool {
+    lhs.nickname == rhs.nickname &&
+    lhs.identifier == rhs.identifier &&
+    lhs.birthday == rhs.birthday &&
+    lhs.other == rhs.other
+}
+
+public func == (lhs: QUserInfo, rhs: PUserInfo) -> Bool {
+    lhs.nickname == rhs.nickname &&
+    lhs.identifier == rhs.identifier &&
+    lhs.birthday == rhs.birthday &&
+    lhs.other == rhs.other
+}
+
+public func == (lhs: [PUserInfo], rhs: [QUserInfo]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
+}
+
+public func == (lhs: [QUserInfo], rhs: [PUserInfo]) -> Bool {
+    lhs.elementsEqual(rhs, by: ==)
 }

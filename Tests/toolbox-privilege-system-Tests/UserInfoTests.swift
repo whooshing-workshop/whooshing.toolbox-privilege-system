@@ -153,6 +153,8 @@ struct UserinfoTesting {
         
         let infos = try await s.infoSlice.fetch(for: AT.ids[0]).get()
         #expect(infos.addresses == Self.infos[0].2.addresses)
+        #expect(infos.alternateEmails == Self.infos[0].2.alternateEmails)
+        #expect(infos.phones == Self.infos[0].2.phones)
     }
     
     @MainActor
