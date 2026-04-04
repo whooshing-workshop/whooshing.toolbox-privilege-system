@@ -130,6 +130,18 @@ struct UserinfoTesting {
         )
     ]}
     
+    static var updates: [(PUserInfo.Updater?, PAddressSlice.Updater?, PAlternateEmailSlice.Updater?, PPhoneSlice.Updater?)] {[
+        (
+//            {
+//                let updater = PUserInfo.Updater(userId: AT.ids[0])
+//            }(),
+            nil,
+            nil,
+            nil,
+            nil
+        )
+    ]}
+    
     @Test("创建用户信息")
     func create() async throws {
         let (s, _) = try await TestingShared.getSystem()
@@ -147,14 +159,70 @@ struct UserinfoTesting {
         #expect(try await QPhoneSlice.query(on: s).count().get() == Self.infos.reduce(0) { $0 + $1.2.phones.count })
     }
     
-    @Test("自定义查询")
-    func customQuery() async throws {
+    @Test("Fetch 查询")
+    func fetchQuery() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
         let infos = try await s.infoSlice.fetch(for: AT.ids[0]).get()
         #expect(infos.addresses == Self.infos[0].2.addresses)
         #expect(infos.alternateEmails == Self.infos[0].2.alternateEmails)
         #expect(infos.phones == Self.infos[0].2.phones)
+    }
+    
+    @Test("自定义查询")
+    func customQuery() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        for info in Self.infos {
+            for address in info.2.addresses {
+                let res = try #require(
+                    try await QUserInfo.query(on: s)
+                        .join(QAddressSlice.self, on: \QUserInfo.id == \QAddressSlice.userInfoId)
+                        .filter(QAddressSlice.self, \.value == address.value)
+                        .first()
+                        .get()
+                )
+                
+                #expect(res.nickname == info.1.nickname)
+                #expect(res.identifier == info.1.identifier)
+            }
+            
+            for email in info.2.alternateEmails {
+                let res = try #require(
+                    try await QUserInfo.query(on: s)
+                        .join(QAlternateEmailSlice.self, on: \QUserInfo.id == \QAlternateEmailSlice.userInfoId)
+                        .filter(QAlternateEmailSlice.self, \.value == email.value)
+                        .first()
+                        .get()
+                )
+                
+                #expect(res.nickname == info.1.nickname)
+                #expect(res.identifier == info.1.identifier)
+            }
+            
+            for phone in info.2.phones {
+                let res = try #require(
+                    try await QUserInfo.query(on: s)
+                        .join(QPhoneSlice.self, on: \QUserInfo.id == \QPhoneSlice.userInfoId)
+                        .filter(QPhoneSlice.self, \.value == phone.value)
+                        .first()
+                        .get()
+                )
+                
+                #expect(res.nickname == info.1.nickname)
+                #expect(res.identifier == info.1.identifier)
+            }
+        }
+    }
+    
+    @Test("数据更新")
+    func update() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let updater = PUserInfo.Updater(userId: AT.ids[0])
+        
+        
+        try await s.userInfo.update(with: updater).get()
     }
     
     @MainActor

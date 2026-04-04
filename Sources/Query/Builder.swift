@@ -30,6 +30,14 @@ public enum Query {
         }
         
         @discardableResult
+        public func filter<Joined, Value>(
+            _ schema: Joined.Type,
+            _ filter: ValueFilter<Joined, Value>
+        ) -> Self where Joined: Queriable {
+            .init(query: query.filter(Joined.Model.self, filter.filter))
+        }
+        
+        @discardableResult
         public func join<Foreign>(
             _ foreign: Foreign.Type,
             on filter: JoinFilter<Model, Foreign>,
