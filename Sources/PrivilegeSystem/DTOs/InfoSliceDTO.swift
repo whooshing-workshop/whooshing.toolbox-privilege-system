@@ -130,14 +130,29 @@ public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
         public let userInfoId: UUID
         package var id: UUID { userInfoId }
         
-        package private(set) var updates: OrderedDictionary<
+        package let updates: OrderedDictionary<
             PartialKeyPath<DTO.InfoSlice<T, DTO.Prepare>>,
             (QueryBuilder<User.Info.Extended<T.Model>>, DTO.InfoSlice<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
-        > = [:]
-        package private(set) var needsPeek = false
+        >
+        package let needsPeek: Bool
         
         public init(userInfoId: UUID) {
             self.userInfoId = userInfoId
+            self.updates = [:]
+            self.needsPeek = false
+        }
+        
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<DTO.InfoSlice<T, DTO.Prepare>>,
+                (QueryBuilder<User.Info.Extended<T.Model>>, DTO.InfoSlice<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
+            >,
+            needsPeek: Bool
+        ) {
+            self.userInfoId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
@@ -145,51 +160,42 @@ public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
 extension DTO.InfoSlice.Updater: DTOUpdater {}
 
 public extension DTO.InfoSlice.Updater {
-    mutating
-    func update(value: @escaping @autoclosure () throws -> T.Value) {
-        updates[\.value] = { builder, _ in
+    func update(value: @escaping @autoclosure () throws -> T.Value) -> Self {
+        generate(key: \.value) { builder, _ in
             builder.set(\.$value, to: try value())
         }
     }
     
-    mutating
-    func update(order: @escaping @autoclosure () throws -> Int16) {
-        updates[\.order] = { builder, _ in
+    func update(order: @escaping @autoclosure () throws -> Int16) -> Self {
+        generate(key: \.order) { builder, _ in
             builder.set(\.$order, to: try order())
         }
     }
     
-    mutating
-    func update(description: @escaping @autoclosure () throws -> String?) {
-        updates[\.description] = { builder, _ in
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
             builder.set(\.$description, to: try description())
         }
     }
 }
 
 public extension DTO.InfoSlice.Updater {
-    mutating
-    func update(value: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> T.Value) {
-        needsPeek = true
-        updates[\.value] = { builder, query in
+    func update(value: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> T.Value) -> Self {
+        generate(needsPeek: true, key: \.value) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$value, to: try value(q))
         }
     }
     
-    mutating
-    func update(order: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> Int16) {
-        needsPeek = true
-        updates[\.order] = { builder, query in
+    func update(order: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> Int16) -> Self {
+        generate(needsPeek: true, key: \.order) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$order, to: try order(q))
         }
     }
     
-    mutating
-    func update(description: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> String?) {
-        needsPeek = true
-        updates[\.description] = { builder, query in
+    func update(description: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
         }

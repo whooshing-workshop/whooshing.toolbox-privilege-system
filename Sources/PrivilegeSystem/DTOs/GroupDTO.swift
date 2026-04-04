@@ -87,14 +87,29 @@ public extension DTO.Group where T == DTO.Prepare {
         public let groupId: UUID
         package var id: UUID { groupId }
         
-        package private(set) var updates: OrderedDictionary<
+        package let updates: OrderedDictionary<
             PartialKeyPath<DTO.Group<DTO.Prepare>>,
             (QueryBuilder<UGroup>, DTO.Group<DTO.Queried>?) throws -> QueryBuilder<UGroup>
-        > = [:]
-        package private(set) var needsPeek = false
+        >
+        package let needsPeek: Bool
         
         public init(groupId: UUID) {
             self.groupId = groupId
+            self.updates = [:]
+            self.needsPeek = false
+        }
+        
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<DTO.Group<DTO.Prepare>>,
+                (QueryBuilder<UGroup>, DTO.Group<DTO.Queried>?) throws -> QueryBuilder<UGroup>
+            >,
+            needsPeek: Bool
+        ) {
+            self.groupId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
@@ -102,51 +117,42 @@ public extension DTO.Group where T == DTO.Prepare {
 extension DTO.Group.Updater: DTOUpdater {}
 
 public extension DTO.Group.Updater {
-    mutating
-    func update(parentId: @escaping @autoclosure () throws -> UUID) {
-        updates[\.parentId] = { builder, _ in
+    func update(parentId: @escaping @autoclosure () throws -> UUID) -> Self {
+        generate(key: \.parentId) { builder, _ in
             builder.set(\.$parent.$id, to: try parentId())
         }
     }
     
-    mutating
-    func update(name: @escaping @autoclosure () throws -> String) {
-        updates[\.name] = { builder, _ in
+    func update(name: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.name) { builder, _ in
             builder.set(\.$name, to: try name())
         }
     }
     
-    mutating
-    func update(description: @escaping @autoclosure () throws -> String?) {
-        updates[\.description] = { builder, _ in
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
             builder.set(\.$description, to: try description())
         }
     }
 }
 
 public extension DTO.Group.Updater {
-    mutating
-    func update(parentId: @escaping (DTO.Group<DTO.Queried>) throws -> UUID) {
-        needsPeek = true
-        updates[\.parentId] = { builder, query in
+    func update(parentId: @escaping (DTO.Group<DTO.Queried>) throws -> UUID) -> Self {
+        generate(needsPeek: true, key: \.parentId) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$parent.$id, to: try parentId(q))
         }
     }
     
-    mutating
-    func update(name: @escaping (DTO.Group<DTO.Queried>) throws -> String) {
-        needsPeek = true
-        updates[\.name] = { builder, query in
+    func update(name: @escaping (DTO.Group<DTO.Queried>) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.name) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$name, to: try name(q))
         }
     }
     
-    mutating
-    func update(description: @escaping (DTO.Group<DTO.Queried>) throws -> String?) {
-        needsPeek = true
-        updates[\.description] = { builder, query in
+    func update(description: @escaping (DTO.Group<DTO.Queried>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
         }

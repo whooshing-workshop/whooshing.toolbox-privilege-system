@@ -104,10 +104,33 @@ package protocol DTOUpdater: Sendable {
         (QueryBuilder<DBModel>, QueriedDTO?) throws -> QueryBuilder<DBModel>
     > { get }
     var needsPeek: Bool { get }
+    init(
+        id: DBModel.IDValue,
+        updates: OrderedDictionary<
+            KeyPathType,
+            (QueryBuilder<DBModel>, QueriedDTO?) throws -> QueryBuilder<DBModel>
+        >,
+        needsPeek: Bool
+    )
 }
 
 package extension DTOUpdater {
     var all: [KeyPathType] { .init(updates.keys) }
+    
+    func generate(
+        needsPeek: Bool = false,
+        key: KeyPathType,
+        value: @escaping (QueryBuilder<DBModel>, QueriedDTO?) throws -> QueryBuilder<DBModel>
+    ) -> Self {
+        var updates = updates
+        updates[key] = value
+        
+        return .init(
+            id: id,
+            updates: updates,
+            needsPeek: self.needsPeek || needsPeek
+        )
+    }
 }
 
 package func formatQuery(_ query: [String: AnyCodable]) -> String {

@@ -106,14 +106,29 @@ public extension DTO.UserInfo where T == DTO.Prepare {
         public let userId: UUID
         package var id: UUID { userId }
         
-        package private(set) var updates: OrderedDictionary<
+        package let updates: OrderedDictionary<
             PartialKeyPath<DTO.UserInfo<DTO.Prepare>>,
             (QueryBuilder<User.Info>, DTO.UserInfo<DTO.Queried>?) throws -> QueryBuilder<User.Info>
-        > = [:]
-        package private(set) var needsPeek = false
+        >
+        package let needsPeek: Bool
         
         public init(userId: UUID) {
             self.userId = userId
+            self.updates = [:]
+            self.needsPeek = false
+        }
+        
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<DTO.UserInfo<DTO.Prepare>>,
+                (QueryBuilder<User.Info>, DTO.UserInfo<DTO.Queried>?) throws -> QueryBuilder<User.Info>
+            >,
+            needsPeek: Bool
+        ) {
+            self.userId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
@@ -121,67 +136,55 @@ public extension DTO.UserInfo where T == DTO.Prepare {
 extension DTO.UserInfo.Updater: DTOUpdater {}
 
 public extension DTO.UserInfo.Updater {
-    mutating
-    func update(identifier: @escaping @autoclosure () throws -> String) {
-        updates[\.identifier] = { builder, _ in
+    func update(identifier: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.identifier) { builder, _ in
             builder.set(\.$identifier, to: try identifier())
         }
     }
     
-    mutating
-    func update(nickname: @escaping @autoclosure () throws -> String) {
-        updates[\.nickname] = { builder, _ in
+    func update(nickname: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.nickname) { builder, _ in
             builder.set(\.$nickname, to: try nickname())
         }
     }
     
-    mutating
-    func update(birthday: @escaping @autoclosure () throws -> Date) {
-        updates[\.birthday] = { builder, _ in
+    func update(birthday: @escaping @autoclosure () throws -> Date) -> Self {
+        generate(key: \.birthday) { builder, _ in
             builder.set(\.$birthday, to: try birthday())
         }
     }
     
-    mutating
-    func update(other: @escaping @autoclosure () throws -> String?) {
-        updates[\.other] = { builder, _ in
+    func update(other: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.other) { builder, _ in
             builder.set(\.$other, to: try other())
         }
     }
 }
 
 public extension DTO.UserInfo.Updater {
-    mutating
-    func update(identifier: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) {
-        needsPeek = true
-        updates[\.identifier] = { builder, query in
+    func update(identifier: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.identifier) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$identifier, to: try identifier(q))
         }
     }
     
-    mutating
-    func update(nickname: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) {
-        needsPeek = true
-        updates[\.nickname] = { builder, query in
+    func update(nickname: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.nickname) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$nickname, to: try nickname(q))
         }
     }
     
-    mutating
-    func update(birthday: @escaping (DTO.UserInfo<DTO.Queried>) throws -> Date) {
-        needsPeek = true
-        updates[\.birthday] = { builder, query in
+    func update(birthday: @escaping (DTO.UserInfo<DTO.Queried>) throws -> Date) -> Self {
+        generate(needsPeek: true, key: \.birthday) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$birthday, to: try birthday(q))
         }
     }
     
-    mutating
-    func update(other: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String?) {
-        needsPeek = true
-        updates[\.other] = { builder, query in
+    func update(other: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.other) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$other, to: try other(q))
         }

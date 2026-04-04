@@ -68,15 +68,30 @@ public extension PM.ResourceDTO where T == DTO.Prepare {
         public let resourceId: UUID
         package var id: UUID { resourceId }
         
-        package private(set) var updates: OrderedDictionary<
+        package let updates: OrderedDictionary<
             AnyKeyPath,
             (QueryBuilder<AssociatedModel>, PM<ResourceList>.ResourceDTO<G, DTO.Queried>?) throws -> QueryBuilder<AssociatedModel>
-        > = [:]
+        >
         
-        package private(set) var needsPeek = false
+        package let needsPeek: Bool
         
         public init(resourceId: UUID) {
             self.resourceId = resourceId
+            self.updates = [:]
+            self.needsPeek = false
+        }
+        
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                AnyKeyPath,
+                (QueryBuilder<AssociatedModel>, PM<ResourceList>.ResourceDTO<G, DTO.Queried>?) throws -> QueryBuilder<AssociatedModel>
+            >,
+            needsPeek: Bool
+        ) {
+            self.resourceId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
@@ -84,9 +99,8 @@ public extension PM.ResourceDTO where T == DTO.Prepare {
 extension PM.ResourceDTO.Updater: DTOUpdater {}
 
 public extension PM.ResourceDTO.Updater {
-    mutating
-    func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping @autoclosure () throws -> V) {
-        updates[path] = { builder, _ in
+    func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping @autoclosure () throws -> V) -> Self {
+        generate(key: path) { builder, _ in
             let field = PM<ResourceList>.ResourceModel<G>.Fields().data
             return builder.set(
                 [
@@ -102,19 +116,16 @@ public extension PM.ResourceDTO.Updater {
         }
     }
     
-    mutating
-    func update(data: @escaping @autoclosure () throws -> G) {
-        updates[\PM.ResourceDTO<G, T>.data] = { builder, _ in
+    func update(data: @escaping @autoclosure () throws -> G) -> Self {
+        generate(key: \PM.ResourceDTO<G, T>.data) { builder, _ in
             builder.set(\.$data, to: try data())
         }
     }
 }
 
 public extension PM.ResourceDTO.Updater {
-    mutating
-    func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> V) {
-        needsPeek = true
-        updates[path] = { builder, data in
+    func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> V) -> Self {
+        generate(needsPeek: true, key: path) { builder, data in
             guard let d = data else { fatalError("应当提供 Data 结果，却没有提供") }
             let field = PM<ResourceList>.ResourceModel<G>.Fields().data
             return builder.set(
@@ -131,10 +142,8 @@ public extension PM.ResourceDTO.Updater {
         }
     }
     
-    mutating
-    func update(data: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> G) {
-        needsPeek = true
-        updates[\PM.ResourceDTO<G, T>.data] = { builder, _data in
+    func update(data: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> G) -> Self {
+        generate(needsPeek: true, key: \PM.ResourceDTO<G, T>.data) { builder, _data in
             guard let d = _data else { fatalError("应当提供 Data 结果，却没有提供") }
             return builder.set(\.$data, to: try data(d))
         }

@@ -82,16 +82,16 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         public let privilegeId: Int64
         package var id: Int64 { privilegeId }
         
-        private(set) var policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil
+        package let policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)?
         
-        package private(set) var updates: OrderedDictionary<
+        package let updates: OrderedDictionary<
             PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
             (
                 QueryBuilder<S.Privilege>,
                 PM<ResourceList>.PrivilegeDTO<DTO.Queried>?
             ) throws -> QueryBuilder<S.Privilege>
-        > = [:]
-        package private(set) var needsPeek = false
+        >
+        package let needsPeek: Bool
         
         var isEmpty: Bool {
             self.updates.count == 0 && policyUpdate == nil
@@ -99,6 +99,53 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         
         public init(privilegeId: Int64) {
             self.privilegeId = privilegeId
+            self.policyUpdate = nil
+            self.updates = [:]
+            self.needsPeek = false
+        }
+        
+        package init(
+            id: Int64,
+            policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil,
+            updates: OrderedDictionary<
+                PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
+                (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>
+            >,
+            needsPeek: Bool
+        ) {
+            self.privilegeId = id
+            self.policyUpdate = policyUpdate
+            self.updates = updates
+            self.needsPeek = needsPeek
+        }
+        
+        package init(
+            id: Int64,
+            updates: OrderedDictionary<
+                PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
+                (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>
+            >,
+            needsPeek: Bool
+        ) {
+            self.privilegeId = id
+            self.policyUpdate = nil
+            self.updates = updates
+            self.needsPeek = needsPeek
+        }
+        
+        package func generate(
+            needsPeek: Bool = false,
+            key: PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
+            value: @escaping (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>
+        ) -> Self {
+            var updates = self.updates
+            updates[key] = value
+            return .init(
+                id: self.id,
+                policyUpdate: self.policyUpdate,
+                updates: updates,
+                needsPeek: self.needsPeek || needsPeek
+            )
         }
     }
 }
@@ -106,54 +153,53 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
 extension PM.PrivilegeDTO.Updater: DTOUpdater {}
 
 public extension PM.PrivilegeDTO.Updater {
-    mutating
-    func update(name: @escaping @autoclosure () throws -> String?) {
-        updates[\.name] = { builder, _ in
+    func update(name: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.name) { builder, _ in
             builder.set(\.$name, to: try name())
         }
     }
     
-    mutating
-    func update(description: @escaping @autoclosure () throws -> String?) {
-        updates[\.description] = { builder, _ in
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
             builder.set(\.$description, to: try description())
         }
     }
     
-    mutating
-    func update(policy: @escaping @autoclosure () throws -> String) {
-        policyUpdate = { _ in
-            try policy()
-        }
+    func update(policy: @escaping @autoclosure () throws -> String) -> Self {
+        .init(
+            id: self.id,
+            policyUpdate: { _ in try policy() },
+            updates: self.updates,
+            needsPeek: self.needsPeek
+        )
     }
 }
 
 public extension PM.PrivilegeDTO.Updater {
-    mutating
-    func update(name: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) {
-        needsPeek = true
-        updates[\.name] = { builder, query in
+    func update(name: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.name) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$name, to: try name(q))
         }
     }
     
-    mutating
-    func update(description: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) {
-        needsPeek = true
-        updates[\.description] = { builder, query in
+    func update(description: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
         }
     }
     
-    mutating
-    func update(policy: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String) {
-        needsPeek = true
-        policyUpdate = { query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return try policy(q)
-        }
+    func update(policy: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String) -> Self {
+        .init(
+            id: self.id,
+            policyUpdate: { query in
+                guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+                return try policy(q)
+            },
+            updates: self.updates,
+            needsPeek: true
+        )
     }
 }
 

@@ -84,14 +84,29 @@ public extension DTO.Domain where T == DTO.Prepare {
         public let domainId: Int64
         package var id: Int64 { domainId }
         
-        package private(set) var updates: OrderedDictionary<
+        package let updates: OrderedDictionary<
             PartialKeyPath<DTO.Domain<DTO.Prepare>>,
             (QueryBuilder<Domain>, DTO.Domain<DTO.Queried>?) throws -> QueryBuilder<Domain>
-        > = [:]
-        package private(set) var needsPeek = false
+        >
+        package let needsPeek: Bool
         
         public init(domainId: Int64) {
             self.domainId = domainId
+            self.updates = [:]
+            self.needsPeek = false
+        }
+        
+        package init(
+            id: Int64,
+            updates: OrderedDictionary<
+                PartialKeyPath<DTO.Domain<DTO.Prepare>>,
+                (QueryBuilder<Domain>, DTO.Domain<DTO.Queried>?) throws -> QueryBuilder<Domain>
+            >,
+            needsPeek: Bool
+        ) {
+            self.domainId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
@@ -99,35 +114,29 @@ public extension DTO.Domain where T == DTO.Prepare {
 extension DTO.Domain.Updater: DTOUpdater {}
 
 public extension DTO.Domain.Updater {
-    mutating
-    func update(name: @escaping @autoclosure () throws -> String) {
-        updates[\.name] = { builder, _ in
+    func update(name: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.name) { builder, _ in
             builder.set(\.$name, to: try name())
         }
     }
     
-    mutating
-    func update(description: @escaping @autoclosure () throws -> String?) {
-        updates[\.description] = { builder, _ in
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
             builder.set(\.$description, to: try description())
         }
     }
 }
 
 public extension DTO.Domain.Updater {
-    mutating
-    func update(name: @escaping (DTO.Domain<DTO.Queried>) throws -> String) {
-        needsPeek = true
-        updates[\.name] = { builder, query in
+    func update(name: @escaping (DTO.Domain<DTO.Queried>) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.name) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$name, to: try name(q))
         }
     }
-    
-    mutating
-    func update(description: @escaping (DTO.Domain<DTO.Queried>) throws -> String?) {
-        needsPeek = true
-        updates[\.description] = { builder, query in
+
+    func update(description: @escaping (DTO.Domain<DTO.Queried>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
         }
