@@ -48,7 +48,7 @@ extension PrivilegeSystem {
                 updater: updater,
                 label: "用户扩展信息",
                 errThrowing: .userExtendedInfoUpdateFailed,
-                filterBuilder: { $0.filter(\.$id == updater.userInfoId) },
+                filterBuilder: { $0.filter(\.$id == updater.infoSliceId) },
                 dtoBuilder: { DTO.InfoSlice<T, DTO.Queried>.make(from: $0) }
             )
         }

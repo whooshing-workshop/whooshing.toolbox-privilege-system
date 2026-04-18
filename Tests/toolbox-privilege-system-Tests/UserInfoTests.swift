@@ -5,6 +5,7 @@ import NIOCore
 import AsyncAlgorithms
 import Foundation
 import Query
+import Collections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -17,6 +18,8 @@ struct UserinfoTesting {
             try await Task.sleep(nanoseconds: 250_000_000)
         }
     }
+    
+    nonisolated(unsafe) static var ids: OrderedDictionary<UUID, (addrs: [UUID], emails: [UUID], phones: [UUID])> = [:]
     
     static var infos: [(UUID, PUserInfo, PExtendedInfo)] {[
         (
@@ -130,15 +133,67 @@ struct UserinfoTesting {
         )
     ]}
     
-    static var updates: [(PUserInfo.Updater?, PAddressSlice.Updater?, PAlternateEmailSlice.Updater?, PPhoneSlice.Updater?)] {[
+    static var updates: [(
+        (PUserInfo.Updater, String, @Sendable (QUserInfo) -> Bool)?,
+        (PAddressSlice.Updater, String, @Sendable (QAddressSlice) -> Bool)?,
+        (PAlternateEmailSlice.Updater, String, @Sendable (QAlternateEmailSlice) -> Bool)?,
+        (PPhoneSlice.Updater, String, @Sendable (QPhoneSlice) -> Bool)?
+    )] {[
         (
-//            {
-//                let updater = PUserInfo.Updater(userId: AT.ids[0])
-//            }(),
+            (
+                .init(userInfoId: Self.ids.keys[0]).update(identifier: "changed1234567890"),
+                "User_1 userinfo",
+                { $0.identifier == "changed1234567890" }
+            ),
             nil,
-            nil,
-            nil,
+            (
+                .init(infoSliceId: Self.ids.values[0].emails[0]).update(value: "updatedexample@example.com"),
+                "User_1 email slice",
+                { $0.value == "updatedexample@example.com" }
+            ),
             nil
+        ),
+        (
+            nil,
+            (
+                .init(infoSliceId: Self.ids.values[1].addrs[1]).update(value: "Updated Sichuan Province"),
+                "User_2 address slice 1",
+                { $0.value == "Updated Sichuan Province" }
+            ),
+            nil,
+            (
+                .init(infoSliceId: Self.ids.values[1].phones[0]).update(value: "+000000000001"),
+                "User_2 phone slice 0",
+                { $0.value == "+000000000001" }
+            )
+        ),
+        (
+            (
+                .init(userInfoId: Self.ids.keys[2]).update(nickname: "UpdatedTechEnthu"),
+                "User_3 userinfo",
+                { $0.nickname == "UpdatedTechEnthu" }
+            ),
+            nil,
+            (
+                .init(infoSliceId: Self.ids.values[2].emails[1]).update(value: "updated_gamer_soul@gmail.com"),
+                "User_3 email slice 1",
+                { $0.value == "updated_gamer_soul@gmail.com" }
+            ),
+            nil
+        ),
+        (
+            nil,
+            (
+                .init(infoSliceId: Self.ids.values[3].addrs[2]).update(value: "Updated Nimman Road"),
+                "User_4 address slice 2",
+                { $0.value == "Updated Nimman Road" }
+            ),
+            nil,
+            (
+                .init(infoSliceId: Self.ids.values[3].phones[0]).update(value: "+66800000000"),
+                "User_4 phone slice 0",
+                { $0.value == "+66800000000" }
+            )
         )
     ]}
     
@@ -157,6 +212,56 @@ struct UserinfoTesting {
         #expect(try await QAddressSlice.query(on: s).count().get() == Self.infos.reduce(0) { $0 + $1.2.addresses.count })
         #expect(try await QAlternateEmailSlice.query(on: s).count().get() == Self.infos.reduce(0) { $0 + $1.2.alternateEmails.count })
         #expect(try await QPhoneSlice.query(on: s).count().get() == Self.infos.reduce(0) { $0 + $1.2.phones.count })
+        
+        for userInfo in Self.infos {
+            let ui = try #require(
+                try await s.query(QUserInfo.self)
+                    .filter(\.identifier == userInfo.1.identifier)
+                    .first()
+                    .get()
+            )
+            
+            var addresses: [UUID] = []
+            var emails: [UUID] = []
+            var phones: [UUID] = []
+            
+            for address in userInfo.2.addresses {
+                let addr = try #require(
+                    try await s.query(QAddressSlice.self)
+                        .filter(\.value == address.value)
+                        .first()
+                        .get()
+                )
+                
+                addresses.append(addr.id)
+            }
+            
+            for email in userInfo.2.alternateEmails {
+                let e = try #require(
+                    try await s.query(QAlternateEmailSlice.self)
+                        .filter(\.value == email.value)
+                        .first()
+                        .get()
+                )
+                
+                emails.append(e.id)
+            }
+            
+            for phone in userInfo.2.phones {
+                let p = try #require(
+                    try await s.query(QPhoneSlice.self)
+                        .filter(\.value == phone.value)
+                        .first()
+                        .get()
+                )
+                
+                phones.append(p.id)
+            }
+            
+            Self.ids[ui.id] = (addresses, emails, phones)
+        }
+        
+        #expect(Self.ids.count == Self.infos.count)
     }
     
     @Test("Fetch 查询")
@@ -219,10 +324,27 @@ struct UserinfoTesting {
     func update() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let updater = PUserInfo.Updater(userId: AT.ids[0])
-        
-        
-        try await s.userInfo.update(with: updater).get()
+        for (infoUpdate, addressUpdate, emailUpdate, phoneUpdate) in Self.updates {
+            if let iu = infoUpdate {
+                let res = try await s.userInfo.update(with: iu.0).get()
+                #expect(iu.2(res), .init(stringLiteral: iu.1))
+            }
+
+            if let au = addressUpdate {
+                let res = try await s.infoSlice.update(with: au.0).get()
+                #expect(au.2(res), .init(stringLiteral: au.1))
+            }
+            
+            if let eu = emailUpdate {
+                let res = try await s.infoSlice.update(with: eu.0).get()
+                #expect(eu.2(res), .init(stringLiteral: eu.1))
+            }
+            
+            if let pu = phoneUpdate {
+                let res = try await s.infoSlice.update(with: pu.0).get()
+                #expect(pu.2(res), .init(stringLiteral: pu.1))
+            }
+        }
     }
     
     @MainActor

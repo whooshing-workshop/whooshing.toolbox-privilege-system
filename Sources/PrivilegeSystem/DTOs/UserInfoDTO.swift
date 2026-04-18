@@ -103,8 +103,8 @@ extension DTO.UserInfo where T == DTO.Prepare {
 
 public extension DTO.UserInfo where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
-        public let userId: UUID
-        package var id: UUID { userId }
+        public let userInfoId: UUID
+        package var id: UUID { userInfoId }
         
         package let updates: OrderedDictionary<
             PartialKeyPath<DTO.UserInfo<DTO.Prepare>>,
@@ -112,8 +112,8 @@ public extension DTO.UserInfo where T == DTO.Prepare {
         >
         package let needsPeek: Bool
         
-        public init(userId: UUID) {
-            self.userId = userId
+        public init(userInfoId: UUID) {
+            self.userInfoId = userInfoId
             self.updates = [:]
             self.needsPeek = false
         }
@@ -126,7 +126,7 @@ public extension DTO.UserInfo where T == DTO.Prepare {
             >,
             needsPeek: Bool
         ) {
-            self.userId = id
+            self.userInfoId = id
             self.updates = updates
             self.needsPeek = needsPeek
         }

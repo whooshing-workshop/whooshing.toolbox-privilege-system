@@ -50,7 +50,7 @@ extension PrivilegeSystem {
                 updater: updater,
                 label: "用户信息",
                 errThrowing: .userInfoUpdateFailed,
-                filterBuilder: { $0.filter(\.$id == updater.userId) },
+                filterBuilder: { $0.filter(\.$id == updater.userInfoId) },
                 dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
             )
         }

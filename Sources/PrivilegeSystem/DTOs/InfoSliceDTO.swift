@@ -127,8 +127,8 @@ extension DTO.InfoSlice where G == DTO.Prepare, T.Value == String {
 
 public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
     struct Updater: @unchecked Sendable {
-        public let userInfoId: UUID
-        package var id: UUID { userInfoId }
+        public let infoSliceId: UUID
+        package var id: UUID { infoSliceId }
         
         package let updates: OrderedDictionary<
             PartialKeyPath<DTO.InfoSlice<T, DTO.Prepare>>,
@@ -136,8 +136,8 @@ public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
         >
         package let needsPeek: Bool
         
-        public init(userInfoId: UUID) {
-            self.userInfoId = userInfoId
+        public init(infoSliceId: UUID) {
+            self.infoSliceId = infoSliceId
             self.updates = [:]
             self.needsPeek = false
         }
@@ -150,7 +150,7 @@ public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
             >,
             needsPeek: Bool
         ) {
-            self.userInfoId = id
+            self.infoSliceId = id
             self.updates = updates
             self.needsPeek = needsPeek
         }

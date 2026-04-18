@@ -121,7 +121,7 @@ package extension Controller {
                     .withError(errThrowing, "\(label) Returning 时发生错误", category: .internal)
             }.flatMapThrowing { data throws(E.ErrType) in
                 guard let d = data else {
-                    throw errThrowing.d("Returning 时未找到修改后的\(label)", category: .internal)
+                    throw errThrowing.d("\(label) 未被成功修改，Returning 未找到其改动", category: .internal)
                 }
                 return try required(throws: errThrowing, category: .internal) {
                     try dtoBuilder(d).get()
