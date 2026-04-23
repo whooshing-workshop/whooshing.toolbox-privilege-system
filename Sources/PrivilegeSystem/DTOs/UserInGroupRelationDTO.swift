@@ -62,9 +62,9 @@ extension DTO.UserInGroupRelation where T == DTO.Queried {
     }
 }
 
-infix operator ~> : MappingPrecedence
+infix operator =| : MappingPrecedence
 
-public func ~> (
+public func =| (
     left: DTO.User<DTO.Queried>,
     right: DTO.Group<DTO.Queried>
 ) -> DTO.UserInGroupRelation<DTO.Prepare> {

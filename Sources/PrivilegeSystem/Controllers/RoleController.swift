@@ -216,7 +216,7 @@ public extension PrivilegeSystem.RoleController {
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
             siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.groupController.__query(on: $0, relations: $1) }
+            modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
         )
     }
     
@@ -269,7 +269,7 @@ public extension PrivilegeSystem.RoleController {
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
             siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.groupController.__query(on: $0, relations: $1) }
+            modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
         )
     }
 }

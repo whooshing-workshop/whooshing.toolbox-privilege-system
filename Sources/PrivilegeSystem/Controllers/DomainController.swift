@@ -58,14 +58,14 @@ extension PrivilegeSystem {
         }
         
         public func update(
-            with updater: DTO.Role<DTO.Prepare>.Updater
-        ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {
+            with updater: DTO.Domain<DTO.Prepare>.Updater
+        ) -> EventLoopRes<DTO.Domain<DTO.Queried>, Errcase> {
             __update(
                 updater: updater,
                 label: "域权限",
                 errThrowing: .domainUpdateFailed,
-                filterBuilder: { $0.filter(\.$id == updater.roleId) },
-                dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
+                filterBuilder: { $0.filter(\.$id == updater.domainId) },
+                dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
             )
         }
     }

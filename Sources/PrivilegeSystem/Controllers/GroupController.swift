@@ -115,9 +115,10 @@ public extension PrivilegeSystem.GroupController {
 
 public extension PrivilegeSystem.GroupController {
     func query(
-        relations: [DTO.UserInGroupRelation<DTO.Prepare>]
+        relations: [DTO.UserInGroupRelation<DTO.Prepare>],
+        strict: Bool = true
     ) -> EventLoopRes<[DTO.UserInGroupRelation<DTO.Queried>], PrivilegeSystem.Errcase> {
-        __query(on: db, relations: relations)
+        __query(on: db, relations: relations, strict: strict)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
             try required(throws: PrivilegeSystem.Errcase.userGroupRelationQueryFailed, category: .internal) {
@@ -132,7 +133,8 @@ public extension PrivilegeSystem.GroupController {
 extension PrivilegeSystem.GroupController {
     func __query(
         on db: PGDatabase,
-        relations: [DTO.UserInGroupRelation<DTO.Prepare>]
+        relations: [DTO.UserInGroupRelation<DTO.Prepare>],
+        strict: Bool
     ) -> EventLoopRes<[UserGroupPivot], PrivilegeSystem.Errcase> {
         UserGroupPivot.query(on: db)
             .with(\.$user)
@@ -143,8 +145,10 @@ extension PrivilegeSystem.GroupController {
             .withError(PrivilegeSystem.Errcase.userGroupRelationQueryFailed, "数据库查询时出错", category: .internal)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
-            guard rs.count == relations.count else {
-                throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external)
+            if strict {
+                guard rs.count == relations.count else {
+                    throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external)
+                }
             }
             return rs
         }
