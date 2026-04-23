@@ -41,12 +41,12 @@ open class Pivot<T: PivotType>: PGModel, @unchecked Sendable {
     
     let fields = Fields()
     
-    @ID(custom: fields.id.key)                      public var id: UUID?
+    @ID(key: .id)                                   open var id: UUID?
     
-    @Parent(fields.foreignPrimary)                  public var primaryModel: T.PrimaryModel
-    @Parent(fields.foreignSecondary)                public var secondaryModel: T.SecondaryModel
+    @Parent(fields.foreignPrimary)                  open var primaryModel: T.PrimaryModel
+    @Parent(fields.foreignSecondary)                open var secondaryModel: T.SecondaryModel
     
-    @Timestamp(fields.createdAt, on: .create)       public var createdAt: Date!
+    @Timestamp(fields.createdAt, on: .create)       open var createdAt: Date!
     
     public required init() {}
     
@@ -67,6 +67,34 @@ extension Pivot: Hashable {
         hasher.combine($secondaryModel.id)
         hasher.combine(createdAt)
     }
+}
+
+open class CustomeIDPivot<T: PivotType>: @unchecked Sendable {
+    
+    public static var name: String { T.foreignPrimaryName + "_" + T.foreignSecondaryName + "_map" }
+    
+    public struct Fields: PGFields {
+        public let id = PGField("id", .uuid)                            .primary
+        public let foreignPrimary = PGField(
+            T.foreignPrimaryName + "_id", T.foreignPrimaryType
+        )                                                               .required
+                                                                        .unique(composite: name + ".pivot")
+                                                                        .foreign(T.PrimaryModel.self, .id, onDelete: .cascade)
+        public let foreignSecondary = PGField(
+            T.foreignSecondaryName + "_id", T.foreignSecondaryType
+        )                                                               .required
+                                                                        .unique(composite: name + ".pivot")
+                                                                        .foreign(T.SecondaryModel.self, .id, onDelete: .cascade)
+        public let createdAt = PGField("created_at", .datetime)         .required
+        
+        public init() {}
+    }
+    
+    let fields = Fields()
+    
+    public required init() {}
+    
+    public typealias MIG = DefaultMIG<Pivot<T>>
 }
 
 public enum Pivots {}

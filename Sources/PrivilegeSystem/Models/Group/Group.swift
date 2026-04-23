@@ -21,7 +21,7 @@ public final class UGroup: PGModel, @unchecked Sendable {
     
     public static let fields = Fields()
     
-    @ID(custom: fields.id.key)                      public var id: UUID?
+    @ID(key: .id)                      public var id: UUID?
     
     @OptionalParent(fields.parentId)                var parent: UGroup?
     

@@ -51,8 +51,8 @@ extension DTO.UserInGroupRelation where T == DTO.Queried {
     static func make(from model: UserGroupPivot) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInGroupDTOFailed, category: .internal) {
             var n = Self.init(
-                _user: try .make(from: model.primaryModel).get(),
-                _group: try .make(from: model.secondaryModel).get(),
+                _user: try .make(from: model.user).get(),
+                _group: try .make(from: model.group).get(),
                 _model: model
             )
             n.$id = try model.requireID()

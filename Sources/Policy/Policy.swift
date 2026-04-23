@@ -26,7 +26,7 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     let fields = Fields()
     
-    @ID(custom: fields.id.key)                      public var id: UUID?
+    @ID(key: .id)                      public var id: UUID?
     
     @Parent(fields.parentId)                        public var parent: T.Model
     @Field(fields.moduleId)                         public var moduleId: UUID

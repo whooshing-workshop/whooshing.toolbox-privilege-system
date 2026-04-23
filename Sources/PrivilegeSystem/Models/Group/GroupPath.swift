@@ -19,7 +19,7 @@ extension UGroup {
         
         static let fields = Fields()
         
-        @ID(custom: fields.id.key)                      var id: UUID?
+        @ID(key: .id)                      var id: UUID?
         
         @Parent(fields.ancestorId)                      var ancestor: UGroup
         @Parent(fields.descendantId)                    var descendant: UGroup

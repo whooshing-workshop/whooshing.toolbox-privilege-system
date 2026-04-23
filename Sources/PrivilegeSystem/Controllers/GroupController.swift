@@ -135,8 +135,10 @@ extension PrivilegeSystem.GroupController {
         relations: [DTO.UserInGroupRelation<DTO.Prepare>]
     ) -> EventLoopRes<[UserGroupPivot], PrivilegeSystem.Errcase> {
         UserGroupPivot.query(on: db)
-            .filter(\.$primaryModel.$id ~~ relations.map { $0.user.id })
-            .filter(\.$secondaryModel.$id ~~ relations.map { $0.group.id })
+            .with(\.$user)
+            .with(\.$group)
+            .filter(\.$user.$id ~~ relations.map { $0.user.id })
+            .filter(\.$group.$id ~~ relations.map { $0.group.id })
             .all()
             .withError(PrivilegeSystem.Errcase.userGroupRelationQueryFailed, "数据库查询时出错", category: .internal)
             .flatMapThrowing
