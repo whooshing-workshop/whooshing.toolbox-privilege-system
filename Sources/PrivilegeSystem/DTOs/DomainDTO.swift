@@ -18,7 +18,7 @@ public extension DTO {
         public let name: String?
         public let description: String?
         
-        @Passive public internal(set) var id: Int64
+        @Passive public internal(set) var id: UUID
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
@@ -70,7 +70,6 @@ extension DTO.Domain where T == DTO.Queried {
 }
 
 extension DTO.Domain where T == DTO.Prepare {
-    /// 需要先存 Policy 到数据库中
     func raw() -> Domain {
         let domain = Domain()
         domain.name = name
@@ -81,8 +80,8 @@ extension DTO.Domain where T == DTO.Prepare {
 
 public extension DTO.Domain where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
-        public let domainId: Int64
-        package var id: Int64 { domainId }
+        public let domainId: UUID
+        package var id: UUID { domainId }
         
         package let updates: OrderedDictionary<
             PartialKeyPath<DTO.Domain<DTO.Prepare>>,
@@ -90,14 +89,14 @@ public extension DTO.Domain where T == DTO.Prepare {
         >
         package let needsPeek: Bool
         
-        public init(domainId: Int64) {
+        public init(domainId: UUID) {
             self.domainId = domainId
             self.updates = [:]
             self.needsPeek = false
         }
         
         package init(
-            id: Int64,
+            id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<DTO.Domain<DTO.Prepare>>,
                 (QueryBuilder<Domain>, DTO.Domain<DTO.Queried>?) throws -> QueryBuilder<Domain>

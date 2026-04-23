@@ -12,6 +12,6 @@ extension PrivilegeModule {
         static var foreignPrimaryName: String { "privilege" }
         static var foreignSecondaryName: String { "resource" }
         
-        static var foreignPrimaryType: DatabaseSchema.DataType { .int64 }
+        static var foreignPrimaryType: DatabaseSchema.DataType { .uuid }
     }
 }

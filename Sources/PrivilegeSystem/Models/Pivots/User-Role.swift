@@ -12,6 +12,6 @@ extension Pivots {
         static let foreignPrimaryName = "user"
         static let foreignSecondaryName = "role"
         
-        static let foreignSecondaryType = DatabaseSchema.DataType.int64
+        static let foreignSecondaryType = DatabaseSchema.DataType.uuid
     }
 }

@@ -34,7 +34,7 @@ open class Pivot<T: PivotType>: PGModel, @unchecked Sendable {
         )                                                               .required
                                                                         .unique(composite: name + ".pivot")
                                                                         .foreign(T.SecondaryModel.self, .id, onDelete: .cascade)
-        public let createdAt = PGField("created_at", .datetime)            .required
+        public let createdAt = PGField("created_at", .datetime)         .required
         
         public init() {}
     }

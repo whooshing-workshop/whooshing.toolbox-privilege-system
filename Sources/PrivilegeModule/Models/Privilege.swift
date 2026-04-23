@@ -9,19 +9,19 @@ public extension PM {
         public static var name: String { "privileges" }
         
         public struct Fields: PGFields {
-            let id = PGField("id", .int64)                          .primary
+            let id = PGField("id", .uuid)                               .primary
             let name = PGField("name", .string)
             let description = PGField("description", .string)
-            let policy = PGField("policy", .string)                 .required
-            let createdAt = PGField("created_at", .datetime)           .required
-            let updatedAt = PGField("updated_at", .datetime)           .required
+            let policy = PGField("policy", .string)                     .required
+            let createdAt = PGField("created_at", .datetime)            .required
+            let updatedAt = PGField("updated_at", .datetime)            .required
             
             public init() {}
         }
         
         public let fields = Fields()
         
-        @ID(custom: fields.id.key)                      public var id: Int64?
+        @ID(custom: fields.id.key)                      public var id: UUID?
         
         @Field(fields.name)                             var name: String?
         @Field(fields.description)                      var description: String?

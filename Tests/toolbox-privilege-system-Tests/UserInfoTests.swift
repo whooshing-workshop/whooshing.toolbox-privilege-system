@@ -350,6 +350,6 @@ struct UserinfoTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .userInfo
+        TestingShared.testStage = .domain
     }
 }

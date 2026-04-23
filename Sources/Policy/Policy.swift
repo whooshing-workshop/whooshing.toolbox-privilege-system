@@ -2,7 +2,7 @@ import PgSQL
 import Fluent
 import Foundation
 
-public protocol PolicyType: Sendable where Model.IDValue == Int64 {
+public protocol PolicyType: Sendable where Model.IDValue == UUID {
     associatedtype Model: PGModel
     static var namePrefix: String { get }
     static var typeId: String { get }
@@ -14,7 +14,7 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     public struct Fields: PGFields {
         public let id = PGField("id", .uuid)                            .primary
-        public let parentId = PGField("\(T.namePrefix)_id", .int64)     .required
+        public let parentId = PGField("\(T.namePrefix)_id", .uuid)     .required
                                                                         .foreign(T.Model.self, .id, onDelete: .cascade)
         public let moduleId = PGField("module_id", .uuid)               .required
         public let policy = PGField("policy", .string)                  .required
@@ -80,7 +80,7 @@ package enum PathFormat: Sendable {
 
 package func policyPath<PT: PolicyType>(
     moduleId: UUID,
-    modelId: Int64,
+    modelId: UUID,
     type: PT.Type = PT.self,
     format: PathFormat
 ) -> String {
@@ -89,7 +89,7 @@ package func policyPath<PT: PolicyType>(
 
 package func policyPath(
     moduleId: UUID,
-    modelId: Int64,
+    modelId: UUID,
     type: String,
     format: PathFormat
 ) -> String {

@@ -11,7 +11,7 @@ public extension PM {
         let description: String?
         let policy: String
         
-        @DTO.Passive() public internal(set) var id: Int64
+        @DTO.Passive() public internal(set) var id: UUID
         @DTO.Passive() public internal(set) var createdAt: Date
         @DTO.Passive() public internal(set) var updatedAt: Date
         
@@ -79,8 +79,8 @@ extension PM.PrivilegeDTO where T == DTO.Prepare {
 
 public extension PM.PrivilegeDTO where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
-        public let privilegeId: Int64
-        package var id: Int64 { privilegeId }
+        public let privilegeId: UUID
+        package var id: UUID { privilegeId }
         
         package let policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)?
         
@@ -97,7 +97,7 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
             self.updates.count == 0 && policyUpdate == nil
         }
         
-        public init(privilegeId: Int64) {
+        public init(privilegeId: UUID) {
             self.privilegeId = privilegeId
             self.policyUpdate = nil
             self.updates = [:]
@@ -105,7 +105,7 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         }
         
         package init(
-            id: Int64,
+            id: UUID,
             policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil,
             updates: OrderedDictionary<
                 PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
@@ -120,7 +120,7 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         }
         
         package init(
-            id: Int64,
+            id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
                 (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>

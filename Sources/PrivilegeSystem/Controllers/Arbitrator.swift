@@ -31,7 +31,7 @@ extension PrivilegeSystem {
             role: DTO.Role<DTO.Queried>,
             resource: [String: AnyCodable],
             operation: String,
-            privilegeIds: [Int64]
+            privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
             user.model.groups.map { group in
                 group.$domains.get(on: db)
@@ -137,7 +137,7 @@ extension PrivilegeSystem.Arbitrator {
                 case privilege
             }
             public let type: T
-            public let id: Int64
+            public let id: UUID
         }
         
         public private(set) var result: Bool
@@ -160,14 +160,14 @@ extension PrivilegeSystem.Arbitrator {
     }
     
     struct RoleData: Encodable, Sendable {
-        let roleId: Int64
+        let roleId: UUID
         let resource: [String: AnyCodable]
         let operation: String
         let user: DTO.User<DTO.Queried>
     }
     
     struct DomainData: Encodable, Sendable {
-        let domainId: Int64
+        let domainId: UUID
         let resource: [String: AnyCodable]
         let operation: String
         let user: DTO.User<DTO.Queried>
@@ -175,7 +175,7 @@ extension PrivilegeSystem.Arbitrator {
     }
     
     struct PrivilegeData: Encodable, Sendable {
-        let privilegeId: Int64
+        let privilegeId: UUID
         let resource: [String: AnyCodable]
         let operation: String
         let user: DTO.User<DTO.Queried>

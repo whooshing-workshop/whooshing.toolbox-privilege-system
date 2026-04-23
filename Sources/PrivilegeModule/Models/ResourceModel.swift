@@ -9,14 +9,14 @@ extension PM {
         public static var name: String { "resources" }
         
         public struct Fields: PGFields {
-            let id = PGField("id", .uuid)                           .primary
-            let name = PGField("name", .string)                     .required
+            let id = PGField("id", .uuid)                               .primary
+            let name = PGField("name", .string)                         .required
             let type = PGField("type",
                 .enum(ResourceList.self, as: "resource_type")
-            )                                                       .required
-            let data = PGField("data", .json)                       .required
-            let createdAt = PGField("created_at", .datetime)           .required
-            let updatedAt = PGField("updated_at", .datetime)           .required
+            )                                                           .required
+            let data = PGField("data", .json)                           .required
+            let createdAt = PGField("created_at", .datetime)            .required
+            let updatedAt = PGField("updated_at", .datetime)            .required
             
             public init() {}
         }

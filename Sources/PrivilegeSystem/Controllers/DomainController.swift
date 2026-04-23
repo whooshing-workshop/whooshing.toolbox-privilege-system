@@ -32,7 +32,7 @@ extension PrivilegeSystem {
         public func createWithReturning(
             @MTORelationBuilder<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
-        ) -> EventLoopRes<[Int64: [DTO.Policy<Domain, DTO.Queried>]], Errcase> {
+        ) -> EventLoopRes<[UUID: [DTO.Policy<Domain, DTO.Queried>]], Errcase> {
             self.createWithReturning(relations: content())
         }
         
@@ -43,17 +43,17 @@ extension PrivilegeSystem {
         }
         
         public func delete(
-            roleIds: [Int64],
+            domainIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
                 Role.self,
-                ids: roleIds,
+                ids: domainIds,
                 allSatisfy: allSatisfy,
                 label: "域权限",
-                errThrowing: .roleDeleteFailed,
+                errThrowing: .domainDeleteFailed,
                 fieldBuilder: { $0.field(\.$id) },
-                filterBuilder: { $0.filter(\.$id ~~ roleIds) }
+                filterBuilder: { $0.filter(\.$id ~~ domainIds) }
             )
         }
         
@@ -63,7 +63,7 @@ extension PrivilegeSystem {
             __update(
                 updater: updater,
                 label: "域权限",
-                errThrowing: .roleUpdateFailed,
+                errThrowing: .domainUpdateFailed,
                 filterBuilder: { $0.filter(\.$id == updater.roleId) },
                 dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
             )
@@ -88,7 +88,7 @@ public extension PrivilegeSystem.DomainController {
     
     func createWithReturning(
         relations: [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
-    ) -> EventLoopRes<[Int64: [DTO.Policy<Domain, DTO.Queried>]], PrivilegeSystem.Errcase> {
+    ) -> EventLoopRes<[UUID: [DTO.Policy<Domain, DTO.Queried>]], PrivilegeSystem.Errcase> {
         db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(
@@ -202,7 +202,7 @@ extension PrivilegeSystem.DomainController {
             on: db,
             dtos: domains,
             label: "域权限",
-            errThrowing: .roleCreateFailed,
+            errThrowing: .domainCreateFailed,
             modelBuilder: { $0.raw() },
             dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
         )

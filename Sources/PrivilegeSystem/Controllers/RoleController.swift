@@ -35,7 +35,7 @@ extension PrivilegeSystem {
         public func createWithReturning(
             @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-        ) -> EventLoopRes<[Int64: [DTO.Policy<Role, DTO.Queried>]], Errcase> {
+        ) -> EventLoopRes<[UUID: [DTO.Policy<Role, DTO.Queried>]], Errcase> {
             createWithReturning(relations: content())
         }
         
@@ -46,7 +46,7 @@ extension PrivilegeSystem {
         }
         
         public func delete(
-            roleIds: [Int64],
+            roleIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
@@ -91,7 +91,7 @@ public extension PrivilegeSystem.RoleController {
     
     func createWithReturning(
         relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-    ) -> EventLoopRes<[Int64: [DTO.Policy<Role, DTO.Queried>]], PrivilegeSystem.Errcase> {
+    ) -> EventLoopRes<[UUID: [DTO.Policy<Role, DTO.Queried>]], PrivilegeSystem.Errcase> {
         db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(

@@ -21,8 +21,8 @@ package extension OPAController {
         policies: (Pr) -> [P],
         moduleId: @Sendable (P) -> UUID,
         policyKey: KeyPath<P, String>,
-        modelId:(Pr, P) -> Int64,
-        modelBuilder: (P, Int64) -> M
+        modelId:(Pr, P) -> UUID,
+        modelBuilder: (P, UUID) -> M
     ) -> EventLoopRes<[M], E> {
         var psData: [(id: String, content: String)] = []
         
@@ -125,7 +125,7 @@ package extension OPAController {
         errThrowing: E,
         filterBuilder: @escaping @Sendable (PGDatabase) -> QueryBuilder<M>,
         moduleId: @Sendable (P) -> UUID,
-        modelIdKey: KeyPath<P, Int64>
+        modelIdKey: KeyPath<P, UUID>
     ) -> EventLoopRes<Void, E> {
         let path = policyPath(
             moduleId: moduleId(policy),

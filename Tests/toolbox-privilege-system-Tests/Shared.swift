@@ -14,6 +14,11 @@ struct TestingShared {
     enum TestStage {
         case account
         case userInfo
+        case group
+        case role
+        case domain
+        case policy
+        case end
     }
      
     static let dbHost = ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_HOST"] ?? "localhost"

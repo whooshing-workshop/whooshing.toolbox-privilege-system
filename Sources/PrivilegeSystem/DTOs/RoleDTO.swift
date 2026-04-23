@@ -18,7 +18,7 @@ public extension DTO {
         public let name: String
         public let description: String?
         
-        @Passive public internal(set) var id: Int64
+        @Passive public internal(set) var id: UUID
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
@@ -81,8 +81,8 @@ extension DTO.Role where T == DTO.Prepare {
 
 public extension DTO.Role where T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
-        public let roleId: Int64
-        package var id: Int64 { roleId }
+        public let roleId: UUID
+        package var id: UUID { roleId }
         
         package let updates: OrderedDictionary<
             PartialKeyPath<DTO.Role<DTO.Prepare>>,
@@ -90,14 +90,14 @@ public extension DTO.Role where T == DTO.Prepare {
         >
         package let needsPeek: Bool
         
-        public init(roleId: Int64) {
+        public init(roleId: UUID) {
             self.roleId = roleId
             self.updates = [:]
             self.needsPeek = false
         }
         
         package init(
-            id: Int64,
+            id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<DTO.Role<DTO.Prepare>>,
                 (QueryBuilder<Role>, DTO.Role<DTO.Queried>?) throws -> QueryBuilder<Role>
