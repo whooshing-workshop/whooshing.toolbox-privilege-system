@@ -7,6 +7,7 @@ import NIOAdvanced
 import OPA
 import PrivilegeModule
 import Collections
+import LoggingAdvanced
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
@@ -79,36 +80,36 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<Result, Errcase> {
             ([
                 opa.query.data(
-                    from: policyPath(moduleId: input.moduleId, modelId: input.role.roleId, type: Role.self, format: .path),
+                    from: "/rules" + policyPath(moduleId: input.moduleId, modelId: input.role.roleId, type: Role.self, format: .path) + "/allow",
                     input: input.role,
                     as: RoleData.self,
                     to: Bool.self
                 )
                 .errCast(Errcase.arbitrateFailed, "OPA Query 用户身份 失败", category: .internal)
                 .map {
-                    (Result.IdKey(type: .role, id: input.role.roleId), $0)
+                    (Result.IdKey(type: .role, moduleId: input.moduleId, id: input.role.roleId), $0)
                 }
             ] + input.domains.map { domainData in
                 opa.query.data(
-                    from: policyPath(moduleId: input.moduleId, modelId: domainData.domainId, type: Domain.self, format: .path),
+                    from: "/rules" + policyPath(moduleId: input.moduleId, modelId: domainData.domainId, type: Domain.self, format: .path) + "/allow",
                     input: domainData,
                     as: DomainData.self,
                     to: Bool.self
                 )
                 .errCast(Errcase.arbitrateFailed, "OPA Query 域权限 失败", category: .internal)
                 .map { res in
-                    (Result.IdKey(type: .domain, id: domainData.domainId), res)
+                    (Result.IdKey(type: .domain, moduleId: input.moduleId, id: domainData.domainId), res)
                 }
             } + input.privileges.map { privilegeData in
                 opa.query.data(
-                    from: policyPath(moduleId: input.moduleId, modelId: privilegeData.privilegeId, type: "privilege", format: .path),
+                    from: "/rules" + policyPath(moduleId: input.moduleId, modelId: privilegeData.privilegeId, type: "privilege", format: .path) + "/allow",
                     input: privilegeData,
                     as: PrivilegeData.self,
                     to: Bool.self
                 )
                 .errCast(Errcase.arbitrateFailed, "OPA Query 资源权限 失败", category: .internal)
                 .map { res in
-                    (Result.IdKey(type: .domain, id: privilegeData.privilegeId), res)
+                    (Result.IdKey(type: .privilege, moduleId: input.moduleId, id: privilegeData.privilegeId), res)
                 }
             })
             
@@ -129,7 +130,7 @@ extension PrivilegeSystem {
 }
 
 extension PrivilegeSystem.Arbitrator {
-    public struct Result: Sendable {
+    public struct Result: Sendable, CustomStringConvertible {
         public struct IdKey: Sendable, Hashable {
             public enum T: Sendable, Hashable {
                 case role
@@ -137,6 +138,7 @@ extension PrivilegeSystem.Arbitrator {
                 case privilege
             }
             public let type: T
+            public let moduleId: UUID
             public let id: UUID
         }
         
@@ -149,6 +151,26 @@ extension PrivilegeSystem.Arbitrator {
         
         mutating func append(id: IdKey, value: Bool) {
             self.reports[id] = value
+        }
+        
+        public var description: String {
+            var res = ""
+            
+            for (k, v) in reports {
+                let path = switch k.type {
+                case .role: policyPath(moduleId: k.moduleId, modelId: k.id, type: Role.self, format: .path)
+                case .domain: policyPath(moduleId: k.moduleId, modelId: k.id, type: Domain.self, format: .path)
+                case .privilege: policyPath(moduleId: k.moduleId, modelId: k.id, type: "privilege", format: .path)
+                }
+                
+                res += "- \(path): \(v)\n"
+            }
+            
+            res += "----------------------\n"
+            
+            res += "\(result)\n"
+            
+            return res
         }
     }
     

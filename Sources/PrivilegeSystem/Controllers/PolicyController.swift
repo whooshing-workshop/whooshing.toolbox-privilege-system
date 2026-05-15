@@ -57,37 +57,6 @@ extension PrivilegeSystem {
                 modelIdKey: \.right
             )
         }
-        
-        public func check<T: PolicyType>(
-            policy: DTO.Policy<T, DTO.Prepare>
-        ) -> EventLoopRes<Result<OPA.Answer<OPA.NULL>, OPA.Err>, Errcase> {
-            check(policy: policy.policy)
-        }
-        
-        public func check(
-            policy: String
-        ) -> EventLoopRes<Result<OPA.Answer<OPA.NULL>, OPA.Err>, Errcase> {
-            opa.policy.check(policy: policy)
-                .errCast(PrivilegeSystem.Errcase.policyCheckFailed, category: .internal)
-        }
-        
-        public func check(
-            policies: [String]
-        ) -> EventLoopRes<[Result<OPA.Answer<OPA.NULL>, OPA.Err>], Errcase> {
-            policies.map {
-                opa.policy.check(policy: $0)
-                    .errCast(PrivilegeSystem.Errcase.policyCheckFailed, category: .internal)
-            }.flatten(on: eventLoop)
-        }
-        
-        public func check<T: PolicyType>(
-            policies: [DTO.Policy<T, DTO.Prepare>]
-        ) -> EventLoopRes<[Result<OPA.Answer<OPA.NULL>, OPA.Err>], Errcase> {
-            policies.map {
-                opa.policy.check(policy: $0.policy)
-                    .errCast(PrivilegeSystem.Errcase.policyCheckFailed, category: .internal)
-            }.flatten(on: eventLoop)
-        }
     }
 }
 

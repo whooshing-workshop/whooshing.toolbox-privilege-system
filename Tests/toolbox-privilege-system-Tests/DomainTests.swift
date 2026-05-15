@@ -44,15 +44,32 @@ struct DomainTesting {
     """
     
     // 可以在这里为您定义的每一个域自定义专属 Policy，如果为 nil 则会使用上面的 defaultPolicy
+    // PolicyTests 关键内容：
+    //   domain0 (GlobalScope)       : input.resource.global == true
+    //   domain1 (AsiaPacific)       : input.resource.region == "asia"
+    //   domain2 (NorthAmerica)      : input.resource.region == "na"
+    //   domain3 (SandboxEnvironment): input.resource.env == "sandbox"
     static let customPolicies: [String?] = [
         """
         allow if {
             input.resource.global == true
         }
         """, // 0: GlobalScope
-        nil, // 1: AsiaPacific
-        nil, // 2: NorthAmerica
-        nil, // 3: SandboxEnvironment
+        """
+        allow if {
+            input.resource.region == "asia"
+        }
+        """, // 1: AsiaPacific
+        """
+        allow if {
+            input.resource.region == "na"
+        }
+        """, // 2: NorthAmerica
+        """
+        allow if {
+            input.resource.env == "sandbox"
+        }
+        """, // 3: SandboxEnvironment
         nil, // 4: Europe
         nil, // 5: SouthAmerica
         nil, // 6: Africa

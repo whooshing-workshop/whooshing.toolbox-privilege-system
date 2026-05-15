@@ -44,15 +44,35 @@ struct RoleTesting {
     """
     
     // 可以在这里为您定义的每一个角色自定义专属 Policy，如果为 nil 则会使用上面的 defaultPolicy
+    // PolicyTests 关键内容：
+    //   role0 (SuperAdminRole): input.operation == "manage_all"
+    //   role1 (EditorRole)    : input.operation 为 "edit" 或 "publish"
+    //   role2 (ModeratorRole) : input.operation == "moderate"
+    //   role3 (ObserverRole)  : input.operation == "view"
     static let customPolicies: [String?] = [
         """
         allow if {
             input.operation == "manage_all"
         }
         """, // 0: SuperAdminRole
-        nil, // 1: EditorRole
-        nil, // 2: ModeratorRole
-        nil, // 3: ObserverRole
+        """
+        allow if {
+            input.operation == "edit"
+        }
+        allow if {
+            input.operation == "publish"
+        }
+        """, // 1: EditorRole
+        """
+        allow if {
+            input.operation == "moderate"
+        }
+        """, // 2: ModeratorRole
+        """
+        allow if {
+            input.operation == "view"
+        }
+        """, // 3: ObserverRole
         nil, // 4: SalesManager
         nil, // 5: HRLead
         nil, // 6: QAAnalyst

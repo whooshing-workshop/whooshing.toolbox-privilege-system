@@ -6,6 +6,7 @@ import NIO
 import Cryptos
 import NIOFileSystem
 import Foundation
+import AsyncHTTPClient
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -22,13 +23,23 @@ struct TestingShared {
         case end
     }
     
+    // ---------------------------------------------------------------------------
+    // 用户与群组的从属关系 (userIdx -> [groupIdx])
+    // PolicyTests 关键场景:
+    //   user0 -> group0 (AdministratorGroup, 绑 domain0: GlobalScope)
+    //   user1 -> group1 (OperatorGroup, 绑 domain1: AsiaPacific)
+    //   user2 -> group2 (DeveloperHub, 绑 domain2: NorthAmerica)
+    //   user3 -> group0 + group3 (两个域, AND 全部满足)
+    //   user4 -> (无 group, 纯 role 判定场景)
+    //   user5 -> group0 + group1 + group2 + group3 (多域 AND 压力测试)
+    // ---------------------------------------------------------------------------
     static let userInGroups: [Int: [Int]] = [
-        0: [1, 2, 4],
-        1: [3, 5],
-        2: [],
-        3: [0],
-        4: [5],
-        5: [0, 1, 2, 3, 4, 5],
+        0: [0],
+        1: [1],
+        2: [2],
+        3: [0, 3],
+        4: [],
+        5: [0, 1, 2, 3],
         6: [6, 7],
         7: [8, 9],
         8: [10],
@@ -41,11 +52,20 @@ struct TestingShared {
         15: [12, 14, 15]
     ]
     
+    // ---------------------------------------------------------------------------
+    // 域与群组的从属关系 (domainIdx -> [groupIdx])
+    // PolicyTests 关键场景:
+    //   domain0 (GlobalScope)       -> group0 (AdministratorGroup)
+    //   domain1 (AsiaPacific)       -> group1 (OperatorGroup)
+    //   domain2 (NorthAmerica)      -> group2 (DeveloperHub)
+    //   domain3 (SandboxEnvironment)-> group3 (BannedUsers)
+    // 以上四组构成 PolicyTests 中核心 judge 场景的基础
+    // ---------------------------------------------------------------------------
     static let domainForGroup: [Int: [Int]] = [
         0: [0],
-        1: [1, 2],
-        2: [3, 4],
-        3: [5],
+        1: [1],
+        2: [2],
+        3: [3],
         4: [6, 7],
         5: [8, 9],
         6: [10, 11],
@@ -104,8 +124,16 @@ struct TestingShared {
         13: [10, 11, 12]
     ]
     
+    // ---------------------------------------------------------------------------
+    // 组内用户的角色指派 (roleIdx -> [(userIdx, groupIdx)])
+    // 注意: (userIdx, groupIdx) 必须在 userInGroups 中有对应关系才有效
+    // PolicyTests 关键场景:
+    //   role3 (ObserverRole) -> user0 在 group0 中 (组内角色指派场景)
+    //   role4 (SalesManager) -> user6 在 group6 中
+    //   role5 (HRLead)       -> user7 在 group8 中
+    // ---------------------------------------------------------------------------
     static let roleForGroupUser: [Int: [(Int, Int)]] = [
-        3: [(0, 2)],
+        3: [(0, 0)],
         4: [(6, 6)],
         5: [(7, 8)],
         6: [(8, 10)],
@@ -136,10 +164,12 @@ struct TestingShared {
         let pool = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         let eventLoop = pool.next()
         
+        let proxy: HTTPClient.Configuration.Proxy? = try isPortOpen(host: "localhost", port: 9090) ? .server(host: "localhost", port: 9090) : nil
+        
         let s = try await PrivilegeSystem(
             eventLoop: eventLoop,
             dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_system", tls: .disable),
-            opaConfigure: .init(host: opaHost, port: opaPort, proxy: .server(host: "localhost", port: 9090)),
+            opaConfigure: .init(host: opaHost, port: opaPort, proxy: proxy),
             logger: .init(label: "Privilege-System-Testing"),
             debuging: .init(tdeEncrypt: false)
         )
@@ -148,7 +178,7 @@ struct TestingShared {
             moduleId: UUID(uuidString: "B7E2A9D0-4F3B-4C1E-8D2A-9B7C6E5F4D32")!,
             eventLoop: eventLoop,
             dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_module", tls: .disable),
-            opaConfigure: .init(host: opaHost, port: opaPort, proxy: .server(host: "localhost", port: 9090)),
+            opaConfigure: .init(host: opaHost, port: opaPort, proxy: proxy),
             logger: .init(label: "Privilege-Module-Testing"),
             debuging: .init(tdeEncrypt: false)
         )
