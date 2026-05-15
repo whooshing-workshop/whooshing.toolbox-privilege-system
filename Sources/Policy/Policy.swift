@@ -93,5 +93,5 @@ package func policyPath(
     type: String,
     format: PathFormat
 ) -> String {
-    "\(format.prefix)m\(moduleId.hexString)\(format.sign)\(type)\(format.sign)id_\(modelId)"
+    "\(format.prefix)m_\(moduleId.hexString)\(format.sign)\(type)\(format.sign)id_\(modelId.hexString)"
 }

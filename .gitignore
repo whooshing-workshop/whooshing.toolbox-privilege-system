@@ -325,3 +325,18 @@ xcuserdata
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,linux,visualstudiocode,node,database,swift,swiftpm,swiftpackagemanager,xcode
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/1.提案.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/10.访问权限的判定.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/11.模块分布式认证系统.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/12.OPA模块.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/13.权限判定流程.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/14.权限反查流程.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/15.SQL数据结构-ERD.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/2.资源.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/3.资源标签.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/4.用户与角色.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/5.域.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/6.用户与用户组.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/7.群组权限.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/8.群组角色.png
+Sources/PrivilegeSystem/PrivilegeSystem.docc/Resources/9.组内角色.png

@@ -26,7 +26,17 @@ struct AccountTesting {
         ("user3@qq.com", "password"),
         ("user4@whooshings.space", "jzosud-sau8wd"),
         ("user5@example.com", "d-3d-as-df-d"),
-        ("user6@example.com", "1238947192")
+        ("user6@example.com", "1238947192"),
+        ("user7@example.com", "pass7word"),
+        ("user8@example.com", "pass8word"),
+        ("user9@example.com", "pass9word"),
+        ("user10@example.com", "pass10word"),
+        ("user11@example.com", "pass11word"),
+        ("user12@example.com", "pass12word"),
+        ("user13@example.com", "pass13word"),
+        ("user14@example.com", "pass14word"),
+        ("user15@example.com", "pass15word"),
+        ("user16@example.com", "pass16word")
     ]
     
     static let oldPasswords: [(Int, String)] = [
@@ -35,7 +45,17 @@ struct AccountTesting {
         (2, "poidoiua"),
         (3, "io28dasfas"),
         (4, "ds8aoikda"),
-        (5, "uhalskjdf")
+        (5, "uhalskjdf"),
+        (6, "oldpass7"),
+        (7, "oldpass8"),
+        (8, "oldpass9"),
+        (9, "oldpass10"),
+        (10, "oldpass11"),
+        (11, "oldpass12"),
+        (12, "oldpass13"),
+        (13, "oldpass14"),
+        (14, "oldpass15"),
+        (15, "oldpass16")
     ]
     
     nonisolated(unsafe) static var ids: [UUID] = []
@@ -141,6 +161,6 @@ struct AccountTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .userInfo
+        TestingShared.testStage = .group
     }
 }

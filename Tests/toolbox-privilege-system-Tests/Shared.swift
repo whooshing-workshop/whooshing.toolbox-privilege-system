@@ -13,13 +13,104 @@ struct TestingShared {
 
     enum TestStage {
         case account
-        case userInfo
         case group
         case role
         case domain
+        case userInfo
+        case relations
         case policy
         case end
     }
+    
+    static let userInGroups: [Int: [Int]] = [
+        0: [1, 2, 4],
+        1: [3, 5],
+        2: [],
+        3: [0],
+        4: [5],
+        5: [0, 1, 2, 3, 4, 5],
+        6: [6, 7],
+        7: [8, 9],
+        8: [10],
+        9: [11],
+        10: [12, 13],
+        11: [14],
+        12: [15],
+        13: [6, 8, 10],
+        14: [7, 9, 11],
+        15: [12, 14, 15]
+    ]
+    
+    static let domainForGroup: [Int: [Int]] = [
+        0: [0],
+        1: [1, 2],
+        2: [3, 4],
+        3: [5],
+        4: [6, 7],
+        5: [8, 9],
+        6: [10, 11],
+        7: [12],
+        8: [13],
+        9: [14],
+        10: [15],
+        11: [6, 8, 10],
+        12: [7, 9, 11],
+        13: [12, 13, 14, 15]
+    ]
+    
+    static let domainForUser: [Int: [Int]] = [
+        3: [4],
+        0: [0],
+        4: [6, 7],
+        5: [8, 9],
+        6: [10],
+        7: [11],
+        8: [12, 13],
+        9: [14],
+        10: [15],
+        11: [6, 8],
+        12: [7, 9],
+        13: [10, 11, 12]
+    ]
+    
+    static let roleForUser: [Int: [Int]] = [
+        0: [0],
+        1: [1, 3],
+        2: [2],
+        3: [4],
+        4: [6, 7],
+        5: [8, 9],
+        6: [10],
+        7: [11],
+        8: [12, 13],
+        9: [14],
+        10: [15],
+        11: [6, 8],
+        12: [7, 9],
+        13: [10, 11, 12]
+    ]
+    
+    static let roleForGroup: [Int: [Int]] = [
+        3: [5],
+        4: [6, 7],
+        5: [8, 9],
+        6: [10],
+        7: [11],
+        8: [12, 13],
+        9: [14],
+        10: [15],
+        11: [6, 8],
+        12: [7, 9],
+        13: [10, 11, 12]
+    ]
+    
+    static let roleForGroupUser: [Int: [(Int, Int)]] = [
+        3: [(0, 2)],
+        4: [(6, 6)],
+        5: [(7, 8)],
+        6: [(8, 10)],
+        7: [(9, 11)]
+    ]
      
     static let dbHost = ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_HOST"] ?? "localhost"
     static let dbPort = Int(ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_PORT"] ?? "5432")!
@@ -47,8 +138,8 @@ struct TestingShared {
         
         let s = try await PrivilegeSystem(
             eventLoop: eventLoop,
-            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "clwang", password: "testing", database: "privilege_system", tls: .disable),
-            opaConfigure: .init(host: opaHost, port: opaPort),
+            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_system", tls: .disable),
+            opaConfigure: .init(host: opaHost, port: opaPort, proxy: .server(host: "localhost", port: 9090)),
             logger: .init(label: "Privilege-System-Testing"),
             debuging: .init(tdeEncrypt: false)
         )
@@ -56,8 +147,8 @@ struct TestingShared {
         let m = try await PrivilegeModule<ResourceList>(
             moduleId: UUID(uuidString: "B7E2A9D0-4F3B-4C1E-8D2A-9B7C6E5F4D32")!,
             eventLoop: eventLoop,
-            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "clwang", password: "testing", database: "privilege_module", tls: .disable),
-            opaConfigure: .init(host: opaHost, port: opaPort),
+            dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_module", tls: .disable),
+            opaConfigure: .init(host: opaHost, port: opaPort, proxy: .server(host: "localhost", port: 9090)),
             logger: .init(label: "Privilege-Module-Testing"),
             debuging: .init(tdeEncrypt: false)
         )

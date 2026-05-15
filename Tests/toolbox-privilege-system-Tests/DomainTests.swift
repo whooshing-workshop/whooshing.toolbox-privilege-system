@@ -3,6 +3,8 @@ import Testing
 @testable import PrivilegeModule
 import Foundation
 import Query
+import Policy
+import Fluent
 
 typealias DT = DomainTesting
 
@@ -22,7 +24,45 @@ struct DomainTesting {
         .init(name: "GlobalScope", description: "全系统顶级域，可以影响所有资源"),
         .init(name: "AsiaPacific", description: "亚太地区业务域"),
         .init(name: "NorthAmerica", description: "北美地区业务域"),
-        .init(name: "SandboxEnvironment", description: "仅限内部访问的隔离沙盒域")
+        .init(name: "SandboxEnvironment", description: "仅限内部访问的隔离沙盒域"),
+        .init(name: "Europe", description: "欧洲业务域"),
+        .init(name: "SouthAmerica", description: "南美洲业务域"),
+        .init(name: "Africa", description: "非洲业务域"),
+        .init(name: "InternalOnly", description: "仅限内网访问"),
+        .init(name: "PublicFacing", description: "面向公众的服务域"),
+        .init(name: "Development", description: "开发环境域"),
+        .init(name: "Staging", description: "预发布环境域"),
+        .init(name: "Production", description: "生产环境域"),
+        .init(name: "LegacySystem", description: "遗留老系统域"),
+        .init(name: "PartnerNetwork", description: "合作伙伴网络域")
+    ]
+    
+    static let defaultPolicy: String = """
+    allow if {
+        true
+    }
+    """
+    
+    // 可以在这里为您定义的每一个域自定义专属 Policy，如果为 nil 则会使用上面的 defaultPolicy
+    static let customPolicies: [String?] = [
+        """
+        allow if {
+            input.resource.global == true
+        }
+        """, // 0: GlobalScope
+        nil, // 1: AsiaPacific
+        nil, // 2: NorthAmerica
+        nil, // 3: SandboxEnvironment
+        nil, // 4: Europe
+        nil, // 5: SouthAmerica
+        nil, // 6: Africa
+        nil, // 7: InternalOnly
+        nil, // 8: PublicFacing
+        nil, // 9: Development
+        nil, // 10: Staging
+        nil, // 11: Production
+        nil, // 12: LegacySystem
+        nil  // 13: PartnerNetwork
     ]
     
     static var updates: [(PDomain.Updater, String, @Sendable (QDomain) -> Bool)] {[
@@ -58,45 +98,38 @@ struct DomainTesting {
         #expect(Self.ids.count == Self.domains.count)
     }
     
-    @Test("作用域权限的挂载流转")
-    func relations() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        let allUsers = try await s.query(QUser.self).all().get()
-        let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
-        let allGroups = try await s.query(QGroup.self).all().get()
-        let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
+    @Test("为每个域创建默认策略")
+    func createPolicies() async throws {
+        let (s, m) = try await TestingShared.getSystem()
         let allDomains = try await s.query(QDomain.self).all().get()
-        let qDomains = DomainTesting.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
+        let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
-        try #require(users.count >= 2)
-        try #require(groups.count >= 2)
-        try #require(qDomains.count >= 3)
+        for (i, domain) in domains.enumerated() {
+            let policyString = (i < Self.customPolicies.count ? Self.customPolicies[i] : nil) ?? Self.defaultPolicy
+            
+            let policy = PPolicy<Domain>(
+                moduleId: m.moduleId,
+                policy: policyString
+            )
+            _ = try await s.policy.create(to: Domain.self) {
+                [policy] => domain.id
+            }.get()
+        }
+    }
+    
+    @Test("验证域策略是否成功添加")
+    func verifyPolicies() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let allDomains = try await s.query(QDomain.self).all().get()
+        let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
-        // 允许组和用户可以特定域进行绑定
-        // qDomains[0] (GlobalScope) -> users[0], users[1]
-        try await s.domain.assign {
-            [qDomains[0]] => [users[0], users[1]]
-        }.get()
-        
-        // qDomains[1] (AsiaPacific) -> groups[0]
-        // qDomains[2] (NorthAmerica) -> groups[1]
-        try await s.domain.assign {
-            [qDomains[1]] => [groups[0]]
-            [qDomains[2]] => [groups[1]]
-        }.get()
-        
-        // 验证特定解绑操作
-        // qDomains[0] -x-> users[1]
-        try await s.domain.unassign {
-            [qDomains[0]] => [users[1]]
-        }.get()
-        
-        // qDomains[1] -x-> groups[0]
-        try await s.domain.unassign {
-            [qDomains[1]] => [groups[0]]
-        }.get()
-        
-        // 注意由于 Domain 的 unassign 操作是通过 DB 层进行的，为了验证可以再次 assign 或者利用 raw query 测试
+        for domain in domains {
+            let policies = try await PolicyExp<Domain>.query(on: s.db)
+                .filter(\.$parent.$id == domain.id)
+                .all().get()
+            
+            #expect(!policies.isEmpty, "域 \(domain.name) 应当至少包含一条关联策略")
+        }
     }
     
     @Test("域信息状态更新")
@@ -112,6 +145,6 @@ struct DomainTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .policy // Set to policy to allow PolicyTests to trigger if enabled, or just wait.
+        TestingShared.testStage = .userInfo // Set to policy to allow PolicyTests to trigger if enabled, or just wait.
     }
 }

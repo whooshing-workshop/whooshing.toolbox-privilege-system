@@ -3,6 +3,8 @@ import Testing
 @testable import PrivilegeModule
 import Foundation
 import Query
+import Policy
+import Fluent
 
 typealias RT = RoleTesting
 
@@ -22,7 +24,45 @@ struct RoleTesting {
         .init(name: "SuperAdminRole", description: "拥有全局控制面板访问权限"),
         .init(name: "EditorRole", description: "可以编辑及发布内容"),
         .init(name: "ModeratorRole", description: "可以审阅社区发言并封禁违规用户"),
-        .init(name: "ObserverRole", description: "只读权限角色")
+        .init(name: "ObserverRole", description: "只读权限角色"),
+        .init(name: "SalesManager", description: "销售部经理角色"),
+        .init(name: "HRLead", description: "人力资源总监角色"),
+        .init(name: "QAAnalyst", description: "测试分析师角色"),
+        .init(name: "GuestRole", description: "访客受限角色"),
+        .init(name: "BillingAdmin", description: "财务账单管理角色"),
+        .init(name: "SecurityOfficer", description: "安全合规管理角色"),
+        .init(name: "DataScientist", description: "数据科学家角色"),
+        .init(name: "ProductManager", description: "产品经理角色"),
+        .init(name: "ContentReviewer", description: "内容审核专员角色"),
+        .init(name: "DevOpsEngineer", description: "运维工程师角色")
+    ]
+    
+    static let defaultPolicy: String = """
+    allow if {
+        true
+    }
+    """
+    
+    // 可以在这里为您定义的每一个角色自定义专属 Policy，如果为 nil 则会使用上面的 defaultPolicy
+    static let customPolicies: [String?] = [
+        """
+        allow if {
+            input.operation == "manage_all"
+        }
+        """, // 0: SuperAdminRole
+        nil, // 1: EditorRole
+        nil, // 2: ModeratorRole
+        nil, // 3: ObserverRole
+        nil, // 4: SalesManager
+        nil, // 5: HRLead
+        nil, // 6: QAAnalyst
+        nil, // 7: GuestRole
+        nil, // 8: BillingAdmin
+        nil, // 9: SecurityOfficer
+        nil, // 10: DataScientist
+        nil, // 11: ProductManager
+        nil, // 12: ContentReviewer
+        nil  // 13: DevOpsEngineer
     ]
     
     static var updates: [(PRole.Updater, String, @Sendable (QRole) -> Bool)] {[
@@ -44,7 +84,7 @@ struct RoleTesting {
         _ = try await s.role.create(roles: Self.roles).get()
     }
     
-    @Test("查询并组装角色集")
+    @Test("查询并验证角色")
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
@@ -63,55 +103,38 @@ struct RoleTesting {
         #expect(Self.ids.count == Self.roles.count)
     }
     
-    @Test("角色的任命与撤职")
-    func relations() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        let allUsers = try await s.query(QUser.self).all().get()
-        let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
-        let allGroups = try await s.query(QGroup.self).all().get()
-        let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
+    @Test("为每个角色创建默认策略")
+    func createPolicies() async throws {
+        let (s, m) = try await TestingShared.getSystem()
         let allRoles = try await s.query(QRole.self).all().get()
-        let qRoles = RoleTesting.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
+        let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
-        try #require(users.count >= 2)
-        try #require(groups.count >= 2)
-        try #require(qRoles.count >= 4)
-        
-        // 测试将角色赋权给 Group 和 User
-        // qRoles[0] (SuperAdminRole) -> users[0]
-        // qRoles[2] (ModeratorRole) -> users[1], users[2]
-        try await s.role.appoint {
-            [qRoles[0]] => [users[0]]       // 用户0被赋予 SuperAdmin
-            [qRoles[2]] => [users[1], users[2]]
-        }.get()
-        
-        // qRoles[1] (EditorRole) -> groups[1]
-        try await s.role.appoint {
-            [qRoles[1]] => [groups[1]]      // 组1被赋予 Editor
-        }.get()
-        
-        // 测试群组内独立赋权：只在属于某个群组的上下文中让某人充当该角色
-        let relReq = try await s.group.query(
-            relations: [
-                users[1] =| groups[2]
-            ]
-        ).get()
-        
-        // 注意 SQL 查询可能顺序变化，故使用 first(where:) 进行准确匹配
-        // qRoles[3] (ObserverRole) -> (users[1] in groups[2])
-        if let rel = relReq.first(where: { $0.user.id == users[1].id && $0.group.id == groups[2].id }) {
-            try await s.role.appoint {
-                [qRoles[3]] => [rel]        // User1 在 Group2 (DeveloperHub) 时拥有 Observer 权限
+        for (i, role) in roles.enumerated() {
+            let policyString = (i < Self.customPolicies.count ? Self.customPolicies[i] : nil) ?? Self.defaultPolicy
+            
+            let policy = PPolicy<Role>(
+                moduleId: m.moduleId,
+                policy: policyString
+            )
+            _ = try await s.policy.create(to: Role.self) {
+                [policy] => role.id
             }.get()
         }
+    }
+    
+    @Test("验证角色策略是否成功添加")
+    func verifyPolicies() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let allRoles = try await s.query(QRole.self).all().get()
+        let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
-        // 测试撤除
-        // qRoles[0] (SuperAdminRole) -x-> users[0]
-        // qRoles[2] (ModeratorRole) -x-> users[1]
-        try await s.role.dismiss {
-            [qRoles[0]] => [users[0]]
-            [qRoles[2]] => [users[1]]
-        }.get()
+        for role in roles {
+            let policies = try await PolicyExp<Role>.query(on: s.db)
+                .filter(\.$parent.$id == role.id)
+                .all().get()
+            
+            #expect(!policies.isEmpty, "角色 \(role.name) 应当至少包含一条关联策略")
+        }
     }
     
     @Test("角色更新测试")
