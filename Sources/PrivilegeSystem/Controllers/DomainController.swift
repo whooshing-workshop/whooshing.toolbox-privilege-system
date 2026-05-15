@@ -47,7 +47,7 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
-                Role.self,
+                Domain.self,
                 ids: domainIds,
                 allSatisfy: allSatisfy,
                 label: "域权限",

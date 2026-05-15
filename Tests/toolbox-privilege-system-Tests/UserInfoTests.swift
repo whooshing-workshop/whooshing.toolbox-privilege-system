@@ -347,6 +347,85 @@ struct UserinfoTesting {
         }
     }
     
+    @Test("用户信息删除测试")
+    func deleteUserInfo() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // 使用一个未建立信息的用户（AT.ids[2]）临时创建 UserInfo
+        let userId = AT.ids[2]
+        
+        let countBefore = try await QUserInfo.query(on: s).count().get()
+        
+        try await s.userInfo.create {
+            [
+                userId => (
+                    PUserInfo(nickname: "TempUser", identifier: "temp_id_delete_test", birthday: .init(timeIntervalSince1970: 0))
+                    => PExtendedInfo(addresses: [], alternateEmails: [], phones: [])
+                )
+            ]
+        }.get()
+        
+        let countMid = try await QUserInfo.query(on: s).count().get()
+        #expect(countMid == countBefore + 1)
+        
+        // 获取刚创建的 Info ID
+        let tempInfo = try #require(
+            try await s.query(QUserInfo.self)
+                .filter(\.identifier == "temp_id_delete_test")
+                .first().get()
+        )
+        
+        try await s.userInfo.delete(infoIds: [tempInfo.id]).get()
+        
+        let countAfter = try await QUserInfo.query(on: s).count().get()
+        #expect(countAfter == countBefore, "删除 UserInfo 后数量应恢复")
+        
+        let found = try await s.query(QUserInfo.self)
+            .filter(\.identifier == "temp_id_delete_test")
+            .first().get()
+        #expect(found == nil, "被删除的 UserInfo 不应被查询到")
+        
+        // allSatisfy = false 不抛异常
+        try await s.userInfo.delete(infoIds: [UUID()], allSatisfy: false).get()
+    }
+    
+    @Test("扩展信息切片删除测试")
+    func deleteInfoSlice() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // 使用 AT.ids[0] 的 UserInfo （已建立）
+        let userId = AT.ids[0]
+        let existingInfo = try #require(
+            try await s.query(QUserInfo.self)
+                .filter(\.userId == userId)
+                .first().get()
+        )
+        
+        // 临时添加一个地址切片
+        let sliceBefore = try await QAddressSlice.query(on: s).count().get()
+        
+        let newSlices = try await s.infoSlice.create(
+            for: existingInfo.id,
+            extendedInfos: [PAddressSlice(value: "TempCity_DeleteTest", order: 99)]
+        ).get()
+        #expect(!newSlices.isEmpty)
+        #expect(try await QAddressSlice.query(on: s).count().get() == sliceBefore + 1)
+        
+        let sliceId = try #require(newSlices.first?.id)
+        try await s.infoSlice.delete(infoIds: [sliceId], type: DTO.Address.self).get()
+        
+        let sliceAfter = try await QAddressSlice.query(on: s).count().get()
+        #expect(sliceAfter == sliceBefore, "切片删除后数量应恢复")
+        
+        let found = try await s.query(QAddressSlice.self)
+            .filter(\.value == "TempCity_DeleteTest")
+            .first().get()
+        #expect(found == nil, "被删除的切片不应被查询到")
+        
+        // allSatisfy = false 不抛异常
+        try await s.infoSlice.delete(infoIds: [UUID()], allSatisfy: false, type: DTO.Address.self).get()
+    }
+    
     @MainActor
     @Test("测试结束")
     func end() async throws {

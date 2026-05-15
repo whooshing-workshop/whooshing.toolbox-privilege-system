@@ -147,6 +147,112 @@ struct RoleTesting {
         }
     }
     
+    @Test("角色多重关联与撤除测试")
+    func appointAndDismissAll() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let users = try await s.query(QUser.self).all().get()
+        let groups = try await s.query(QGroup.self).all().get()
+        let roles = try await s.query(QRole.self).all().get()
+        
+        let user = users[1]
+        let group = groups[1]
+        let role = roles[1]
+        
+        // 1. Role <-> User
+        try await s.role.appoint { [role] => [user] }.get()
+        let c1 = try await UserRolePivot.query(on: s.db)
+            .count().get()
+        #expect(c1 == 1)
+        try await s.role.dismiss { [role] => [user] }.get()
+        let c2 = try await UserRolePivot.query(on: s.db)
+            .count().get()
+        #expect(c2 == 0)
+
+        // 2. Role <-> Group
+        try await s.role.appoint { [role] => [group] }.get()
+        let c3 = try await RoleGroupPivot.query(on: s.db)
+            .count().get()
+        #expect(c3 == 1)
+        try await s.role.dismiss { [role] => [group] }.get()
+        let c4 = try await RoleGroupPivot.query(on: s.db)
+            .count().get()
+        #expect(c4 == 0)
+
+        // 3. Role <-> UserInGroup
+        // 先建立 User <-> Group 关系才能指派组内用户的角色
+        try await s.group.join { [user] => [group] }.get()
+        let uig = try await s.group.query(relations: [user =| group]).get()
+        try await s.role.appoint { [role] => uig }.get()
+        let c5 = try await RoleUserInGroupPivot.query(on: s.db)
+            .count().get()
+        #expect(c5 == 1)
+        try await s.role.dismiss { [role] => uig }.get()
+        let c6 = try await RoleUserInGroupPivot.query(on: s.db)
+            .count().get()
+        #expect(c6 == 0)
+        
+        // 扫尾清理 User <-> Group
+        try await s.group.kick { [user] => [group] }.get()
+    }
+    
+    @Test("角色删除测试")
+    func delete() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        
+        // 临时创建一个角色用于删除测试
+        let tempRole = try await s.role.create(roles: [
+            .init(name: "TempDeleteRole", description: "临时删除测试角色")
+        ]).get()
+        
+        let countBefore = try await s.query(QRole.self).count().get()
+        #expect(countBefore == Self.roles.count + 1)
+        
+        let tempId = try #require(tempRole.first?.id)
+        try await s.role.delete(roleIds: [tempId]).get()
+        
+        let countAfter = try await s.query(QRole.self).count().get()
+        #expect(countAfter == Self.roles.count, "删除后角色数量应恢复")
+        
+        let found = try await s.query(QRole.self)
+            .filter(\.name == "TempDeleteRole")
+            .first().get()
+        #expect(found == nil, "被删除的角色不应被查询到")
+        
+        // 忳照 allSatisfy = false 不抛异常
+        let nonExistentId = UUID()
+        try await s.role.delete(roleIds: [nonExistentId], allSatisfy: false).get()
+    }
+    
+    @Test("通过 Prepare 关系指派组内用户角色")
+    func appointDismissWithPrepare() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let users = try await s.query(QUser.self).all().get()
+        let groups = try await s.query(QGroup.self).all().get()
+        let roles = try await s.query(QRole.self).all().get()
+        
+        let user = users[3]
+        let group = groups[3]
+        let role = roles[3]
+        
+        // 建立群组内关系
+        try await s.group.join { [user] => [group] }.get()
+        
+        // 使用 Prepare DTO 指派角色
+        let prepareRelation = DTO.UserInGroupRelation<DTO.Prepare>(user: user, group: group)
+        try await s.role.appoint { [role] => [prepareRelation] }.get()
+        
+        let c1 = try await RoleUserInGroupPivot.query(on: s.db).count().get()
+        #expect(c1 == 1)
+        
+        // 使用 Prepare DTO 撤除角色
+        try await s.role.dismiss { [role] => [prepareRelation] }.get()
+        let c2 = try await RoleUserInGroupPivot.query(on: s.db).count().get()
+        #expect(c2 == 0)
+        
+        // 清理
+        try await s.group.kick { [user] => [group] }.get()
+    }
+    
     @MainActor
     @Test("测试结束")
     func end() async throws {

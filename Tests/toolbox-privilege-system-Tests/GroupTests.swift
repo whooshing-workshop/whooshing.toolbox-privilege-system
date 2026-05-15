@@ -3,6 +3,7 @@ import Testing
 @testable import PrivilegeModule
 import Foundation
 import Query
+import Fluent
 
 typealias GT = GroupTesting
 
@@ -94,6 +95,57 @@ struct GroupTesting {
             let res = try await s.group.update(with: updater).get()
             #expect(verifier(res), "验证失败: \(msg)")
         }
+    }
+    
+    @Test("群组关联与移除测试")
+    func relationAndKick() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let users = try await s.query(QUser.self).all().get()
+        let groups = try await s.query(QGroup.self).all().get()
+        
+        let user = users[0]
+        let group = groups[0]
+        
+        // join
+        try await s.group.join { [user] => [group] }.get()
+        let count1 = try await UserGroupPivot.query(on: s.db).count().get()
+        #expect(count1 == 1)
+        
+        // query(relations:) 验证
+        let relations = try await s.group.query(relations: [user =| group]).get()
+        #expect(relations.count == 1)
+        #expect(relations[0].user.id == user.id)
+        #expect(relations[0].group.id == group.id)
+        
+        // kick 后验证清理
+        try await s.group.kick { [user] => [group] }.get()
+        let count2 = try await UserGroupPivot.query(on: s.db).count().get()
+        #expect(count2 == 0)
+    }
+    
+    @Test("群组删除测试")
+    func delete() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // 临时创建一个群组用于删除测试
+        let temp = try await s.group.create(groups: [
+            .init(name: "TempDeleteGroup", description: "临时删除测试群组")
+        ]).get()
+        
+        let totalBefore = try await s.query(QGroup.self).count().get()
+        #expect(totalBefore == Self.groups.count + 1)
+        
+        let tempId = try #require(temp.first?.id)
+        try await s.group.delete(groupIds: [tempId]).get()
+        
+        let totalAfter = try await s.query(QGroup.self).count().get()
+        #expect(totalAfter == Self.groups.count, "删除后群组数量应恢复")
+        
+        // 验证不存在
+        let found = try await s.query(QGroup.self)
+            .filter(\.name == "TempDeleteGroup")
+            .first().get()
+        #expect(found == nil, "被删除的群组不应被查询到")
     }
     
     @MainActor

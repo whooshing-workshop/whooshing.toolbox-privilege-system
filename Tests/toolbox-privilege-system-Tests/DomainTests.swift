@@ -142,9 +142,68 @@ struct DomainTesting {
         }
     }
     
+    @Test("域多重关联与撤除测试")
+    func assignAndUnassignAll() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let users = try await s.query(QUser.self).all().get()
+        let groups = try await s.query(QGroup.self).all().get()
+        let domains = try await s.query(QDomain.self).all().get()
+        
+        let user = users[2]
+        let group = groups[2]
+        let domain = domains[2]
+        
+        // 1. Domain <-> User
+        try await s.domain.assign { [domain] => [user] }.get()
+        let count1 = try await UserDomainPivot.query(on: s.db)
+            .count().get()
+        #expect(count1 == 1)
+        try await s.domain.unassign { [domain] => [user] }.get()
+        let count2 = try await UserDomainPivot.query(on: s.db)
+            .count().get()
+        #expect(count2 == 0)
+
+        // 2. Domain <-> Group
+        try await s.domain.assign { [domain] => [group] }.get()
+        let count3 = try await DomainGroupPivot.query(on: s.db)
+            .count().get()
+        #expect(count3 == 1)
+        try await s.domain.unassign { [domain] => [group] }.get()
+        let count4 = try await DomainGroupPivot.query(on: s.db)
+            .count().get()
+        #expect(count4 == 0)
+    }
+    
+    @Test("域删除测试")
+    func delete() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let tempDomain = try await s.domain.create(domains: [
+            .init(name: "TempDeleteDomain", description: "临时删除测试域")
+        ]).get()
+        
+        let countBefore = try await s.query(QDomain.self).count().get()
+        #expect(countBefore == Self.domains.count + 1)
+        
+        let tempId = try #require(tempDomain.first?.id)
+        try await s.domain.delete(domainIds: [tempId]).get()
+        
+        let countAfter = try await s.query(QDomain.self).count().get()
+        #expect(countAfter == Self.domains.count, "删除后域数量应恢复")
+        
+        let found = try await s.query(QDomain.self)
+            .filter(\.name == "TempDeleteDomain")
+            .first().get()
+        #expect(found == nil, "被删除的域不应被查询到")
+        
+        // allSatisfy = false 应不抛异常
+        let nonExistentId = UUID()
+        try await s.domain.delete(domainIds: [nonExistentId], allSatisfy: false).get()
+    }
+    
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .userInfo // Set to policy to allow PolicyTests to trigger if enabled, or just wait.
+        TestingShared.testStage = .userInfo
     }
 }
