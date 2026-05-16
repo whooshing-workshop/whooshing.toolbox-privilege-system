@@ -4,6 +4,7 @@ import Testing
 import Foundation
 import Query
 import Fluent
+import ErrorHandle
 
 typealias GT = GroupTesting
 
@@ -20,22 +21,22 @@ struct GroupTesting {
     nonisolated(unsafe) static var ids: [UUID] = []
     
     static let groups: [PGroup] = [
-        .init(name: "AdministratorGroup", description: "全系统管理员的集合群组，拥有最高系统访问权限"),
-        .init(name: "OperatorGroup", description: "运营管理群组"),
-        .init(name: "DeveloperHub", description: "后端服务器与前端客户端的研发群体"),
-        .init(name: "BannedUsers", description: "被封禁和限制访问的用户集合"),
-        .init(name: "StandardUsers", description: "普通注册用户群体"),
-        .init(name: "GuestUsers", description: "游客群体"),
-        .init(name: "SalesTeam", description: "销售团队"),
-        .init(name: "MarketingTeam", description: "市场营销"),
-        .init(name: "HumanResources", description: "人力资源"),
-        .init(name: "QualityAssurance", description: "质量保障"),
-        .init(name: "Designers", description: "UI/UX 设计"),
-        .init(name: "DataAnalysts", description: "数据分析师"),
-        .init(name: "CustomerSupport", description: "客户支持"),
-        .init(name: "LegalDepartment", description: "法务部"),
-        .init(name: "FinanceDepartment", description: "财务部"),
-        .init(name: "Contractors", description: "外包人员")
+        .init(under: nil, name: "AdministratorGroup", description: "全系统管理员的集合群组，拥有最高系统访问权限"),
+        .init(under: nil, name: "OperatorGroup", description: "运营管理群组"),
+        .init(under: nil, name: "DeveloperHub", description: "后端服务器与前端客户端的研发群体"),
+        .init(under: nil, name: "BannedUsers", description: "被封禁和限制访问的用户集合"),
+        .init(under: nil, name: "StandardUsers", description: "普通注册用户群体"),
+        .init(under: nil, name: "GuestUsers", description: "游客群体"),
+        .init(under: nil, name: "SalesTeam", description: "销售团队"),
+        .init(under: nil, name: "MarketingTeam", description: "市场营销"),
+        .init(under: nil, name: "HumanResources", description: "人力资源"),
+        .init(under: nil, name: "QualityAssurance", description: "质量保障"),
+        .init(under: nil, name: "Designers", description: "UI/UX 设计"),
+        .init(under: nil, name: "DataAnalysts", description: "数据分析师"),
+        .init(under: nil, name: "CustomerSupport", description: "客户支持"),
+        .init(under: nil, name: "LegalDepartment", description: "法务部"),
+        .init(under: nil, name: "FinanceDepartment", description: "财务部"),
+        .init(under: nil, name: "Contractors", description: "外包人员")
     ]
     
     static var updates: [(PGroup.Updater, String, @Sendable (QGroup) -> Bool)] {[
@@ -123,123 +124,388 @@ struct GroupTesting {
         #expect(count2 == 0)
     }
     
-    @Test("群组嵌套：embed 单父多子（GT.ids[0] 包含 GT.ids[6,7]）")
-    func embedSingleParentMultipleChildren() async throws {
+    // =========================================================================
+    // MARK: group_paths 内接表核心验证
+    // =========================================================================
+    // 设计：create() 自动写入自循环路径（ancestor==descendant，depth==0）
+    //        move()  原子化地断旧链、接新链、更新主表 parent_id
+    // 验证策略：统一用 UGroup.Path 查询，不再用 UGroup 的 parentId 字段
+    // =========================================================================
+
+    // -------------------------------------------------------------------------
+    // MARK: 1. create 后自循环路径验证
+    // -------------------------------------------------------------------------
+
+    @Test("group_paths：create 后每个群组应有且仅有 1 条 depth=0 的自循环路径")
+    func paths_SelfLoopAfterCreate() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
-        // 通过 GT.ids 精确取出父群组与子群组
-        let allGroups = try await s.query(QGroup.self).all().get()
-        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))  // AdministratorGroup
-        let child6  = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
-        let child7  = try #require(allGroups.first(where: { $0.id == GT.ids[7] }))  // MarketingTeam
+        // 所有群组创建后，group_paths 中应有 groups.count 条自循环路径
+        let totalPaths = try await UGroup.Path.query(on: s.db).count().get()
+        #expect(totalPaths == Self.groups.count,
+                "创建 \(Self.groups.count) 个群组后 group_paths 应有等量自循环路径")
 
-        // 使用 builder DSL 将两个子群组嵌入父群组
-        try await s.group.embed {
-            [child6, child7] => parent
-        }.get()
+        // 验证每条自循环路径均 depth=0 且 ancestor==descendant
+        let selfLoops = try await UGroup.Path.query(on: s.db)
+            .filter(\.$depth == 0)
+            .all().get()
+        #expect(selfLoops.count == Self.groups.count, "所有路径应均为 depth=0 自循环")
+        for loop in selfLoops {
+            #expect(loop.$ancestor.id == loop.$descendant.id,
+                    "depth=0 路径的 ancestor_id 与 descendant_id 应相同")
+        }
 
-        // 验证 DB：GT.ids[6] 和 GT.ids[7] 的 parent_id 应指向 GT.ids[0]
-        let updated6 = try #require(try await UGroup.find(GT.ids[6], on: s.db).get())
-        let updated7 = try #require(try await UGroup.find(GT.ids[7], on: s.db).get())
-        #expect(updated6.$parent.id == GT.ids[0], "SalesTeam 的 parent_id 应为 AdministratorGroup")
-        #expect(updated7.$parent.id == GT.ids[0], "MarketingTeam 的 parent_id 应为 AdministratorGroup")
+        // 验证特定群组的自循环路径存在
+        let adminSelf = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .filter(\.$descendant.$id == GT.ids[0])
+            .first().get()
+        #expect(adminSelf != nil, "AdministratorGroup 应有自循环路径")
+        #expect(adminSelf?.depth == 0)
     }
 
-    @Test("群组嵌套：embed 单父单子（GT.ids[1] 包含 GT.ids[8]）")
-    func embedSingleParentSingleChild() async throws {
-        let (s, _) = try await TestingShared.getSystem()
+    // -------------------------------------------------------------------------
+    // MARK: 2. move 单层：GT.ids[6] → GT.ids[0]（SalesTeam 进 AdministratorGroup）
+    // -------------------------------------------------------------------------
 
+    @Test("move 单层：GT.ids[6] 移入 GT.ids[0]，group_paths 应增加直接子路径")
+    func paths_MoveSingleLevel_Child6ToParent0() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))  // AdministratorGroup
+        let child  = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
+
+        let pathsBefore = try await UGroup.Path.query(on: s.db).count().get()
+
+        // move: child => parent（可选类型）
+        try await s.group.move(child => Optional(parent)).get()
+
+        // group_paths 应新增 1 条路径（parent.ancestor → child.descendant，depth=1）
+        let pathsAfter = try await UGroup.Path.query(on: s.db).count().get()
+        #expect(pathsAfter == pathsBefore + 1, "move 单层后 group_paths 应增加 1 条路径")
+
+        // 验证具体路径：ancestor=GT.ids[0], descendant=GT.ids[6], depth=1
+        let direct = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .filter(\.$descendant.$id == GT.ids[6])
+            .first().get()
+        #expect(direct != nil, "应存在 AdministratorGroup → SalesTeam 的路径")
+        #expect(direct?.depth == 1, "直接父子关系 depth 应为 1")
+    }
+
+    @Test("move 单层：GT.ids[7] 移入 GT.ids[0]，group_paths 正确新增")
+    func paths_MoveSingleLevel_Child7ToParent0() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))
+        let child  = try #require(allGroups.first(where: { $0.id == GT.ids[7] }))  // MarketingTeam
+
+        try await s.group.move(child => Optional(parent)).get()
+
+        let direct = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .filter(\.$descendant.$id == GT.ids[7])
+            .first().get()
+        #expect(direct != nil, "应存在 AdministratorGroup → MarketingTeam 的路径")
+        #expect(direct?.depth == 1)
+    }
+
+    @Test("move 单层：GT.ids[8] 移入 GT.ids[1]，group_paths 正确新增")
+    func paths_MoveSingleLevel_Child8ToParent1() async throws {
+        let (s, _) = try await TestingShared.getSystem()
         let allGroups = try await s.query(QGroup.self).all().get()
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[1] }))  // OperatorGroup
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[8] }))  // HumanResources
 
-        try await s.group.embed {
-            [child] => parent
-        }.get()
+        try await s.group.move(child => Optional(parent)).get()
 
-        let updated = try #require(try await UGroup.find(GT.ids[8], on: s.db).get())
-        #expect(updated.$parent.id == GT.ids[1], "HumanResources 的 parent_id 应为 OperatorGroup")
+        let direct = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[1])
+            .filter(\.$descendant.$id == GT.ids[8])
+            .first().get()
+        #expect(direct != nil)
+        #expect(direct?.depth == 1)
     }
 
-    @Test("群组嵌套：embed 后 divorce 脱离父群组")
-    func embedThenDivorce() async throws {
-        let (s, _) = try await TestingShared.getSystem()
+    // -------------------------------------------------------------------------
+    // MARK: 3. 验证单层移动后的 group_paths 全貌
+    // -------------------------------------------------------------------------
 
+    @Test("group_paths 全貌：单层 move 后 GT.ids[0] 应有 3 条路径（含自循环）")
+    func paths_QueryAllPathsUnderParent0() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // 此时 GT.ids[0] 已经是 GT.ids[6] 和 GT.ids[7] 的 parent
+        // group_paths 中以 GT.ids[0] 为 ancestor 的路径：
+        //   [0→0 depth=0], [0→6 depth=1], [0→7 depth=1] → 3 条
+        let pathsFromAdmin = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .all().get()
+        #expect(pathsFromAdmin.count == 3,
+                "AdministratorGroup 为起点的路径应有 3 条（自循环+2个子）")
+
+        // GT.ids[1] 的路径：[1→1 depth=0], [1→8 depth=1] → 2 条
+        let pathsFromOp = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[1])
+            .all().get()
+        #expect(pathsFromOp.count == 2, "OperatorGroup 为起点的路径应有 2 条")
+
+        // 孤立群组 GT.ids[3]（BannedUsers）应只有自循环
+        let pathsBanned = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[3])
+            .all().get()
+        #expect(pathsBanned.count == 1, "BannedUsers 应只有自循环路径")
+        #expect(pathsBanned[0].depth == 0)
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: 4. move 多层：GT.ids[9] → GT.ids[6]（三层嵌套 0→6→9）
+    // -------------------------------------------------------------------------
+
+    @Test("move 多层：GT.ids[9] 移入 GT.ids[6]，形成三层链 GT.ids[0→6→9]")
+    func paths_MoveMultiLevel_Child9ToChild6() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // 前置：GT.ids[6](SalesTeam) 已在 GT.ids[0](AdministratorGroup) 下
         let allGroups = try await s.query(QGroup.self).all().get()
-        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[2] }))  // DeveloperHub
-        let child9  = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
-        let child10 = try #require(allGroups.first(where: { $0.id == GT.ids[10] })) // Designers
+        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
+        let child  = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
 
-        // 先 embed
-        try await s.group.embed {
-            [child9, child10] => parent
-        }.get()
+        try await s.group.move(child => Optional(parent)).get()
 
-        var q9  = try #require(try await UGroup.find(GT.ids[9], on: s.db).get())
-        var q10 = try #require(try await UGroup.find(GT.ids[10], on: s.db).get())
-        #expect(q9.$parent.id == GT.ids[2],  "embed 后 QualityAssurance.parent_id 应为 DeveloperHub")
-        #expect(q10.$parent.id == GT.ids[2], "embed 后 Designers.parent_id 应为 DeveloperHub")
+        // group_paths 应出现：
+        //   0 → 9 depth=2（AdministratorGroup 到 QualityAssurance）
+        //   6 → 9 depth=1（SalesTeam 到 QualityAssurance）
+        //   9 → 9 depth=0（自循环）
+        let path_0_9 = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .filter(\.$descendant.$id == GT.ids[9])
+            .first().get()
+        #expect(path_0_9 != nil, "应存在 AdministratorGroup → QualityAssurance 的跨层路径")
+        #expect(path_0_9?.depth == 2, "跨层路径 depth 应为 2")
 
-        // 再 divorce
-        // divorce 需要已 embed 后的最新 QGroup DTO，先重新查询
-        let freshGroups = try await s.query(QGroup.self).all().get()
-        let freshChild9  = try #require(freshGroups.first(where: { $0.id == GT.ids[9] }))
-        let freshChild10 = try #require(freshGroups.first(where: { $0.id == GT.ids[10] }))
-        let freshParent  = try #require(freshGroups.first(where: { $0.id == GT.ids[2] }))
+        let path_6_9 = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[6])
+            .filter(\.$descendant.$id == GT.ids[9])
+            .first().get()
+        #expect(path_6_9 != nil)
+        #expect(path_6_9?.depth == 1)
 
-        try await s.group.divorce {
-            [freshChild9, freshChild10] => freshParent
-        }.get()
-
-        q9  = try #require(try await UGroup.find(GT.ids[9], on: s.db).get())
-        q10 = try #require(try await UGroup.find(GT.ids[10], on: s.db).get())
-        #expect(q9.$parent.id == nil,  "divorce 后 QualityAssurance.parent_id 应为 nil")
-        #expect(q10.$parent.id == nil, "divorce 后 Designers.parent_id 应为 nil")
+        // GT.ids[0] 为 ancestor 的总路径应为：0→0, 0→6, 0→7, 0→9 → 4 条
+        let pathsFromAdmin = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .all().get()
+        #expect(pathsFromAdmin.count == 4,
+                "三层结构下 AdministratorGroup 为起点的路径应有 4 条")
     }
 
-    @Test("群组嵌套：验证 GT.ids[0] 下有 2 个子群组，GT.ids[1] 下有 1 个")
-    func queryChildGroups() async throws {
+    // -------------------------------------------------------------------------
+    // MARK: 5. move 到根（脱离父群组，paths 旧链清除）
+    // -------------------------------------------------------------------------
+
+    @Test("move 到根：GT.ids[9] 脱离 GT.ids[6]，三层链被清除")
+    func paths_MoveToRoot_Child9FromChild6() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // 前置：GT.ids[9] 在 GT.ids[6] 下（三层链 0→6→9）
+        let freshGroups = try await s.query(QGroup.self).all().get()
+        let child = try #require(freshGroups.first(where: { $0.id == GT.ids[9] }))
+
+        // move 到 nil 表示脱离父群组，成为根节点
+        try await s.group.move(child => QGroup?.none).get()
+
+        // 旧链应被清除：不应再有 0→9 或 6→9 的路径
+        let path_0_9 = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .filter(\.$descendant.$id == GT.ids[9])
+            .first().get()
+        #expect(path_0_9 == nil, "脱离后 AdministratorGroup → QualityAssurance 路径应被清除")
+
+        let path_6_9 = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[6])
+            .filter(\.$descendant.$id == GT.ids[9])
+            .first().get()
+        #expect(path_6_9 == nil, "脱离后 SalesTeam → QualityAssurance 路径应被清除")
+
+        // GT.ids[9] 应只剩自循环
+        let selfLoop = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[9])
+            .all().get()
+        #expect(selfLoop.count == 1, "脱离后 QualityAssurance 应只剩自循环路径")
+        #expect(selfLoop[0].depth == 0)
+
+        // GT.ids[0] 的路径恢复为 3 条（0→0, 0→6, 0→7）
+        let pathsFromAdmin = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .all().get()
+        #expect(pathsFromAdmin.count == 3,
+                "脱离后 AdministratorGroup 路径应恢复为 3 条")
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: 6. move 到根后再换 parent（路径完整重建）
+    // -------------------------------------------------------------------------
+
+    @Test("move 重建：GT.ids[9] 从根移入 GT.ids[1]，新链正确建立")
+    func paths_MoveRebuild_Child9ToParent1() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // 前置：GT.ids[9] 已是根节点
+        let freshGroups = try await s.query(QGroup.self).all().get()
+        let newParent = try #require(freshGroups.first(where: { $0.id == GT.ids[1] }))  // OperatorGroup
+        let child     = try #require(freshGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
+
+        try await s.group.move(child => Optional(newParent)).get()
+
+        // 新链：1→9 depth=1
+        let path_1_9 = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[1])
+            .filter(\.$descendant.$id == GT.ids[9])
+            .first().get()
+        #expect(path_1_9 != nil, "QualityAssurance 移入 OperatorGroup 后应有路径")
+        #expect(path_1_9?.depth == 1)
+
+        // 旧链不应存在（0→9 在前一步已被清除，不应重现）
+        let path_0_9 = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .filter(\.$descendant.$id == GT.ids[9])
+            .first().get()
+        #expect(path_0_9 == nil, "不应有 AdministratorGroup → QualityAssurance 的旧链")
+
+        // 清理：将 GT.ids[9] 脱离，保持后续测试环境干净
+        let cleanGroups = try await s.query(QGroup.self).all().get()
+        let cleanChild = try #require(cleanGroups.first(where: { $0.id == GT.ids[9] }))
+        try await s.group.move(cleanChild => QGroup?.none).get()
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: 7. move 非法：将父群组移入其子孙（循环检测）
+    // -------------------------------------------------------------------------
+
+    @Test("move 非法：将父群组 GT.ids[0] 移入其子群组 GT.ids[6]，应抛出 groupMoveFailed")
+    func paths_MoveIllegal_ParentIntoChild() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // 前置：GT.ids[6] 在 GT.ids[0] 下，即 GT.ids[0] 是 GT.ids[6] 的祖先
+        let freshGroups = try await s.query(QGroup.self).all().get()
+        let parent = try #require(freshGroups.first(where: { $0.id == GT.ids[0] }))
+        let child  = try #require(freshGroups.first(where: { $0.id == GT.ids[6] }))
+
+        // 尝试把 AdministratorGroup 移入其子 SalesTeam → 应报错
+        var didThrow = false
+        do {
+            try await s.group.move(parent => Optional(child)).get()
+        } catch {
+            // 任何错误都意味着 move 被正确拦截
+            didThrow = true
+        }
+        #expect(didThrow, "将父群组移入子群组应抛出错误，不应成功执行")
+
+        // group_paths 不应发生改变，AdministratorGroup 路径条数保持 3 条
+        let pathsFromAdmin = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[0])
+            .all().get()
+        #expect(pathsFromAdmin.count == 3, "非法 move 后 paths 不应改变")
+    }
+
+    @Test("move 非法：将群组移入自身，应抛出 groupMoveFailed")
+    func paths_MoveIllegal_SelfToSelf() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let group = try #require(allGroups.first(where: { $0.id == GT.ids[3] }))  // BannedUsers（独立群组）
+
+        var didThrow = false
+        do {
+            try await s.group.move(group => Optional(group)).get()
+        } catch {
+            didThrow = true
+        }
+        #expect(didThrow, "将群组移入自身应抛出错误")
+    }
+
+    // -------------------------------------------------------------------------
+    // MARK: 8. 删除父群组后子孙连坐（group_paths 级联清理验证）
+    // -------------------------------------------------------------------------
+
+    @Test("delete 级联：临时父子树删除后 group_paths 完整清除")
+    func paths_DeleteCascade_Parent0() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
-        // embed 已在前序测试中完成（GT.ids[0] → [6,7]，GT.ids[1] → [8]）
-        let children0 = try await s.query(QGroup.self)
-            .filter(\.parentId == GT.ids[0])
-            .all().get()
-        #expect(children0.count == 2, "AdministratorGroup 应有 2 个子群组")
+        // 临时创建一个小树：tempParent → tempChild1, tempChild2
+        // 用于验证删除父节点时子孙及所有 group_paths 一并清除
+        let created = try await s.group.create(groups: [
+            .init(under: nil, name: "TempParent",  description: "临时父群组"),
+            .init(under: nil, name: "TempChild1",  description: "临时子群组1"),
+            .init(under: nil, name: "TempChild2",  description: "临时子群组2"),
+        ]).get()
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let tempParent = try #require(allGroups.first(where: { $0.name == "TempParent" }))
+        let tempChild1 = try #require(allGroups.first(where: { $0.name == "TempChild1" }))
+        let tempChild2 = try #require(allGroups.first(where: { $0.name == "TempChild2" }))
 
-        let children1 = try await s.query(QGroup.self)
-            .filter(\.parentId == GT.ids[1])
-            .all().get()
-        #expect(children1.count == 1, "OperatorGroup 应有 1 个子群组")
+        // 建立层级：tempChild1, tempChild2 → tempParent
+        try await s.group.move(tempChild1 => Optional(tempParent)).get()
+        try await s.group.move(tempChild2 => Optional(tempParent)).get()
 
-        let childIds0 = children0.map { $0.id }
-        #expect(childIds0.contains(GT.ids[6]), "SalesTeam 应在 AdministratorGroup 下")
-        #expect(childIds0.contains(GT.ids[7]), "MarketingTeam 应在 AdministratorGroup 下")
+        // 此时 group_paths 中应有：
+        //   TempParent→TempParent (0), TempParent→TempChild1 (1), TempParent→TempChild2 (1)
+        //   TempChild1→TempChild1 (0), TempChild2→TempChild2 (0)
+        // 共 5 条新路径
+        let pathsBefore = try await UGroup.Path.query(on: s.db).count().get()
+
+        let tempParentId = try #require(created.first(where: { $0.name == "TempParent" })?.id)
+
+        // 删除父节点，应级联删除 TempChild1, TempChild2 及所有路径
+        try await s.group.delete(groupIds: [tempParentId]).get()
+
+        // 主表：三个临时群组应全部消失
+        for name in ["TempParent", "TempChild1", "TempChild2"] {
+            let found = try await s.query(QGroup.self)
+                .filter(\.name == name).first().get()
+            #expect(found == nil, "\(name) 被级联删除后不应存在")
+        }
+
+        // group_paths：3 个群组的 5 条路径应全部清除
+        let pathsAfter = try await UGroup.Path.query(on: s.db).count().get()
+        #expect(pathsAfter == pathsBefore - 5,
+                "删除临时父子树（3个群组）后 group_paths 应减少 5 条")
+
+        // GT.ids[1]（OperatorGroup）及 GT.ids[8] 的路径不应受影响
+        let pathsFromOp = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == GT.ids[1])
+            .all().get()
+        #expect(pathsFromOp.count == 2, "OperatorGroup 的路径不应受临时树删除影响")
     }
 
-    @Test("群组删除测试")
+    @Test("群组删除测试：孤立叶子群组的单独删除")
     func delete() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        
-        // 临时创建一个群组用于删除测试
+
+        // 临时创建一个孤立群组（无父无子），用于独立删除测试
         let temp = try await s.group.create(groups: [
-            .init(name: "TempDeleteGroup", description: "临时删除测试群组")
+            .init(under: nil, name: "TempDeleteGroup", description: "临时删除测试群组")
         ]).get()
-        
-        let totalBefore = try await s.query(QGroup.self).count().get()
-        #expect(totalBefore == Self.groups.count + 1)
-        
         let tempId = try #require(temp.first?.id)
+
+        // 创建后应有自循环路径
+        let pathAfterCreate = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == tempId)
+            .all().get()
+        #expect(pathAfterCreate.count == 1, "孤立群组创建后应有 1 条自循环路径")
+
+        let countBefore = try await s.query(QGroup.self).count().get()
+
         try await s.group.delete(groupIds: [tempId]).get()
-        
-        let totalAfter = try await s.query(QGroup.self).count().get()
-        #expect(totalAfter == Self.groups.count, "删除后群组数量应恢复")
-        
-        // 验证不存在
+
+        // 主表中不应再找到该群组
         let found = try await s.query(QGroup.self)
             .filter(\.name == "TempDeleteGroup")
             .first().get()
         #expect(found == nil, "被删除的群组不应被查询到")
+
+        let countAfter = try await s.query(QGroup.self).count().get()
+        #expect(countAfter == countBefore - 1, "删除后群组数量应减少 1")
+
+        // group_paths 中该群组的自循环路径也应被清除
+        let pathAfterDelete = try await UGroup.Path.query(on: s.db)
+            .filter(\.$ancestor.$id == tempId)
+            .first().get()
+        #expect(pathAfterDelete == nil, "群组删除后 group_paths 中的自循环路径应一并清除")
     }
     
     @MainActor

@@ -46,7 +46,7 @@ struct RelationsTesting {
         #expect(actualCount == expectedCount, "UserGroupPivot 表数据量应与映射配置匹配")
     }
 
-    @Test("构建群组嵌套结构（embed）")
+    @Test("构建群组嵌套结构（move）")
     func buildGroupStructures() async throws {
         let (s, _) = try await TestingShared.getSystem()
         let allGroups = try await s.query(QGroup.self).all().get()
@@ -57,22 +57,22 @@ struct RelationsTesting {
         for (parentIdx, childIndices) in TestingShared.groupStructures {
             guard !childIndices.isEmpty else { continue }
             let parent = groups[parentIdx]
-            let children = childIndices.map { groups[$0] }
 
-            // embed: [children] => parent
-            try await s.group.embed {
-                children => parent
-            }.get()
+            for childIdx in childIndices {
+                let child = groups[childIdx]
+                // move: child => Optional(parent) 建立父子关系
+                try await s.group.move(child => Optional(parent)).get()
+            }
         }
 
-        // 验证：逐父群组检查子群组数量（用 QGroup DTO query 过滤 parentId）
+        // 验证：用 QGroup.parentId 确认每个子群组已成功挂载到父群组下
         for (parentIdx, childIndices) in TestingShared.groupStructures {
             let parentId = groups[parentIdx].id
             let childCount = try await s.query(QGroup.self)
                 .filter(\.parentId == parentId)
                 .count().get()
             #expect(childCount == childIndices.count,
-                    "GT.ids[\(parentIdx)] 应有 \(childIndices.count) 个子群组，实际 \(childCount) 个")
+                    "GT.ids[\(parentIdx)] 应有 \(childIndices.count) 个直接子群组，实际 \(childCount) 个")
         }
     }
     
