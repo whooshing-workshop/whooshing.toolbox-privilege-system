@@ -100,6 +100,7 @@ struct TestingShared {
         13: [12, 13, 14, 15]
     ]
     
+    // 域与用户的从属关系 (domainIdx -> [groupIdx])
     static let domainForUser: [Int: [Int]] = [
         3: [4],
         0: [0],
@@ -115,6 +116,7 @@ struct TestingShared {
         13: [10, 11, 12]
     ]
     
+    // 角色与用户的从属关系 (roleIdx -> [userIdx])
     static let roleForUser: [Int: [Int]] = [
         0: [0],
         1: [1, 3],
@@ -132,6 +134,7 @@ struct TestingShared {
         13: [10, 11, 12]
     ]
     
+    // 角色与群组的从属关系 (roleIdx -> [groupIdx])
     static let roleForGroup: [Int: [Int]] = [
         3: [5],
         4: [6, 7],

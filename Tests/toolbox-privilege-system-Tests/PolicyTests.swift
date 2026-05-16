@@ -195,44 +195,53 @@ struct PolicyTesting {
     }
 
     // =========================================================================
-    // MARK: 3. 纯角色判定（AT.ids[4] 无 group，无域策略叠加）
+    // MARK: 3. 纯角色判定（AT.ids[4] 可用角色验证）
     // =========================================================================
-    // AT.ids[4] 的可用角色：RT.ids[6]、RT.ids[7]（均为 allow if {true}）
-    // 命名角色（SuperAdmin/Editor/Moderator/Observer）在 MARK 4-6 中与域策略一同验证
-    // 本节验证"无群组"基础结构：reports 中无 domain 条目
+    // roleForUser[4] = [RT[6], RT[7]]（均为 allow if {true}）
+    // domainForUser[4] = [domain6, domain7]（用户直接域，均为 allow if {true}）
+    // userInGroups[4] = []（无 group）
+    // 注意：user4 虽无 group，但有直接赋予的用户域，judge 时 domain reports 不为空！
+    // 命名角色（SuperAdmin/Editor/Moderator/Observer）在 MARK 4-5 中与域策略一同验证
 
-    @Test("纯角色判定：用户无 group 时，role 通过，无 domain 报告")
-    func judgeRoleOnly_NoGroup_Allow() async throws {
+    @Test("纯角色判定：user4+RT[6]，role 通过，user 直接域(domain6/domain7)也通过")
+    func judgeRoleOnly_User4_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[4] 无 group，RT.ids[6] 策略 allow if {true}
+        // user4: roleForUser[4]=[RT[6],RT[7]], domainForUser[4]=[domain6,domain7]
+        // domain6/domain7 均为 allow if {true}，空 resource 也能通过
         let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 6, s: s) // RT.ids[6]: allow if {true}
+        let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: [:], operation: "anything", privilegeIds: []
         ).get()
 
-        #expect(res.result, "RT[6](allow all) + 无group → ALLOW")
+        #expect(res.result, "RT[6](allow all) + domain6/7(allow all) → ALLOW")
+        // user4 有直接赋予的 domain6, domain7，所以有 domain 报告
         let domainReports = res.reports.filter { $0.key.type == .domain }
-        #expect(domainReports.isEmpty, "无 group 的用户不应有 domain 报告")
+        #expect(!domainReports.isEmpty, "user4 有直接赋予的 domain6/domain7，应有 domain 报告")
+        #expect(domainReports.count == 2, "domain6 和 domain7 共 2 个 domain 报告")
+        #expect(domainReports.values.allSatisfy { $0 }, "domain6/domain7 均 allow if {true} → 全 true")
     }
 
-    @Test("纯角色判定：user4 使用 RT[7]，reports 结构验证")
-    func judgeRoleOnly_NoGroup_ReportsStructure() async throws {
+    @Test("纯角色判定：user4 使用 RT[7]，reports 结构验证（含用户直接域）")
+    func judgeRoleOnly_User4_ReportsStructure() async throws {
         let (s, m) = try await TestingShared.getSystem()
+        // user4: roleForUser[4]=[RT[6],RT[7]], domainForUser[4]=[domain6,domain7]
         let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 7, s: s) // RT.ids[7]: allow if {true}
+        let role = try await fetchRole(index: 7, s: s) // RT[7]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: [:], operation: "view", privilegeIds: []
         ).get()
 
-        #expect(res.result, "RT[7](allow all) + 无group → ALLOW")
+        #expect(res.result, "RT[7](allow all) + domain6/7(allow all) → ALLOW")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == true, "role 报告应为 true")
-        #expect(res.reports.filter { $0.key.type == .domain }.isEmpty, "无 domain 报告")
+        // user4 有直接赋予的 domain6, domain7，无 group
+        let domainReports = res.reports.filter { $0.key.type == .domain }
+        #expect(domainReports.count == 2, "user4 有 domain6 和 domain7 共 2 个直接域报告")
     }
 
     // SuperAdminRole 完整验证：user0 持有 RT[0]（用户角色），在 group0 中（domain0: global==true）
@@ -465,11 +474,14 @@ struct PolicyTesting {
     // domain0: global==true，domain3: env==sandbox
     // user3 可用角色: RT[4](用户角色, allow if {true}), RT[5](群组角色 via group3, allow if {true})
 
-    @Test("双域AND：全部满足 → ALLOW，reports 包含 2 个域")
+    @Test("双域AND：全部满足 → ALLOW，reports 包含 3 个域")
     func judgeMultiDomain_AllPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
+        // user3: userInGroups[3]=[0,3] → group0(domain0: global==true) + group3(domain3: env==sandbox)
+        // 同时 domainForUser[3]=[domain4] → 用户直接赋予 domain4(allow if {true})
+        // 因此 domain reports 共 3 个: domain0 + domain3 + domain4
         let user = try await fetchUser(index: 3, s: s)
-        let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}
+        let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}（user3 的用户角色）
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -477,9 +489,9 @@ struct PolicyTesting {
             operation: "view", privilegeIds: []
         ).get()
 
-        #expect(res.result, "role+domain0+domain3 全通过 → ALLOW")
+        #expect(res.result, "role+domain0+domain3+domain4 全通过 → ALLOW")
         let domainReports = res.reports.filter { $0.key.type == .domain }
-        #expect(domainReports.count == 2, "应有 2 个域报告")
+        #expect(domainReports.count == 3, "应有 3 个域报告: domain0(群组)+domain3(群组)+domain4(用户直接)")
         #expect(domainReports.values.allSatisfy { $0 })
     }
 
@@ -514,9 +526,12 @@ struct PolicyTesting {
         #expect(!res.result, "domain0 要求 global==true，缺失 → DENY")
     }
 
-    @Test("双域AND：两域均不满足 → DENY，两个域报告均为 false")
+    @Test("双域AND：两个群组域均不满足 → DENY（但 domain4 直接域仍通过）")
     func judgeMultiDomain_BothFail() async throws {
         let (s, m) = try await TestingShared.getSystem()
+        // user3 域: group0(domain0: global==true) + group3(domain3: env==sandbox) + 直接 domain4(allow all)
+        // 传空 resource：domain0失败, domain3失败, domain4通过
+        // AND 逻辑下，任一失败则整体 DENY
         let user = try await fetchUser(index: 3, s: s)
         let role = try await fetchRole(index: 4, s: s)
 
@@ -525,19 +540,26 @@ struct PolicyTesting {
             resource: [:], operation: "view", privilegeIds: []
         ).get()
 
-        #expect(!res.result, "两域均失败 → DENY")
-        #expect(res.reports.filter { $0.key.type == .domain }.values.allSatisfy { !$0 })
+        #expect(!res.result, "domain0/domain3 均失败 → 整体 DENY（即使 domain4 通过）")
+        // domain4(allow all) 为 true，所以不能断言所有域均为 false
+        let domainReports = res.reports.filter { $0.key.type == .domain }
+        #expect(domainReports.values.contains(false), "至少 domain0 或 domain3 不满足 → 应包含 false")
     }
 
     // =========================================================================
     // MARK: 7. 四域极端 AND（AT.ids[5] -> domain0,1,2,3）
     // =========================================================================
-    // user5 可用角色: RT[8](用户角色, allow if {true}), RT[9](用户角色, allow if {true})
+    // user5: roleForUser[5]=[RT[8],RT[9]]
+    // userInGroups[5]=[0,1,2,3] → group0(domain0) + group1(domain1) + group2(domain2) + group3(domain3)
+    // domainForUser[5]=[domain8,domain9] → 直接域 domain8, domain9 (均 allow if {true})
+    // domain reports 共 6 个: domain0~3(群组) + domain8,9(用户直接)
     // domain1(asia) 和 domain2(na) 互斥，region 不能同时满足，验证 AND 严格性
 
     @Test("四域极端AND：domain1(asia)与domain2(na)互斥 → 始终 DENY")
     func judgeQuadDomain_AlwaysDeny() async throws {
         let (s, m) = try await TestingShared.getSystem()
+        // user5: roleForUser[5]=[RT[8],RT[9]]。全部为 allow if {true}
+        // user5 在 group0~3 + 直接域 domain8/9，共 6 个 domain
         let user = try await fetchUser(index: 5, s: s)
         let role = try await fetchRole(index: 8, s: s) // RT[8]: allow if {true}
 
@@ -546,15 +568,16 @@ struct PolicyTesting {
             resource: [
                 "global": AnyCodable(true),
                 "env": AnyCodable("sandbox"),
-                "region": AnyCodable("asia")
+                "region": AnyCodable("asia") // domain2 需要 na，并预 asia → domain2 失败
             ],
             operation: "view", privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain2 需要 region=na，与 domain1 的 asia 互斥 → 始终 DENY")
         let domainReports = res.reports.filter { $0.key.type == .domain }
-        #expect(domainReports.count == 4, "4 个 group → 4 个域报告")
-        #expect(domainReports.values.contains(false))
+        // user5 有 6 个 domain：domain0(群组)+domain1(群组)+domain2(群组)+domain3(群组)+domain8(直接)+domain9(直接)
+        #expect(domainReports.count == 6, "6 个 domain: 4 个群组域 + 2 个用户直接域")
+        #expect(domainReports.values.contains(false), "domain2(na)与 domain1(asia)互斥 → 应有 false")
     }
 
 
@@ -831,21 +854,24 @@ struct PolicyTesting {
         #expect(res.result, "空 privilegeIds 不影响纯角色鉴权")
     }
 
-    @Test("边界：无 group 用户的 reports 中不含 domain 条目")
-    func edge_NoGroupUser_NoDomainReports() async throws {
+    @Test("边界：有直接用户域的无group用户，domain reports 不为空")
+    func edge_NoGroupUser_HasDirectDomainReports() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // user4 无 group，使用 RT[7](allow if {true})
+        // user4: userInGroups[4]=[] (无 group)，但 domainForUser[4]=[domain6, domain7]
+        // domain6/domain7 均为 allow if {true}，空 resource 也通过
         let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 7, s: s) // RT[7]: allow if {true}
+        let role = try await fetchRole(index: 7, s: s) // RT[7]: user4 的用户角色
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: [:], operation: "view", privilegeIds: []
         ).get()
 
-        #expect(res.result)
-        #expect(res.reports.filter { $0.key.type == .domain }.isEmpty,
-                "无 group 的用户不应有 domain 报告")
+        #expect(res.result, "RT[7](allow all) + domain6/7(allow all) → ALLOW")
+        let domainReports = res.reports.filter { $0.key.type == .domain }
+        #expect(!domainReports.isEmpty, "user4 有直接赋予的 domain6/domain7，应有 domain 报告")
+        #expect(domainReports.count == 2, "domain6 和 domain7 共 2 个")
+        #expect(domainReports.values.allSatisfy { $0 }, "domain6/domain7 均通过")
     }
 
     @Test("边界：role 失败时 AND 逻辑使最终结果为 false")
