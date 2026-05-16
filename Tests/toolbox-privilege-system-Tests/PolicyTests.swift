@@ -197,95 +197,142 @@ struct PolicyTesting {
     // =========================================================================
     // MARK: 3. 纯角色判定（AT.ids[4] 无 group，无域策略叠加）
     // =========================================================================
+    // AT.ids[4] 的可用角色：RT.ids[6]、RT.ids[7]（均为 allow if {true}）
+    // 命名角色（SuperAdmin/Editor/Moderator/Observer）在 MARK 4-6 中与域策略一同验证
+    // 本节验证"无群组"基础结构：reports 中无 domain 条目
 
-    @Test("纯角色判定：SuperAdminRole 允许 manage_all")
-    func judgeRoleOnly_SuperAdmin_Allowed() async throws {
+    @Test("纯角色判定：用户无 group 时，role 通过，无 domain 报告")
+    func judgeRoleOnly_NoGroup_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[4] → 无 group（Shared.userInGroups[4] = []）
+        // AT.ids[4] 无 group，RT.ids[6] 策略 allow if {true}
         let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 0, s: s) // RT.ids[0] = SuperAdminRole
+        let role = try await fetchRole(index: 6, s: s) // RT.ids[6]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "manage_all", privilegeIds: []
+            resource: [:], operation: "anything", privilegeIds: []
         ).get()
-        
-        #expect(res.result, "SuperAdminRole + manage_all → ALLOW")
+
+        #expect(res.result, "RT[6](allow all) + 无group → ALLOW")
         let domainReports = res.reports.filter { $0.key.type == .domain }
-        #expect(domainReports.isEmpty, "无 group 的用户应无 domain 报告")
+        #expect(domainReports.isEmpty, "无 group 的用户不应有 domain 报告")
     }
 
-    @Test("纯角色判定：SuperAdminRole 拒绝非授权操作")
-    func judgeRoleOnly_SuperAdmin_Denied() async throws {
+    @Test("纯角色判定：user4 使用 RT[7]，reports 结构验证")
+    func judgeRoleOnly_NoGroup_ReportsStructure() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 0, s: s)
-
-        let res = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "edit", privilegeIds: []
-        ).get()
-
-        #expect(!res.result, "SuperAdminRole 不允许 edit → DENY")
-        let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
-        #expect(res.reports[roleKey] == false)
-    }
-
-    @Test("纯角色判定：EditorRole 允许 edit 和 publish，拒绝 manage_all")
-    func judgeRoleOnly_Editor() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 1, s: s) // RT.ids[1] = EditorRole
-
-        for op in ["edit", "publish"] {
-            let res = try await s.arbitrator.judge(
-                moduleId: m.moduleId, user: user, role: role,
-                resource: [:], operation: op, privilegeIds: []
-            ).get()
-            #expect(res.result, "EditorRole + \(op) → ALLOW")
-        }
-
-        let denied = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "manage_all", privilegeIds: []
-        ).get()
-        #expect(!denied.result, "EditorRole 不允许 manage_all → DENY")
-    }
-
-    @Test("纯角色判定：ModeratorRole 允许 moderate，拒绝其他")
-    func judgeRoleOnly_Moderator() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 2, s: s) // RT.ids[2] = ModeratorRole
-
-        let allow = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "moderate", privilegeIds: []
-        ).get()
-        #expect(allow.result, "ModeratorRole + moderate → ALLOW")
-
-        let deny = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "edit", privilegeIds: []
-        ).get()
-        #expect(!deny.result, "ModeratorRole 不允许 edit → DENY")
-    }
-
-    @Test("纯角色判定：ObserverRole 允许 view，reports 结构验证")
-    func judgeRoleOnly_Observer_ReportsStructure() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 3, s: s) // RT.ids[3] = ObserverRole
+        let role = try await fetchRole(index: 7, s: s) // RT.ids[7]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: [:], operation: "view", privilegeIds: []
         ).get()
 
-        #expect(res.result, "ObserverRole + view → ALLOW")
+        #expect(res.result, "RT[7](allow all) + 无group → ALLOW")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == true, "role 报告应为 true")
-        #expect(res.reports.filter { $0.key.type == .domain }.isEmpty)
+        #expect(res.reports.filter { $0.key.type == .domain }.isEmpty, "无 domain 报告")
+    }
+
+    // SuperAdminRole 完整验证：user0 持有 RT[0]（用户角色），在 group0 中（domain0: global==true）
+    @Test("纯角色判定：SuperAdminRole(user0) manage_all+global=true → ALLOW")
+    func judgeRoleOnly_SuperAdmin_Allowed() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // user0 可用角色: RT[0](SuperAdmin 用户角色), RT[3](Observer 组内角色 in group0)
+        // user0 在 group0，group0 绑 domain0(global==true)，需配合 global=true 使域通过
+        let user = try await fetchUser(index: 0, s: s)
+        let role = try await fetchRole(index: 0, s: s) // RT[0] = SuperAdminRole
+
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "manage_all", privilegeIds: []
+        ).get()
+        #expect(res.result, "SuperAdminRole + manage_all + domain0(global=true) → ALLOW")
+    }
+
+    @Test("纯角色判定：SuperAdminRole(user0) edit → DENY（role 策略不匹配）")
+    func judgeRoleOnly_SuperAdmin_Denied() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 0, s: s)
+        let role = try await fetchRole(index: 0, s: s)
+
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "edit", privilegeIds: []
+        ).get()
+        #expect(!res.result, "SuperAdminRole 不允许 edit → DENY")
+        let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
+        #expect(res.reports[roleKey] == false)
+    }
+
+    // EditorRole 完整验证：user1 持有 RT[1]（用户角色），在 group1 中（domain1: region==asia）
+    @Test("纯角色判定：EditorRole(user1) edit+region=asia → ALLOW；manage_all → DENY")
+    func judgeRoleOnly_Editor() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // user1 可用角色: RT[1](Editor), RT[3](Observer)；在 group1，domain1(region=asia)
+        let user = try await fetchUser(index: 1, s: s)
+        let role = try await fetchRole(index: 1, s: s) // RT[1] = EditorRole
+
+        for op in ["edit", "publish"] {
+            let res = try await s.arbitrator.judge(
+                moduleId: m.moduleId, user: user, role: role,
+                resource: ["region": AnyCodable("asia")],
+                operation: op, privilegeIds: []
+            ).get()
+            #expect(res.result, "EditorRole + \(op) + region=asia → ALLOW")
+        }
+
+        let denied = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("asia")],
+            operation: "manage_all", privilegeIds: []
+        ).get()
+        #expect(!denied.result, "EditorRole 不允许 manage_all → DENY")
+    }
+
+    // ModeratorRole 完整验证：user2 持有 RT[2]，在 group2 中（domain2: region==na）
+    @Test("纯角色判定：ModeratorRole(user2) moderate+region=na → ALLOW；edit → DENY")
+    func judgeRoleOnly_Moderator() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // user2 可用角色: RT[2](Moderator)；在 group2，domain2(region=na)
+        let user = try await fetchUser(index: 2, s: s)
+        let role = try await fetchRole(index: 2, s: s)
+
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("na")],
+            operation: "moderate", privilegeIds: []
+        ).get()
+        #expect(allow.result, "ModeratorRole + moderate + region=na → ALLOW")
+
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("na")],
+            operation: "edit", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "ModeratorRole 不允许 edit → DENY")
+    }
+
+    // ObserverRole 完整验证：user1 持有 RT[3]（用户角色），在 group1（domain1: region==asia）
+    @Test("纯角色判定：ObserverRole(user1) view+region=asia → ALLOW，reports 结构验证")
+    func judgeRoleOnly_Observer_ReportsStructure() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // user1 可用角色: RT[1](Editor), RT[3](Observer)
+        let user = try await fetchUser(index: 1, s: s)
+        let role = try await fetchRole(index: 3, s: s) // RT[3] = ObserverRole
+
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("asia")],
+            operation: "view", privilegeIds: []
+        ).get()
+
+        #expect(res.result, "ObserverRole + view + region=asia → ALLOW")
+        let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
+        #expect(res.reports[roleKey] == true, "role 报告应为 true")
     }
 
 
@@ -293,58 +340,61 @@ struct PolicyTesting {
     // MARK: 4. 角色 + 单域 AND（AT.ids[0] -> GT.ids[0] -> DT.ids[0]: global==true）
     // =========================================================================
 
-    @Test("角色+单域：role ✓ domain ✓ → ALLOW")
+    // user0 可用角色：RT[0](SuperAdmin 用户角色) + RT[3](Observer 组内角色 in group0)
+    // group0 绑 domain0: global==true
+
+    @Test("角色+单域：role(Observer) ✓ domain ✓ → ALLOW")
     func judgeRoleAndDomain_BothPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 0, s: s)  // AT.ids[0] -> group0 -> domain0
-        let role = try await fetchRole(index: 1, s: s)  // RT.ids[1] = EditorRole: edit/publish
+        // user0 → group0 → domain0(global==true)；RT[3](Observer) 是 user0 的组内角色
+        let user = try await fetchUser(index: 0, s: s)
+        let role = try await fetchRole(index: 3, s: s) // RT[3] = ObserverRole: view
 
-        // operation=edit ✓, resource.global=true (domain0 通过) ✓ → ALLOW
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
 
-        #expect(res.result, "EditorRole + domain0(global==true) + edit → ALLOW")
+        #expect(res.result, "ObserverRole + domain0(global=true) + view → ALLOW")
         #expect(res.reports.filter { $0.key.type == .role }.values.allSatisfy { $0 })
         #expect(res.reports.filter { $0.key.type == .domain }.values.allSatisfy { $0 })
     }
 
-    @Test("角色+单域：role ✓ domain ✗ (global=false) → DENY")
+    @Test("角色+单域：role(Observer) ✓ domain ✗ (global=false) → DENY")
     func judgeRoleAndDomain_DomainFails() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 1, s: s)
+        let role = try await fetchRole(index: 3, s: s) // RT[3] ObserverRole
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(false)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain0 要求 global==true，false 时 DENY")
         #expect(res.reports.filter { $0.key.type == .domain }.values.contains(false))
     }
 
-    @Test("角色+单域：role ✗ (operation不匹配) domain ✓ → DENY")
+    @Test("角色+单域：role(SuperAdmin) ✗ (operation不匹配) domain ✓ → DENY")
     func judgeRoleAndDomain_RoleFails() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 0, s: s)  // RT.ids[0] = SuperAdminRole: manage_all only
+        let role = try await fetchRole(index: 0, s: s) // RT[0] = SuperAdminRole: manage_all only
 
-        // operation=edit → SuperAdminRole 不允许 → role 失败
+        // operation=view → SuperAdminRole 不允许 → role 失败；domain0(global=true) 通过
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
 
-        #expect(!res.result, "SuperAdminRole 不允许 edit，domain 通过也应 DENY")
+        #expect(!res.result, "SuperAdminRole 不允许 view，domain 通过也应 DENY")
         #expect(res.reports.filter { $0.key.type == .role }.values.contains(false))
     }
 
-    @Test("角色+单域：role ✗ domain ✗ → DENY")
+    @Test("角色+单域：role(SuperAdmin) ✗ domain ✗ → DENY")
     func judgeRoleAndDomain_BothFail() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 0, s: s)
@@ -353,22 +403,24 @@ struct PolicyTesting {
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(false)],
-            operation: "delete", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
 
-        #expect(!res.result, "role 和 domain 均失败 → DENY")
+        #expect(!res.result, "role(SuperAdmin+view) 和 domain(global=false) 均失败 → DENY")
     }
 
     // =========================================================================
     // MARK: 5. 不同单域策略验证
     // =========================================================================
+    // user1 可用角色: RT[1](Editor), RT[3](Observer) —— 均为用户角色
+    // user2 可用角色: RT[2](Moderator) —— 用户角色
 
     @Test("AsiaPacific域(DT.ids[1])：region=asia 时允许，region=na 时拒绝")
     func judgeAsiaPacificDomain() async throws {
         let (s, m) = try await TestingShared.getSystem()
         // AT.ids[1] -> GT.ids[1] -> DT.ids[1]: region=="asia"
         let user = try await fetchUser(index: 1, s: s)
-        let role = try await fetchRole(index: 3, s: s)  // ObserverRole: view
+        let role = try await fetchRole(index: 3, s: s) // RT[3] = ObserverRole: view (user1 用户角色)
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -390,7 +442,7 @@ struct PolicyTesting {
         let (s, m) = try await TestingShared.getSystem()
         // AT.ids[2] -> GT.ids[2] -> DT.ids[2]: region=="na"
         let user = try await fetchUser(index: 2, s: s)
-        let role = try await fetchRole(index: 2, s: s)  // ModeratorRole: moderate
+        let role = try await fetchRole(index: 2, s: s) // RT[2] = ModeratorRole: moderate (user2 用户角色)
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -411,13 +463,13 @@ struct PolicyTesting {
     // MARK: 6. 双域 AND（AT.ids[3] -> GT.ids[0]+GT.ids[3] -> domain0+domain3）
     // =========================================================================
     // domain0: global==true，domain3: env==sandbox
-    // 两者均需满足，任一失败则整体 DENY
+    // user3 可用角色: RT[4](用户角色, allow if {true}), RT[5](群组角色 via group3, allow if {true})
 
     @Test("双域AND：全部满足 → ALLOW，reports 包含 2 个域")
     func judgeMultiDomain_AllPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 3, s: s)
-        let role = try await fetchRole(index: 3, s: s)  // ObserverRole: view
+        let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -435,9 +487,8 @@ struct PolicyTesting {
     func judgeMultiDomain_Domain3Fails() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 3, s: s)
-        let role = try await fetchRole(index: 3, s: s)
+        let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}
 
-        // 只有 global=true，无 env → domain3 失败
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
@@ -452,7 +503,7 @@ struct PolicyTesting {
     func judgeMultiDomain_Domain0Fails() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 3, s: s)
-        let role = try await fetchRole(index: 3, s: s)
+        let role = try await fetchRole(index: 5, s: s) // RT[5]: 群组角色，allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -467,7 +518,7 @@ struct PolicyTesting {
     func judgeMultiDomain_BothFail() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 3, s: s)
-        let role = try await fetchRole(index: 3, s: s)
+        let role = try await fetchRole(index: 4, s: s)
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -481,16 +532,15 @@ struct PolicyTesting {
     // =========================================================================
     // MARK: 7. 四域极端 AND（AT.ids[5] -> domain0,1,2,3）
     // =========================================================================
+    // user5 可用角色: RT[8](用户角色, allow if {true}), RT[9](用户角色, allow if {true})
     // domain1(asia) 和 domain2(na) 互斥，region 不能同时满足，验证 AND 严格性
 
     @Test("四域极端AND：domain1(asia)与domain2(na)互斥 → 始终 DENY")
     func judgeQuadDomain_AlwaysDeny() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[5] -> GT.ids[0,1,2,3] -> domain0,1,2,3
         let user = try await fetchUser(index: 5, s: s)
-        let role = try await fetchRole(index: 3, s: s)
+        let role = try await fetchRole(index: 8, s: s) // RT[8]: allow if {true}
 
-        // 尽量满足：global=true, env=sandbox, region=asia（但 domain2 需要 na）
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: [
@@ -582,15 +632,18 @@ struct PolicyTesting {
     @Test("Role 策略替换：新语义立即生效（deploy 限制）")
     func rolePolicy_ReplaceAndRejudge() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let targetId = RT.ids[13]  // DevOpsEngineer，默认 allow if { true }
-        // AT.ids[4]：无 group，纯角色判定
-        let user = try await fetchUser(index: 4, s: s)
-        let role = try await fetchRole(index: 13, s: s)
+        // 使用 RT.ids[12](ContentReviewer)，属于 user8(用户角色), user8 在 group10(无外部域约束)
+        // 注：group10 属于 group2(DeveloperHub, domain2: region=na) 的子群组
+        //      所以初始 judge 需要 region=na 来满足 domain2
+        let targetId = RT.ids[12]
+        let user = try await fetchUser(index: 8, s: s)
+        let role = try await fetchRole(index: 12, s: s) // RT[12] = user8 的用户角色
 
-        // 替换前：allow if { true } → 任何操作通过
+        // 替换前：allow if { true } → 任何操作都通过（配合 region=na 满足域策略）
         let before = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "anything", privilegeIds: []
+            resource: ["region": AnyCodable("na")],
+            operation: "anything", privilegeIds: []
         ).get()
         #expect(before.result, "替换前默认策略允许任何操作")
 
@@ -612,13 +665,15 @@ struct PolicyTesting {
         // 验证新策略
         let deployRes = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "deploy", privilegeIds: []
+            resource: ["region": AnyCodable("na")],
+            operation: "deploy", privilegeIds: []
         ).get()
         #expect(deployRes.result, "替换后：deploy → ALLOW")
 
         let denyRes = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "anything", privilegeIds: []
+            resource: ["region": AnyCodable("na")],
+            operation: "anything", privilegeIds: []
         ).get()
         #expect(!denyRes.result, "替换后：anything → DENY")
 
@@ -722,12 +777,13 @@ struct PolicyTesting {
         #expect(!denyEdit.result, "ModeratorRole 不允许 edit → DENY")
     }
 
-    @Test("综合：ObserverRole + GlobalScope+Sandbox 双域，精准访问控制矩阵")
+    @Test("综合：RT[4](默认放行) + GlobalScope+Sandbox 双域，精准访问控制矩阵")
     func comprehensive_ObserverTwoDomains() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[3] -> GT.ids[0](domain0: global==true) + GT.ids[3](domain3: env==sandbox)
+        // AT.ids[3] → GT.ids[0](domain0: global==true) + GT.ids[3](domain3: env==sandbox)
+        // user3 可用角色: RT[4](用户角色, allow if {true}), RT[5](群组角色 via group3)
         let user = try await fetchUser(index: 3, s: s)
-        let role = try await fetchRole(index: 3, s: s)  // ObserverRole: view
+        let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}
 
         struct Case {
             let resource: [String: AnyCodable]
@@ -739,8 +795,6 @@ struct PolicyTesting {
         let cases: [Case] = [
             .init(resource: ["global": AnyCodable(true), "env": AnyCodable("sandbox")],
                   op: "view", expected: true,   desc: "双域全满足 + view → ALLOW"),
-            .init(resource: ["global": AnyCodable(true), "env": AnyCodable("sandbox")],
-                  op: "manage_all", expected: false, desc: "role 不满足 manage_all → DENY"),
             .init(resource: ["global": AnyCodable(false), "env": AnyCodable("sandbox")],
                   op: "view", expected: false,  desc: "global=false → domain0 失败 → DENY"),
             .init(resource: ["global": AnyCodable(true)],
@@ -766,12 +820,13 @@ struct PolicyTesting {
     @Test("边界：空 privilegeIds 不影响纯角色鉴权")
     func edge_EmptyPrivilegeIds() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 4, s: s)  // 无 group
-        let role = try await fetchRole(index: 1, s: s)  // EditorRole
+        // user4 可用角色: RT[6], RT[7](均为 allow if {true})
+        let user = try await fetchUser(index: 4, s: s)
+        let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "edit", privilegeIds: []
+            resource: [:], operation: "anything", privilegeIds: []
         ).get()
         #expect(res.result, "空 privilegeIds 不影响纯角色鉴权")
     }
@@ -779,8 +834,9 @@ struct PolicyTesting {
     @Test("边界：无 group 用户的 reports 中不含 domain 条目")
     func edge_NoGroupUser_NoDomainReports() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 4, s: s)  // Shared.userInGroups[4] = []
-        let role = try await fetchRole(index: 3, s: s)
+        // user4 无 group，使用 RT[7](allow if {true})
+        let user = try await fetchUser(index: 4, s: s)
+        let role = try await fetchRole(index: 7, s: s) // RT[7]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -795,18 +851,19 @@ struct PolicyTesting {
     @Test("边界：role 失败时 AND 逻辑使最终结果为 false")
     func edge_RoleFailsAndShortCircuit() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[0] 在 group0 中 (domain0 通过: global==true)，但 role 失败
+        // user0 可用角色: RT[0](SuperAdmin), RT[3](Observer)
+        // user0 在 group0，绑 domain0(global==true)
+        // 测试：SuperAdmin+view → role 失败，即使 domain0 通过也 DENY
         let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 2, s: s)  // ModeratorRole: moderate only
+        let role = try await fetchRole(index: 0, s: s) // RT[0] = SuperAdminRole: manage_all only
 
-        // operation=view → ModeratorRole 不允许 → role 失败
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],  // domain0 通过
+            resource: ["global": AnyCodable(true)], // domain0 通过
             operation: "view", privilegeIds: []
         ).get()
 
-        #expect(!res.result, "role 失败（ModeratorRole 不含 view）→ DENY")
+        #expect(!res.result, "role 失败（SuperAdmin 不含 view）→ DENY")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == false)
     }
@@ -814,18 +871,22 @@ struct PolicyTesting {
     @Test("边界：默认域策略 allow if {true} 对所有 resource 放行")
     func edge_DefaultDomainAllowsAll() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[6] -> GT.ids[6,7]
-        // Shared.domainForGroup: domain4(Europe) -> group6,7，默认 allow if {true}
+        // user6 在 GT.ids[6,7](SalesTeam+MarketingTeam)
+        // group6/7 直接绑 domain4(默认 allow if {true})
+        // 但父群组 group0 绑 domain0(global==true) 也会继承到 user6
+        // 所以 resource={} 时 domain0(global==true) 失败 → DENY
+        // 改为测试 global=true 时，domain4 + domain0 全部通过
+        // user6 可用角色: RT[10](用户角色), RT[4](组内角色 in group6)
         let user = try await fetchUser(index: 6, s: s)
-        let role = try await fetchRole(index: 3, s: s)  // ObserverRole: view
+        let role = try await fetchRole(index: 10, s: s) // RT[10]: allow if {true}
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:],  // 完全空的 resource
+            resource: ["global": AnyCodable(true)], // 满足继承的 domain0
             operation: "view", privilegeIds: []
         ).get()
 
-        #expect(res.result, "默认域策略 allow if {true} 对空 resource 应放行")
+        #expect(res.result, "RT[10](allow all) + domain4(allow all) + domain0(global=true) 全通过 → ALLOW")
     }
 
     // =========================================================================
@@ -895,14 +956,12 @@ struct PolicyTesting {
     @Test("嵌套群组：子群组用户继承父群组 domain0(global==true) → global=true ALLOW")
     func nestedGroup_InheritParentDomain_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[6] 在 SalesTeam(group6) + MarketingTeam(group7) 中
-        // group6/7 是 AdministratorGroup(group0) 的子群组，group0 绑定 domain0 (global==true)
-        // group6/7 各自还直接绑定 domain4 (allow if {true})
-        // 因此用户的域策略 = domain0(继承) AND domain4(直接) AND domain4(直接)
+        // user6 可用角色: RT[10](用户角色, allow if {true}), RT[4](组内角色 in group6, allow if {true})
+        // group6/7 父群组 group0 绑 domain0(global==true) 会继承到 user6
+        // group6/7 直接绑 domain4(allow if {true})
         let user = try await fetchUser(index: 6, s: s)
-        let role = try await fetchRole(index: 3, s: s) // ObserverRole: view
+        let role = try await fetchRole(index: 10, s: s) // RT[10]: allow if {true}
 
-        // global=true → domain0(继承) 通过，domain4(直接) 通过 → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
@@ -915,17 +974,19 @@ struct PolicyTesting {
         #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告都应为 true")
     }
 
+
+
     @Test("嵌套群组：子群组用户父群组 domain0(global==true) 不满足 → global=false DENY")
     func nestedGroup_InheritParentDomain_Deny() async throws {
         let (s, m) = try await TestingShared.getSystem()
         let user = try await fetchUser(index: 6, s: s)
-        let role = try await fetchRole(index: 3, s: s)
+        // RT[4]: user6 的组内角色(in group6), allow if {true}
+        let role = try await fetchRole(index: 4, s: s)
 
-        // global=false → 继承自父群组的 domain0 失败 → 整体 DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            operation: "any", privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY")
 
@@ -936,10 +997,13 @@ struct PolicyTesting {
     @Test("嵌套群组：role 失败时即使父群组域策略全通过也应 DENY")
     func nestedGroup_RoleFailsOverridesDomain() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 6, s: s)
-        let role = try await fetchRole(index: 0, s: s) // SuperAdminRole: manage_all only
+        // user6 可用角色: RT[10](allow if {true}), RT[4](allow if {true})
+        // 两种都是 allow all，无法测试 role 失败场景
+        // 改为使用 user0(group0)：RT[0](SuperAdmin) + view 操作 → role 失败
+        // user0 可用角色: RT[0](SuperAdmin), RT[3](Observer in-group)
+        let user = try await fetchUser(index: 0, s: s) // user0 在 group0(domain0: global==true)
+        let role = try await fetchRole(index: 0, s: s) // RT[0] SuperAdminRole: manage_all only
 
-        // global=true → 所有 domain 通过，但 role 要求 manage_all → view 失败
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
@@ -957,8 +1021,9 @@ struct PolicyTesting {
         // AT.ids[7] → group8 (HumanResources，child of group1/OperatorGroup: domain1 region=asia)
         //           + group9 (QualityAssurance，child of group2/DeveloperHub: domain2 region=na)
         // domain1 要求 region="asia"，domain2 要求 region="na" → 两者互斥，始终 DENY
+        // user7 可用角色: RT[11](用户角色, allow if {true}), RT[5](组内角色 in group8, allow if {true})
         let user = try await fetchUser(index: 7, s: s)
-        let role = try await fetchRole(index: 3, s: s) // ObserverRole: view
+        let role = try await fetchRole(index: 11, s: s) // RT[11]: allow if {true}
 
         // 尝试只满足 domain1
         let denyWithAsia = try await s.arbitrator.judge(
@@ -991,8 +1056,9 @@ struct PolicyTesting {
     func nestedGroup_SingleChildInheritsParentDomain2() async throws {
         let (s, m) = try await TestingShared.getSystem()
         // AT.ids[8] → group10 (Designers，child of group2/DeveloperHub: domain2 region=na)
+        // user8 可用角色: RT[12], RT[13](用户角色, allow if {true}), RT[6](组内角色 in group10, allow if {true})
         let user = try await fetchUser(index: 8, s: s)
-        let role = try await fetchRole(index: 3, s: s) // ObserverRole: view
+        let role = try await fetchRole(index: 12, s: s) // RT[12]: allow if {true}
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -1016,47 +1082,41 @@ struct PolicyTesting {
         //   group6/7 直接绑定 domain4 (allow if {true}) → 始终通过
         //   group6/7 父群组 group0 绑定 domain0 (global==true) → 需 global=true
         // 总和: domain0(继承) AND domain4(直接) AND domain4(直接)
+        // user6 可用角色: RT[10](用户角色, allow if {true}), RT[4](组内角色 in group6, allow if {true})
         let user = try await fetchUser(index: 6, s: s)
-        let role = try await fetchRole(index: 1, s: s) // EditorRole: edit/publish
+        let role = try await fetchRole(index: 10, s: s) // RT[10]: allow if {true}
 
-        // global=true，edit → 全通过
+        // global=true → 全通过
         let allPass = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
-        #expect(allPass.result, "domain4(直接) + domain0(继承, global=true) + EditorRole(edit) → ALLOW")
+        #expect(allPass.result, "domain4(直接) + domain0(继承, global=true) + RT[10](allow all) → ALLOW")
 
-        // global=false → domain0(继承) 失败 → DENY（即使 domain4 通过）
+        // global=false → domain0(继承) 失败 → DENY
         let inheritFail = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(false)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
         #expect(!inheritFail.result, "domain0(继承) 失败 → 整体 DENY")
-
-        // global=true 但 role 不允许 moderate → DENY
-        let roleFail = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "moderate", privilegeIds: []
-        ).get()
-        #expect(!roleFail.result, "EditorRole 不允许 moderate → DENY")
     }
+
 
     @Test("嵌套群组：用户直接域权限与所在子群组继承的父群组域权限并行验证")
     func nestedGroup_UserDirectDomainPlusInherited() async throws {
         let (s, m) = try await TestingShared.getSystem()
         // AT.ids[0] 在 group0 (AdministratorGroup) 中
         // AT.ids[0] 同时被直接赋予 domain0 (GlobalScope: global==true) (Shared.domainForUser[0] = [0])
-        // domain0 来自：① group0 的直接绑定 ② 用户直接赋予 → 2 条 domain 报告
+        // user0 可用角色: RT[0](SuperAdmin), RT[3](Observer in-group)—使用 RT[3](Observer)
         let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 1, s: s) // EditorRole
+        let role = try await fetchRole(index: 3, s: s) // RT[3] ObserverRole: view
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(true)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
         #expect(res.result, "用户直接域 + 群组域均满足 global=true → ALLOW")
 
@@ -1064,14 +1124,15 @@ struct PolicyTesting {
         #expect(!domainReports.isEmpty, "应有 domain 报告")
         #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告均为 true")
 
-        // global=false → 无论直接还是继承的 domain0 均失败 → DENY
+        // global=false → domain0 均失败 → DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: ["global": AnyCodable(false)],
-            operation: "edit", privilegeIds: []
+            operation: "view", privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 用户直接域 + 群组域 domain0 均失败 → DENY")
     }
+
 
     // =========================================================================
     // MARK: 14. 组内角色（appoint / dismiss 动态场景）
@@ -1246,26 +1307,179 @@ struct PolicyTesting {
     @Test("组内角色：judge 传入的 role 决定策略，组内指派不影响其他 role 的 judge 结果")
     func inGroupRole_ScopeIsolation_NotGlobal() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // AT.ids[0] 在 group0 中，RelationTests 将 ObserverRole(view) 指派到 user0 in group0
-        // 当 judge 使用 SuperAdminRole → 应走 SuperAdminRole 的策略，而非 ObserverRole
+        // user0 在 group0 中，RelationTests 将 ObserverRole(view) 指派到 user0 in group0
+        // user0 可用角色: RT[0](SuperAdmin, 用户角色), RT[3](Observer, 组内角色)
+        // 测试: 当使用 RT[0](SuperAdmin) + view 操作 → role 策略不允许 → DENY
+        // 组内 RT[3](Observer) 的存在不干扰 RT[0] 的判定
         let user = try await fetchUser(index: 0, s: s)
-        let superAdminRole = try await fetchRole(index: 0, s: s) // SuperAdminRole: manage_all only
+        let superAdminRole = try await fetchRole(index: 0, s: s) // RT[0]: manage_all only
 
-        // SuperAdminRole + operation=view → role 不允许 → DENY（组内 ObserverRole 不影响此次 judge）
+        // RT[0] + view → role 策略不通过 → DENY（组内 RT[3] 不干扰）
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: superAdminRole,
             resource: ["global": AnyCodable(true)],
             operation: "view", privilegeIds: []
         ).get()
-        #expect(!deny.result, "SuperAdminRole 不允许 view → DENY，组内 ObserverRole 指派不影响此次 judge")
+        #expect(!deny.result, "RT[0] 不允许 view → DENY，组内 RT[3] 不影响此次 judge")
 
-        // SuperAdminRole + manage_all + domain0(global=true) → ALLOW
+        // RT[0] + manage_all + domain0(global=true) → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: superAdminRole,
             resource: ["global": AnyCodable(true)],
             operation: "manage_all", privilegeIds: []
         ).get()
-        #expect(allow.result, "SuperAdminRole + manage_all + domain0(global=true) → ALLOW")
+        #expect(allow.result, "RT[0] + manage_all + domain0(global=true) → ALLOW")
+
+        // 切换为 RT[3](Observer) + view + global=true → ALLOW
+        let observerRole = try await fetchRole(index: 3, s: s)
+        let allowObserver = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: observerRole,
+            resource: ["global": AnyCodable(true)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(allowObserver.result, "RT[3](Observer) + view + global=true → ALLOW")
+    }
+
+    // =========================================================================
+    // MARK: 15. 新 RoleController 查询 API 全覆盖测试
+    // =========================================================================
+    // 覆盖 roles/userRoles/groupRoles/userInGroupRoles 及 is/verify 方法
+
+    @Test("新API：roles(for:) 返回用户所有可用角色的并集")
+    func newAPI_roles_ReturnsAllAvailableRoles() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user0: RT[0](用户角色) + RT[3](组内角色 in group0)
+        let user = try await fetchUser(index: 0, s: s)
+        let allRoles = try await s.role.roles(for: user).get()
+        let allRoleIds = Set(allRoles.map { $0.id })
+        #expect(allRoleIds.contains(RT.ids[0]), "用户角色 RT[0] 应包含在内")
+        #expect(allRoleIds.contains(RT.ids[3]), "组内角色 RT[3] 应包含在内")
+    }
+
+    @Test("新API：userRoles(for:) 仅返回直接赋予用户的角色")
+    func newAPI_userRoles_ReturnsOnlyDirectUserRoles() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user1: RT[1](Editor), RT[3](Observer) 均为用户角色
+        let user = try await fetchUser(index: 1, s: s)
+        let userRoles = try await s.role.userRoles(for: user).get()
+        let ids = Set(userRoles.map { $0.id })
+        #expect(ids.contains(RT.ids[1]), "user1 的用户角色应包含 RT[1](Editor)")
+        #expect(ids.contains(RT.ids[3]), "user1 的用户角色应包含 RT[3](Observer)")
+    }
+
+    @Test("新API：groupRoles(for:) 返回用户所有群组（含父群组）的群组角色")
+    func newAPI_groupRoles_IncludesParentGroupRoles() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user3 在 group3(BannedUsers)，group3 绑 RT[5] 为群组角色
+        let user = try await fetchUser(index: 3, s: s)
+        let groupRoles = try await s.role.groupRoles(for: user).get()
+        let allRoleIds = Set(groupRoles.flatMap { $0.left.map { $0.id } })
+        #expect(allRoleIds.contains(RT.ids[5]), "group3 的群组角色 RT[5] 应被查到")
+    }
+
+    @Test("新API：userInGroupRoles(for:) 返回用户在各群组内的专属角色")
+    func newAPI_userInGroupRoles_ReturnsInGroupRoles() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user0 在 group0 中有组内角色 RT[3]
+        let user = try await fetchUser(index: 0, s: s)
+        let inGroupRoles = try await s.role.userInGroupRoles(for: user).get()
+        let allRoleIds = Set(inGroupRoles.flatMap { $0.left.map { $0.id } })
+        #expect(allRoleIds.contains(RT.ids[3]), "user0 在 group0 的组内角色 RT[3] 应被查到")
+    }
+
+    @Test("新API：is(role:appointedFor:) 对用户角色、群组角色、组内角色均返回 true")
+    func newAPI_is_role_ChecksAllThreeSources() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user0: RT[0](用户角色) + RT[3](组内角色)
+        let user = try await fetchUser(index: 0, s: s)
+        let rt0 = try await fetchRole(index: 0, s: s)
+        let rt3 = try await fetchRole(index: 3, s: s)
+        let rt1 = try await fetchRole(index: 1, s: s) // user0 没有 RT[1]
+
+        let hasRT0 = try await s.role.is(role: rt0, appointedFor: user).get()
+        #expect(hasRT0, "RT[0] 是 user0 的用户角色，应返回 true")
+
+        let hasRT3 = try await s.role.is(role: rt3, appointedFor: user).get()
+        #expect(hasRT3, "RT[3] 是 user0 的组内角色，应返回 true")
+
+        let hasRT1 = try await s.role.is(role: rt1, appointedFor: user).get()
+        #expect(!hasRT1, "RT[1] 不属于 user0，应返回 false")
+    }
+
+    @Test("新API：is(userRole:appointedFor:) 精确检查用户角色")
+    func newAPI_is_userRole_ExactCheck() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user1: RT[1](Editor), RT[3](Observer) 均为用户角色
+        let user = try await fetchUser(index: 1, s: s)
+        let rt1 = try await fetchRole(index: 1, s: s)
+        let rt2 = try await fetchRole(index: 2, s: s) // user1 没有 RT[2]
+
+        #expect(try await s.role.is(userRole: rt1, appointedFor: user).get(), "RT[1] 是 user1 的用户角色")
+        #expect(!(try await s.role.is(userRole: rt2, appointedFor: user).get()), "RT[2] 不是 user1 的用户角色")
+    }
+
+    @Test("新API：is(groupRole:appointedFor:) 精确检查群组角色")
+    func newAPI_is_groupRole_ExactCheck() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // group3(BannedUsers) 绑 RT[5] 为群组角色
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let group3 = try #require(allGroups.first(where: { $0.id == GT.ids[3] }))
+        let rt5 = try await fetchRole(index: 5, s: s)
+        let rt1 = try await fetchRole(index: 1, s: s)
+
+        #expect(try await s.role.is(groupRole: rt5, appointedFor: group3).get(), "RT[5] 是 group3 的群组角色")
+        #expect(!(try await s.role.is(groupRole: rt1, appointedFor: group3).get()), "RT[1] 不是 group3 的群组角色")
+    }
+
+    @Test("新API：verify(groupRole:appointedFor:) 返回该群组角色适用的群组列表")
+    func newAPI_verify_groupRole_ReturnsApplicableGroups() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user3 在 group3(BannedUsers)，group3 是 RT[5] 的群组角色持有者
+        let user = try await fetchUser(index: 3, s: s)
+        let rt5 = try await fetchRole(index: 5, s: s)
+
+        let groups = try await s.role.verify(groupRole: rt5, appointedFor: user).get()
+        #expect(!groups.isEmpty, "RT[5] 作为群组角色，应返回包含 group3 的群组列表")
+        let groupIds = Set(groups.map { $0.id })
+        #expect(groupIds.contains(GT.ids[3]), "group3 应在返回列表中")
+    }
+
+    @Test("新API：verify(userInGroupRole:appointedFor:) 返回该组内角色适用的群组列表")
+    func newAPI_verify_userInGroupRole_ReturnsApplicableGroups() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user0 在 group0 中有组内角色 RT[3]
+        let user = try await fetchUser(index: 0, s: s)
+        let rt3 = try await fetchRole(index: 3, s: s)
+
+        let groups = try await s.role.verify(userInGroupRole: rt3, appointedFor: user).get()
+        #expect(!groups.isEmpty, "RT[3] 作为 user0 的组内角色，应返回包含 group0 的群组列表")
+        let groupIds = Set(groups.map { $0.id })
+        #expect(groupIds.contains(GT.ids[0]), "group0 应在返回列表中")
+    }
+
+    @Test("新API：verify(userInGroupRole:) 对无组内角色的用户返回空列表")
+    func newAPI_verify_userInGroupRole_EmptyForNoAssignment() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user4 无任何组内角色指派
+        let user = try await fetchUser(index: 4, s: s)
+        let rt3 = try await fetchRole(index: 3, s: s)
+
+        let groups = try await s.role.verify(userInGroupRole: rt3, appointedFor: user).get()
+        #expect(groups.isEmpty, "user4 无组内角色，应返回空列表")
+    }
+
+    @Test("新API：roles(for:) 不重复返回角色（去重验证）")
+    func newAPI_roles_Deduplication() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        // user8: RT[12], RT[13](用户角色) + RT[6](组内角色 in group10)
+        let user = try await fetchUser(index: 8, s: s)
+        let roles = try await s.role.roles(for: user).get()
+        let ids = roles.map { $0.id }
+        let uniqueIds = Set(ids)
+        #expect(ids.count == uniqueIds.count, "roles(for:) 不应返回重复角色")
+        #expect(uniqueIds.contains(RT.ids[12]), "RT[12] 应包含在内")
+        #expect(uniqueIds.contains(RT.ids[13]), "RT[13] 应包含在内")
+        #expect(uniqueIds.contains(RT.ids[6]), "组内角色 RT[6] 应包含在内")
     }
 
     // =========================================================================
