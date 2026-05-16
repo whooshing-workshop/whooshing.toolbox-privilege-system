@@ -123,6 +123,100 @@ struct GroupTesting {
         #expect(count2 == 0)
     }
     
+    @Test("群组嵌套：embed 单父多子（GT.ids[0] 包含 GT.ids[6,7]）")
+    func embedSingleParentMultipleChildren() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+
+        // 通过 GT.ids 精确取出父群组与子群组
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))  // AdministratorGroup
+        let child6  = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
+        let child7  = try #require(allGroups.first(where: { $0.id == GT.ids[7] }))  // MarketingTeam
+
+        // 使用 builder DSL 将两个子群组嵌入父群组
+        try await s.group.embed {
+            [child6, child7] => parent
+        }.get()
+
+        // 验证 DB：GT.ids[6] 和 GT.ids[7] 的 parent_id 应指向 GT.ids[0]
+        let updated6 = try #require(try await UGroup.find(GT.ids[6], on: s.db).get())
+        let updated7 = try #require(try await UGroup.find(GT.ids[7], on: s.db).get())
+        #expect(updated6.$parent.id == GT.ids[0], "SalesTeam 的 parent_id 应为 AdministratorGroup")
+        #expect(updated7.$parent.id == GT.ids[0], "MarketingTeam 的 parent_id 应为 AdministratorGroup")
+    }
+
+    @Test("群组嵌套：embed 单父单子（GT.ids[1] 包含 GT.ids[8]）")
+    func embedSingleParentSingleChild() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[1] }))  // OperatorGroup
+        let child  = try #require(allGroups.first(where: { $0.id == GT.ids[8] }))  // HumanResources
+
+        try await s.group.embed {
+            [child] => parent
+        }.get()
+
+        let updated = try #require(try await UGroup.find(GT.ids[8], on: s.db).get())
+        #expect(updated.$parent.id == GT.ids[1], "HumanResources 的 parent_id 应为 OperatorGroup")
+    }
+
+    @Test("群组嵌套：embed 后 divorce 脱离父群组")
+    func embedThenDivorce() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let parent = try #require(allGroups.first(where: { $0.id == GT.ids[2] }))  // DeveloperHub
+        let child9  = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
+        let child10 = try #require(allGroups.first(where: { $0.id == GT.ids[10] })) // Designers
+
+        // 先 embed
+        try await s.group.embed {
+            [child9, child10] => parent
+        }.get()
+
+        var q9  = try #require(try await UGroup.find(GT.ids[9], on: s.db).get())
+        var q10 = try #require(try await UGroup.find(GT.ids[10], on: s.db).get())
+        #expect(q9.$parent.id == GT.ids[2],  "embed 后 QualityAssurance.parent_id 应为 DeveloperHub")
+        #expect(q10.$parent.id == GT.ids[2], "embed 后 Designers.parent_id 应为 DeveloperHub")
+
+        // 再 divorce
+        // divorce 需要已 embed 后的最新 QGroup DTO，先重新查询
+        let freshGroups = try await s.query(QGroup.self).all().get()
+        let freshChild9  = try #require(freshGroups.first(where: { $0.id == GT.ids[9] }))
+        let freshChild10 = try #require(freshGroups.first(where: { $0.id == GT.ids[10] }))
+        let freshParent  = try #require(freshGroups.first(where: { $0.id == GT.ids[2] }))
+
+        try await s.group.divorce {
+            [freshChild9, freshChild10] => freshParent
+        }.get()
+
+        q9  = try #require(try await UGroup.find(GT.ids[9], on: s.db).get())
+        q10 = try #require(try await UGroup.find(GT.ids[10], on: s.db).get())
+        #expect(q9.$parent.id == nil,  "divorce 后 QualityAssurance.parent_id 应为 nil")
+        #expect(q10.$parent.id == nil, "divorce 后 Designers.parent_id 应为 nil")
+    }
+
+    @Test("群组嵌套：验证 GT.ids[0] 下有 2 个子群组，GT.ids[1] 下有 1 个")
+    func queryChildGroups() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+
+        // embed 已在前序测试中完成（GT.ids[0] → [6,7]，GT.ids[1] → [8]）
+        let children0 = try await s.query(QGroup.self)
+            .filter(\.parentId == GT.ids[0])
+            .all().get()
+        #expect(children0.count == 2, "AdministratorGroup 应有 2 个子群组")
+
+        let children1 = try await s.query(QGroup.self)
+            .filter(\.parentId == GT.ids[1])
+            .all().get()
+        #expect(children1.count == 1, "OperatorGroup 应有 1 个子群组")
+
+        let childIds0 = children0.map { $0.id }
+        #expect(childIds0.contains(GT.ids[6]), "SalesTeam 应在 AdministratorGroup 下")
+        #expect(childIds0.contains(GT.ids[7]), "MarketingTeam 应在 AdministratorGroup 下")
+    }
+
     @Test("群组删除测试")
     func delete() async throws {
         let (s, _) = try await TestingShared.getSystem()

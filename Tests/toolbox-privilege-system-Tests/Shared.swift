@@ -53,6 +53,28 @@ struct TestingShared {
     ]
     
     // ---------------------------------------------------------------------------
+    // 群组嵌套结构 (parentGroupIdx -> [childGroupIdx])
+    // RelationTests 中通过 embed()/divorce() 建立和拆除父子关系
+    // 设计原则: 子群组索引不与 userInGroups 的 group0-5 核心场景冲突
+    //
+    //   GT.ids[0] (AdministratorGroup)
+    //       ├─ GT.ids[6]  (SalesTeam)       // 测试单父多子场景
+    //       └─ GT.ids[7]  (MarketingTeam)
+    //
+    //   GT.ids[1] (OperatorGroup)
+    //       └─ GT.ids[8]  (HumanResources)  // 测试单父单子场景
+    //
+    //   GT.ids[2] (DeveloperHub)
+    //       ├─ GT.ids[9]  (QualityAssurance) // 测试 embed 后 divorce 清理
+    //       └─ GT.ids[10] (Designers)
+    // ---------------------------------------------------------------------------
+    static let groupStructures: [Int: [Int]] = [
+        0: [6, 7],
+        1: [8],
+        2: [9, 10],
+    ]
+    
+    // ---------------------------------------------------------------------------
     // 域与群组的从属关系 (domainIdx -> [groupIdx])
     // PolicyTests 关键场景:
     //   domain0 (GlobalScope)       -> group0 (AdministratorGroup)

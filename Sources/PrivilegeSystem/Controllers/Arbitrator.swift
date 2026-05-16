@@ -34,6 +34,7 @@ extension PrivilegeSystem {
             operation: String,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
+            // 查询该用户所有的域权，包括其所在的群组，其本身被赋予的域权限，以及嵌套群组的所有域权限
             user.model.groups.map { group in
                 group.$domains.get(on: db)
                     .withError(Errcase.arbitrationDataCollectFailed, "数据库加载组域权限失败", category: .internal)

@@ -48,7 +48,7 @@ public extension Query {
             return nil
         }
         
-        // 2 x 1
+        // 2 x 2
         static func castCodable<Value>(
             _ left: KeyPath<L, Value>,
             _ method: DatabaseQuery.Filter.Method,
@@ -63,6 +63,16 @@ public extension Query {
             
             if
                 let lField = l as? KeyPath<L.Model, IDProperty<L.Model, Value>>,
+                let rField = r as? KeyPath<R.Model, FieldProperty<R.Model, Value?>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
+                let lField = l as? KeyPath<L.Model, FieldProperty<L.Model, Value>>,
+                let rField = r as? KeyPath<R.Model, FieldProperty<R.Model, Value?>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
+                let lField = l as? KeyPath<L.Model, IDProperty<L.Model, Value>>,
                 let rField = r as? KeyPath<R.Model, OptionalFieldProperty<R.Model, Value>>
             {
                 return make(lhs: lField, method: method, rhs: rField)
@@ -76,7 +86,7 @@ public extension Query {
             return nil
         }
         
-        // 1 x 2
+        // 2 x 2
         static func castCodable<Value>(
             _ left: KeyPath<L, Value?>,
             _ method: DatabaseQuery.Filter.Method,
@@ -90,6 +100,16 @@ public extension Query {
             }
             
             if
+                let lField = l as? KeyPath<L.Model, FieldProperty<L.Model, Value?>>,
+                let rField = r as? KeyPath<R.Model, IDProperty<R.Model, Value>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
+                let lField = l as? KeyPath<L.Model, FieldProperty<L.Model, Value?>>,
+                let rField = r as? KeyPath<R.Model, FieldProperty<R.Model, Value>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
                 let lField = l as? KeyPath<L.Model, OptionalFieldProperty<L.Model, Value>>,
                 let rField = r as? KeyPath<R.Model, IDProperty<R.Model, Value>>
             {
@@ -104,7 +124,7 @@ public extension Query {
             return nil
         }
         
-        // 1 x 1
+        // 2 x 2
         static func castCodable<Value>(
             _ left: KeyPath<L, Value?>,
             _ method: DatabaseQuery.Filter.Method,
@@ -118,6 +138,21 @@ public extension Query {
             }
             
             if
+                let lField = l as? KeyPath<L.Model, FieldProperty<L.Model, Value?>>,
+                let rField = r as? KeyPath<R.Model, FieldProperty<R.Model, Value?>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
+                let lField = l as? KeyPath<L.Model, FieldProperty<L.Model, Value?>>,
+                let rField = r as? KeyPath<R.Model, OptionalFieldProperty<R.Model, Value>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
+                let lField = l as? KeyPath<L.Model, OptionalFieldProperty<L.Model, Value>>,
+                let rField = r as? KeyPath<R.Model, FieldProperty<R.Model, Value?>>
+            {
+                return make(lhs: lField, method: method, rhs: rField)
+            } else if
                 let lField = l as? KeyPath<L.Model, OptionalFieldProperty<L.Model, Value>>,
                 let rField = r as? KeyPath<R.Model, OptionalFieldProperty<R.Model, Value>>
             {

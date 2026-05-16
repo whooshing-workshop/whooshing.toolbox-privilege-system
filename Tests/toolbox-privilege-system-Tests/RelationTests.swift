@@ -45,6 +45,36 @@ struct RelationsTesting {
         let actualCount = try await UserGroupPivot.query(on: s.db).count().get()
         #expect(actualCount == expectedCount, "UserGroupPivot 表数据量应与映射配置匹配")
     }
+
+    @Test("构建群组嵌套结构（embed）")
+    func buildGroupStructures() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let allGroups = try await s.query(QGroup.self).all().get()
+
+        // 通过 GroupTesting.ids 索引精确映射
+        let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
+
+        for (parentIdx, childIndices) in TestingShared.groupStructures {
+            guard !childIndices.isEmpty else { continue }
+            let parent = groups[parentIdx]
+            let children = childIndices.map { groups[$0] }
+
+            // embed: [children] => parent
+            try await s.group.embed {
+                children => parent
+            }.get()
+        }
+
+        // 验证：逐父群组检查子群组数量（用 QGroup DTO query 过滤 parentId）
+        for (parentIdx, childIndices) in TestingShared.groupStructures {
+            let parentId = groups[parentIdx].id
+            let childCount = try await s.query(QGroup.self)
+                .filter(\.parentId == parentId)
+                .count().get()
+            #expect(childCount == childIndices.count,
+                    "GT.ids[\(parentIdx)] 应有 \(childIndices.count) 个子群组，实际 \(childCount) 个")
+        }
+    }
     
     @Test("构建 Domain 与 Group 关系")
     func buildDomainForGroup() async throws {

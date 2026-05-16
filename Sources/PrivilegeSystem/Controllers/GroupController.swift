@@ -22,29 +22,108 @@ extension PrivilegeSystem {
         public func create(
             groups: [DTO.Group<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
-            __create(
-                on: db,
-                dtos: groups,
-                label: "群组",
-                errThrowing: .userInfoCreateFailed,
-                modelBuilder: { $0.raw() },
-                dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
-            )
+            // 创建组，需要修改 groups 表，也需要修改 group_paths 内接表
+            // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
+            db.trans { db in
+                self.__create(
+                    on: db,
+                    dtos: groups,
+                    label: "群组",
+                    errThrowing: .userInfoCreateFailed,
+                    modelBuilder: { $0.raw() },
+                    dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
+                ).flatMap { res in
+                    // 创建表，更新 group_paths 内接表
+                    res.map { group in
+                        var r = db.eventLoop.makeSucceededVoidResult(throws: Errcase.ErrType.self)
+                        
+                        if let parentId = group.parentId {
+                            // 继承父辈路径：找出所有“能够到达 A”的祖先路径，复制它们，并将它们的后代改成 B，depth 在原来的基础上 +1。
+                            r = r.flatMap {
+                                db.raw(
+                                    """
+                                    INSERT INTO group_paths (id, ancestor_id, descendant_id, depth)
+                                    SELECT 
+                                        gen_random_uuid() AS id, 
+                                        ancestor_id, 
+                                        \(bind: group.id)::uuid AS descendant_id, 
+                                        (depth + 1) AS depth
+                                    FROM group_paths
+                                    WHERE descendant_id = \(bind: parentId)::uuid
+                                    """
+                                )
+                                .run()
+                                .withError(Errcase.groupCreateFailed, "内接表捞表操作失败", category: .internal)
+                            }
+                        }
+                        
+                        return r.flatMap {
+                            // 添加自身路径：插入一条 B -> B，depth = 0 的自循环路径。
+                            let cycle = UGroup.Path()
+                            cycle.$ancestor.id = group.id
+                            cycle.$descendant.id = group.id
+                            cycle.depth = 0
+                            
+                            return cycle.save(on: db)
+                                .withError(Errcase.groupCreateFailed, "内接表自循环路径创建失败", category: .internal)
+                        }
+                    }.flatten(on: db.eventLoop).map { res }
+                }
+            }
         }
         
         public func delete(
             groupIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
-                UGroup.self,
-                ids: groupIds,
-                allSatisfy: allSatisfy,
-                label: "用户群组",
-                errThrowing: .groupDeleteFailed,
-                fieldBuilder: { $0.field(\.$id) },
-                filterBuilder: { $0.filter(\.$id ~~ groupIds) }
-            )
+            // 删除组，必须先清理 group_paths 表中的内接链接
+            // 再从 groups 主表中批量删除表
+            // 同时，删除父组意味着其下的所有子群组也会被删除
+            // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
+            db.trans { db in
+                self.__satisfyCheck(
+                    on: db,
+                    UGroup.self,
+                    ids: groupIds,
+                    allSatisfy: allSatisfy,
+                    label: "用户群组",
+                    errThrowing: .groupDeleteFailed,
+                    fieldBuilder: { $0.field(\.$id) },
+                    filterBuilder: { $0.filter(\.$id ~~ groupIds) }
+                ).flatMap {
+                    EventLoopRes<Set<UUID>, Errcase>.whenAllSucceed(
+                        groupIds.map { id in
+                            // 先去内接表中，揪出当前组及其所有下属子孙的 ID 集合
+                            UGroup.Path.query(on: db)
+                                .filter(\.$ancestor.$id == id)
+                                .all()
+                                .withError(Errcase.groupDeleteFailed, "获取子树节点失败", category: .internal)
+                                .map
+                            { paths in
+                                // 提取出所有需要连坐删除的组 ID（去重确保安全）
+                                Set(paths.map { $0.$descendant.id })
+                            }
+                        },
+                        on: db.eventLoop
+                    ).flatMap { ids in
+                        let targetIDs = ids.reduce(into: Set<UUID>()) { $0.formUnion($1) }
+                        
+                        // 批量抹去内接表中所有以这些组为“后代”的路径
+                        return UGroup.Path.query(on: db)
+                            .filter(\.$descendant.$id ~~ targetIDs)
+                            .delete()
+                            .withError(Errcase.groupDeleteFailed, "内接表级联删除路径失败", category: .internal)
+                            .flatMap
+                        {
+                            // 最后在主表中把这些组真正物理切除（因为有外键，需要先删内接表再删主表）
+                            UGroup.query(on: db)
+                                .filter(\.$id ~~ targetIDs)
+                                .delete()
+                                .withError(Errcase.groupDeleteFailed, "群组主表删除失败", category: .internal)
+                        }
+                    }
+                }
+            }
         }
         
         public func update(
@@ -62,7 +141,27 @@ extension PrivilegeSystem {
 }
 
 public extension PrivilegeSystem.GroupController {
-    // MARK: - 加入群组
+    // MARK: - 用户加入群组
+    
+    func join(
+        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
+        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        join(relations: content())
+    }
+    
+    // MARK: - 用户移出群组
+    
+    func kick(
+        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
+        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        kick(relations: content())
+    }
+}
+
+public extension PrivilegeSystem.GroupController {
+    // MARK: - 用户加入群组
     
     func join(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
@@ -77,7 +176,7 @@ public extension PrivilegeSystem.GroupController {
         )
     }
     
-    // MARK: - 移出群组
+    // MARK: - 用户移出群组
     
     func kick(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
@@ -91,25 +190,73 @@ public extension PrivilegeSystem.GroupController {
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
-}
-
-public extension PrivilegeSystem.GroupController {
-    // MARK: - 加入群组
     
-    func join(
-        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+    // MARK: - 群组移动至父群组
+    
+    func move(
+        _ relation: OTORelation<DTO.Group<DTO.Queried>, DTO.Group<DTO.Queried>?>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        join(relations: content())
-    }
-    
-    // MARK: - 移出群组
-    
-    func kick(
-        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
-    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        kick(relations: content())
+        db.trans { db in
+            // 新上级不能是自己，也不能是自己的子孙（防止形成环形死循环）
+            UGroup.Path.query(on: db)
+                .filter(\.$ancestor.$id == relation.left.id)
+                .all()
+                .withError(PrivilegeSystem.Errcase.groupMoveFailed, "获取子树失败", category: .internal)
+                .flatMap
+            { subTreePaths in
+                // 拿到 B 及其所有子孙的 ID 集合（诛九族名单）
+                let subTreeIDs = Set(subTreePaths.map { $0.$descendant.id })
+                
+                // 检查：如果新上级在 subTreeIDs 里面，立刻抛出异常熔断
+                if let superId = relation.right?.id, subTreeIDs.contains(superId) {
+                    return db.eventLoop.makeFailedResult(PrivilegeSystem.Errcase.groupMoveFailed, "不可将群组移动到自己或子群中", category: .external) // 非法操作拦截
+                }
+                
+                // 更新主表 groups
+                relation.left.model.$parent.id = relation.right?.id
+                
+                return relation.left.model.update(on: db)
+                    .withError(PrivilegeSystem.Errcase.groupMoveFailed, "更新群组主表上级失败", category: .internal)
+                    .flatMap
+                {
+                    // 只要后代在 B 圈子里，且祖先不在 B 圈子里（属于外部老祖先），通通干掉
+                    UGroup.Path.query(on: db)
+                        .filter(\.$descendant.$id ~~ subTreeIDs)
+                        .filter(\.$ancestor.$id !~ subTreeIDs)
+                        .delete()
+                        .withError(PrivilegeSystem.Errcase.groupMoveFailed, "断开旧链失败", category: .internal)
+                        .flatMap
+                    {
+                        // 如果是移到最顶层（新上级为 nil），到这一步旧链断完就结束了，直接返回成功
+                        guard let superId = relation.right?.id else {
+                            return db.eventLoop.makeSucceededVoidResult()
+                        }
+                        
+                        // 捞出“新父级 X 及其所有祖先”，跟“B 及其子孙”进行交叉组合
+                        return UGroup.Path.query(on: db)
+                            .filter(\.$descendant.$id == superId)
+                            .all()
+                            .withError(PrivilegeSystem.Errcase.groupMoveFailed, "获取新父级祖先链失败", category: .internal)
+                            .flatMap
+                        { superTreePaths in
+                            // 批量并发构建新路径组合（笛卡尔积）
+                            superTreePaths.flatMap { superPath in
+                                subTreePaths.filter { $0.$ancestor.id == relation.left.id }.map { subPath in
+                                    let newPath = UGroup.Path()
+                                    newPath.$ancestor.id = superPath.$ancestor.id
+                                    newPath.$descendant.id = subPath.$descendant.id
+                                    // 新距离 = 祖先到X的距离 + 子孙到B的距离 + 1
+                                    newPath.depth = superPath.depth + subPath.depth + 1
+                                    
+                                    return newPath.save(on: db)
+                                        .withError(PrivilegeSystem.Errcase.groupMoveFailed, "批量重建新链失败", category: .internal)
+                                }
+                            }.flatten(on: db.eventLoop)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

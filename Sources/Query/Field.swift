@@ -104,7 +104,9 @@ extension Query.Builder {
             fatalError("KeyPath 未产生正确的 Fluent 字段映射")
         }
         
-        if let field = k as? KeyPath<Model.Model, OptionalFieldProperty<Model.Model, Value>> {
+        if let field = k as? KeyPath<Model.Model, FieldProperty<Model.Model, Value?>> {
+            return .init(query: query.field(field))
+        } else if let field = k as? KeyPath<Model.Model, OptionalFieldProperty<Model.Model, Value>> {
             return .init(query: query.field(field))
         }
         

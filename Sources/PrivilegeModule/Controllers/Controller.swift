@@ -34,6 +34,35 @@ package extension Controller {
         }
     }
     
+    func __satisfyCheck<T: PGModel>(
+        on db: PGDatabase,
+        _ model: T.Type = T.self,
+        ids: [T.IDValue],
+        allSatisfy: Bool = true,
+        label: String,
+        errThrowing: E,
+        fieldBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>,
+        filterBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>
+    ) -> EventLoopRes<Void, E> {
+        let r: EventLoopRes<Void, E>
+        
+        if allSatisfy {
+            r = filterBuilder(fieldBuilder(T.query(on: db)))
+                .all()
+                .withError(errThrowing, "查询\(label) ID 时出错", category: .internal)
+                .flatMapThrowing
+            { info throws(E.ErrType) in
+                guard info.count == ids.count else {
+                    throw errThrowing.d("所提供的\(label) ID 中有不存在项", category: .external)
+                }
+            }
+        } else {
+            r = db.eventLoop.makeSucceededVoidResult()
+        }
+        
+        return r
+    }
+    
     func __delete<T: PGModel>(
         _ model: T.Type = T.self,
         ids: [T.IDValue],
@@ -48,22 +77,15 @@ package extension Controller {
         }
         
         return db.trans { db in
-            let r: EventLoopRes<Void, E>
-            if allSatisfy {
-                r = filterBuilder(fieldBuilder(T.query(on: db)))
-                    .all()
-                    .withError(errThrowing, "查询\(label) ID 时出错", category: .internal)
-                    .flatMapThrowing
-                { info throws(E.ErrType) in
-                    guard info.count == ids.count else {
-                        throw errThrowing.d("所提供的\(label) ID 中有不存在项", category: .external)
-                    }
-                }
-            } else {
-                r = db.eventLoop.makeSucceededVoidResult()
-            }
-            
-            return r.flatMap {
+            self.__satisfyCheck(
+                on: db,
+                ids: ids,
+                allSatisfy: allSatisfy,
+                label: label,
+                errThrowing: errThrowing,
+                fieldBuilder: fieldBuilder,
+                filterBuilder: filterBuilder
+            ).flatMap {
                 filterBuilder(T.query(on: db))
                     .delete()
                     .withError(errThrowing, category: .internal)

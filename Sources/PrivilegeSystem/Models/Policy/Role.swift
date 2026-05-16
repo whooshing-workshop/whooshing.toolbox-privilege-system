@@ -19,7 +19,7 @@ public final class Role: PGModel, @unchecked Sendable {
     
     public static let fields = Fields()
     
-    @ID(key: .id)                      public var id: UUID?
+    @ID(key: .id)                                   public var id: UUID?
     
     @Field(fields.name)                             var name: String
     @Field(fields.description)                      var description: String?

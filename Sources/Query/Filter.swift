@@ -34,7 +34,7 @@ public extension Query {
         }
         
         static func castOptionalCodable(
-            _ lhs: KeyPath<M, Value>,
+            _ lhs: KeyPath<M, Value?>,
             _ method: DatabaseQuery.Filter.Method,
             _ rhs: Value?
         ) -> Self? where Value: Codable & Sendable {
@@ -42,7 +42,9 @@ public extension Query {
                 fatalError("KeyPath 未产生正确的 Fluent 字段映射")
             }
             
-            if let field = k as? KeyPath<M.Model, OptionalFieldProperty<M.Model, Value>> {
+            if let field = k as? KeyPath<M.Model, FieldProperty<M.Model, Value?>> {
+                return .init(filter: .init(field, method, .bind(rhs)))
+            } else if let field = k as? KeyPath<M.Model, OptionalFieldProperty<M.Model, Value>> {
                 return .init(filter: .init(field, method, rhs == nil ? .null : .bind(rhs!)))
             }
             
@@ -68,7 +70,7 @@ public extension Query {
         }
         
         static func castOptionalEnum(
-            _ lhs: KeyPath<M, Value>,
+            _ lhs: KeyPath<M, Value?>,
             _ method: DatabaseQuery.Filter.Method,
             _ rhs: Value?
         ) -> Self? where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
@@ -133,27 +135,27 @@ public func <= <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value) -> Query.V
 
 // MARK: -
 
-public func == <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
+public func == <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
     .castOptionalCodable(lhs, .equal, rhs)!
 }
 
-public func != <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
+public func != <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
     .castOptionalCodable(lhs, .notEqual, rhs)!
 }
 
-public func >= <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
+public func >= <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
     .castOptionalCodable(lhs, .greaterThanOrEqual, rhs)!
 }
 
-public func > <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
+public func > <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
     .castOptionalCodable(lhs, .greaterThan, rhs)!
 }
 
-public func < <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
+public func < <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
     .castOptionalCodable(lhs, .lessThan, rhs)!
 }
 
-public func <= <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
+public func <= <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable {
     .castOptionalCodable(lhs, .lessThanOrEqual, rhs)!
 }
 
@@ -185,27 +187,27 @@ public func <= <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value) -> Query.V
 
 // MARK: -
 
-public func == <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
+public func == <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
     .castOptionalEnum(lhs, .equal, rhs)!
 }
 
-public func != <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
+public func != <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
     .castOptionalEnum(lhs, .notEqual, rhs)!
 }
 
-public func >= <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
+public func >= <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
     .castOptionalEnum(lhs, .greaterThanOrEqual, rhs)!
 }
 
-public func > <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
+public func > <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
     .castOptionalEnum(lhs, .greaterThan, rhs)!
 }
 
-public func < <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
+public func < <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
     .castOptionalEnum(lhs, .lessThan, rhs)!
 }
 
-public func <= <Model, Value>(lhs: KeyPath<Model, Value>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
+public func <= <Model, Value>(lhs: KeyPath<Model, Value?>, rhs: Value?) -> Query.ValueFilter<Model, Value> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String {
     .castOptionalEnum(lhs, .lessThanOrEqual, rhs)!
 }
 

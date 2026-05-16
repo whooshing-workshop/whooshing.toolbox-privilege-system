@@ -49,6 +49,7 @@ public extension PrivilegeSystem {
         case userJoinGroupFailed = "用户加入群组失败"
         case userKickGroupFailed = "用户从群组移除失败"
         case userGroupRelationQueryFailed = "用户与群组关系查询失败"
+        case groupMoveFailed = "群组移动至群组失败"
         
         // 域权限相关错误
         case domainCreateFailed = "域权限数据创建失败"

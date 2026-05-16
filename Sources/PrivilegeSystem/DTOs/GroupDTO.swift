@@ -40,11 +40,11 @@ public extension DTO {
 
 public extension DTO.Group where T == DTO.Prepare {
     init(
-        parentId: UUID? = nil,
+        under parent: DTO.Group<DTO.Queried>?,
         name: String,
         description: String? = nil
     ) {
-        self = Self.init(_parentId: parentId, _name: name, _description: description, _model: nil)
+        self = Self.init(_parentId: parent?.id, _name: name, _description: description, _model: nil)
     }
 }
 
@@ -117,12 +117,6 @@ public extension DTO.Group where T == DTO.Prepare {
 extension DTO.Group.Updater: DTOUpdater {}
 
 public extension DTO.Group.Updater {
-    func update(parentId: @escaping @autoclosure () throws -> UUID) -> Self {
-        generate(key: \.parentId) { builder, _ in
-            builder.set(\.$parent.$id, to: try parentId())
-        }
-    }
-    
     func update(name: @escaping @autoclosure () throws -> String) -> Self {
         generate(key: \.name) { builder, _ in
             builder.set(\.$name, to: try name())
@@ -137,13 +131,6 @@ public extension DTO.Group.Updater {
 }
 
 public extension DTO.Group.Updater {
-    func update(parentId: @escaping (DTO.Group<DTO.Queried>) throws -> UUID) -> Self {
-        generate(needsPeek: true, key: \.parentId) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$parent.$id, to: try parentId(q))
-        }
-    }
-    
     func update(name: @escaping (DTO.Group<DTO.Queried>) throws -> String) -> Self {
         generate(needsPeek: true, key: \.name) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }

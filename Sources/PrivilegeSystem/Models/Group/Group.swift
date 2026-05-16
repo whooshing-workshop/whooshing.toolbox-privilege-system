@@ -10,7 +10,9 @@ public final class UGroup: PGModel, @unchecked Sendable {
     public struct Fields: PGFields {
         let id = PGField("id", .uuid)                               .primary
         let parentId = PGField("parent_id", .uuid)                  .foreign(UGroup.self, .id, onDelete: .cascade)
+                                                                    .unique(composite: "group.unique")
         let name = PGField("name", .string)                         .required
+                                                                    .unique(composite: "group.unique")
         let description = PGField("description", .string)
         let createdAt = PGField("created_at", .datetime)            .required
         let updatedAt = PGField("updated_at", .datetime)            .required
@@ -18,10 +20,9 @@ public final class UGroup: PGModel, @unchecked Sendable {
         public init() {}
     }
     
-    
     public static let fields = Fields()
     
-    @ID(key: .id)                      public var id: UUID?
+    @ID(key: .id)                                   public var id: UUID?
     
     @OptionalParent(fields.parentId)                var parent: UGroup?
     

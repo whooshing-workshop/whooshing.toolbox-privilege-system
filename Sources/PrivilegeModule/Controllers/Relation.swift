@@ -67,21 +67,6 @@ public func => <L, R>(left: [L], right: [R]) -> MTMRelation<L, R> {
 }
 
 @resultBuilder
-public struct OTORelationBuilder<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
-    public static func buildBlock(_ components: [(Left, Right)]) -> [OTORelation<Left, Right>] {
-        components.map { $0 => $1 }
-    }
-    
-    public static func buildBlock(_ components: [OTORelation<Left, Right>]) -> [OTORelation<Left, Right>] {
-        components
-    }
-    
-    public static func buildBlock(_ components: OTORelation<Left, Right>...) -> [OTORelation<Left, Right>] {
-        components
-    }
-}
-
-@resultBuilder
 public struct OTOChainRelationBuilder<Left, Right, More>: Sendable where Left: Sendable, Right: Sendable, More: Sendable {
     public static func buildBlock(_ components: [(Left, Right, More)]) -> [OTORelation<Left, OTORelation<Right, More>>] {
         components.map { $0 => $1 => $2 }
