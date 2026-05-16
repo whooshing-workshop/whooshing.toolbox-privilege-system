@@ -59,8 +59,8 @@ typealias PT = PolicyTesting
 //     AT.ids[0] -> [GT.ids[0]]            // 单域 AND 场景
 //     AT.ids[1] -> [GT.ids[1]]            // 单域 AND 场景
 //     AT.ids[2] -> [GT.ids[2]]            // 单域 AND 场景
-//     AT.ids[3] -> [GT.ids[0], GT.ids[3]] // 双域 AND 场景
-//     AT.ids[4] -> []                     // 无 group，纯角色判定场景
+//     AT.ids[3] -> [GT.ids[0], GT.ids[3]] // 双群组域 + 用户直接域 AND 场景
+//     AT.ids[4] -> []                     // 无 group，但有用户直接域
 //     AT.ids[5] -> [GT.ids[0..3]]         // 四域 AND 场景
 //     AT.ids[6] -> [GT.ids[6], GT.ids[7]] // 子群组用户，继承父群组域权限
 //     AT.ids[7] -> [GT.ids[8], GT.ids[9]] // 多子群组用户，继承不同父群组域权限
@@ -72,9 +72,13 @@ typealias PT = PolicyTesting
 //     RT.ids[5] (HRLead)       -> AT.ids[7] in GT.ids[8]
 //
 //   用户被直接赋予的域权限:
-//     AT.ids[0] <- DT.ids[0] (GlobalScope) ← 用户直接域权限场景
+//     AT.ids[0] <- DT.ids[0] (GlobalScope)
+//     AT.ids[3] <- DT.ids[4] (Europe, default allow)
+//     AT.ids[4] <- DT.ids[6] + DT.ids[7] (default allow)
+//     AT.ids[5] <- DT.ids[8] + DT.ids[9] (default allow)
 //
-//   【鉴权逻辑】: 最终结果 = role策略 AND 所有所属群组域策略 AND 资源权限
+//   【鉴权逻辑】: judge() 先要求传入 role 对 user 可用；
+//               最终结果 = role策略 AND 所属/父群组域策略 AND 用户直接域策略 AND 资源权限
 //               嵌套群组时，父群组的域策略同样作用于用户
 //
 // =============================================================================
@@ -197,8 +201,8 @@ struct PolicyTesting {
     // =========================================================================
     // MARK: 3. 纯角色判定（AT.ids[4] 可用角色验证）
     // =========================================================================
-    // roleForUser[4] = [RT[6], RT[7]]（均为 allow if {true}）
-    // domainForUser[4] = [domain6, domain7]（用户直接域，均为 allow if {true}）
+    // user4 直接用户角色 = [RT[6], RT[7]]（均为 allow if {true}）
+    // user4 直接用户域 = [domain6, domain7]（均为 allow if {true}）
     // userInGroups[4] = []（无 group）
     // 注意：user4 虽无 group，但有直接赋予的用户域，judge 时 domain reports 不为空！
     // 命名角色（SuperAdmin/Editor/Moderator/Observer）在 MARK 4-5 中与域策略一同验证
@@ -206,7 +210,7 @@ struct PolicyTesting {
     @Test("纯角色判定：user4+RT[6]，role 通过，user 直接域(domain6/domain7)也通过")
     func judgeRoleOnly_User4_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // user4: roleForUser[4]=[RT[6],RT[7]], domainForUser[4]=[domain6,domain7]
+        // user4: 直接用户角色 RT[6]/RT[7]，直接用户域 domain6/domain7
         // domain6/domain7 均为 allow if {true}，空 resource 也能通过
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
@@ -227,7 +231,7 @@ struct PolicyTesting {
     @Test("纯角色判定：user4 使用 RT[7]，reports 结构验证（含用户直接域）")
     func judgeRoleOnly_User4_ReportsStructure() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // user4: roleForUser[4]=[RT[6],RT[7]], domainForUser[4]=[domain6,domain7]
+        // user4: 直接用户角色 RT[6]/RT[7]，直接用户域 domain6/domain7
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 7, s: s) // RT[7]: allow if {true}
 
@@ -478,7 +482,7 @@ struct PolicyTesting {
     func judgeMultiDomain_AllPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
         // user3: userInGroups[3]=[0,3] → group0(domain0: global==true) + group3(domain3: env==sandbox)
-        // 同时 domainForUser[3]=[domain4] → 用户直接赋予 domain4(allow if {true})
+        // 同时直接赋予 domain4(allow if {true})
         // 因此 domain reports 共 3 个: domain0 + domain3 + domain4
         let user = try await fetchUser(index: 3, s: s)
         let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}（user3 的用户角色）
@@ -549,16 +553,16 @@ struct PolicyTesting {
     // =========================================================================
     // MARK: 7. 四域极端 AND（AT.ids[5] -> domain0,1,2,3）
     // =========================================================================
-    // user5: roleForUser[5]=[RT[8],RT[9]]
+    // user5 直接用户角色 = [RT[8],RT[9]]
     // userInGroups[5]=[0,1,2,3] → group0(domain0) + group1(domain1) + group2(domain2) + group3(domain3)
-    // domainForUser[5]=[domain8,domain9] → 直接域 domain8, domain9 (均 allow if {true})
+    // user5 直接用户域 = [domain8,domain9] (均 allow if {true})
     // domain reports 共 6 个: domain0~3(群组) + domain8,9(用户直接)
     // domain1(asia) 和 domain2(na) 互斥，region 不能同时满足，验证 AND 严格性
 
     @Test("四域极端AND：domain1(asia)与domain2(na)互斥 → 始终 DENY")
     func judgeQuadDomain_AlwaysDeny() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // user5: roleForUser[5]=[RT[8],RT[9]]。全部为 allow if {true}
+        // user5: 直接用户角色 RT[8]/RT[9]，全部为 allow if {true}
         // user5 在 group0~3 + 直接域 domain8/9，共 6 个 domain
         let user = try await fetchUser(index: 5, s: s)
         let role = try await fetchRole(index: 8, s: s) // RT[8]: allow if {true}
@@ -655,8 +659,8 @@ struct PolicyTesting {
     @Test("Role 策略替换：新语义立即生效（deploy 限制）")
     func rolePolicy_ReplaceAndRejudge() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // 使用 RT.ids[12](ContentReviewer)，属于 user8(用户角色), user8 在 group10(无外部域约束)
-        // 注：group10 属于 group2(DeveloperHub, domain2: region=na) 的子群组
+        // 使用 RT.ids[12](ContentReviewer)，属于 user8(用户角色)
+        // group10 属于 group2(DeveloperHub, domain2: region=na) 的子群组
         //      所以初始 judge 需要 region=na 来满足 domain2
         let targetId = RT.ids[12]
         let user = try await fetchUser(index: 8, s: s)
@@ -857,7 +861,7 @@ struct PolicyTesting {
     @Test("边界：有直接用户域的无group用户，domain reports 不为空")
     func edge_NoGroupUser_HasDirectDomainReports() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        // user4: userInGroups[4]=[] (无 group)，但 domainForUser[4]=[domain6, domain7]
+        // user4: userInGroups[4]=[] (无 group)，但直接赋予 domain6/domain7
         // domain6/domain7 均为 allow if {true}，空 resource 也通过
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 7, s: s) // RT[7]: user4 的用户角色
@@ -1134,7 +1138,7 @@ struct PolicyTesting {
     func nestedGroup_UserDirectDomainPlusInherited() async throws {
         let (s, m) = try await TestingShared.getSystem()
         // AT.ids[0] 在 group0 (AdministratorGroup) 中
-        // AT.ids[0] 同时被直接赋予 domain0 (GlobalScope: global==true) (Shared.domainForUser[0] = [0])
+        // AT.ids[0] 同时被直接赋予 domain0 (GlobalScope: global==true)
         // user0 可用角色: RT[0](SuperAdmin), RT[3](Observer in-group)—使用 RT[3](Observer)
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 3, s: s) // RT[3] ObserverRole: view
@@ -1274,14 +1278,9 @@ struct PolicyTesting {
             [role] => [rel]
         }.get()
 
-        // dismiss 后用 SuperAdminRole（不允许 moderate）验证不影响其他鉴权
-        let superAdmin = try await fetchRole(index: 0, s: s)
-        let denyWrongRole = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: superAdmin,
-            resource: ["region": AnyCodable("na")],
-            operation: "moderate", privilegeIds: []
-        ).get()
-        #expect(!denyWrongRole.result, "SuperAdminRole 不允许 moderate → DENY（dismiss 后无副作用）")
+        // dismiss 后 ModeratorRole 不再是 user8 的可用身份；不要再用它调用 judge。
+        let stillAvailable = try await s.role.is(role: role, appointedFor: user).get()
+        #expect(!stillAvailable, "dismiss 后 ModeratorRole 不应再属于 user8")
     }
 
     @Test("组内角色：同一用户在不同群组担任不同组内角色，两角色互相独立")

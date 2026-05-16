@@ -29,8 +29,8 @@ struct TestingShared {
     //   user0 -> group0 (AdministratorGroup, 绑 domain0: GlobalScope)
     //   user1 -> group1 (OperatorGroup, 绑 domain1: AsiaPacific)
     //   user2 -> group2 (DeveloperHub, 绑 domain2: NorthAmerica)
-    //   user3 -> group0 + group3 (两个域, AND 全部满足)
-    //   user4 -> (无 group, 纯 role 判定场景)
+    //   user3 -> group0 + group3 (两个群组域 + 用户直接域, AND 全部满足)
+    //   user4 -> (无 group, 但有用户直接域)
     //   user5 -> group0 + group1 + group2 + group3 (多域 AND 压力测试)
     // ---------------------------------------------------------------------------
     static let userInGroups: [Int: [Int]] = [
@@ -88,65 +88,59 @@ struct TestingShared {
         1: [1],
         2: [2],
         3: [3],
-        4: [6, 7],
-        5: [8, 9],
-        6: [10, 11],
-        7: [12],
-        8: [13],
-        9: [14],
-        10: [15],
-        11: [6, 8, 10],
-        12: [7, 9, 11],
-        13: [12, 13, 14, 15]
+        4: [6, 7]
     ]
     
-    // 域与用户的从属关系 (domainIdx -> [groupIdx])
+    // 域与用户的从属关系 (domainIdx -> [userIdx])
+    // PolicyTests 关键场景:
+    //   user0 <- domain0              // 用户直接域 + 群组域重叠
+    //   user3 <- domain4              // 双群组域之外，再叠加一个默认放行直接域
+    //   user4 <- domain6 + domain7    // 无 group 用户仍有 domain reports
+    //   user5 <- domain8 + domain9    // 四群组域压力测试之外，再叠加两个直接域
     static let domainForUser: [Int: [Int]] = [
-        3: [4],
         0: [0],
-        4: [6, 7],
-        5: [8, 9],
-        6: [10],
-        7: [11],
-        8: [12, 13],
-        9: [14],
-        10: [15],
-        11: [6, 8],
-        12: [7, 9],
-        13: [10, 11, 12]
+        4: [3],
+        6: [4],
+        7: [4],
+        8: [5],
+        9: [5]
     ]
     
     // 角色与用户的从属关系 (roleIdx -> [userIdx])
+    // 注意: 这里的 key 是 role index，不是 user index。
+    // PolicyTests 关键场景:
+    //   user0 <- RT[0]
+    //   user1 <- RT[1] + RT[3]
+    //   user2 <- RT[2]
+    //   user3 <- RT[4]
+    //   user4 <- RT[6] + RT[7]
+    //   user5 <- RT[8] + RT[9]
+    //   user6 <- RT[10]
+    //   user7 <- RT[11]
+    //   user8 <- RT[12] + RT[13]
     static let roleForUser: [Int: [Int]] = [
         0: [0],
-        1: [1, 3],
+        1: [1],
         2: [2],
-        3: [4],
-        4: [6, 7],
-        5: [8, 9],
-        6: [10],
-        7: [11],
-        8: [12, 13],
-        9: [14],
-        10: [15],
-        11: [6, 8],
-        12: [7, 9],
-        13: [10, 11, 12]
+        3: [1],
+        4: [3],
+        6: [4],
+        7: [4],
+        8: [5],
+        9: [5],
+        10: [6],
+        11: [7],
+        12: [8],
+        13: [8]
     ]
     
     // 角色与群组的从属关系 (roleIdx -> [groupIdx])
+    // 群组角色会对该群组及其子群组用户生效。
     static let roleForGroup: [Int: [Int]] = [
         3: [5],
         4: [6, 7],
-        5: [8, 9],
-        6: [10],
-        7: [11],
-        8: [12, 13],
-        9: [14],
-        10: [15],
-        11: [6, 8],
-        12: [7, 9],
-        13: [10, 11, 12]
+        5: [3],
+        6: [10]
     ]
     
     // ---------------------------------------------------------------------------

@@ -217,7 +217,7 @@ struct RoleTesting {
     
     @Test("角色删除测试")
     func delete() async throws {
-        let (s, m) = try await TestingShared.getSystem()
+        let (s, _) = try await TestingShared.getSystem()
         
         // 临时创建一个角色用于删除测试
         let tempRole = try await s.role.create(roles: [

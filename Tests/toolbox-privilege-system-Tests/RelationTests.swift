@@ -24,7 +24,7 @@ struct RelationsTesting {
         let (s, _) = try await TestingShared.getSystem()
         let allUsers = try await s.query(QUser.self).all().get()
         let allGroups = try await s.query(QGroup.self).all().get()
-        
+
         let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
         let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
         
@@ -104,9 +104,10 @@ struct RelationsTesting {
     @Test("构建 Domain 与 User 关系")
     func buildDomainForUser() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all().get()
-        let domains = try await s.query(QDomain.self).all().get()
-        
+        let allUsers = try await s.query(QUser.self).all().get()
+        let allDomains = try await s.query(QDomain.self).all().get()
+        let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
+        let domains = DomainTesting.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         for (domainIdx, userIndices) in TestingShared.domainForUser {
             let domain = domains[domainIdx]
             let mappedUsers = userIndices.map { users[$0] }
