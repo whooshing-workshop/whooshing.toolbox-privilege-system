@@ -34,10 +34,61 @@ extension PrivilegeSystem {
             operation: String,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
-            // 查询该用户所有的域权，包括其所在的群组，其本身被赋予的域权限，以及嵌套群组的所有域权限
-            user.model.groups.map { group in
-                group.$domains.get(on: db)
-                    .withError(Errcase.arbitrationDataCollectFailed, "数据库加载组域权限失败", category: .internal)
+            // 查询该用户所有的域权，包括其所在的群组，父群组的所有域权限，及其本身被赋予的域权限
+            [
+                // 查询用户所在的群组，父群组的所有域权限
+                user.model.$groups.query(on: db)
+                    .with(\.$parents) { path in
+                        path.with(\.$ancestor)
+                    }
+                    .all()
+                    .withError(Errcase.arbitrationDataCollectFailed, "取得用户所加入的所有群组失败", category: .internal)
+                    .flatMapThrowing
+                { groups throws(Errcase.ErrType) in
+                    let gs = [UGroup]((
+                        groups +
+                        groups.flatMap { $0.parents.map { $0.ancestor } }
+                    ).uniqued())
+                    
+                    let ids = try required(throws: Errcase.arbitrateFailed, "取得群组 ID 失败", category: .internal) {
+                        try gs.compactMap { try $0.requireID() }
+                    }
+                    
+                    return (gs, ids)
+                }.flatMap { groups, groupIds in
+                    guard !groupIds.isEmpty else {
+                        return self.db.eventLoop.makeSucceededResult([])
+                    }
+                    
+                    return DomainGroupPivot.query(on: self.db)
+                        .filter(\.$secondaryModel.$id ~~ groupIds) // groups
+                        .with(\.$primaryModel)  // domains
+                        .all()
+                        .withError(Errcase.arbitrationDataCollectFailed, "取得 Domain Pivot 数据失败", category: .internal)
+                        .flatMapThrowing
+                    { pivots throws(Errcase.ErrType) in
+                        try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
+                            // 内存装配：此时每一行 pivot 都天然维护了 [Group -> Domain] 的纽带关系
+                            try pivots.map { pivot in
+                                // 从最开始传入的 groups 内存集合里，凭借 pivot 的 groupId 瞬间定位到完整的 UGroup 实体
+                                guard let associatedGroup = groups.first(where: { $0.id == pivot.$secondaryModel.id }) else {
+                                    throw Errcase.arbitrationDataCollectFailed.d("群组数据映射丢失", category: .internal)
+                                }
+                                
+                                return DomainData(
+                                    domainId: try pivot.primaryModel.requireID(),
+                                    resource: resource,
+                                    operation: operation,
+                                    user: user,
+                                    group: try .make(from: associatedGroup).get()
+                                )
+                            }
+                        }
+                    }
+                },
+                // 查询用户本身被赋予的域权限
+                user.model.$domains.get(on: db)
+                    .withError(Errcase.arbitrationDataCollectFailed, "数据库加载用户域权限失败", category: .internal)
                     .flatMapThrowing
                 { domains throws(Errcase.ErrType) in
                     try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
@@ -47,12 +98,12 @@ extension PrivilegeSystem {
                                 resource: resource,
                                 operation: operation,
                                 user: user,
-                                group: try .make(from: group).get()
+                                group: nil
                             )
                         }
                     }
                 }
-            }.flatten(on: eventLoop).flatMap { domainDatas in
+            ].flatten(on: db.eventLoop).flatMap { domainDatas in
                 self.__judge(
                     input: ArbitrateData(
                         moduleId: moduleId,
@@ -194,7 +245,7 @@ extension PrivilegeSystem.Arbitrator {
         let resource: [String: AnyCodable]
         let operation: String
         let user: DTO.User<DTO.Queried>
-        let group: DTO.Group<DTO.Queried>
+        let group: DTO.Group<DTO.Queried>?
     }
     
     struct PrivilegeData: Encodable, Sendable {
