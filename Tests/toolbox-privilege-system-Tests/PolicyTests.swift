@@ -37,11 +37,23 @@ typealias PT = PolicyTesting
 //     DT.ids[3] = SandboxEnvironment : allow if { input.resource.env == "sandbox" }
 //     DT.ids[4..13]                  : allow if { true }  (默认放行)
 //
+//   群组嵌套结构（GroupTests/RelationTests 中建立，via move API + group_paths）:
+//     GT.ids[0] (AdministratorGroup)
+//         ├─ GT.ids[6]  (SalesTeam)        ← 继承 domain0 (GlobalScope)
+//         └─ GT.ids[7]  (MarketingTeam)    ← 继承 domain0 (GlobalScope)
+//     GT.ids[1] (OperatorGroup)
+//         └─ GT.ids[8]  (HumanResources)   ← 继承 domain1 (AsiaPacific)
+//     GT.ids[2] (DeveloperHub)
+//         ├─ GT.ids[9]  (QualityAssurance) ← 继承 domain2 (NorthAmerica)
+//         └─ GT.ids[10] (Designers)        ← 继承 domain2 (NorthAmerica)
+//
 //   群组-域绑定（RelationTests 中建立）:
 //     GT.ids[0] (AdministratorGroup) <- DT.ids[0] (GlobalScope)
 //     GT.ids[1] (OperatorGroup)      <- DT.ids[1] (AsiaPacific)
 //     GT.ids[2] (DeveloperHub)       <- DT.ids[2] (NorthAmerica)
 //     GT.ids[3] (BannedUsers)        <- DT.ids[3] (SandboxEnvironment)
+//     GT.ids[6] (SalesTeam)          <- DT.ids[4] (default, allow if {true})
+//     GT.ids[7] (MarketingTeam)      <- DT.ids[4] (default, allow if {true})
 //
 //   用户-群组成员（RelationTests 中建立）:
 //     AT.ids[0] -> [GT.ids[0]]            // 单域 AND 场景
@@ -50,13 +62,23 @@ typealias PT = PolicyTesting
 //     AT.ids[3] -> [GT.ids[0], GT.ids[3]] // 双域 AND 场景
 //     AT.ids[4] -> []                     // 无 group，纯角色判定场景
 //     AT.ids[5] -> [GT.ids[0..3]]         // 四域 AND 场景
+//     AT.ids[6] -> [GT.ids[6], GT.ids[7]] // 子群组用户，继承父群组域权限
+//     AT.ids[7] -> [GT.ids[8], GT.ids[9]] // 多子群组用户，继承不同父群组域权限
+//     AT.ids[8] -> [GT.ids[10]]           // 单子群组用户，继承父群组域权限
 //
 //   组内角色指派（RelationTests 中建立）:
 //     RT.ids[3] (ObserverRole) -> AT.ids[0] in GT.ids[0]
+//     RT.ids[4] (SalesManager) -> AT.ids[6] in GT.ids[6]
+//     RT.ids[5] (HRLead)       -> AT.ids[7] in GT.ids[8]
+//
+//   用户被直接赋予的域权限:
+//     AT.ids[0] <- DT.ids[0] (GlobalScope) ← 用户直接域权限场景
 //
 //   【鉴权逻辑】: 最终结果 = role策略 AND 所有所属群组域策略 AND 资源权限
+//               嵌套群组时，父群组的域策略同样作用于用户
 //
 // =============================================================================
+
 
 @Suite("权限策略 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct PolicyTesting {
@@ -848,6 +870,402 @@ struct PolicyTesting {
                 Issue.record("DT.ids[\(i)] 域应至少有 1 条策略，当前 \(count) 条")
             }
         }
+    }
+
+    // =========================================================================
+    // MARK: 13. 嵌套群组域权限继承
+    // =========================================================================
+    // 验证：当用户处于子群组时，所有父群组绑定的域策略都会叠加到鉴权链路中。
+    //
+    // 嵌套结构（由 GroupTests + RelationTests 建立）：
+    //   GT.ids[0] (AdministratorGroup) ← domain0: global==true
+    //       ├─ GT.ids[6]  (SalesTeam)        ← domain4: allow if {true}
+    //       └─ GT.ids[7]  (MarketingTeam)    ← domain4: allow if {true}
+    //   GT.ids[1] (OperatorGroup) ← domain1: region=="asia"
+    //       └─ GT.ids[8]  (HumanResources)
+    //   GT.ids[2] (DeveloperHub) ← domain2: region=="na"
+    //       ├─ GT.ids[9]  (QualityAssurance)
+    //       └─ GT.ids[10] (Designers)
+    //
+    // AT.ids[6] → [group6, group7]  继承 domain0 (GlobalScope)
+    // AT.ids[7] → [group8, group9]  继承 domain1 (AsiaPacific) + domain2 (NorthAmerica)
+    // AT.ids[8] → [group10]         继承 domain2 (NorthAmerica)
+    // =========================================================================
+
+    @Test("嵌套群组：子群组用户继承父群组 domain0(global==true) → global=true ALLOW")
+    func nestedGroup_InheritParentDomain_Allow() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[6] 在 SalesTeam(group6) + MarketingTeam(group7) 中
+        // group6/7 是 AdministratorGroup(group0) 的子群组，group0 绑定 domain0 (global==true)
+        // group6/7 各自还直接绑定 domain4 (allow if {true})
+        // 因此用户的域策略 = domain0(继承) AND domain4(直接) AND domain4(直接)
+        let user = try await fetchUser(index: 6, s: s)
+        let role = try await fetchRole(index: 3, s: s) // ObserverRole: view
+
+        // global=true → domain0(继承) 通过，domain4(直接) 通过 → ALLOW
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(allow.result, "子群组用户 + 满足父群组 domain0(global=true) → ALLOW")
+
+        let domainReports = allow.reports.filter { $0.key.type == .domain }
+        #expect(!domainReports.isEmpty, "嵌套群组用户应有 domain 报告")
+        #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告都应为 true")
+    }
+
+    @Test("嵌套群组：子群组用户父群组 domain0(global==true) 不满足 → global=false DENY")
+    func nestedGroup_InheritParentDomain_Deny() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 6, s: s)
+        let role = try await fetchRole(index: 3, s: s)
+
+        // global=false → 继承自父群组的 domain0 失败 → 整体 DENY
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(false)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY")
+
+        let domainReports = deny.reports.filter { $0.key.type == .domain }
+        #expect(domainReports.values.contains(false), "domain0 报告应为 false")
+    }
+
+    @Test("嵌套群组：role 失败时即使父群组域策略全通过也应 DENY")
+    func nestedGroup_RoleFailsOverridesDomain() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 6, s: s)
+        let role = try await fetchRole(index: 0, s: s) // SuperAdminRole: manage_all only
+
+        // global=true → 所有 domain 通过，但 role 要求 manage_all → view 失败
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!res.result, "SuperAdminRole 不允许 view → DENY，即使 domain 全通过")
+        let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(
+            type: .role, moduleId: m.moduleId, id: role.id)
+        #expect(res.reports[roleKey] == false)
+    }
+
+    @Test("嵌套群组：用户在两个不同父群组的子群组中 → 两个父群组域策略均须满足")
+    func nestedGroup_MultiParentDomains_MustAllPass() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[7] → group8 (HumanResources，child of group1/OperatorGroup: domain1 region=asia)
+        //           + group9 (QualityAssurance，child of group2/DeveloperHub: domain2 region=na)
+        // domain1 要求 region="asia"，domain2 要求 region="na" → 两者互斥，始终 DENY
+        let user = try await fetchUser(index: 7, s: s)
+        let role = try await fetchRole(index: 3, s: s) // ObserverRole: view
+
+        // 尝试只满足 domain1
+        let denyWithAsia = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("asia")],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!denyWithAsia.result, "region=asia → domain1 通过但 domain2(na) 失败 → DENY")
+
+        // 尝试只满足 domain2
+        let denyWithNa = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("na")],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!denyWithNa.result, "region=na → domain2 通过但 domain1(asia) 失败 → DENY")
+
+        // 两者均不满足
+        let denyEmpty = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: [:],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!denyEmpty.result, "无 region → 两个父群组域策略均失败 → DENY")
+        let domainReports = denyEmpty.reports.filter { $0.key.type == .domain }
+        #expect(domainReports.values.allSatisfy { !$0 }, "所有继承域报告应为 false")
+    }
+
+    @Test("嵌套群组：单一子群组用户继承父群组 domain2(region=na)")
+    func nestedGroup_SingleChildInheritsParentDomain2() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[8] → group10 (Designers，child of group2/DeveloperHub: domain2 region=na)
+        let user = try await fetchUser(index: 8, s: s)
+        let role = try await fetchRole(index: 3, s: s) // ObserverRole: view
+
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("na")],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(allow.result, "region=na → 继承的 domain2 通过 → ALLOW")
+
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("asia")],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "region=asia → 继承的 domain2(na) 失败 → DENY")
+    }
+
+    @Test("嵌套群组：子群组直接域策略与父群组继承域策略 AND 叠加验证")
+    func nestedGroup_DirectAndInheritedDomainsAND() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[6] → group6(SalesTeam) + group7(MarketingTeam)
+        //   group6/7 直接绑定 domain4 (allow if {true}) → 始终通过
+        //   group6/7 父群组 group0 绑定 domain0 (global==true) → 需 global=true
+        // 总和: domain0(继承) AND domain4(直接) AND domain4(直接)
+        let user = try await fetchUser(index: 6, s: s)
+        let role = try await fetchRole(index: 1, s: s) // EditorRole: edit/publish
+
+        // global=true，edit → 全通过
+        let allPass = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "edit", privilegeIds: []
+        ).get()
+        #expect(allPass.result, "domain4(直接) + domain0(继承, global=true) + EditorRole(edit) → ALLOW")
+
+        // global=false → domain0(继承) 失败 → DENY（即使 domain4 通过）
+        let inheritFail = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(false)],
+            operation: "edit", privilegeIds: []
+        ).get()
+        #expect(!inheritFail.result, "domain0(继承) 失败 → 整体 DENY")
+
+        // global=true 但 role 不允许 moderate → DENY
+        let roleFail = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "moderate", privilegeIds: []
+        ).get()
+        #expect(!roleFail.result, "EditorRole 不允许 moderate → DENY")
+    }
+
+    @Test("嵌套群组：用户直接域权限与所在子群组继承的父群组域权限并行验证")
+    func nestedGroup_UserDirectDomainPlusInherited() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[0] 在 group0 (AdministratorGroup) 中
+        // AT.ids[0] 同时被直接赋予 domain0 (GlobalScope: global==true) (Shared.domainForUser[0] = [0])
+        // domain0 来自：① group0 的直接绑定 ② 用户直接赋予 → 2 条 domain 报告
+        let user = try await fetchUser(index: 0, s: s)
+        let role = try await fetchRole(index: 1, s: s) // EditorRole
+
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "edit", privilegeIds: []
+        ).get()
+        #expect(res.result, "用户直接域 + 群组域均满足 global=true → ALLOW")
+
+        let domainReports = res.reports.filter { $0.key.type == .domain }
+        #expect(!domainReports.isEmpty, "应有 domain 报告")
+        #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告均为 true")
+
+        // global=false → 无论直接还是继承的 domain0 均失败 → DENY
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(false)],
+            operation: "edit", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "global=false → 用户直接域 + 群组域 domain0 均失败 → DENY")
+    }
+
+    // =========================================================================
+    // MARK: 14. 组内角色（appoint / dismiss 动态场景）
+    // =========================================================================
+    // 设计图（diagrams/9.组内角色.png）要点：
+    //   组内角色只在该群组内对指定用户生效。
+    //   用户脱离该群组后，角色自动失效（鉴权时不再使用该角色）。
+    //   同一用户可在不同群组中担任不同组内角色。
+    //
+    // 已有固定场景（RelationTests 建立）：
+    //   RT.ids[3] (ObserverRole) → AT.ids[0] in GT.ids[0]
+    //   RT.ids[4] (SalesManager) → AT.ids[6] in GT.ids[6]
+    //   RT.ids[5] (HRLead)       → AT.ids[7] in GT.ids[8]
+    //
+    // 本节额外动态 appoint/dismiss：使用 RT.ids[2] 对 AT.ids[8] 进行组内角色指派和撤销。
+    // =========================================================================
+
+    @Test("组内角色：RelationTests 中已指派 ObserverRole 到 user0 in group0，judge 通过")
+    func inGroupRole_ExistingAssignment_ObserverInGroup0() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // RT.ids[3] (ObserverRole: view) → AT.ids[0] in GT.ids[0]
+        // AT.ids[0] 在 group0 中，group0 绑 domain0 (global==true)
+        let user = try await fetchUser(index: 0, s: s)
+        let role = try await fetchRole(index: 3, s: s)
+
+        // domain 满足 + role 满足 → ALLOW
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(allow.result, "ObserverRole(view) + domain0(global=true) → ALLOW")
+
+        // domain 失败 → DENY（组内角色不能越过域策略）
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(false)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "global=false → domain0 失败 → DENY 即使有组内角色")
+    }
+
+    @Test("组内角色：RelationTests 中已指派 SalesManager(RT.ids[4]) 到 user6 in group6，嵌套域策略和组内角色共同生效")
+    func inGroupRole_ExistingAssignment_SalesManagerInGroup6() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // RT.ids[4] (SalesManager: allow if {true}) → AT.ids[6] in GT.ids[6]
+        // AT.ids[6] 在 group6(SalesTeam) + group7(MarketingTeam) 中
+        // group6/7 直接绑 domain4 (allow if {true})，且父群组 group0 绑 domain0 (global==true)
+        let user = try await fetchUser(index: 6, s: s)
+        let role = try await fetchRole(index: 4, s: s) // SalesManager: allow if {true}
+
+        // SalesManager 策略 allow if {true}，global=true 满足 domain0 → ALLOW
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "any_operation", privilegeIds: []
+        ).get()
+        #expect(allow.result, "SalesManager(allow all) + domain0(global=true) + domain4(allow all) → ALLOW")
+
+        // global=false → 父群组 domain0 失败 → DENY
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(false)],
+            operation: "any_operation", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY 即使是组内角色")
+    }
+
+    @Test("组内角色：动态 appoint，鉴权立即生效；dismiss 后验证撤销成功")
+    func inGroupRole_DynamicAppointAndDismiss() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // 使用 RT.ids[2] (ModeratorRole: moderate) 动态指派给 AT.ids[8] in GT.ids[10]
+        // AT.ids[8] → group10 (Designers，child of group2/DeveloperHub: domain2 region=na)
+        let user = try await fetchUser(index: 8, s: s)
+        let role = try await fetchRole(index: 2, s: s) // ModeratorRole: moderate
+
+        // ─── 第一步：查询 user8 在 group10 中的关系对 ────────────────────────
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let group10 = try #require(allGroups.first(where: { $0.id == GT.ids[10] }))
+
+        let relReq = try await s.group.query(
+            relations: [user =| group10]
+        ).get()
+        let rel = try #require(
+            relReq.first(where: { $0.user.id == user.id && $0.group.id == group10.id }),
+            "AT.ids[8] 应在 GT.ids[10] 中"
+        )
+
+        // ─── 第二步：appoint ModeratorRole → AT.ids[8] in GT.ids[10] ───────
+        try await s.role.appoint {
+            [role] => [rel]
+        }.get()
+
+        // ─── 第三步：鉴权验证（appoint 后应通过）────────────────────────────
+        // ModeratorRole: moderate，group10 继承 domain2 (region=na)
+        let allowAfterAppoint = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("na")],
+            operation: "moderate", privilegeIds: []
+        ).get()
+        #expect(allowAfterAppoint.result, "appoint 后：ModeratorRole + domain2(region=na) → ALLOW")
+
+        // region=asia → domain2 失败 → DENY
+        let denyDomain = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["region": AnyCodable("asia")],
+            operation: "moderate", privilegeIds: []
+        ).get()
+        #expect(!denyDomain.result, "region=asia → domain2(na) 失败 → DENY")
+
+        // ─── 第四步：dismiss，撤销 ModeratorRole ────────────────────────────
+        try await s.role.dismiss {
+            [role] => [rel]
+        }.get()
+
+        // dismiss 后用 SuperAdminRole（不允许 moderate）验证不影响其他鉴权
+        let superAdmin = try await fetchRole(index: 0, s: s)
+        let denyWrongRole = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: superAdmin,
+            resource: ["region": AnyCodable("na")],
+            operation: "moderate", privilegeIds: []
+        ).get()
+        #expect(!denyWrongRole.result, "SuperAdminRole 不允许 moderate → DENY（dismiss 后无副作用）")
+    }
+
+    @Test("组内角色：同一用户在不同群组担任不同组内角色，两角色互相独立")
+    func inGroupRole_SameUserDifferentGroupRoles() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[7] 在 group8(HumanResources) 和 group9(QualityAssurance) 中
+        // RelationTests 中 RT.ids[5](HRLead, allow if {true}) → AT.ids[7] in GT.ids[8]
+        // 动态再指派 RT.ids[6](allow if {true}) → AT.ids[7] in GT.ids[9]
+        let user = try await fetchUser(index: 7, s: s)
+        let hrLeadRole = try await fetchRole(index: 5, s: s) // HRLead: allow if {true}
+        let role6 = try await fetchRole(index: 6, s: s)      // RT.ids[6]: allow if {true}
+
+        let allGroups = try await s.query(QGroup.self).all().get()
+        let group9 = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))
+
+        let relReq = try await s.group.query(
+            relations: [user =| group9]
+        ).get()
+        let relInGroup9 = try #require(
+            relReq.first(where: { $0.user.id == user.id && $0.group.id == group9.id }),
+            "AT.ids[7] 应在 GT.ids[9] 中"
+        )
+
+        // 动态指派 role6 → user7 in group9
+        try await s.role.appoint {
+            [role6] => [relInGroup9]
+        }.get()
+
+        // ─── 测试场景：HRLead + group8 继承 domain1(asia) → 只满足 asia ───
+        // HRLead(allow all) + group8 的父群组域策略(domain1: region=asia)
+        // 注意：user7 在 group8 AND group9，两个父群组域策略均生效
+        // group8 父群组: domain1 (region=asia)
+        // group9 父群组: domain2 (region=na)
+        // 两者互斥 → 始终 DENY
+        let alwaysDeny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: hrLeadRole,
+            resource: ["region": AnyCodable("asia")],
+            operation: "hr_task", privilegeIds: []
+        ).get()
+        #expect(!alwaysDeny.result,
+                "user7 在 group8+group9，父群组 domain1(asia) AND domain2(na) 互斥 → 始终 DENY")
+
+        // 清理：dismiss role6 from user7 in group9
+        try await s.role.dismiss {
+            [role6] => [relInGroup9]
+        }.get()
+    }
+
+    @Test("组内角色：judge 传入的 role 决定策略，组内指派不影响其他 role 的 judge 结果")
+    func inGroupRole_ScopeIsolation_NotGlobal() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // AT.ids[0] 在 group0 中，RelationTests 将 ObserverRole(view) 指派到 user0 in group0
+        // 当 judge 使用 SuperAdminRole → 应走 SuperAdminRole 的策略，而非 ObserverRole
+        let user = try await fetchUser(index: 0, s: s)
+        let superAdminRole = try await fetchRole(index: 0, s: s) // SuperAdminRole: manage_all only
+
+        // SuperAdminRole + operation=view → role 不允许 → DENY（组内 ObserverRole 不影响此次 judge）
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: superAdminRole,
+            resource: ["global": AnyCodable(true)],
+            operation: "view", privilegeIds: []
+        ).get()
+        #expect(!deny.result, "SuperAdminRole 不允许 view → DENY，组内 ObserverRole 指派不影响此次 judge")
+
+        // SuperAdminRole + manage_all + domain0(global=true) → ALLOW
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: superAdminRole,
+            resource: ["global": AnyCodable(true)],
+            operation: "manage_all", privilegeIds: []
+        ).get()
+        #expect(allow.result, "SuperAdminRole + manage_all + domain0(global=true) → ALLOW")
     }
 
     // =========================================================================

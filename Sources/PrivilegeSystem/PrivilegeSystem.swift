@@ -89,7 +89,7 @@ public final class PrivilegeSystem: Sendable {
         self.policy = .init(db: db, eventLoop: eventLoop, opa: opa)
         self.role = .init(db: db, eventLoop: eventLoop, groupController: self.group, policyController: self.policy)
         self.domain = .init(db: db, eventLoop: eventLoop, policyController: self.policy)
-        self.arbitrator = .init(db: db, eventLoop: eventLoop, opa: opa)
+        self.arbitrator = .init(db: db, eventLoop: eventLoop, opa: opa, roleController: self.role)
         
         try await systemInitialize(dbConfigure: dbConfigure)
         try await opaInitialize()

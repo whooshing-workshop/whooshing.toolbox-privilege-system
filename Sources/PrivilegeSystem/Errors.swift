@@ -42,6 +42,15 @@ public extension PrivilegeSystem {
         case roleDismissGroupFailed = "角色从用户组撤职组失败"
         case roleDismissGroupUserFailed = "角色从用户组内用户撤职失败"
         
+        case userRoleFetchFailed = "用户可用的用户角色拉取失败"
+        case groupRoleQueryFailed = "用户可用的群组角色查询失败"
+        case userInGroupRoleQueryFailed = "用户可用的组内角色查询失败"
+        
+        case userRoleCheckFailed = "用户可用的用户角色检查失败"
+        case groupRoleCheckFailed = "群组可用的群组角色检查失败"
+        case groupRoleVerifyFailed = "用户可用的群组角色检验失败"
+        case userInGroupRoleVerifyFailed = "用户可用的组内角色检查失败"
+        
         // 角色组相关错误
         case groupCreateFailed = "群组数据创建失败"
         case groupDeleteFailed = "群组数据删除失败"
