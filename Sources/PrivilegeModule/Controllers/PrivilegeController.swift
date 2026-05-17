@@ -33,9 +33,15 @@ public extension PrivilegeModule {
         public func create(
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<Void, Errcase> {
-            __createPolicy(
+            let mappedPrivileges = privileges.map { p in
+                var newP = p
+                newP.$id = UUID()
+                return newP
+            }
+            
+            return __createPolicy(
                 on: db,
-                relations: privileges,
+                relations: mappedPrivileges,
                 policyType: Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
@@ -43,16 +49,26 @@ public extension PrivilegeModule {
                 moduleId: { _ in moduleId } ,
                 policyKey: \.policy,
                 modelId: { _, p in p.id },
-                modelBuilder: { p, _ in p.raw() }
+                modelBuilder: { p, mid in 
+                    let raw = p.raw()
+                    raw.id = mid
+                    return raw
+                }
             ).map { _ in }
         }
         
         public func createWithReturning(
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
-            __createPolicy(
+            let mappedPrivileges = privileges.map { p in
+                var newP = p
+                newP.$id = UUID()
+                return newP
+            }
+            
+            return __createPolicy(
                 on: db,
-                relations: privileges,
+                relations: mappedPrivileges,
                 policyType: Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
@@ -60,7 +76,11 @@ public extension PrivilegeModule {
                 moduleId: { _ in moduleId } ,
                 policyKey: \.policy,
                 modelId: { _, p in p.id },
-                modelBuilder: { p, _ in p.raw() }
+                modelBuilder: { p, mid in 
+                    let raw = p.raw()
+                    raw.id = mid
+                    return raw
+                }
             ).flatMapThrowing { ps throws(Errcase.ErrType) in
                 try required(throws: Errcase.privilegeCreateFailed, "Returning 解包失败", category: .internal) {
                     try ps.map {

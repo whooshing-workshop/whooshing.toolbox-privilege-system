@@ -12,6 +12,7 @@ package protocol OPAController: Controller {
 }
 
 package extension OPAController {
+    // 创建 OPA 策略并记录在数据库中
     func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel, PT: PolicyType>(
         on db: PGDatabase,
         relations: [Pr],
@@ -59,7 +60,7 @@ package extension OPAController {
         return db.trans { db in
             ps
                 .create(on: db)
-                .withError(errThrowing, "\(policyType)数据库插入\(label)策略失败", category: .internal)
+                .withError(errThrowing, "\(policyType) 数据库插入 \(label) 策略失败", category: .internal)
                 .flatMap
             {
                 let target = db.eventLoop.makeTarget(of: Void.self, throws: E.ErrType.self)
