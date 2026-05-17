@@ -53,6 +53,15 @@ public final class UGroup: PGModel, @unchecked Sendable {
     public init() {}
     
     public typealias MIG = DefaultMIG<UGroup>
+    
+    func fill() -> Self {
+        self.$parents.fromId = self.id
+        self.$childs.fromId = self.id
+        self.$users.fromId = self.id
+        self.$groupRoles.fromId = self.id
+        self.$domains.fromId = self.id
+        return self
+    }
 }
 
 extension UGroup: Hashable {

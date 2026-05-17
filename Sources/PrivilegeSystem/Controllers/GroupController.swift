@@ -31,7 +31,7 @@ extension PrivilegeSystem {
                     label: "群组",
                     errThrowing: .userInfoCreateFailed,
                     modelBuilder: { $0.raw() },
-                    dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
+                    dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0.fill()) }
                 ).flatMap { res in
                     // 创建表，更新 group_paths 内接表
                     res.map { group in
@@ -130,6 +130,7 @@ extension PrivilegeSystem {
             with updater: DTO.Group<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Group<DTO.Queried>, Errcase> {
             __update(
+                on: db,
                 updater: updater,
                 label: "用户群组",
                 errThrowing: .groupUpdateFailed,
@@ -167,6 +168,7 @@ public extension PrivilegeSystem.GroupController {
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "用户组与用户",
@@ -182,6 +184,7 @@ public extension PrivilegeSystem.GroupController {
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "用户组与用户",

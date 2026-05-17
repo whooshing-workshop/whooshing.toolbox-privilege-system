@@ -33,6 +33,7 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
+                on: db,
                 User.Info.self,
                 ids: infoIds,
                 allSatisfy: allSatisfy,
@@ -47,6 +48,7 @@ extension PrivilegeSystem {
             with updater: DTO.UserInfo<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase> {
             __update(
+                on: db,
                 updater: updater,
                 label: "用户信息",
                 errThrowing: .userInfoUpdateFailed,

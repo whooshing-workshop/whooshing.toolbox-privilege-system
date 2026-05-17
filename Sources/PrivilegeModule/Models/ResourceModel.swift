@@ -47,6 +47,11 @@ extension PM {
             self.data = resource.data.json
             self.createdAt = resource.createdAt
             self.updatedAt = resource.updatedAt
+            
+            self.$id.exists = resource.$id.exists
+            self._$idExists = resource._$idExists
+            self._$id.exists = resource._$id.exists
+            self.$privileges.fromId = self.id
         }
         
         public typealias MIG = DefaultMIG<AnyResource>
@@ -97,6 +102,11 @@ extension PM {
         // 要解包的 Resource 类型的 type 必须与表结构中 type 的类型相同
         var isValid: Bool {
             T.type == type && data.name == name
+        }
+        
+        func fill() -> Self {
+            self.$privileges.fromId = self.id
+            return self
         }
         
         public typealias MIG = DefaultMIG<AnyResource>

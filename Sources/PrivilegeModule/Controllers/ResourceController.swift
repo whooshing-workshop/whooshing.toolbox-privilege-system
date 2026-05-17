@@ -29,7 +29,8 @@ public extension PrivilegeModule {
                 label: "资源",
                 errThrowing: .resourceCreateFailed,
                 modelBuilder: { $0.raw() },
-                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) })
+                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0.fill()) }
+            )
         }
         
         public func delete(
@@ -37,6 +38,7 @@ public extension PrivilegeModule {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
+                on: db,
                 AnyResource.self,
                 ids: ids,
                 allSatisfy: allSatisfy,
@@ -51,6 +53,7 @@ public extension PrivilegeModule {
             with updater: ResourceDTO<T, DTO.Prepare>.Updater
         ) -> EventLoopRes<ResourceDTO<T, DTO.Queried>, Errcase> {
             __update(
+                on: db,
                 updater: updater,
                 label: "资源",
                 errThrowing: .resourceUpdateFailed,

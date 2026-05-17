@@ -47,6 +47,7 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
+                on: db,
                 Domain.self,
                 ids: domainIds,
                 allSatisfy: allSatisfy,
@@ -61,6 +62,7 @@ extension PrivilegeSystem {
             with updater: DTO.Domain<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Domain<DTO.Queried>, Errcase> {
             __update(
+                on: db,
                 updater: updater,
                 label: "域权限",
                 errThrowing: .domainUpdateFailed,
@@ -142,6 +144,7 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "域权限与用户",
@@ -155,6 +158,7 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "域权限与用户组",
@@ -170,6 +174,7 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "域权限与用户",
@@ -183,6 +188,7 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "域权限与用户组",
@@ -204,7 +210,7 @@ extension PrivilegeSystem.DomainController {
             label: "域权限",
             errThrowing: .domainCreateFailed,
             modelBuilder: { $0.raw() },
-            dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
+            dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0.fill()) }
         )
     }
 }

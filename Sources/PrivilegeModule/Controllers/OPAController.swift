@@ -135,6 +135,7 @@ package extension OPAController {
     }
     
     func __deletePolicy<P: Sendable, M: PGModel, PT: PolicyType>(
+        on db: PGDatabase,
         policy: P,
         policyType: PT.Type,
         label: String,

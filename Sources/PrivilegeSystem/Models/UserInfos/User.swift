@@ -31,6 +31,7 @@ public final class User: PGModel, @unchecked Sendable {
     @Field(fields.salt)                         var salt: Data
     
     @OptionalChild(for: \Token.$user)           var token: Token!
+    
     @Siblings(
         through: UserGroupPivot.self,
         from: \.$user,
@@ -51,6 +52,13 @@ public final class User: PGModel, @unchecked Sendable {
     @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
     
     public init() {}
+    
+    func fill() -> Self {
+        self.$groups.fromId = self.id
+        self.$roles.fromId = self.id
+        self.$domains.fromId = self.id
+        return self
+    }
     
     public typealias MIG = DefaultMIG<User>
 }

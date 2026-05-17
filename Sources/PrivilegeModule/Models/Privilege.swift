@@ -38,6 +38,12 @@ public extension PM {
         
         public init() { }
         
+        // 使用 Fluent 批量创建 Model 后([dbModels].create(on: db))，这些批量创建的 Models 的 sibilings 都会失效，直接使用会触发断言崩溃，因此需要显式指定其 fromId"
+        func fill() -> Self {
+            self.$resources.fromId = self.id
+            return self
+        }
+        
         public typealias MIG = DefaultMIG<Privilege>
     }
 }

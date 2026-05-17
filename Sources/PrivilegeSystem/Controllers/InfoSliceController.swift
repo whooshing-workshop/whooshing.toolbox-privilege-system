@@ -31,6 +31,7 @@ extension PrivilegeSystem {
             type: T.Type = T.self
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
+                on: db,
                 User.Info.Extended<T.Model>.self,
                 ids: infoIds,
                 allSatisfy: allSatisfy,
@@ -45,6 +46,7 @@ extension PrivilegeSystem {
             with updater: DTO.InfoSlice<T, DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.InfoSlice<T, DTO.Queried>, Errcase> {
             __update(
+                on: db,
                 updater: updater,
                 label: "用户扩展信息",
                 errThrowing: .userExtendedInfoUpdateFailed,

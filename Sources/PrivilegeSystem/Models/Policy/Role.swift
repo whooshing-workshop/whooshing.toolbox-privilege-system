@@ -48,6 +48,14 @@ public final class Role: PGModel, @unchecked Sendable {
     
     public init() {}
     
+    func fill() -> Self {
+        self.$users.fromId = self.id
+        self.$groups.fromId = self.id
+        self.$usersInGroup.fromId = self.id
+        self.$policies.fromId = self.id
+        return self
+    }
+    
     public typealias MIG = DefaultMIG<Role>
 }
 

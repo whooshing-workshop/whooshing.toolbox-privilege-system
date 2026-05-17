@@ -88,9 +88,7 @@ public extension PrivilegeModule {
             ).flatMapThrowing { ps throws(Errcase.ErrType) in
                 try required(throws: Errcase.privilegeCreateFailed, "Returning 解包失败", category: .internal) {
                     try ps.map { p in
-                        // 使用 Fluent 批量创建 Model 后([dbModels].create(on: db))，这些批量创建的 Models 的 sibilings 都会失效，直接使用会触发断言崩溃，因此需要显式指定其 fromId"
-                        p.$resources.fromId = p.id
-                        return try PrivilegeDTO<DTO.Queried>.make(from: p).get()
+                        try PrivilegeDTO<DTO.Queried>.make(from: p.fill()).get()
                     }
                 }
             }
@@ -100,6 +98,7 @@ public extension PrivilegeModule {
             policy: PrivilegeDTO<DTO.Queried>
         ) -> EventLoopRes<Void, Errcase> {
             __deletePolicy(
+                on: db,
                 policy: policy,
                 policyType: Privilege.self,
                 label: "资源权限",
@@ -130,6 +129,7 @@ public extension PrivilegeModule {
                 // 先对一般字段进行更新: name, description
                 // 这些字段无需额外的评估
                 self.__update(
+                    on: db,
                     updater: updater,
                     allowEmpty: true,
                     label: "资源权限",
@@ -209,6 +209,7 @@ public extension PrivilegeModule.PrivilegeController {
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "资源权限与资源",
@@ -226,6 +227,7 @@ public extension PrivilegeModule.PrivilegeController {
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase>  {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "资源权限与资源",

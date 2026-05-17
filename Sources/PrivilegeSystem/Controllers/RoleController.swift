@@ -50,6 +50,7 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             __delete(
+                on: db,
                 Role.self,
                 ids: roleIds,
                 allSatisfy: allSatisfy,
@@ -64,6 +65,7 @@ extension PrivilegeSystem {
             with updater: DTO.Role<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {
             __update(
+                on: db,
                 updater: updater,
                 label: "角色",
                 errThrowing: .roleUpdateFailed,
@@ -158,6 +160,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "角色与用户",
@@ -171,6 +174,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "角色与用户组",
@@ -184,6 +188,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "角色与群组内用户",
@@ -197,6 +202,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .attach,
             label: "角色与群组内用户",
@@ -211,6 +217,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "角色与用户",
@@ -224,6 +231,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "角色与用户组",
@@ -237,6 +245,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "角色与群组内用户",
@@ -250,6 +259,7 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __manyToMany(
+            on: db,
             relations,
             action: .detach,
             label: "角色与群组内用户",
@@ -637,7 +647,7 @@ extension PrivilegeSystem.RoleController {
             label: "角色",
             errThrowing: .roleCreateFailed,
             modelBuilder: { $0.raw() },
-            dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
+            dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0.fill()) }
         )
     }
 }

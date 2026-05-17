@@ -65,6 +65,7 @@ package extension Controller {
     }
     
     func __delete<T: PGModel>(
+        on db: PGDatabase,
         _ model: T.Type = T.self,
         ids: [T.IDValue],
         allSatisfy: Bool = true,
@@ -95,6 +96,7 @@ package extension Controller {
     }
     
     func __update<T: DTOUpdater>(
+        on db: PGDatabase,
         updater: T,
         allowEmpty: Bool = false,
         label: String,
@@ -154,6 +156,7 @@ package extension Controller {
     }
     
     func __manyToMany<Left, Right, LM, RM, TM>(
+        on db: PGDatabase,
         _ relations: [MTMRelation<Left, Right>],
         action: ManyToManyAction,
         label: String,

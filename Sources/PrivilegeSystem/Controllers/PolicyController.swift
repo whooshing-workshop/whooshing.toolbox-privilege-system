@@ -44,6 +44,7 @@ extension PrivilegeSystem {
             policy: OTORelation<DTO.Policy<T, DTO.Queried>, T.Model.IDValue>
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             __deletePolicy(
+                on: db,
                 policy: policy,
                 policyType: T.self,
                 label: "权限策略",

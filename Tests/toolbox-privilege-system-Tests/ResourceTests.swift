@@ -263,6 +263,68 @@ struct ResourceTests {
         #expect(!siblingsAfter.contains(where: { $0.id == anyResourceDTO.id }))
     }
     
+    @Test("查询与验证资源权限")
+    func resource_Privilege_QueryAndVerify() async throws {
+        let (_, m) = try await TestingShared.getSystem()
+        let file = FileResource(name: "query_verify.txt", path: "/tmp/query_verify.txt", isPrivate: true)
+        let resourceDTO = try await m.resource.create(resources: [
+            PFileResource(data: file)
+        ]).get().first!
+        
+        let suffix = UUID().uuidString
+        let privileges = try await m.privilege.createWithReturning(privileges: [
+            .init(
+                name: "QueryTestPrivilege-\(suffix)",
+                description: "查询测试专用",
+                policy: "allow if { true }"
+            )
+        ]).get()
+        let privilegeDTO = privileges[0]
+        
+        let anyResourceDTO = PModule.AnyResourceDTO.init(resourceDTO)
+        
+        // 先 Attach
+        try await m.privilege.attach {
+            [privilegeDTO] => [anyResourceDTO]
+        }.get()
+        
+        // 1. 测试 privilege(attachedTo:) -> T: Resource
+        let attachedPrivileges = try await m.privilege.privilege(attachedTo: resourceDTO).get()
+        #expect(attachedPrivileges.contains(where: { $0.id == privilegeDTO.id }))
+        
+        // 2. 测试 privilege(attachedTo:) -> AnyResourceDTO
+        let attachedPrivilegesAny = try await m.privilege.privilege(attachedTo: anyResourceDTO).get()
+        #expect(attachedPrivilegesAny.contains(where: { $0.id == privilegeDTO.id }))
+        
+        // 3. 测试 is(privilege:attachedTo:) -> T: Resource
+        let isAttached = try await m.privilege.is(privilege: privilegeDTO, attachedTo: resourceDTO).get()
+        #expect(isAttached == true)
+        
+        // 4. 测试 is(privilege:attachedTo:) -> AnyResourceDTO
+        let isAttachedAny = try await m.privilege.is(privilege: privilegeDTO, attachedTo: anyResourceDTO).get()
+        #expect(isAttachedAny == true)
+        
+        // 5. 测试未绑定的权限
+        let otherPrivileges = try await m.privilege.createWithReturning(privileges: [
+            .init(
+                name: "OtherPrivilege-\(suffix)",
+                policy: "allow if { true }"
+            )
+        ]).get()
+        let otherPrivilegeDTO = otherPrivileges[0]
+        
+        let isOtherAttached = try await m.privilege.is(privilege: otherPrivilegeDTO, attachedTo: resourceDTO).get()
+        #expect(isOtherAttached == false)
+        
+        // 清理
+        try await m.privilege.detach {
+            [privilegeDTO] => [anyResourceDTO]
+        }.get()
+        try await m.privilege.delete(policy: privilegeDTO).get()
+        try await m.privilege.delete(policy: otherPrivilegeDTO).get()
+        try await m.resource.delete(ids: [resourceDTO.id]).get()
+    }
+    
     @Test("删除资源")
     func resource_Delete() async throws {
         let (_, m) = try await TestingShared.getSystem()
