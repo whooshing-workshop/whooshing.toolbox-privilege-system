@@ -144,7 +144,7 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "anything", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]), operation: .anything, privilegeIds: []
         ).get()
 
         #expect(res.result, "RT[6](allow all) + domain6/7(allow all) → ALLOW")
@@ -164,7 +164,7 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]), operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "RT[7](allow all) + domain6/7(allow all) → ALLOW")
@@ -186,8 +186,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "manage_all", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .manage_all, privilegeIds: []
         ).get()
         #expect(res.result, "SuperAdminRole + manage_all + domain0(global=true) → ALLOW")
     }
@@ -200,8 +200,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "edit", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .edit, privilegeIds: []
         ).get()
         #expect(!res.result, "SuperAdminRole 不允许 edit → DENY")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
@@ -219,16 +219,16 @@ struct PolicyTesting {
         for op in ["edit", "publish"] {
             let res = try await s.arbitrator.judge(
                 moduleId: m.moduleId, user: user, role: role,
-                resource: ["region": AnyCodable("asia")],
-                operation: op, privilegeIds: []
+                resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+                operation: JsonOperation(rawValue: op)!, privilegeIds: []
             ).get()
             #expect(res.result, "EditorRole + \(op) + region=asia → ALLOW")
         }
 
         let denied = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "manage_all", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .manage_all, privilegeIds: []
         ).get()
         #expect(!denied.result, "EditorRole 不允许 manage_all → DENY")
     }
@@ -243,15 +243,15 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(allow.result, "ModeratorRole + moderate + region=na → ALLOW")
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "edit", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .edit, privilegeIds: []
         ).get()
         #expect(!deny.result, "ModeratorRole 不允许 edit → DENY")
     }
@@ -266,8 +266,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "ObserverRole + view + region=asia → ALLOW")
@@ -292,8 +292,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "ObserverRole + domain0(global=true) + view → ALLOW")
@@ -309,8 +309,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain0 要求 global==true，false 时 DENY")
@@ -326,8 +326,8 @@ struct PolicyTesting {
         // operation=view → SuperAdminRole 不允许 → role 失败；domain0(global=true) 通过
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "SuperAdminRole 不允许 view，domain 通过也应 DENY")
@@ -342,8 +342,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "role(SuperAdmin+view) 和 domain(global=false) 均失败 → DENY")
@@ -364,15 +364,15 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "region=asia → AsiaPacific 域通过 → ALLOW")
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "region=na → AsiaPacific 域失败 → DENY")
     }
@@ -386,15 +386,15 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(allow.result, "region=na → NorthAmerica 域通过 → ALLOW")
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(!deny.result, "region=asia → NorthAmerica 域失败 → DENY")
     }
@@ -416,8 +416,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true), "env": AnyCodable("sandbox")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true), "env": AnyCodable("sandbox")]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "role+domain0+domain3+domain4 全通过 → ALLOW")
@@ -434,8 +434,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain3 要求 env==sandbox，缺失 → DENY")
@@ -450,8 +450,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["env": AnyCodable("sandbox")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["env": AnyCodable("sandbox")]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain0 要求 global==true，缺失 → DENY")
@@ -468,7 +468,7 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]), operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain0/domain3 均失败 → 整体 DENY（即使 domain4 通过）")
@@ -496,12 +496,12 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [
+            resource: JsonResource(name: "test", content: [
                 "global": AnyCodable(true),
                 "env": AnyCodable("sandbox"),
                 "region": AnyCodable("asia") // domain2 需要 na，并预 asia → domain2 失败
-            ],
-            operation: "view", privilegeIds: []
+            ]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "domain2 需要 region=na，与 domain1 的 asia 互斥 → 始终 DENY")
@@ -525,15 +525,15 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "ObserverRole + domain0 全满足 → ALLOW")
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → domain0 失败 → DENY")
     }
@@ -546,8 +546,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "edit", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .edit, privilegeIds: []
         ).get()
 
         #expect(!res.result, "SuperAdminRole 不允许 edit，domain 通过也 DENY")
@@ -570,8 +570,8 @@ struct PolicyTesting {
         // 替换前：allow if { true } → 任何操作都通过（配合 region=na 满足域策略）
         let before = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "anything", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .anything, privilegeIds: []
         ).get()
         #expect(before.result, "替换前默认策略允许任何操作")
 
@@ -593,15 +593,15 @@ struct PolicyTesting {
         // 验证新策略
         let deployRes = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "deploy", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .deploy, privilegeIds: []
         ).get()
         #expect(deployRes.result, "替换后：deploy → ALLOW")
 
         let denyRes = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "anything", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .anything, privilegeIds: []
         ).get()
         #expect(!denyRes.result, "替换后：anything → DENY")
 
@@ -632,24 +632,24 @@ struct PolicyTesting {
         // ✓ 亚太地区 + edit
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "edit", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .edit, privilegeIds: []
         ).get()
         #expect(allow.result, "EditorRole + region=asia → ALLOW")
 
         // ✗ 欧洲地区 + publish（region 不匹配 domain1）
         let denyRegion = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("eu")],
-            operation: "publish", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("eu")]),
+            operation: .publish, privilegeIds: []
         ).get()
         #expect(!denyRegion.result, "region=eu → AsiaPacific 域失败 → DENY")
 
         // ✗ 正确地区但无权操作
         let denyOp = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "manage_all", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .manage_all, privilegeIds: []
         ).get()
         #expect(!denyOp.result, "EditorRole 不允许 manage_all → DENY")
     }
@@ -663,22 +663,22 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(allow.result, "ModeratorRole + region=na → ALLOW")
 
         let denyAsia = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(!denyAsia.result, "region=asia → NorthAmerica 域失败 → DENY")
 
         let denyEdit = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "edit", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .edit, privilegeIds: []
         ).get()
         #expect(!denyEdit.result, "ModeratorRole 不允许 edit → DENY")
     }
@@ -692,20 +692,20 @@ struct PolicyTesting {
         let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}
 
         struct Case {
-            let resource: [String: AnyCodable]
-            let op: String
+            let resource: JsonResource
+            let op: JsonOperation
             let expected: Bool
             let desc: String
         }
 
         let cases: [Case] = [
-            .init(resource: ["global": AnyCodable(true), "env": AnyCodable("sandbox")],
-                  op: "view", expected: true,   desc: "双域全满足 + view → ALLOW"),
-            .init(resource: ["global": AnyCodable(false), "env": AnyCodable("sandbox")],
-                  op: "view", expected: false,  desc: "global=false → domain0 失败 → DENY"),
-            .init(resource: ["global": AnyCodable(true)],
-                  op: "view", expected: false,  desc: "env 缺失 → domain3 失败 → DENY"),
-            .init(resource: [:], op: "view", expected: false, desc: "两域均失败 → DENY")
+            .init(resource: JsonResource(name: "test", content: ["global": AnyCodable(true), "env": AnyCodable("sandbox")]),
+                  op: .view, expected: true,   desc: "双域全满足 + view → ALLOW"),
+            .init(resource: JsonResource(name: "test", content: ["global": AnyCodable(false), "env": AnyCodable("sandbox")]),
+                  op: .view, expected: false,  desc: "global=false → domain0 失败 → DENY"),
+            .init(resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+                  op: .view, expected: false,  desc: "env 缺失 → domain3 失败 → DENY"),
+            .init(resource: JsonResource(name: "test", content: [:]), op: .view, expected: false, desc: "两域均失败 → DENY")
         ]
 
         for c in cases {
@@ -732,7 +732,7 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "anything", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]), operation: .anything, privilegeIds: []
         ).get()
         #expect(res.result, "空 privilegeIds 不影响纯角色鉴权")
     }
@@ -755,7 +755,7 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "read", privilegeIds: [privilege.id]
+            resource: JsonResource(name: "test", content: [:]), operation: .read, privilegeIds: [privilege.id]
         ).get()
         #expect(allow.result, "role/domain/privilege 均通过 → ALLOW")
 
@@ -766,7 +766,7 @@ struct PolicyTesting {
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "write", privilegeIds: [privilege.id]
+            resource: JsonResource(name: "test", content: [:]), operation: .write, privilegeIds: [privilege.id]
         ).get()
         #expect(!deny.result, "privilege 不允许 write → 整体 DENY")
         #expect(deny.reports[privilegeKey] == false, "privilege 报告应为 false")
@@ -804,8 +804,8 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["kind": AnyCodable("file")],
-            operation: "read", privilegeIds: [readPrivilege.id, filePrivilege.id]
+            resource: JsonResource(name: "test", content: ["kind": AnyCodable("file")]),
+            operation: .read, privilegeIds: [readPrivilege.id, filePrivilege.id]
         ).get()
         #expect(allow.result, "两个 privilege 均通过 → ALLOW")
         #expect(allow.reports[readKey] == true)
@@ -813,8 +813,8 @@ struct PolicyTesting {
 
         let denyOperation = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["kind": AnyCodable("file")],
-            operation: "write", privilegeIds: [readPrivilege.id, filePrivilege.id]
+            resource: JsonResource(name: "test", content: ["kind": AnyCodable("file")]),
+            operation: .write, privilegeIds: [readPrivilege.id, filePrivilege.id]
         ).get()
         #expect(!denyOperation.result, "read privilege 失败 → 整体 DENY")
         #expect(denyOperation.reports[readKey] == false)
@@ -822,8 +822,8 @@ struct PolicyTesting {
 
         let denyResource = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["kind": AnyCodable("directory")],
-            operation: "read", privilegeIds: [readPrivilege.id, filePrivilege.id]
+            resource: JsonResource(name: "test", content: ["kind": AnyCodable("directory")]),
+            operation: .read, privilegeIds: [readPrivilege.id, filePrivilege.id]
         ).get()
         #expect(!denyResource.result, "file privilege 失败 → 整体 DENY")
         #expect(denyResource.reports[readKey] == true)
@@ -844,7 +844,7 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]), operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "RT[7](allow all) + domain6/7(allow all) → ALLOW")
@@ -864,7 +864,7 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:], operation: "anything", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]), operation: .anything, privilegeIds: []
         ).get()
 
         #expect(res.result, "无 domain/privilege 约束时，role 通过即可 ALLOW")
@@ -884,8 +884,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)], // domain0 通过
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]), // domain0 通过
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(!res.result, "role 失败（SuperAdmin 不含 view）→ DENY")
@@ -902,8 +902,8 @@ struct PolicyTesting {
         do {
             _ = try await s.arbitrator.judge(
                 moduleId: m.moduleId, user: user, role: role,
-                resource: ["global": AnyCodable(true)],
-                operation: "manage_all", privilegeIds: []
+                resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .manage_all, privilegeIds: []
             ).get()
             Issue.record("不可用 role 不应进入仲裁策略查询")
         } catch let err {
@@ -925,8 +925,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)], // 满足继承的 domain0
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]), // 满足继承s的 domain0
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "RT[10](allow all) + domain4(allow all) + domain0(global=true) 全通过 → ALLOW")
@@ -963,8 +963,8 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "子群组用户 + 满足父群组 domain0(global=true) → ALLOW")
 
@@ -985,8 +985,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
 
         #expect(res.result, "父群组角色 + 继承 domain0(global=true) + 子群组 domain4 → ALLOW")
@@ -1006,8 +1006,8 @@ struct PolicyTesting {
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "any", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .any, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY")
 
@@ -1027,8 +1027,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!res.result, "SuperAdminRole 不允许 view → DENY，即使 domain 全通过")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(
@@ -1049,24 +1049,24 @@ struct PolicyTesting {
         // 尝试只满足 domain1
         let denyWithAsia = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!denyWithAsia.result, "region=asia → domain1 通过但 domain2(na) 失败 → DENY")
 
         // 尝试只满足 domain2
         let denyWithNa = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!denyWithNa.result, "region=na → domain2 通过但 domain1(asia) 失败 → DENY")
 
         // 两者均不满足
         let denyEmpty = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: [:],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: [:]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!denyEmpty.result, "无 region → 两个父群组域策略均失败 → DENY")
         let domainReports = denyEmpty.reports.filter { $0.key.type == .domain }
@@ -1083,15 +1083,15 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "region=na → 继承的 domain2 通过 → ALLOW")
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "region=asia → 继承的 domain2(na) 失败 → DENY")
     }
@@ -1110,8 +1110,8 @@ struct PolicyTesting {
         // global=true → 全通过
         let allPass = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allPass.result, "domain4(直接) + domain0(继承, global=true) + RT[10](allow all) → ALLOW")
         let passDomainReports = allPass.reports.filter { $0.key.type == .domain }
@@ -1121,8 +1121,8 @@ struct PolicyTesting {
         // global=false → domain0(继承) 失败 → DENY
         let inheritFail = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!inheritFail.result, "domain0(继承) 失败 → 整体 DENY")
     }
@@ -1139,8 +1139,8 @@ struct PolicyTesting {
 
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(res.result, "用户直接域 + 群组域均满足 global=true → ALLOW")
 
@@ -1152,8 +1152,8 @@ struct PolicyTesting {
         // global=false → domain0 均失败 → DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 用户直接域 + 群组域 domain0 均失败 → DENY")
     }
@@ -1186,16 +1186,16 @@ struct PolicyTesting {
         // domain 满足 + role 满足 → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "ObserverRole(view) + domain0(global=true) → ALLOW")
 
         // domain 失败 → DENY（组内角色不能越过域策略）
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → domain0 失败 → DENY 即使有组内角色")
     }
@@ -1212,16 +1212,16 @@ struct PolicyTesting {
         // SalesManager 策略 allow if {true}，global=true 满足 domain0 → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(true)],
-            operation: "any_operation", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .any_operation, privilegeIds: []
         ).get()
         #expect(allow.result, "SalesManager(allow all) + domain0(global=true) + domain4(allow all) → ALLOW")
 
         // global=false → 父群组 domain0 失败 → DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["global": AnyCodable(false)],
-            operation: "any_operation", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(false)]),
+            operation: .any_operation, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY 即使是组内角色")
     }
@@ -1255,16 +1255,16 @@ struct PolicyTesting {
         // ModeratorRole: moderate，group10 继承 domain2 (region=na)
         let allowAfterAppoint = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("na")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(allowAfterAppoint.result, "appoint 后：ModeratorRole + domain2(region=na) → ALLOW")
 
         // region=asia → domain2 失败 → DENY
         let denyDomain = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: ["region": AnyCodable("asia")],
-            operation: "moderate", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .moderate, privilegeIds: []
         ).get()
         #expect(!denyDomain.result, "region=asia → domain2(na) 失败 → DENY")
 
@@ -1312,8 +1312,8 @@ struct PolicyTesting {
         // 两者互斥 → 始终 DENY
         let alwaysDeny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: hrLeadRole,
-            resource: ["region": AnyCodable("asia")],
-            operation: "hr_task", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["region": AnyCodable("asia")]),
+            operation: .hr_task, privilegeIds: []
         ).get()
         #expect(!alwaysDeny.result,
                 "user7 在 group8+group9，父群组 domain1(asia) AND domain2(na) 互斥 → 始终 DENY")
@@ -1337,16 +1337,16 @@ struct PolicyTesting {
         // RT[0] + view → role 策略不通过 → DENY（组内 RT[3] 不干扰）
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: superAdminRole,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "RT[0] 不允许 view → DENY，组内 RT[3] 不影响此次 judge")
 
         // RT[0] + manage_all + domain0(global=true) → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: superAdminRole,
-            resource: ["global": AnyCodable(true)],
-            operation: "manage_all", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .manage_all, privilegeIds: []
         ).get()
         #expect(allow.result, "RT[0] + manage_all + domain0(global=true) → ALLOW")
 
@@ -1354,8 +1354,8 @@ struct PolicyTesting {
         let observerRole = try await fetchRole(index: 3, s: s)
         let allowObserver = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: observerRole,
-            resource: ["global": AnyCodable(true)],
-            operation: "view", privilegeIds: []
+            resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            operation: .view, privilegeIds: []
         ).get()
         #expect(allowObserver.result, "RT[3](Observer) + view + global=true → ALLOW")
     }
@@ -1370,14 +1370,11 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 1, s: s) // EditorRole: edit 或 publish
         
-        let file = FileResource(name: "public_doc.txt", path: "/docs/public_doc.txt", isPrivate: false)
+        let jsonResource = JsonResource(name: "public_doc.txt", content: ["isPrivate": AnyCodable(false), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
+            PM<ResourceList>.ResourceDTO<JsonResource, DTO.Prepare>(data: jsonResource)
         ]).get().first!
         let anyResourceDTO = PM<ResourceList>.AnyResourceDTO(resourceDTO)
-        
-        var resourceDict = file.json
-        resourceDict["region"] = "asia" // 满足 domain1(AsiaPacific) 的限制
         
         // Privilege 策略：要求 input.resource.isPrivate == false 且 operation == edit
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -1394,8 +1391,8 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: resourceDict,
-            operation: "edit", privilegeIds: [privilegeDTO.id]
+            resource: jsonResource,
+            operation: .edit, privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(allow.result, "Resource.isPrivate == false 且 operation == edit，且满足 role/domain，-> ALLOW")
@@ -1403,8 +1400,8 @@ struct PolicyTesting {
         // 验证其他操作被拒绝 (role 允许 publish，但 privilege 拒绝)
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: resourceDict,
-            operation: "publish", privilegeIds: [privilegeDTO.id]
+            resource: jsonResource,
+            operation: .publish, privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(!deny.result, "operation == publish，Privilege 拒绝 -> DENY")
@@ -1424,14 +1421,11 @@ struct PolicyTesting {
         let role = try await fetchRole(index: 1, s: s) // EditorRole: edit or publish
         
         // 这是一个私有文件
-        let file = FileResource(name: "secret_keys.env", path: "/etc/secret_keys.env", isPrivate: true)
+        let jsonResource = JsonResource(name: "secret_keys.env", content: ["isPrivate": AnyCodable(true), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
+            PM<ResourceList>.ResourceDTO<JsonResource, DTO.Prepare>(data: jsonResource)
         ]).get().first!
         let anyResourceDTO = PM<ResourceList>.AnyResourceDTO(resourceDTO)
-        
-        var resourceDict = file.json
-        resourceDict["region"] = "asia" // 满足 domain1 的限制
         
         // Privilege 策略：要求 input.resource.isPrivate == false
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -1449,8 +1443,8 @@ struct PolicyTesting {
         // 尝试 edit (符合 role 策略，但被 privilege 策略拒绝)
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: resourceDict,
-            operation: "edit", privilegeIds: [privilegeDTO.id]
+            resource: jsonResource,
+            operation: .edit, privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(!deny.result, "Resource.isPrivate == true，不满足 Privilege 策略(isPrivate == false) → DENY")
@@ -1469,14 +1463,11 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 1, s: s) // EditorRole
         
-        let dir = DirectoryResource(name: "user_home", path: "/home/user1", ownerId: user.id)
+        let jsonResource = JsonResource(name: "user_home", content: ["ownerId": AnyCodable(user.id.uuidString), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<DirectoryResource, DTO.Prepare>(data: dir)
+            PM<ResourceList>.ResourceDTO<JsonResource, DTO.Prepare>(data: jsonResource)
         ]).get().first!
         let anyResourceDTO = PM<ResourceList>.AnyResourceDTO(resourceDTO)
-        
-        var resourceDict = dir.json
-        resourceDict["region"] = "asia" // 满足 domain1
         
         // Privilege 策略：仅要求操作者是属主 (无特定 operation 要求，只要通过 role)
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -1493,8 +1484,8 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: resourceDict,
-            operation: "edit", privilegeIds: [privilegeDTO.id]
+            resource: jsonResource,
+            operation: .edit, privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(allow.result, "Directory.ownerId 等于 user.id → ALLOW")
@@ -1504,13 +1495,11 @@ struct PolicyTesting {
         let otherUser = try await fetchUser(index: 0, s: s)
         let otherRole = try await fetchRole(index: 0, s: s)
         
-        var otherResourceDict = dir.json
-        otherResourceDict["global"] = true // 满足 user0 的 domain0(GlobalScope)
-        
+        let jsonResourceOther = JsonResource(name: "user_home", content: ["ownerId": AnyCodable(user.id.uuidString), "global": AnyCodable(true)])
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: otherUser, role: otherRole,
-            resource: otherResourceDict,
-            operation: "manage_all", privilegeIds: [privilegeDTO.id]
+            resource: jsonResourceOther,
+            operation: .manage_all, privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(!deny.result, "Directory.ownerId 不等于 otherUser.id (即 user0.id) → DENY")

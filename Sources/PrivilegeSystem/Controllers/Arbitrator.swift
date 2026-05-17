@@ -33,7 +33,7 @@ extension PrivilegeSystem {
             moduleId: UUID,
             user: DTO.User<DTO.Queried>,
             role: DTO.Role<DTO.Queried>,
-            resource: T?,
+            resource: T,
             operation: T.Operations,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
@@ -86,7 +86,7 @@ extension PrivilegeSystem {
                                     
                                     return DomainData(
                                         domainId: try pivot.primaryModel.requireID(),
-                                        resource: resource?.json ?? [:],
+                                        resource: resource.json,
                                         operation: operation.rawValue,
                                         user: user,
                                         group: try .make(from: associatedGroup).get()
@@ -104,7 +104,7 @@ extension PrivilegeSystem {
                             try domains.map { domain in
                                 DomainData(
                                     domainId: try domain.requireID(),
-                                    resource: resource?.json ?? [:],
+                                    resource: resource.json,
                                     operation: operation.rawValue,
                                     user: user,
                                     group: nil
@@ -119,14 +119,14 @@ extension PrivilegeSystem {
                             domains: domainDatas.flatMap { $0 },
                             role: .init(
                                 roleId: role.id,
-                                resource: resource?.json ?? [:],
+                                resource: resource.json,
                                 operation: operation.rawValue,
                                 user: user
                             ),
                             privileges: privilegeIds.map {
                                 .init(
                                     privilegeId: $0,
-                                    resource: resource?.json ?? [:],
+                                    resource: resource.json,
                                     operation: operation.rawValue,
                                     user: user
                                 )

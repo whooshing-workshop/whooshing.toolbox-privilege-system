@@ -40,6 +40,42 @@ struct FileResource: Resource {
     }
 }
 
+enum JsonOperation: String, OperationList {
+    case anything
+    case view
+    case manage_all
+    case edit
+    case moderate
+    case publish
+    case deploy
+    case read
+    case write
+    case any
+    case any_operation
+    case hr_task
+}
+
+struct JsonResource: Resource {
+    typealias ResourceType = ResourceList
+    typealias Operations = JsonOperation
+
+    static let type: ResourceList = .file
+    var name: String
+    var content: [String: AnyCodable]
+
+    var json: [String: AnyCodable] {
+        var base = content
+        base["name"] = AnyCodable(name)
+        return base
+    }
+
+    static var mirrors: [PartialKeyPath<JsonResource>: [String]] {
+        return [
+            \.name: ["name"]
+        ]
+    }
+}
+
 enum DirectoryOperation: String, OperationList {
     case list
     case createChild
