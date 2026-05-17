@@ -1360,8 +1360,8 @@ struct PolicyTesting {
     @Test("Resource + Privilege：Privilege 的策略依赖 resource 的属性，当条件满足时 ALLOW")
     func edge_PrivilegeAndResource_Allowed() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 0, s: s) // SuperAdmin: manage_all
+        let user = try await fetchUser(index: 1, s: s)
+        let role = try await fetchRole(index: 1, s: s) // EditorRole: edit 或 publish
         
         let file = FileResource(name: "public_doc.txt", path: "/docs/public_doc.txt", isPrivate: false)
         let resourceDTO = try await m.resource.create(resources: [
@@ -1369,19 +1369,17 @@ struct PolicyTesting {
         ]).get().first!
         let anyResourceDTO = PM<ResourceList>.AnyResourceDTO(resourceDTO)
         
-        // Privilege 策略：要求 input.resource.isPrivate == false
+        var resourceDict = file.json
+        resourceDict["region"] = "asia" // 满足 domain1(AsiaPacific) 的限制
+        
+        // Privilege 策略：要求 input.resource.isPrivate == false 且 operation == edit
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
-                name: "PublicFileRead",
-                policy: "allow if { input.resource.isPrivate == false; input.operation == \"read\" }"
+                name: "PublicFileEdit",
+                policy: "allow if { input.resource.isPrivate == false; input.operation == \"edit\" }"
             )
         ]).get()
         let privilegeDTO = privileges[0]
-        
-        print("====== DEBUG ======")
-        print("privilegeDTO.id: \(privilegeDTO.id)")
-        print("privilegeDTO.model.id: \(String(describing: privilegeDTO.model.id))")
-        print("privilegeDTO.model.$id.exists: \(privilegeDTO.model.$id.exists)")
         
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
@@ -1389,20 +1387,20 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: file.json,
-            operation: "read", privilegeIds: [privilegeDTO.id]
+            resource: resourceDict,
+            operation: "edit", privilegeIds: [privilegeDTO.id]
         ).get()
         
-        #expect(allow.result, "Resource.isPrivate == false 且 operation == read，满足 Privilege 策略 → ALLOW")
+        #expect(allow.result, "Resource.isPrivate == false 且 operation == edit，且满足 role/domain，-> ALLOW")
         
-        // 验证其他操作被拒绝
+        // 验证其他操作被拒绝 (role 允许 publish，但 privilege 拒绝)
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: file.json,
-            operation: "write", privilegeIds: [privilegeDTO.id]
+            resource: resourceDict,
+            operation: "publish", privilegeIds: [privilegeDTO.id]
         ).get()
         
-        #expect(!deny.result, "操作不为 read → DENY")
+        #expect(!deny.result, "operation == publish，Privilege 拒绝 -> DENY")
         
         // 清理
         try await m.privilege.detach {
@@ -1415,8 +1413,8 @@ struct PolicyTesting {
     @Test("Resource + Privilege：Privilege 的策略依赖 resource 的属性，当条件不满足时 DENY")
     func edge_PrivilegeAndResource_Denied() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 0, s: s) // SuperAdmin: manage_all
+        let user = try await fetchUser(index: 1, s: s)
+        let role = try await fetchRole(index: 1, s: s) // EditorRole: edit or publish
         
         // 这是一个私有文件
         let file = FileResource(name: "secret_keys.env", path: "/etc/secret_keys.env", isPrivate: true)
@@ -1425,11 +1423,14 @@ struct PolicyTesting {
         ]).get().first!
         let anyResourceDTO = PM<ResourceList>.AnyResourceDTO(resourceDTO)
         
+        var resourceDict = file.json
+        resourceDict["region"] = "asia" // 满足 domain1 的限制
+        
         // Privilege 策略：要求 input.resource.isPrivate == false
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
-                name: "PublicFileRead_DenyTest",
-                policy: "allow if { input.resource.isPrivate == false; input.operation == \"read\" }"
+                name: "PublicFileEdit_DenyTest",
+                policy: "allow if { input.resource.isPrivate == false; input.operation == \"edit\" }"
             )
         ]).get()
         let privilegeDTO = privileges[0]
@@ -1438,11 +1439,11 @@ struct PolicyTesting {
             [privilegeDTO] => [anyResourceDTO]
         }.get()
         
-        // 尝试 read
+        // 尝试 edit (符合 role 策略，但被 privilege 策略拒绝)
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: file.json,
-            operation: "read", privilegeIds: [privilegeDTO.id]
+            resource: resourceDict,
+            operation: "edit", privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(!deny.result, "Resource.isPrivate == true，不满足 Privilege 策略(isPrivate == false) → DENY")
@@ -1458,20 +1459,23 @@ struct PolicyTesting {
     @Test("Resource + Privilege：针对 Directory 的属主判断")
     func edge_DirectoryResource_Owner() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let user = try await fetchUser(index: 0, s: s)
-        let role = try await fetchRole(index: 0, s: s) // SuperAdmin
+        let user = try await fetchUser(index: 1, s: s)
+        let role = try await fetchRole(index: 1, s: s) // EditorRole
         
-        let dir = DirectoryResource(name: "user_home", path: "/home/user0", ownerId: user.id)
+        let dir = DirectoryResource(name: "user_home", path: "/home/user1", ownerId: user.id)
         let resourceDTO = try await m.resource.create(resources: [
             PM<ResourceList>.ResourceDTO<DirectoryResource, DTO.Prepare>(data: dir)
         ]).get().first!
         let anyResourceDTO = PM<ResourceList>.AnyResourceDTO(resourceDTO)
         
-        // Privilege 策略：要求操作者是属主
+        var resourceDict = dir.json
+        resourceDict["region"] = "asia" // 满足 domain1
+        
+        // Privilege 策略：仅要求操作者是属主 (无特定 operation 要求，只要通过 role)
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "DirectoryOwnerOnly",
-                policy: "allow if { input.resource.ownerId == input.subject.id }"
+                policy: "allow if { input.resource.ownerId == input.user.id }"
             )
         ]).get()
         let privilegeDTO = privileges[0]
@@ -1482,21 +1486,27 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: dir.json,
-            operation: "list", privilegeIds: [privilegeDTO.id]
+            resource: resourceDict,
+            operation: "edit", privilegeIds: [privilegeDTO.id]
         ).get()
         
         #expect(allow.result, "Directory.ownerId 等于 user.id → ALLOW")
         
         // 测试非属主被拒绝
-        let otherUser = try await fetchUser(index: 1, s: s)
+        // 使用 user0(SuperAdmin), 其带有 global 的要求
+        let otherUser = try await fetchUser(index: 0, s: s)
+        let otherRole = try await fetchRole(index: 0, s: s)
+        
+        var otherResourceDict = dir.json
+        otherResourceDict["global"] = true // 满足 user0 的 domain0(GlobalScope)
+        
         let deny = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: otherUser, role: role, // 其他用户，同一角色
-            resource: dir.json,
-            operation: "list", privilegeIds: [privilegeDTO.id]
+            moduleId: m.moduleId, user: otherUser, role: otherRole,
+            resource: otherResourceDict,
+            operation: "manage_all", privilegeIds: [privilegeDTO.id]
         ).get()
         
-        #expect(!deny.result, "Directory.ownerId 不等于 otherUser.id → DENY")
+        #expect(!deny.result, "Directory.ownerId 不等于 otherUser.id (即 user0.id) → DENY")
         
         // 清理
         try await m.privilege.detach {
