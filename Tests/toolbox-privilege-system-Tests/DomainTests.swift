@@ -51,24 +51,16 @@ struct DomainTesting {
     //   domain3 (SandboxEnvironment): input.resource.env == "sandbox"
     static let customPolicies: [String?] = [
         """
-        allow if {
-            input.resource.global == true
-        }
+        allow if { input.resource.global == true }
         """, // 0: GlobalScope
         """
-        allow if {
-            input.resource.region == "asia"
-        }
+        allow if { input.resource.region == "asia" }
         """, // 1: AsiaPacific
         """
-        allow if {
-            input.resource.region == "na"
-        }
+        allow if { input.resource.region == "na" }
         """, // 2: NorthAmerica
         """
-        allow if {
-            input.resource.env == "sandbox"
-        }
+        allow if { input.resource.env == "sandbox" }
         """, // 3: SandboxEnvironment
         nil, // 4: Europe
         nil, // 5: SouthAmerica

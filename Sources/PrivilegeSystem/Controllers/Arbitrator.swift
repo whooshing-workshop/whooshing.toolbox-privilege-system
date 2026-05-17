@@ -29,16 +29,16 @@ extension PrivilegeSystem {
             self.roleController = roleController
         }
         
-        public func judge(
+        public func judge<T: Resource>(
             moduleId: UUID,
             user: DTO.User<DTO.Queried>,
             role: DTO.Role<DTO.Queried>,
-            resource: [String: AnyCodable],
-            operation: String,
+            resource: T?,
+            operation: T.Operations,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
             // 检查所提供的 role 是否是 user 可用的身份，否则报错
-            roleController.is(role: role, appointedFor: user).flatMap {
+            roleController.is(role: role, appointedTo: user).flatMap {
                 $0 ?
                 self.db.eventLoop.makeSucceededResult(()) :
                 self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的 Role 并非对 User 可用", category: .external)
@@ -86,8 +86,8 @@ extension PrivilegeSystem {
                                     
                                     return DomainData(
                                         domainId: try pivot.primaryModel.requireID(),
-                                        resource: resource,
-                                        operation: operation,
+                                        resource: resource?.json ?? [:],
+                                        operation: operation.rawValue,
                                         user: user,
                                         group: try .make(from: associatedGroup).get()
                                     )
@@ -104,8 +104,8 @@ extension PrivilegeSystem {
                             try domains.map { domain in
                                 DomainData(
                                     domainId: try domain.requireID(),
-                                    resource: resource,
-                                    operation: operation,
+                                    resource: resource?.json ?? [:],
+                                    operation: operation.rawValue,
                                     user: user,
                                     group: nil
                                 )
@@ -119,15 +119,15 @@ extension PrivilegeSystem {
                             domains: domainDatas.flatMap { $0 },
                             role: .init(
                                 roleId: role.id,
-                                resource: resource,
-                                operation: operation,
+                                resource: resource?.json ?? [:],
+                                operation: operation.rawValue,
                                 user: user
                             ),
                             privileges: privilegeIds.map {
                                 .init(
                                     privilegeId: $0,
-                                    resource: resource,
-                                    operation: operation,
+                                    resource: resource?.json ?? [:],
+                                    operation: operation.rawValue,
                                     user: user
                                 )
                             }

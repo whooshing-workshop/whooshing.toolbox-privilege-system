@@ -30,7 +30,7 @@ extension PM {
         @Field(fields.data)                         var data: [String: AnyCodable]
         
         @Siblings(
-            through: PrivilegeResourcePivot.self,
+            through: PrivilegeAnyResourcePivot.self,
             from: \.$secondaryModel,
             to: \.$primaryModel
         )                                           var privileges: [Privilege]
@@ -75,6 +75,12 @@ extension PM {
         @Field(fields.name)                         var name: String
         @Enum(fields.type)                          var type: ResourceList
         @Field(fields.data)                         var data: T
+        
+        @Siblings(
+            through: PrivilegeResourcePivot.self,
+            from: \.$secondaryModel,
+            to: \.$primaryModel
+        )                                           var privileges: [Privilege]
         
         @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!

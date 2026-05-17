@@ -157,12 +157,13 @@ public extension PrivilegeSystem.RoleController {
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToManyReversed(
+        __manyToMany(
             relations,
             action: .attach,
             label: "角色与用户",
             errThrowing: .roleAppointUserFailed,
-            pivotType: Pivots.UserRole.self
+            siblingBuilder: { $0.model.$users },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -174,7 +175,8 @@ public extension PrivilegeSystem.RoleController {
             action: .attach,
             label: "角色与用户组",
             errThrowing: .roleAppointGroupFailed,
-            pivotType: Pivots.RoleGroup.self
+            siblingBuilder: { $0.model.$groups },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -186,7 +188,21 @@ public extension PrivilegeSystem.RoleController {
             action: .attach,
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
-            pivotType: Pivots.RoleUserInGroup.self
+            siblingBuilder: { $0.model.$usersInGroup },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+        )
+    }
+    
+    func appoint(
+        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        __manyToMany(
+            relations,
+            action: .attach,
+            label: "角色与群组内用户",
+            errThrowing: .roleAppointGroupUserFailed,
+            siblingBuilder: { $0.model.$usersInGroup },
+            modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
         )
     }
     
@@ -194,12 +210,13 @@ public extension PrivilegeSystem.RoleController {
     func dismiss(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToManyReversed(
+        __manyToMany(
             relations,
             action: .detach,
             label: "角色与用户",
             errThrowing: .roleDismissUserFailed,
-            pivotType: Pivots.UserRole.self
+            siblingBuilder: { $0.model.$users },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -211,7 +228,8 @@ public extension PrivilegeSystem.RoleController {
             action: .detach,
             label: "角色与用户组",
             errThrowing: .roleDismissGroupFailed,
-            pivotType: Pivots.RoleGroup.self
+            siblingBuilder: { $0.model.$groups },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -223,10 +241,26 @@ public extension PrivilegeSystem.RoleController {
             action: .detach,
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
-            pivotType: Pivots.RoleUserInGroup.self
+            siblingBuilder: { $0.model.$usersInGroup },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+        )
+    }
+    
+    func dismiss(
+        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        __manyToMany(
+            relations,
+            action: .detach,
+            label: "角色与群组内用户",
+            errThrowing: .roleDismissGroupUserFailed,
+            siblingBuilder: { $0.model.$usersInGroup },
+            modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
         )
     }
 }
+
+// MARK: - 角色的验证与查询
 
 public extension PrivilegeSystem.RoleController {
     // 一个 user 可用的所有 roles 包括:
@@ -263,37 +297,37 @@ public extension PrivilegeSystem.RoleController {
 public extension PrivilegeSystem.RoleController {
     func `is`(
         role: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, role: role, appointedFor: user)
+        __is(on: db, role: role, appointedTo: user)
     }
     
     func `is`(
         userRole: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, userRole: userRole, appointedFor: user)
+        __is(on: db, userRole: userRole, appointedTo: user)
     }
     
     func `is`(
         groupRole: DTO.Role<DTO.Queried>,
-        appointedFor group: DTO.Group<DTO.Queried>
+        appointedTo group: DTO.Group<DTO.Queried>
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, groupRole: groupRole, appointedFor: group)
+        __is(on: db, groupRole: groupRole, appointedTo: group)
     }
     
     func verify(
         groupRole: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
-        __verify(on: db, groupRole: groupRole, appointedFor: user)
+        __verify(on: db, groupRole: groupRole, appointedTo: user)
     }
     
     func verify(
         userInGroupRole: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
-        __verify(on: db, userInGroupRole: userInGroupRole, appointedFor: user)
+        __verify(on: db, userInGroupRole: userInGroupRole, appointedTo: user)
     }
 }
 
@@ -302,12 +336,12 @@ extension PrivilegeSystem.RoleController {
     func __is(
         on db: PGDatabase,
         role: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<Bool, Errcase> {
         [
-            __is(on: db, userRole: role, appointedFor: user),
-            __verify(on: db, groupRole: role, appointedFor: user).map { !$0.isEmpty },
-            __verify(on: db, userInGroupRole: role, appointedFor: user).map { !$0.isEmpty }
+            __is(on: db, userRole: role, appointedTo: user),
+            __verify(on: db, groupRole: role, appointedTo: user).map { !$0.isEmpty },
+            __verify(on: db, userInGroupRole: role, appointedTo: user).map { !$0.isEmpty }
         ].flatten(on: db.eventLoop).map { $0.reduce(false) { $0 || $1 } }
     }
     
@@ -315,7 +349,7 @@ extension PrivilegeSystem.RoleController {
     func __is(
         on db: PGDatabase,
         userRole: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<Bool, Errcase> {
         user.model.$roles.query(on: db)
             .filter(\.$id == userRole.id)
@@ -328,7 +362,7 @@ extension PrivilegeSystem.RoleController {
     func __is(
         on db: PGDatabase,
         groupRole: DTO.Role<DTO.Queried>,
-        appointedFor group: DTO.Group<DTO.Queried>
+        appointedTo group: DTO.Group<DTO.Queried>
     ) -> EventLoopRes<Bool, Errcase> {
         group.model.$groupRoles.query(on: db)
             .filter(\.$id == groupRole.id)
@@ -341,7 +375,7 @@ extension PrivilegeSystem.RoleController {
     func __verify(
         on db: PGDatabase,
         groupRole: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
         user.model.$groups.query(on: db)
             .with(\.$parents) { path in
@@ -391,7 +425,7 @@ extension PrivilegeSystem.RoleController {
     func __verify(
         on db: PGDatabase,
         userInGroupRole: DTO.Role<DTO.Queried>,
-        appointedFor user: DTO.User<DTO.Queried>
+        appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
         RoleUserInGroupPivot.query(on: db)
             .filter(\.$primaryModel.$id == userInGroupRole.id)

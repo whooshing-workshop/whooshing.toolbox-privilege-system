@@ -171,7 +171,8 @@ public extension PrivilegeSystem.GroupController {
             action: .attach,
             label: "用户组与用户",
             errThrowing: .userJoinGroupFailed,
-            pivotType: Pivots.UserGroup.self
+            siblingBuilder: { $0.model.$groups },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -185,7 +186,8 @@ public extension PrivilegeSystem.GroupController {
             action: .detach,
             label: "用户组与用户",
             errThrowing: .userKickGroupFailed,
-            pivotType: Pivots.UserGroup.self
+            siblingBuilder: { $0.model.$groups },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     

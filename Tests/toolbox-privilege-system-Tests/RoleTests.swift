@@ -51,27 +51,17 @@ struct RoleTesting {
     //   role3 (ObserverRole)  : input.operation == "view"
     static let customPolicies: [String?] = [
         """
-        allow if {
-            input.operation == "manage_all"
-        }
+        allow if { input.operation == "manage_all" }
         """, // 0: SuperAdminRole
         """
-        allow if {
-            input.operation == "edit"
-        }
-        allow if {
-            input.operation == "publish"
-        }
+        allow if { input.operation == "edit" }
+        allow if { input.operation == "publish" }
         """, // 1: EditorRole
         """
-        allow if {
-            input.operation == "moderate"
-        }
+        allow if { input.operation == "moderate" }
         """, // 2: ModeratorRole
         """
-        allow if {
-            input.operation == "view"
-        }
+        allow if { input.operation == "view" }
         """, // 3: ObserverRole
         nil, // 4: SalesManager
         nil, // 5: HRLead

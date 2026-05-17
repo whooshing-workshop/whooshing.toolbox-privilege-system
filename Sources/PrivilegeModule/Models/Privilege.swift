@@ -31,7 +31,7 @@ public extension PM {
         @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!
         
         @Siblings(
-            through: PrivilegeResourcePivot.self,
+            through: PrivilegeAnyResourcePivot.self,
             from: \.$primaryModel,
             to: \.$secondaryModel
         )                                               var resources: [AnyResource]

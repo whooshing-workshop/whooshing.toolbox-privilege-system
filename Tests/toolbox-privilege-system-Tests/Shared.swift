@@ -216,6 +216,7 @@ enum ResourceList: String, ResourceTypeList {
     case file
     case directory
     case alias
+    case json
 }
 
 func randomBuffer(size: Int) -> ByteBuffer {

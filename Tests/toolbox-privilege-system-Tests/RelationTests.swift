@@ -266,7 +266,7 @@ struct RelationsTesting {
         #expect(allRoleIds.contains(RT.ids[3]), "user0 在 group0 的组内角色 RT[3] 应被查到")
     }
 
-    @Test("RoleController：is(role:appointedFor:) 对用户角色、群组角色、组内角色均返回 true")
+    @Test("RoleController：is(role:appointedTo:) 对用户角色、群组角色、组内角色均返回 true")
     func roleAPI_is_role_ChecksAllThreeSources() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // user0: RT[0](用户角色) + RT[11](群组角色) + RT[3](组内角色)
@@ -276,13 +276,13 @@ struct RelationsTesting {
         let rt11 = try await fetchRole(index: 11, s: s)
         let rt1 = try await fetchRole(index: 1, s: s) // user0 没有 RT[1]
 
-        #expect(try await s.role.is(role: rt0, appointedFor: user).get(), "RT[0] 是 user0 的用户角色")
-        #expect(try await s.role.is(role: rt3, appointedFor: user).get(), "RT[3] 是 user0 的组内角色")
-        #expect(try await s.role.is(role: rt11, appointedFor: user).get(), "RT[11] 是 user0 的群组角色")
-        #expect(!(try await s.role.is(role: rt1, appointedFor: user).get()), "RT[1] 不属于 user0")
+        #expect(try await s.role.is(role: rt0, appointedTo: user).get(), "RT[0] 是 user0 的用户角色")
+        #expect(try await s.role.is(role: rt3, appointedTo: user).get(), "RT[3] 是 user0 的组内角色")
+        #expect(try await s.role.is(role: rt11, appointedTo: user).get(), "RT[11] 是 user0 的群组角色")
+        #expect(!(try await s.role.is(role: rt1, appointedTo: user).get()), "RT[1] 不属于 user0")
     }
 
-    @Test("RoleController：is(userRole:appointedFor:) 精确检查用户角色")
+    @Test("RoleController：is(userRole:appointedTo:) 精确检查用户角色")
     func roleAPI_is_userRole_ExactCheck() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // user1: RT[1](Editor), RT[3](Observer) 均为用户角色
@@ -290,11 +290,11 @@ struct RelationsTesting {
         let rt1 = try await fetchRole(index: 1, s: s)
         let rt2 = try await fetchRole(index: 2, s: s) // user1 没有 RT[2]
 
-        #expect(try await s.role.is(userRole: rt1, appointedFor: user).get(), "RT[1] 是 user1 的用户角色")
-        #expect(!(try await s.role.is(userRole: rt2, appointedFor: user).get()), "RT[2] 不是 user1 的用户角色")
+        #expect(try await s.role.is(userRole: rt1, appointedTo: user).get(), "RT[1] 是 user1 的用户角色")
+        #expect(!(try await s.role.is(userRole: rt2, appointedTo: user).get()), "RT[2] 不是 user1 的用户角色")
     }
 
-    @Test("RoleController：is(groupRole:appointedFor:) 精确检查群组角色")
+    @Test("RoleController：is(groupRole:appointedTo:) 精确检查群组角色")
     func roleAPI_is_groupRole_ExactCheck() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // group3(BannedUsers) 绑 RT[5] 为群组角色
@@ -303,31 +303,31 @@ struct RelationsTesting {
         let rt5 = try await fetchRole(index: 5, s: s)
         let rt1 = try await fetchRole(index: 1, s: s)
 
-        #expect(try await s.role.is(groupRole: rt5, appointedFor: group3).get(), "RT[5] 是 group3 的群组角色")
-        #expect(!(try await s.role.is(groupRole: rt1, appointedFor: group3).get()), "RT[1] 不是 group3 的群组角色")
+        #expect(try await s.role.is(groupRole: rt5, appointedTo: group3).get(), "RT[5] 是 group3 的群组角色")
+        #expect(!(try await s.role.is(groupRole: rt1, appointedTo: group3).get()), "RT[1] 不是 group3 的群组角色")
     }
 
-    @Test("RoleController：verify(groupRole:appointedFor:) 返回该群组角色适用的群组列表")
+    @Test("RoleController：verify(groupRole:appointedTo:) 返回该群组角色适用的群组列表")
     func roleAPI_verify_groupRole_ReturnsApplicableGroups() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // user3 在 group3(BannedUsers)，group3 是 RT[5] 的群组角色持有者
         let user = try await fetchUser(index: 3, s: s)
         let rt5 = try await fetchRole(index: 5, s: s)
 
-        let groups = try await s.role.verify(groupRole: rt5, appointedFor: user).get()
+        let groups = try await s.role.verify(groupRole: rt5, appointedTo: user).get()
         #expect(!groups.isEmpty, "RT[5] 作为群组角色，应返回包含 group3 的群组列表")
         let groupIds = Set(groups.map { $0.id })
         #expect(groupIds.contains(GT.ids[3]), "group3 应在返回列表中")
     }
 
-    @Test("RoleController：verify(userInGroupRole:appointedFor:) 返回该组内角色适用的群组列表")
+    @Test("RoleController：verify(userInGroupRole:appointedTo:) 返回该组内角色适用的群组列表")
     func roleAPI_verify_userInGroupRole_ReturnsApplicableGroups() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // user0 在 group0 中有组内角色 RT[3]
         let user = try await fetchUser(index: 0, s: s)
         let rt3 = try await fetchRole(index: 3, s: s)
 
-        let groups = try await s.role.verify(userInGroupRole: rt3, appointedFor: user).get()
+        let groups = try await s.role.verify(userInGroupRole: rt3, appointedTo: user).get()
         #expect(!groups.isEmpty, "RT[3] 作为 user0 的组内角色，应返回包含 group0 的群组列表")
         let groupIds = Set(groups.map { $0.id })
         #expect(groupIds.contains(GT.ids[0]), "group0 应在返回列表中")
@@ -340,7 +340,7 @@ struct RelationsTesting {
         let user = try await fetchUser(index: 4, s: s)
         let rt3 = try await fetchRole(index: 3, s: s)
 
-        let groups = try await s.role.verify(userInGroupRole: rt3, appointedFor: user).get()
+        let groups = try await s.role.verify(userInGroupRole: rt3, appointedTo: user).get()
         #expect(groups.isEmpty, "user4 无组内角色，应返回空列表")
     }
 

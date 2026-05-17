@@ -127,6 +127,13 @@ struct PolicyTesting {
     // 注意：user4 虽无 group，但有直接赋予的用户域，judge 时 domain reports 不为空！
     // 命名角色（SuperAdmin/Editor/Moderator/Observer）在 MARK 4-5 中与域策略一同验证
 
+    
+    // user: 4
+    // role: 6      nil
+    // group: nil   nil
+    // domain:  6   nil
+    //          7   nil
+    // resource: nil
     @Test("纯角色判定：user4+RT[6]，role 通过，user 直接域(domain6/domain7)也通过")
     func judgeRoleOnly_User4_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -973,7 +980,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 6, s: s)
         let role = try await fetchRole(index: 11, s: s) // RT[11]: allow if {true}
 
-        let applicableGroups = try await s.role.verify(groupRole: role, appointedFor: user).get()
+        let applicableGroups = try await s.role.verify(groupRole: role, appointedTo: user).get()
         #expect(applicableGroups.map { $0.id }.contains(GT.ids[0]), "RT[11] 应作为父群组 group0 的群组角色对 user6 可用")
 
         let res = try await s.arbitrator.judge(
@@ -1267,7 +1274,7 @@ struct PolicyTesting {
         }.get()
 
         // dismiss 后 ModeratorRole 不再是 user8 的可用身份；不要再用它调用 judge。
-        let stillAvailable = try await s.role.is(role: role, appointedFor: user).get()
+        let stillAvailable = try await s.role.is(role: role, appointedTo: user).get()
         #expect(!stillAvailable, "dismiss 后 ModeratorRole 不应再属于 user8")
     }
 

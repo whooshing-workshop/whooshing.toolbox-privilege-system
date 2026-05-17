@@ -87,8 +87,10 @@ public extension PrivilegeModule {
                 }
             ).flatMapThrowing { ps throws(Errcase.ErrType) in
                 try required(throws: Errcase.privilegeCreateFailed, "Returning 解包失败", category: .internal) {
-                    try ps.map {
-                        try PrivilegeDTO<DTO.Queried>.make(from: $0).get()
+                    try ps.map { p in
+                        // 使用 Fluent 批量创建 Model 后([dbModels].create(on: db))，这些批量创建的 Models 的 sibilings 都会失效，直接使用会触发断言崩溃，因此需要显式指定其 fromId"
+                        p.$resources.fromId = p.id
+                        return try PrivilegeDTO<DTO.Queried>.make(from: p).get()
                     }
                 }
             }
@@ -177,6 +179,8 @@ public extension PrivilegeModule {
 }
 
 public extension PrivilegeModule.PrivilegeController {
+    typealias Errcase = S.Errcase
+    
     // MARK: - 资源权限附加
     
     func attach(
@@ -196,7 +200,6 @@ public extension PrivilegeModule.PrivilegeController {
     }
 }
 
-
 public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
@@ -210,7 +213,8 @@ public extension PrivilegeModule.PrivilegeController {
             action: .attach,
             label: "资源权限与资源",
             errThrowing: .privilegeAttachResourceFailed,
-            pivotType: S.PrivilegeResource.self
+            siblingBuilder: { $0.model.$resources },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
     }
     
@@ -226,7 +230,100 @@ public extension PrivilegeModule.PrivilegeController {
             action: .detach,
             label: "资源权限与资源",
             errThrowing: .privilegeDetachResourceFailed,
-            pivotType: S.PrivilegeResource.self
+            siblingBuilder: { $0.model.$resources },
+            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+    }
+}
+
+// MARK: - 资源权限验证与查询
+
+public extension PrivilegeModule.PrivilegeController {
+    func privilege<T: Resource>(
+        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+    ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
+        __privilege(on: db, attachedTo: resource)
+    }
+    
+    func privilege(
+        attachedTo resource: S.AnyResourceDTO
+    ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
+        __privilege(on: db, attachedTo: resource)
+    }
+}
+
+public extension PrivilegeModule.PrivilegeController {
+    func `is`<T: Resource>(
+        privilege: S.PrivilegeDTO<DTO.Queried>,
+        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+    ) -> EventLoopRes<Bool, Errcase> {
+        __is(on: db, privilege: privilege, attachedTo: resource)
+    }
+    
+    func `is`(
+        privilege: S.PrivilegeDTO<DTO.Queried>,
+        attachedTo resource: S.AnyResourceDTO
+    ) -> EventLoopRes<Bool, Errcase> {
+        __is(on: db, privilege: privilege, attachedTo: resource)
+    }
+}
+
+extension PrivilegeModule.PrivilegeController {
+    // 取得 某资源 的所有资源权限
+    func __privilege<T: Resource>(
+        on db: PGDatabase,
+        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+    ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
+        resource.model.$privileges.get(on: db)
+            .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)
+            .flatMapThrowing
+        { privileges throws(Errcase.ErrType) in
+            try required(throws: Errcase.privilegeFetchFailed, "转为 DTO 失败", category: .internal) {
+                try privileges.map { try S.PrivilegeDTO<DTO.Queried>.make(from: $0).get() }
+            }
+        }
+    }
+    
+    // 取得 某资源 的所有资源权限
+    func __privilege(
+        on db: PGDatabase,
+        attachedTo resource: S.AnyResourceDTO
+    ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
+        resource.model.$privileges.get(on: db)
+            .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)
+            .flatMapThrowing
+        { privileges throws(Errcase.ErrType) in
+            try required(throws: Errcase.privilegeFetchFailed, "转为 DTO 失败", category: .internal) {
+                try privileges.map { try S.PrivilegeDTO<DTO.Queried>.make(from: $0).get() }
+            }
+        }
+    }
+}
+
+extension PrivilegeModule.PrivilegeController {
+    // 检查某权限是否被附加给某资源
+    func __is<T: Resource>(
+        on db: PGDatabase,
+        privilege: S.PrivilegeDTO<DTO.Queried>,
+        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+    ) -> EventLoopRes<Bool, Errcase> {
+        resource.model.$privileges.query(on: db)
+            .filter(\.$id == privilege.id)
+            .first()
+            .withError(Errcase.privilegeCheckFailed, "从数据库查询失败", category: .internal)
+            .map { $0 != nil }
+    }
+    
+    // 检查某权限是否被附加给某资源
+    func __is(
+        on db: PGDatabase,
+        privilege: S.PrivilegeDTO<DTO.Queried>,
+        attachedTo resource: S.AnyResourceDTO
+    ) -> EventLoopRes<Bool, Errcase> {
+        resource.model.$privileges.query(on: db)
+            .filter(\.$id == privilege.id)
+            .first()
+            .withError(Errcase.privilegeCheckFailed, "从数据库查询失败", category: .internal)
+            .map { $0 != nil }
     }
 }

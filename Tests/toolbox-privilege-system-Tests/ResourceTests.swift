@@ -206,24 +206,15 @@ struct ResourceTests {
         ]).get()
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = try PModule.AnyResourceDTO.make(from: try await PModule.AnyResource.query(on: m.db)
-            .filter(\.$id == resourceDTO.id)
-            .first()!
-        ).get()
+        let anyResourceDTO = PModule.AnyResourceDTO.init(resourceDTO)
         
         // 测试 Attach
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
         }.get()
-        
-        // 重新查询 Privilege
-        #warning("使用 Fluent 批量创建 Model 后([dbModels].create(on: db))，这些批量创建的 Models 的 sibilings 都会失效，直接使用会触发断言崩溃")
-        let newPrivilege = try await PModule.Privilege.query(on: m.db)
-            .filter(\.$id == privilegeDTO.id)
-            .first()!
-        
+
         // 验证 Attach
-        let siblings = try await newPrivilege.$resources.get(on: m.db)
+        let siblings = try await privilegeDTO.model.$resources.get(on: m.db)
         #expect(siblings.contains(where: { $0.id == anyResourceDTO.id }))
         
         // 测试 Detach
@@ -231,12 +222,7 @@ struct ResourceTests {
             [privilegeDTO] => [anyResourceDTO]
         }.get()
         
-        // 再次重新查询 Privilege
-        let newPrivilege2 = try await PModule.Privilege.query(on: m.db)
-            .filter(\.$id == privilegeDTO.id)
-            .first()!
-        
-        let siblingsAfter = try await newPrivilege2.$resources.get(on: m.db)
+        let siblingsAfter = try await privilegeDTO.model.$resources.get(reload: true, on: m.db)
         
         #expect(!siblingsAfter.contains(where: { $0.id == anyResourceDTO.id }))
     }
