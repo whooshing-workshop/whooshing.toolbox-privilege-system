@@ -13,22 +13,31 @@ package protocol OPAController: Controller {
 
 package extension OPAController {
     // 创建 OPA 策略并记录在数据库中
+    // Pr: 策略与其所属模型的关系 Policy Relation
+    // P: 策略 Policy
+    // M: Fluent 模型，可直接存取数据库
+    // PT: 策略类型，包括 Domain, Role, Privilege
     func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel, PT: PolicyType>(
         on db: PGDatabase,
-        relations: [Pr],
-        policyType: PT.Type,
+        relations: [Pr],                    // 待创建策略，同时每个策略绑定一个所属模型
+        policyType: PT.Type,                // 策略的类型，包括 Domain, Role, Privilege
         label: String,
         errThrowing: E,
-        policies: (Pr) -> [P],
-        moduleId: @Sendable (P) -> UUID,
-        policyKey: KeyPath<P, String>,
-        modelId:(Pr, P) -> UUID,
-        modelBuilder: (P, UUID) -> M
+        policies: (Pr) -> [P],              // 从一条关系中列出所有相关的 Policies
+        moduleId: @Sendable (P) -> UUID,    // 给出一个 Policy，返回其服务模块的 ID 号
+        policyKey: KeyPath<P, String>,      // 指出 Policy 的 OPA 代码属性
+        modelId:(Pr, P) -> UUID,            // 要求返回策略所绑定的所属模型的 ID 号
+        modelBuilder: (P, UUID) -> M        // 根据提供的 Policy 和 [所属模型的 ID 号] 创建具体的 Policy Fluent 模型
     ) -> EventLoopRes<[M], E> {
+        // 准备 policy 容器，存储每个对应 policy 的对应路径及其 策略内容
+        // 用于后续存取 OPA
         var psData: [(id: String, content: String)] = []
         
-        let ps = relations.flatMap { relation in
+        // 准备要创建到 数据库中 的数据
+        // 内容均为 Policy Fluent 模型
+        let ps: [M] = relations.flatMap { relation in
             policies(relation).map { (policy: P) in
+                // 准备路径，要放在 opa 中的位置
                 let path = policyPath(
                     moduleId: moduleId(policy),
                     modelId: modelId(relation, policy),
@@ -36,6 +45,7 @@ package extension OPAController {
                     format: .route
                 )
                 
+                // 准备 policy 的具体内容
                 let policyStr = """
                 package rules.\(path)
                 import data.utils.pg
@@ -44,20 +54,23 @@ package extension OPAController {
                 \(policy[keyPath: policyKey])    
                 """
                 
+                // 收集 路径 和 策略内容
                 psData.append((path, policyStr))
                 
+                // 创建 Fluent 模型
                 return modelBuilder(policy, modelId(relation, policy))
             }
         }
         
         let progress = ProgressBox()
-        let policies = psData
+        let opaPolicyData = psData
         
         // 在 SQL 事务中，先执行 SQL 插入，保持该事务会话
         // 只有当 OPA 也插入成功后才提交事务
         // 否则，无论 SQL 或 OPA 插入失败，数据库与 OPA 都会进行回滚
         // 其中 OPA 回滚是通过删除已增加的策略实现的
         return db.trans { db in
+            // 先在数据库中创建所有 policy 数据
             ps
                 .create(on: db)
                 .withError(errThrowing, "\(policyType) 数据库插入 \(label) 策略失败", category: .internal)
@@ -69,12 +82,14 @@ package extension OPAController {
                 Task {
                     do {
                         try await withThrowingTaskGroup { group in
-                            for (i, (id, content)) in policies.enumerated() {
+                            // id 为 opa 路径，content 为 策略规则内容
+                            for (i, (id, content)) in opaPolicyData.enumerated() {
                                 group.addTask {
                                     _ = try await required(throws: errThrowing, "\(policyType) 类型 OPA \(label)策略插入失败", category: .internal) {
                                         try await self.opa.policy.save(by: id, content: content)
                                     }
                                     
+                                    // 记录创建进程
                                     progress.append(index: i)
                                 }
                             }
@@ -91,7 +106,7 @@ package extension OPAController {
                 return target.futureResult.map { ps }
             }.flatMapError { error in
                 // 任何一条失败将停止任务，且进行回滚
-                undo(policies: policies, progress: progress).flatMap {
+                undo(policies: opaPolicyData, progress: progress).flatMap {
                     self.eventLoop.makeFailedResult(error)
                 }
             }

@@ -8,13 +8,13 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 
-typealias TokenModel = Token
+package typealias TokenModel = Token
 
 public typealias PToken = DTO.Token<DTO.Prepare>
 public typealias QToken = DTO.Token<DTO.Queried>
 
 public extension DTO {
-    struct Token<T: Status>: Sendable, Hashable {
+    struct Token<T: Status>: DTOModel, Sendable, Hashable {
         public let credential: String
         
         @Protect public internal(set) var tokenEncrypted: Data
@@ -26,7 +26,7 @@ public extension DTO {
         @Passive public internal(set) var expireAfter: Int
         @Passive public internal(set) var createdAt: Date
         
-        typealias AssociatedModel = TokenModel
+        package typealias AssociatedModel = TokenModel
         private let m: AssociatedModel?
         
         init(

@@ -35,23 +35,27 @@ public extension PrivilegeModule {
         ) -> EventLoopRes<Void, Errcase> {
             let mappedPrivileges = privileges.map { p in
                 var newP = p
-                newP.$id = UUID()
+                newP.id = UUID()
                 return newP
             }
             
+            // Pr: PrivilegeDTO<DTO.Prepare>
+            // P == Pr
+            // M: PM<ResourceList>.Privilege
+            // PT: Privilege
             return __createPolicy(
                 on: db,
-                relations: mappedPrivileges,
+                relations: mappedPrivileges,        // 资源策略创建无需绑定关系，传入策略列表
                 policyType: Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
-                policies: { [$0] },
-                moduleId: { _ in moduleId } ,
+                policies: { [$0] },                 // 返回本地，即 Pr == P
+                moduleId: { _ in moduleId },        // 服务模块 id 为本模块的 id
                 policyKey: \.policy,
-                modelId: { _, p in p.id },
-                modelBuilder: { p, mid in 
+                modelId: { _, p in p.id },          // 资源策略无绑定关系，使用本身的策略 id 作为 modelId
+                modelBuilder: { p, mid in
                     let raw = p.raw()
-                    raw.id = mid
+                    raw.id = mid                    // 资源策略 fluent 模型的 id 必须指定，否则 fluent 会随机创建
                     return raw
                 }
             ).map { _ in }
@@ -62,7 +66,7 @@ public extension PrivilegeModule {
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
             let mappedPrivileges = privileges.map { p in
                 var newP = p
-                newP.$id = UUID()
+                newP.id = UUID()
                 return newP
             }
             
@@ -206,8 +210,7 @@ public extension PrivilegeModule.PrivilegeController {
             action: .attach,
             label: "资源权限与资源",
             errThrowing: .privilegeAttachResourceFailed,
-            siblingBuilder: { $0.model.$resources },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: S.PrivilegeResource.self
         )
     }
     
@@ -223,8 +226,7 @@ public extension PrivilegeModule.PrivilegeController {
             action: .detach,
             label: "资源权限与资源",
             errThrowing: .privilegeDetachResourceFailed,
-            siblingBuilder: { $0.model.$resources },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: S.PrivilegeResource.self
         )
     }
 }

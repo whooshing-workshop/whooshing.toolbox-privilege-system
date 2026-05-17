@@ -8,13 +8,13 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 
-typealias DomainModel = Domain
+package typealias DomainModel = Domain
 
 public typealias PDomain = DTO.Domain<DTO.Prepare>
 public typealias QDomain = DTO.Domain<DTO.Queried>
 
 public extension DTO {
-    struct Domain<T: Status>: Sendable, Hashable {
+    struct Domain<T: Status>: DTOModel, Sendable, Hashable {
         public let name: String?
         public let description: String?
         
@@ -22,7 +22,7 @@ public extension DTO {
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
-        typealias AssociatedModel = DomainModel
+        package typealias AssociatedModel = DomainModel
         private let m: AssociatedModel?
         
         init(

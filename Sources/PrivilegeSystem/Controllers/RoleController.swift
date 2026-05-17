@@ -128,13 +128,6 @@ public extension PrivilegeSystem.RoleController {
         self.appoint(relations: content())
     }
     
-    func appoint(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
-    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(relations: content())
-    }
-    
     // MARK: - 角色撤职
     
     func dismiss(
@@ -157,13 +150,6 @@ public extension PrivilegeSystem.RoleController {
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
     }
-    
-    func dismiss(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
-    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(relations: content())
-    }
 }
 
 public extension PrivilegeSystem.RoleController {
@@ -171,13 +157,12 @@ public extension PrivilegeSystem.RoleController {
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        __manyToManyReversed(
             relations,
             action: .attach,
             label: "角色与用户",
             errThrowing: .roleAppointUserFailed,
-            siblingBuilder: { $0.model.$users },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.UserRole.self
         )
     }
     
@@ -189,8 +174,7 @@ public extension PrivilegeSystem.RoleController {
             action: .attach,
             label: "角色与用户组",
             errThrowing: .roleAppointGroupFailed,
-            siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.RoleGroup.self
         )
     }
     
@@ -202,21 +186,7 @@ public extension PrivilegeSystem.RoleController {
             action: .attach,
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
-            siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
-        )
-    }
-    
-    func appoint(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
-    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
-            relations,
-            action: .attach,
-            label: "角色与群组内用户",
-            errThrowing: .roleAppointGroupUserFailed,
-            siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
+            pivotType: Pivots.RoleUserInGroup.self
         )
     }
     
@@ -224,13 +194,12 @@ public extension PrivilegeSystem.RoleController {
     func dismiss(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        __manyToManyReversed(
             relations,
             action: .detach,
             label: "角色与用户",
             errThrowing: .roleDismissUserFailed,
-            siblingBuilder: { $0.model.$users },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.UserRole.self
         )
     }
     
@@ -242,8 +211,7 @@ public extension PrivilegeSystem.RoleController {
             action: .detach,
             label: "角色与用户组",
             errThrowing: .roleDismissGroupFailed,
-            siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.RoleGroup.self
         )
     }
     
@@ -255,21 +223,7 @@ public extension PrivilegeSystem.RoleController {
             action: .detach,
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
-            siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
-        )
-    }
-    
-    func dismiss(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
-    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
-            relations,
-            action: .detach,
-            label: "角色与群组内用户",
-            errThrowing: .roleDismissGroupUserFailed,
-            siblingBuilder: { $0.model.$usersInGroup },
-            modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
+            pivotType: Pivots.RoleUserInGroup.self
         )
     }
 }

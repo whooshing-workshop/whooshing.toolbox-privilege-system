@@ -290,6 +290,6 @@ struct DomainTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .userInfo
+        TestingShared.testStage = .resource
     }
 }

@@ -12,7 +12,7 @@ public typealias PGroup = DTO.Group<DTO.Prepare>
 public typealias QGroup = DTO.Group<DTO.Queried>
 
 public extension DTO {
-    struct Group<T: Status>: Sendable, Hashable {
+    struct Group<T: Status>: DTOModel, Sendable, Hashable {
         public let parentId: UUID?
         public let name: String
         public let description: String?
@@ -21,7 +21,7 @@ public extension DTO {
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
-        typealias AssociatedModel = UGroup
+        package typealias AssociatedModel = UGroup
         private let m: AssociatedModel?
         
         init(

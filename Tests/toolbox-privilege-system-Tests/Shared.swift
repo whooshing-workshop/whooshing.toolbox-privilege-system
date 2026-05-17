@@ -10,6 +10,8 @@ import AsyncHTTPClient
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
+typealias PModule = PrivilegeModule<ResourceList>
+
 struct TestingShared {
 
     enum TestStage {
@@ -17,6 +19,7 @@ struct TestingShared {
         case group
         case role
         case domain
+        case resource
         case userInfo
         case relations
         case policy

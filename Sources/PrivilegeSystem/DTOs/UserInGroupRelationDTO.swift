@@ -9,14 +9,14 @@ public typealias PUserInGroupRelation = DTO.UserInGroupRelation<DTO.Prepare>
 public typealias QUserInGroupRelation = DTO.UserInGroupRelation<DTO.Queried>
 
 public extension DTO {
-    struct UserInGroupRelation<T: Status>: Sendable, Hashable {
+    struct UserInGroupRelation<T: Status>: DTOModel, Sendable, Hashable {
         public let user: User<Queried>
         public let group: Group<Queried>
         
         @Passive public internal(set) var id: UUID
         @Passive public internal(set) var createdAt: Date
         
-        typealias AssociatedModel = UserGroupPivot
+        package typealias AssociatedModel = UserGroupPivot
         private let m: AssociatedModel?
         
         init(

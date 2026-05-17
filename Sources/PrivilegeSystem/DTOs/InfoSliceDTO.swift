@@ -33,8 +33,8 @@ public extension DTO {
         static var description: String { get }
     }
     
-    struct InfoSlice<T: UserInfoModel, G: Status>: Sendable, Hashable {
-        public let value: T.Value
+    struct InfoSlice<G: UserInfoModel, T: Status>: DTOModel, Sendable, Hashable {
+        public let value: G.Value
         public let order: Int16
         public let description: String?
         
@@ -43,11 +43,11 @@ public extension DTO {
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
-        typealias AssociatedModel = UserModel.Info.Extended<T.Model>
+        package typealias AssociatedModel = UserModel.Info.Extended<G.Model>
         private let m: AssociatedModel?
         
         init(
-            _value: T.Value,
+            _value: G.Value,
             _order: Int16,
             _description: String?,
             _model: AssociatedModel?
@@ -78,8 +78,8 @@ public extension DTO {
     }
 }
 
-public extension DTO.InfoSlice where G == DTO.Prepare {
-    init(value: T.Value, order: Int16, description: String? = nil) {
+public extension DTO.InfoSlice where T == DTO.Prepare {
+    init(value: G.Value, order: Int16, description: String? = nil) {
         self = Self.init(
             _value: value,
             _order: order,
@@ -89,15 +89,15 @@ public extension DTO.InfoSlice where G == DTO.Prepare {
     }
 }
 
-extension DTO.InfoSlice where G == DTO.Queried, T.Value == String {
-    var model: User.Info.Extended<T.Model> {
+extension DTO.InfoSlice where T == DTO.Queried, G.Value == String {
+    var model: User.Info.Extended<G.Model> {
         guard let m = m else {
             fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
         }
         return m
     }
     
-    public static func make(from model: User.Info.Extended<T.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: User.Info.Extended<G.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
             var n = Self.init(
                 _value: model.value,     // 暂时使用强制解包，因为目前用户 Info Value 字段均为 String
@@ -114,9 +114,9 @@ extension DTO.InfoSlice where G == DTO.Queried, T.Value == String {
     }
 }
 
-extension DTO.InfoSlice where G == DTO.Prepare, T.Value == String {
-    func raw(for userInfoId: UUID) -> User.Info.Extended<T.Model> {
-        let info = User.Info.Extended<T.Model>()
+extension DTO.InfoSlice where T == DTO.Prepare, G.Value == String {
+    func raw(for userInfoId: UUID) -> User.Info.Extended<G.Model> {
+        let info = User.Info.Extended<G.Model>()
         info.$userInfo.id = userInfoId
         info.value = value
         info.order = order
@@ -125,14 +125,14 @@ extension DTO.InfoSlice where G == DTO.Prepare, T.Value == String {
     }
 }
 
-public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
+public extension DTO.InfoSlice where G.Value == String, T == DTO.Prepare {
     struct Updater: @unchecked Sendable {
         public let infoSliceId: UUID
         package var id: UUID { infoSliceId }
         
         package let updates: OrderedDictionary<
-            PartialKeyPath<DTO.InfoSlice<T, DTO.Prepare>>,
-            (QueryBuilder<User.Info.Extended<T.Model>>, DTO.InfoSlice<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
+            PartialKeyPath<DTO.InfoSlice<G, DTO.Prepare>>,
+            (QueryBuilder<User.Info.Extended<G.Model>>, DTO.InfoSlice<G, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
         >
         package let needsPeek: Bool
         
@@ -145,8 +145,8 @@ public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
         package init(
             id: UUID,
             updates: OrderedDictionary<
-                PartialKeyPath<DTO.InfoSlice<T, DTO.Prepare>>,
-                (QueryBuilder<User.Info.Extended<T.Model>>, DTO.InfoSlice<T, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<T.Model>>
+                PartialKeyPath<DTO.InfoSlice<G, DTO.Prepare>>,
+                (QueryBuilder<User.Info.Extended<G.Model>>, DTO.InfoSlice<G, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
             >,
             needsPeek: Bool
         ) {
@@ -160,7 +160,7 @@ public extension DTO.InfoSlice where T.Value == String, G == DTO.Prepare {
 extension DTO.InfoSlice.Updater: DTOUpdater {}
 
 public extension DTO.InfoSlice.Updater {
-    func update(value: @escaping @autoclosure () throws -> T.Value) -> Self {
+    func update(value: @escaping @autoclosure () throws -> G.Value) -> Self {
         generate(key: \.value) { builder, _ in
             builder.set(\.$value, to: try value())
         }
@@ -180,21 +180,21 @@ public extension DTO.InfoSlice.Updater {
 }
 
 public extension DTO.InfoSlice.Updater {
-    func update(value: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> T.Value) -> Self {
+    func update(value: @escaping (DTO.InfoSlice<G, DTO.Queried>) throws -> G.Value) -> Self {
         generate(needsPeek: true, key: \.value) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$value, to: try value(q))
         }
     }
     
-    func update(order: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> Int16) -> Self {
+    func update(order: @escaping (DTO.InfoSlice<G, DTO.Queried>) throws -> Int16) -> Self {
         generate(needsPeek: true, key: \.order) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$order, to: try order(q))
         }
     }
     
-    func update(description: @escaping (DTO.InfoSlice<T, DTO.Queried>) throws -> String?) -> Self {
+    func update(description: @escaping (DTO.InfoSlice<G, DTO.Queried>) throws -> String?) -> Self {
         generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
@@ -202,7 +202,7 @@ public extension DTO.InfoSlice.Updater {
     }
 }
 
-extension DTO.InfoSlice: Encodable where G == DTO.Queried {
+extension DTO.InfoSlice: Encodable where T == DTO.Queried {
     enum CodingKeys: String, CodingKey {
         case value
         case order
@@ -224,8 +224,8 @@ extension DTO.InfoSlice: Encodable where G == DTO.Queried {
     }
 }
 
-extension DTO.InfoSlice: Query.Queriable where G == DTO.Queried, T.Value == String {
-    public typealias Model = User.Info.Extended<T.Model>
+extension DTO.InfoSlice: Query.Queriable where T == DTO.Queried, G.Value == String {
+    public typealias Model = User.Info.Extended<G.Model>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.value: \.$value,

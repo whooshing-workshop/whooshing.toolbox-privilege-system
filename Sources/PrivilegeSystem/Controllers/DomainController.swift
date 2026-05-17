@@ -141,13 +141,12 @@ public extension PrivilegeSystem.DomainController {
     func assign(
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        __manyToManyReversed(
             relations,
             action: .attach,
             label: "域权限与用户",
             errThrowing: .domainAssignUserFailed,
-            siblingBuilder: { $0.model.$users },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.UserDomain.self
         )
     }
     
@@ -159,8 +158,7 @@ public extension PrivilegeSystem.DomainController {
             action: .attach,
             label: "域权限与用户组",
             errThrowing: .domainAssignGroupFailed,
-            siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.DomainGroup.self
         )
     }
     
@@ -169,13 +167,12 @@ public extension PrivilegeSystem.DomainController {
     func unassign(
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        __manyToManyReversed(
             relations,
             action: .detach,
             label: "域权限与用户",
             errThrowing: .domainUnassignUserFailed,
-            siblingBuilder: { $0.model.$users },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.UserDomain.self
         )
     }
     
@@ -187,8 +184,7 @@ public extension PrivilegeSystem.DomainController {
             action: .detach,
             label: "域权限与用户组",
             errThrowing: .domainUnassignGroupFailed,
-            siblingBuilder: { $0.model.$groups },
-            modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
+            pivotType: Pivots.DomainGroup.self
         )
     }
 }

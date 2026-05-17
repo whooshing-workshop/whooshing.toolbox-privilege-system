@@ -26,7 +26,7 @@ extension PM {
         @ID(key: .id)                               public var id: UUID?
         
         @Field(fields.name)                         var name: String
-        @Field(fields.type)                         var type: ResourceList
+        @Enum(fields.type)                          var type: ResourceList
         @Field(fields.data)                         var data: [String: AnyCodable]
         
         @Siblings(
@@ -62,8 +62,8 @@ extension PM {
                 .enum(ResourceList.self, as: "resource_type")
             )                                                       .required
             let data = PGField("data", .json)                       .required
-            let createdAt = PGField("created_at", .datetime)           .required
-            let updatedAt = PGField("updated_at", .datetime)           .required
+            let createdAt = PGField("created_at", .datetime)        .required
+            let updatedAt = PGField("updated_at", .datetime)        .required
             
             public init() {}
         }
@@ -73,7 +73,7 @@ extension PM {
         @ID(key: .id)                               public var id: UUID?
         
         @Field(fields.name)                         var name: String
-        @Field(fields.type)                         var type: ResourceList
+        @Enum(fields.type)                          var type: ResourceList
         @Field(fields.data)                         var data: T
         
         @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!

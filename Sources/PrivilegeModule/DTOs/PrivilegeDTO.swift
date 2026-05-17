@@ -6,14 +6,14 @@ import SQLKit
 import Query
 
 public extension PM {
-    struct PrivilegeDTO<T: DTO.Status>: Sendable {
+    struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable {
         let name: String?
         let description: String?
         let policy: String
         
-        @DTO.Passive() public internal(set) var id: UUID
-        @DTO.Passive() public internal(set) var createdAt: Date
-        @DTO.Passive() public internal(set) var updatedAt: Date
+        @DTO.Passive public internal(set) var id: UUID
+        @DTO.Passive public internal(set) var createdAt: Date
+        @DTO.Passive public internal(set) var updatedAt: Date
         
         public typealias S = PM<ResourceList>
         package typealias AssociatedModel = Privilege

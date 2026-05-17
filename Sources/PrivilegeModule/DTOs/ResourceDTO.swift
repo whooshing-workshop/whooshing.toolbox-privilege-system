@@ -6,7 +6,10 @@ import SQLKit
 import Query
 
 public extension PM {
-    struct ResourceDTO<G: Resource, T: DTO.Status>: Sendable where G.ResourceType == ResourceList {
+    typealias PResource<G: Resource> = ResourceDTO<G, DTO.Prepare> where G.ResourceType == ResourceList
+    typealias QResource<G: Resource> = ResourceDTO<G, DTO.Queried> where G.ResourceType == ResourceList
+    
+    struct ResourceDTO<G: Resource, T: DTO.Status>: DTOModel, Sendable where G.ResourceType == ResourceList {
         let data: G
         
         @DTO.Passive() public internal(set) var id: UUID

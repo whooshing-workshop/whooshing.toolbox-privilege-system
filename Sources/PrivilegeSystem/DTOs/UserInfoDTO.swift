@@ -14,7 +14,7 @@ public typealias PUserInfo = DTO.UserInfo<DTO.Prepare>
 public typealias QUserInfo = DTO.UserInfo<DTO.Queried>
 
 public extension DTO {
-    struct UserInfo<T: Status>: Sendable, Hashable {
+    struct UserInfo<T: Status>: DTOModel, Sendable, Hashable {
         public let nickname: String
         public let identifier: String
         public let birthday: Date
@@ -25,7 +25,7 @@ public extension DTO {
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
-        typealias AssociatedModel = UserModel.Info
+        package typealias AssociatedModel = UserModel.Info
         private let m: AssociatedModel?
         
         init(

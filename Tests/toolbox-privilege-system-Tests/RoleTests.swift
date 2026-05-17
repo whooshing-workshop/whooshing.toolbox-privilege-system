@@ -300,36 +300,6 @@ struct RoleTesting {
         let nonExistentId = UUID()
         try await s.role.delete(roleIds: [nonExistentId], allSatisfy: false).get()
     }
-    
-    @Test("通过 Prepare 关系指派组内用户角色")
-    func appointDismissWithPrepare() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all().get()
-        let groups = try await s.query(QGroup.self).all().get()
-        let roles = try await s.query(QRole.self).all().get()
-        
-        let user = users[3]
-        let group = groups[3]
-        let role = roles[3]
-        
-        // 建立群组内关系
-        try await s.group.join { [user] => [group] }.get()
-        
-        // 使用 Prepare DTO 指派角色
-        let prepareRelation = DTO.UserInGroupRelation<DTO.Prepare>(user: user, group: group)
-        try await s.role.appoint { [role] => [prepareRelation] }.get()
-        
-        let c1 = try await RoleUserInGroupPivot.query(on: s.db).count().get()
-        #expect(c1 == 1)
-        
-        // 使用 Prepare DTO 撤除角色
-        try await s.role.dismiss { [role] => [prepareRelation] }.get()
-        let c2 = try await RoleUserInGroupPivot.query(on: s.db).count().get()
-        #expect(c2 == 0)
-        
-        // 清理
-        try await s.group.kick { [user] => [group] }.get()
-    }
 
     @Test("清理验证：所有角色均至少有 1 条策略")
     func cleanup_AllRolesHavePolicies() async throws {

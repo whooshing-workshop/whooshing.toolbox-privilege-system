@@ -9,13 +9,13 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 
-typealias UserModel = User
+package typealias UserModel = User
 
 public typealias PUser = DTO.User<DTO.Prepare>
 public typealias QUser = DTO.User<DTO.Queried>
 
 public extension DTO {
-    struct User<T: Status>: Sendable, Hashable {
+    struct User<T: Status>: DTOModel, Sendable, Hashable {
         public let email: String
         
         @Protect public internal(set) var hashedPasswd: String
@@ -24,7 +24,7 @@ public extension DTO {
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
-        typealias AssociatedModel = UserModel
+        package typealias AssociatedModel = UserModel
         private let m: AssociatedModel?
         
         init(

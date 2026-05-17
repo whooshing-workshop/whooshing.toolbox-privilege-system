@@ -2,17 +2,17 @@ import PgSQL
 import Policy
 import Foundation
 
-extension Pivots {
+package extension Pivots {
     struct UserGroup: PivotType {
-        typealias PrimaryModel = User
-        typealias SecondaryModel = UGroup
+        package typealias PrimaryModel = User
+        package typealias SecondaryModel = UGroup
         
-        static let foreignPrimaryName = "user"
-        static let foreignSecondaryName = "group"
+        package static let foreignPrimaryName = "user"
+        package static let foreignSecondaryName = "group"
     }
 }
 
-class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchecked Sendable {
+package class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchecked Sendable {
     @Siblings(
         through: RoleUserInGroupPivot.self,
         from: \.$secondaryModel,
@@ -20,23 +20,23 @@ class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchecked Send
     )
     var roles: [Role]
     
-    @ID(key: .id)                               var id: UUID?
+    @ID(key: .id)                               package var id: UUID?
     @Parent(fields.foreignPrimary)              var user: User
     @Parent(fields.foreignSecondary)            var group: UGroup
     @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
     
-    typealias MIG = DefaultMIG<UserGroupPivot>
+    package typealias MIG = DefaultMIG<UserGroupPivot>
 }
 
 extension UserGroupPivot: Hashable {
-    static func == (lhs: UserGroupPivot, rhs: UserGroupPivot) -> Bool {
+    package static func == (lhs: UserGroupPivot, rhs: UserGroupPivot) -> Bool {
         lhs.id == rhs.id &&
         lhs.$user.id == rhs.$user.id &&
         lhs.$group.id == rhs.$group.id &&
         lhs.createdAt == rhs.createdAt
     }
     
-    func hash(into hasher: inout Hasher) {
+    package func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine($user.id)
         hasher.combine($group.id)

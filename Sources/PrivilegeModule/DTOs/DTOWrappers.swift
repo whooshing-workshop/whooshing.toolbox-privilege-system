@@ -7,6 +7,17 @@ import NIOConcurrencyHelpers
 
 public enum DTO {}
 
+package protocol DTOModel where AssociatedModel.IDValue == UUID {
+    associatedtype AssociatedModel: PGModel
+    associatedtype T: DTO.Status
+    var id: UUID { get }
+    var model: AssociatedModel { get }
+}
+
+package extension DTOModel {
+    var model: AssociatedModel { fatalError("未保存到数据库中的 DTO 不存在 model 模型") }
+}
+
 public extension DTO {
     protocol Status: Sendable, Hashable {}
     

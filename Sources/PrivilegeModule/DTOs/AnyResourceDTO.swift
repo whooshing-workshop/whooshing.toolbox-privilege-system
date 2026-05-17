@@ -7,7 +7,9 @@ import Query
 @preconcurrency import AnyCodable
 
 public extension PM {
-    struct AnyResourceDTO: Sendable {
+    struct AnyResourceDTO: DTOModel, Sendable {
+        package typealias T = DTO.Queried
+        
         public let id: UUID
         public let data: [String: AnyCodable]
         public let createdAt: Date
@@ -34,7 +36,7 @@ public extension PM {
             self.m = model
         }
         
-        var model: PM<ResourceList>.AnyResource {
+        package var model: AnyResource {
             guard let m = m else {
                 fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
             }

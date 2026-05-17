@@ -8,13 +8,13 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 
-typealias RoleModel = Role
+package typealias RoleModel = Role
 
 public typealias PRole = DTO.Role<DTO.Prepare>
 public typealias QRole = DTO.Role<DTO.Queried>
 
 public extension DTO {
-    struct Role<T: Status>: Sendable, Hashable {
+    struct Role<T: Status>: DTOModel, Sendable, Hashable {
         public let name: String
         public let description: String?
         
@@ -22,7 +22,7 @@ public extension DTO {
         @Passive public internal(set) var createdAt: Date
         @Passive public internal(set) var updatedAt: Date
         
-        typealias AssociatedModel = RoleModel
+        package typealias AssociatedModel = RoleModel
         private let m: AssociatedModel?
         
         init(
