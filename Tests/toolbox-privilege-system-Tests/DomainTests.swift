@@ -148,6 +148,63 @@ struct DomainTesting {
             #expect(!policies.isEmpty, "域 \(domain.name) 应当至少包含一条关联策略")
         }
     }
+
+    @Test("createWithReturning 返回正确的 QPolicy 字典（Domain 类型）")
+    func createWithReturning_DomainPolicy() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let targetId = Self.ids[13] // PartnerNetwork
+
+        let existing = try await PolicyExp<Domain>.query(on: s.db)
+            .filter(\.$parent.$id == targetId).all().get()
+        for p in existing {
+            let qp = try QPolicy<Domain>.make(from: p).get()
+            try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
+        }
+
+        let newPolicy = PPolicy<Domain>(
+            moduleId: m.moduleId,
+            policy: "allow if { input.resource.partner == true }"
+        )
+        let returned = try await s.policy.createWithReturning(to: Domain.self) {
+            [newPolicy] => targetId
+        }.get()
+
+        let policies = try #require(returned[targetId])
+        #expect(policies.count == 1)
+        #expect(policies[0].policy.contains("partner"))
+
+        for qp in policies {
+            try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
+        }
+        let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
+        try await s.policy.create(to: Domain.self) { [def] => targetId }.get()
+    }
+
+    @Test("Domain 策略删除：从 DB 移除，计数减少 1，并可恢复")
+    func domainPolicy_DeleteAndRestore() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let targetId = Self.ids[12] // LegacySystem
+
+        let before = try await PolicyExp<Domain>.query(on: s.db)
+            .filter(\.$parent.$id == targetId).all().get()
+        guard let first = before.first else {
+            Issue.record("DT.ids[12](LegacySystem) 应有策略")
+            return
+        }
+
+        let qp = try QPolicy<Domain>.make(from: first).get()
+        try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
+
+        let after = try await PolicyExp<Domain>.query(on: s.db)
+            .filter(\.$parent.$id == targetId).count().get()
+        #expect(after == before.count - 1, "删除后应少 1 条")
+
+        let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
+        try await s.policy.create(to: Domain.self) { [def] => targetId }.get()
+        let restored = try await PolicyExp<Domain>.query(on: s.db)
+            .filter(\.$parent.$id == targetId).count().get()
+        #expect(restored == before.count, "恢复后数量应与原来一致")
+    }
     
     @Test("域信息状态更新")
     func update() async throws {
@@ -216,6 +273,18 @@ struct DomainTesting {
         // allSatisfy = false 应不抛异常
         let nonExistentId = UUID()
         try await s.domain.delete(domainIds: [nonExistentId], allSatisfy: false).get()
+    }
+
+    @Test("清理验证：所有域均至少有 1 条策略")
+    func cleanup_AllDomainsHavePolicies() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        for (i, domainId) in Self.ids.enumerated() {
+            let count = try await PolicyExp<Domain>.query(on: s.db)
+                .filter(\.$parent.$id == domainId).count().get()
+            if count < 1 {
+                Issue.record("DT.ids[\(i)] 域应至少有 1 条策略，当前 \(count) 条")
+            }
+        }
     }
     
     @MainActor

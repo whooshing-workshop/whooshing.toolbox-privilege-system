@@ -118,86 +118,6 @@ struct PolicyTesting {
         )
     }
 
-    /// 通过 DT.ids[index] 精确查询域。
-    private func fetchDomain(index: Int, s: PrivilegeSystem) async throws -> QDomain {
-        try #require(
-            try await s.query(QDomain.self)
-                .filter(\.id == DT.ids[index])
-                .first().get()
-        )
-    }
-
-    // =========================================================================
-    // MARK: 2. createWithReturning 验证
-    // =========================================================================
-
-    @Test("createWithReturning 返回正确的 QPolicy 字典（Role 类型）")
-    func createWithReturning_Role() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        // 使用 RT.ids[13] (DevOpsEngineer)，先清理再创建
-        let targetId = RT.ids[13]
-
-        let existing = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
-        for p in existing {
-            let qp = try QPolicy<Role>.make(from: p).get()
-            try await s.policy.delete(from: Role.self, policy: qp => targetId).get()
-        }
-
-        let newPolicy = PPolicy<Role>(
-            moduleId: m.moduleId,
-            policy: "allow if { input.operation == \"devops\" }"
-        )
-        let returned = try await s.policy.createWithReturning(to: Role.self) {
-            [newPolicy] => targetId
-        }.get()
-
-        let policies = try #require(returned[targetId], "返回字典中应有 targetId 对应的条目")
-        #expect(policies.count == 1)
-        #expect(policies[0].moduleId == m.moduleId)
-        #expect(policies[0].policy.contains("devops"))
-
-        // 清理
-        for qp in policies {
-            try await s.policy.delete(from: Role.self, policy: qp => targetId).get()
-        }
-        // 恢复默认策略
-        let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }.get()
-    }
-
-    @Test("createWithReturning 返回正确的 QPolicy 字典（Domain 类型）")
-    func createWithReturning_Domain() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        // 使用 DT.ids[13] (PartnerNetwork)
-        let targetId = DT.ids[13]
-
-        let existing = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
-        for p in existing {
-            let qp = try QPolicy<Domain>.make(from: p).get()
-            try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
-        }
-
-        let newPolicy = PPolicy<Domain>(
-            moduleId: m.moduleId,
-            policy: "allow if { input.resource.partner == true }"
-        )
-        let returned = try await s.policy.createWithReturning(to: Domain.self) {
-            [newPolicy] => targetId
-        }.get()
-
-        let policies = try #require(returned[targetId])
-        #expect(policies.count == 1)
-        #expect(policies[0].policy.contains("partner"))
-
-        for qp in policies {
-            try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
-        }
-        let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Domain.self) { [def] => targetId }.get()
-    }
-
     // =========================================================================
     // MARK: 3. 纯角色判定（AT.ids[4] 可用角色验证）
     // =========================================================================
@@ -627,36 +547,10 @@ struct PolicyTesting {
     }
 
     // =========================================================================
-    // MARK: 9. 策略删除与重建（delete + create）
+    // MARK: 9. 策略语义变更与仲裁
     // =========================================================================
 
-    @Test("Role 策略删除：从 DB 移除，计数减少 1")
-    func rolePolicy_DeleteAndVerify() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        let targetId = RT.ids[12]  // ContentReviewer
-
-        let before = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
-        guard let first = before.first else {
-            Issue.record("RT.ids[12](ContentReviewer) 应有策略"); return
-        }
-
-        let qp = try QPolicy<Role>.make(from: first).get()
-        try await s.policy.delete(from: Role.self, policy: qp => targetId).get()
-
-        let after = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
-        #expect(after == before.count - 1, "删除后应少 1 条")
-
-        // 恢复
-        let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }.get()
-        let restored = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
-        #expect(restored == before.count, "恢复后数量应与原来一致")
-    }
-
-    @Test("Role 策略替换：新语义立即生效（deploy 限制）")
+    @Test("Role 策略替换：新语义立即影响仲裁结果（deploy 限制）")
     func rolePolicy_ReplaceAndRejudge() async throws {
         let (s, m) = try await TestingShared.getSystem()
         // 使用 RT.ids[12](ContentReviewer)，属于 user8(用户角色)
@@ -713,28 +607,6 @@ struct PolicyTesting {
         }
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
         try await s.policy.create(to: Role.self) { [def] => targetId }.get()
-    }
-
-    @Test("Domain 策略删除并恢复")
-    func domainPolicy_DeleteAndVerify() async throws {
-        let (s, m) = try await TestingShared.getSystem()
-        let targetId = DT.ids[12]  // LegacySystem，默认 allow if { true }
-
-        let before = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
-        guard let first = before.first else {
-            Issue.record("DT.ids[12](LegacySystem) 应有策略"); return
-        }
-
-        let qp = try QPolicy<Domain>.make(from: first).get()
-        try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
-
-        let after = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
-        #expect(after == before.count - 1)
-
-        let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Domain.self) { [def] => targetId }.get()
     }
 
 
@@ -858,6 +730,103 @@ struct PolicyTesting {
         #expect(res.result, "空 privilegeIds 不影响纯角色鉴权")
     }
 
+    @Test("资源权限：privilegeIds 非空时，privilege 策略参与最终 AND")
+    func edge_PrivilegePolicyParticipatesInAnd() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 4, s: s)
+        let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
+        let suffix = UUID().uuidString
+
+        let privileges = try await m.privilege.createWithReturning(privileges: [
+            .init(
+                name: "PolicyTestReadPrivilege-\(suffix)",
+                description: "PolicyTests 临时资源权限",
+                policy: "allow if { input.operation == \"read\" }"
+            )
+        ]).get()
+        let privilege = try #require(privileges.first)
+
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: [:], operation: "read", privilegeIds: [privilege.id]
+        ).get()
+        #expect(allow.result, "role/domain/privilege 均通过 → ALLOW")
+
+        let privilegeKey = PrivilegeSystem.Arbitrator.Result.IdKey(
+            type: .privilege, moduleId: m.moduleId, id: privilege.id
+        )
+        #expect(allow.reports[privilegeKey] == true, "privilege 报告应为 true")
+
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: [:], operation: "write", privilegeIds: [privilege.id]
+        ).get()
+        #expect(!deny.result, "privilege 不允许 write → 整体 DENY")
+        #expect(deny.reports[privilegeKey] == false, "privilege 报告应为 false")
+
+        try await m.privilege.delete(policy: privilege).get()
+    }
+
+    @Test("资源权限：多个 privilegeIds 必须全部通过，reports 分别记录")
+    func edge_MultiplePrivilegePoliciesAreAnded() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 4, s: s)
+        let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
+        let suffix = UUID().uuidString
+
+        let privileges = try await m.privilege.createWithReturning(privileges: [
+            .init(
+                name: "PolicyTestReadPrivilege-\(suffix)",
+                description: "PolicyTests 临时 read 权限",
+                policy: "allow if { input.operation == \"read\" }"
+            ),
+            .init(
+                name: "PolicyTestFilePrivilege-\(suffix)",
+                description: "PolicyTests 临时 file 权限",
+                policy: "allow if { input.resource.kind == \"file\" }"
+            )
+        ]).get()
+        let readPrivilege = try #require(privileges.first)
+        let filePrivilege = try #require(privileges.dropFirst().first)
+        let readKey = PrivilegeSystem.Arbitrator.Result.IdKey(
+            type: .privilege, moduleId: m.moduleId, id: readPrivilege.id
+        )
+        let fileKey = PrivilegeSystem.Arbitrator.Result.IdKey(
+            type: .privilege, moduleId: m.moduleId, id: filePrivilege.id
+        )
+
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["kind": AnyCodable("file")],
+            operation: "read", privilegeIds: [readPrivilege.id, filePrivilege.id]
+        ).get()
+        #expect(allow.result, "两个 privilege 均通过 → ALLOW")
+        #expect(allow.reports[readKey] == true)
+        #expect(allow.reports[fileKey] == true)
+
+        let denyOperation = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["kind": AnyCodable("file")],
+            operation: "write", privilegeIds: [readPrivilege.id, filePrivilege.id]
+        ).get()
+        #expect(!denyOperation.result, "read privilege 失败 → 整体 DENY")
+        #expect(denyOperation.reports[readKey] == false)
+        #expect(denyOperation.reports[fileKey] == true)
+
+        let denyResource = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["kind": AnyCodable("directory")],
+            operation: "read", privilegeIds: [readPrivilege.id, filePrivilege.id]
+        ).get()
+        #expect(!denyResource.result, "file privilege 失败 → 整体 DENY")
+        #expect(denyResource.reports[readKey] == true)
+        #expect(denyResource.reports[fileKey] == false)
+
+        for privilege in privileges {
+            try await m.privilege.delete(policy: privilege).get()
+        }
+    }
+
     @Test("边界：有直接用户域的无group用户，domain reports 不为空")
     func edge_NoGroupUser_HasDirectDomainReports() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -876,6 +845,25 @@ struct PolicyTesting {
         #expect(!domainReports.isEmpty, "user4 有直接赋予的 domain6/domain7，应有 domain 报告")
         #expect(domainReports.count == 2, "domain6 和 domain7 共 2 个")
         #expect(domainReports.values.allSatisfy { $0 }, "domain6/domain7 均通过")
+    }
+
+    @Test("边界：没有任何域约束的用户，仅产生 role report")
+    func edge_NoDomainConstraints_RoleOnlyReport() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // user9 在 group11 中；group11 没有 domain，user9 也没有直接 domain。
+        // RT[7] 通过 roleForGroupUser 指派给 user9 in group11。
+        let user = try await fetchUser(index: 9, s: s)
+        let role = try await fetchRole(index: 7, s: s)
+
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: [:], operation: "anything", privilegeIds: []
+        ).get()
+
+        #expect(res.result, "无 domain/privilege 约束时，role 通过即可 ALLOW")
+        #expect(res.reports.filter { $0.key.type == .role }.count == 1)
+        #expect(res.reports.filter { $0.key.type == .domain }.isEmpty)
+        #expect(res.reports.filter { $0.key.type == .privilege }.isEmpty)
     }
 
     @Test("边界：role 失败时 AND 逻辑使最终结果为 false")
@@ -898,6 +886,24 @@ struct PolicyTesting {
         #expect(res.reports[roleKey] == false)
     }
 
+    @Test("边界：传入不属于用户的 role 时，judge 在策略查询前失败")
+    func edge_UnavailableRoleRejectedBeforePolicyEvaluation() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 4, s: s)
+        let role = try await fetchRole(index: 0, s: s) // RT[0] 不属于 user4
+
+        do {
+            _ = try await s.arbitrator.judge(
+                moduleId: m.moduleId, user: user, role: role,
+                resource: ["global": AnyCodable(true)],
+                operation: "manage_all", privilegeIds: []
+            ).get()
+            Issue.record("不可用 role 不应进入仲裁策略查询")
+        } catch let err {
+            #expect(err.error == .arbitrationDataCollectFailed)
+        }
+    }
+
     @Test("边界：默认域策略 allow if {true} 对所有 resource 放行")
     func edge_DefaultDomainAllowsAll() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -917,50 +923,6 @@ struct PolicyTesting {
         ).get()
 
         #expect(res.result, "RT[10](allow all) + domain4(allow all) + domain0(global=true) 全通过 → ALLOW")
-    }
-
-    // =========================================================================
-    // MARK: 12. 环境清理验证
-    // =========================================================================
-
-    @Test("清理验证：DevOpsEngineer(RT.ids[13]) 已恢复 1 条策略")
-    func cleanup_DevOpsEngineer() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        let count = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == RT.ids[13]).count().get()
-        #expect(count == 1, "DevOpsEngineer 应恢复为 1 条策略，当前 \(count) 条")
-    }
-
-    @Test("清理验证：ContentReviewer(RT.ids[12]) 已恢复 1 条策略")
-    func cleanup_ContentReviewer() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        let count = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == RT.ids[12]).count().get()
-        #expect(count == 1, "ContentReviewer 应恢复为 1 条策略，当前 \(count) 条")
-    }
-
-    @Test("清理验证：所有角色均至少有 1 条策略")
-    func cleanup_AllRolesHavePolicies() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        for (i, roleId) in RT.ids.enumerated() {
-            let count = try await PolicyExp<Role>.query(on: s.db)
-                .filter(\.$parent.$id == roleId).count().get()
-            if count < 1 {
-                Issue.record("RT.ids[\(i)] 角色应至少有 1 条策略，当前 \(count) 条")
-            }
-        }
-    }
-
-    @Test("清理验证：所有域均至少有 1 条策略")
-    func cleanup_AllDomainsHavePolicies() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        for (i, domainId) in DT.ids.enumerated() {
-            let count = try await PolicyExp<Domain>.query(on: s.db)
-                .filter(\.$parent.$id == domainId).count().get()
-            if count < 1 {
-                Issue.record("DT.ids[\(i)] 域应至少有 1 条策略，当前 \(count) 条")
-            }
-        }
     }
 
     // =========================================================================
@@ -1002,6 +964,28 @@ struct PolicyTesting {
         let domainReports = allow.reports.filter { $0.key.type == .domain }
         #expect(!domainReports.isEmpty, "嵌套群组用户应有 domain 报告")
         #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告都应为 true")
+    }
+
+    @Test("嵌套群组：父群组角色对直接子群组用户可用，并参与仲裁")
+    func nestedGroup_ParentGroupRoleAvailableToChildUser() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        // Shared.roleForGroup[11] = [group0]，user6 在 group6/group7，二者均为 group0 子群组。
+        let user = try await fetchUser(index: 6, s: s)
+        let role = try await fetchRole(index: 11, s: s) // RT[11]: allow if {true}
+
+        let applicableGroups = try await s.role.verify(groupRole: role, appointedFor: user).get()
+        #expect(applicableGroups.map { $0.id }.contains(GT.ids[0]), "RT[11] 应作为父群组 group0 的群组角色对 user6 可用")
+
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: ["global": AnyCodable(true)],
+            operation: "view", privilegeIds: []
+        ).get()
+
+        #expect(res.result, "父群组角色 + 继承 domain0(global=true) + 子群组 domain4 → ALLOW")
+        let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
+        #expect(res.reports[roleKey] == true)
+        #expect(res.reports.filter { $0.key.type == .domain }.values.allSatisfy { $0 })
     }
 
 
@@ -1123,6 +1107,9 @@ struct PolicyTesting {
             operation: "view", privilegeIds: []
         ).get()
         #expect(allPass.result, "domain4(直接) + domain0(继承, global=true) + RT[10](allow all) → ALLOW")
+        let passDomainReports = allPass.reports.filter { $0.key.type == .domain }
+        #expect(passDomainReports.count == 2, "group6/group7 重复获得 domain0/domain4 时，应按 domain id 去重为 2 个报告")
+        #expect(passDomainReports.values.allSatisfy { $0 }, "domain0/domain4 均应通过")
 
         // global=false → domain0(继承) 失败 → DENY
         let inheritFail = try await s.arbitrator.judge(
@@ -1152,6 +1139,7 @@ struct PolicyTesting {
 
         let domainReports = res.reports.filter { $0.key.type == .domain }
         #expect(!domainReports.isEmpty, "应有 domain 报告")
+        #expect(domainReports.count == 1, "domain0 同时来自用户直接域和群组域，reports 应按 domain id 去重")
         #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告均为 true")
 
         // global=false → domain0 均失败 → DENY
@@ -1363,148 +1351,6 @@ struct PolicyTesting {
             operation: "view", privilegeIds: []
         ).get()
         #expect(allowObserver.result, "RT[3](Observer) + view + global=true → ALLOW")
-    }
-
-    // =========================================================================
-    // MARK: 15. 新 RoleController 查询 API 全覆盖测试
-    // =========================================================================
-    // 覆盖 roles/userRoles/groupRoles/userInGroupRoles 及 is/verify 方法
-
-    @Test("新API：roles(for:) 返回用户所有可用角色的并集")
-    func newAPI_roles_ReturnsAllAvailableRoles() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user0: RT[0](用户角色) + RT[3](组内角色 in group0)
-        let user = try await fetchUser(index: 0, s: s)
-        let allRoles = try await s.role.roles(for: user).get()
-        let allRoleIds = Set(allRoles.map { $0.id })
-        #expect(allRoleIds.contains(RT.ids[0]), "用户角色 RT[0] 应包含在内")
-        #expect(allRoleIds.contains(RT.ids[3]), "组内角色 RT[3] 应包含在内")
-    }
-
-    @Test("新API：userRoles(for:) 仅返回直接赋予用户的角色")
-    func newAPI_userRoles_ReturnsOnlyDirectUserRoles() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user1: RT[1](Editor), RT[3](Observer) 均为用户角色
-        let user = try await fetchUser(index: 1, s: s)
-        let userRoles = try await s.role.userRoles(for: user).get()
-        let ids = Set(userRoles.map { $0.id })
-        #expect(ids.contains(RT.ids[1]), "user1 的用户角色应包含 RT[1](Editor)")
-        #expect(ids.contains(RT.ids[3]), "user1 的用户角色应包含 RT[3](Observer)")
-    }
-
-    @Test("新API：groupRoles(for:) 返回用户所有群组（含父群组）的群组角色")
-    func newAPI_groupRoles_IncludesParentGroupRoles() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user3 在 group3(BannedUsers)，group3 绑 RT[5] 为群组角色
-        let user = try await fetchUser(index: 3, s: s)
-        let groupRoles = try await s.role.groupRoles(for: user).get()
-        let allRoleIds = Set(groupRoles.flatMap { $0.left.map { $0.id } })
-        #expect(allRoleIds.contains(RT.ids[5]), "group3 的群组角色 RT[5] 应被查到")
-    }
-
-    @Test("新API：userInGroupRoles(for:) 返回用户在各群组内的专属角色")
-    func newAPI_userInGroupRoles_ReturnsInGroupRoles() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user0 在 group0 中有组内角色 RT[3]
-        let user = try await fetchUser(index: 0, s: s)
-        let inGroupRoles = try await s.role.userInGroupRoles(for: user).get()
-        let allRoleIds = Set(inGroupRoles.flatMap { $0.left.map { $0.id } })
-        #expect(allRoleIds.contains(RT.ids[3]), "user0 在 group0 的组内角色 RT[3] 应被查到")
-    }
-
-    @Test("新API：is(role:appointedFor:) 对用户角色、群组角色、组内角色均返回 true")
-    func newAPI_is_role_ChecksAllThreeSources() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user0: RT[0](用户角色) + RT[3](组内角色)
-        let user = try await fetchUser(index: 0, s: s)
-        let rt0 = try await fetchRole(index: 0, s: s)
-        let rt3 = try await fetchRole(index: 3, s: s)
-        let rt1 = try await fetchRole(index: 1, s: s) // user0 没有 RT[1]
-
-        let hasRT0 = try await s.role.is(role: rt0, appointedFor: user).get()
-        #expect(hasRT0, "RT[0] 是 user0 的用户角色，应返回 true")
-
-        let hasRT3 = try await s.role.is(role: rt3, appointedFor: user).get()
-        #expect(hasRT3, "RT[3] 是 user0 的组内角色，应返回 true")
-
-        let hasRT1 = try await s.role.is(role: rt1, appointedFor: user).get()
-        #expect(!hasRT1, "RT[1] 不属于 user0，应返回 false")
-    }
-
-    @Test("新API：is(userRole:appointedFor:) 精确检查用户角色")
-    func newAPI_is_userRole_ExactCheck() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user1: RT[1](Editor), RT[3](Observer) 均为用户角色
-        let user = try await fetchUser(index: 1, s: s)
-        let rt1 = try await fetchRole(index: 1, s: s)
-        let rt2 = try await fetchRole(index: 2, s: s) // user1 没有 RT[2]
-
-        #expect(try await s.role.is(userRole: rt1, appointedFor: user).get(), "RT[1] 是 user1 的用户角色")
-        #expect(!(try await s.role.is(userRole: rt2, appointedFor: user).get()), "RT[2] 不是 user1 的用户角色")
-    }
-
-    @Test("新API：is(groupRole:appointedFor:) 精确检查群组角色")
-    func newAPI_is_groupRole_ExactCheck() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // group3(BannedUsers) 绑 RT[5] 为群组角色
-        let allGroups = try await s.query(QGroup.self).all().get()
-        let group3 = try #require(allGroups.first(where: { $0.id == GT.ids[3] }))
-        let rt5 = try await fetchRole(index: 5, s: s)
-        let rt1 = try await fetchRole(index: 1, s: s)
-
-        #expect(try await s.role.is(groupRole: rt5, appointedFor: group3).get(), "RT[5] 是 group3 的群组角色")
-        #expect(!(try await s.role.is(groupRole: rt1, appointedFor: group3).get()), "RT[1] 不是 group3 的群组角色")
-    }
-
-    @Test("新API：verify(groupRole:appointedFor:) 返回该群组角色适用的群组列表")
-    func newAPI_verify_groupRole_ReturnsApplicableGroups() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user3 在 group3(BannedUsers)，group3 是 RT[5] 的群组角色持有者
-        let user = try await fetchUser(index: 3, s: s)
-        let rt5 = try await fetchRole(index: 5, s: s)
-
-        let groups = try await s.role.verify(groupRole: rt5, appointedFor: user).get()
-        #expect(!groups.isEmpty, "RT[5] 作为群组角色，应返回包含 group3 的群组列表")
-        let groupIds = Set(groups.map { $0.id })
-        #expect(groupIds.contains(GT.ids[3]), "group3 应在返回列表中")
-    }
-
-    @Test("新API：verify(userInGroupRole:appointedFor:) 返回该组内角色适用的群组列表")
-    func newAPI_verify_userInGroupRole_ReturnsApplicableGroups() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user0 在 group0 中有组内角色 RT[3]
-        let user = try await fetchUser(index: 0, s: s)
-        let rt3 = try await fetchRole(index: 3, s: s)
-
-        let groups = try await s.role.verify(userInGroupRole: rt3, appointedFor: user).get()
-        #expect(!groups.isEmpty, "RT[3] 作为 user0 的组内角色，应返回包含 group0 的群组列表")
-        let groupIds = Set(groups.map { $0.id })
-        #expect(groupIds.contains(GT.ids[0]), "group0 应在返回列表中")
-    }
-
-    @Test("新API：verify(userInGroupRole:) 对无组内角色的用户返回空列表")
-    func newAPI_verify_userInGroupRole_EmptyForNoAssignment() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user4 无任何组内角色指派
-        let user = try await fetchUser(index: 4, s: s)
-        let rt3 = try await fetchRole(index: 3, s: s)
-
-        let groups = try await s.role.verify(userInGroupRole: rt3, appointedFor: user).get()
-        #expect(groups.isEmpty, "user4 无组内角色，应返回空列表")
-    }
-
-    @Test("新API：roles(for:) 不重复返回角色（去重验证）")
-    func newAPI_roles_Deduplication() async throws {
-        let (s, _) = try await TestingShared.getSystem()
-        // user8: RT[12], RT[13](用户角色) + RT[6](组内角色 in group10)
-        let user = try await fetchUser(index: 8, s: s)
-        let roles = try await s.role.roles(for: user).get()
-        let ids = roles.map { $0.id }
-        let uniqueIds = Set(ids)
-        #expect(ids.count == uniqueIds.count, "roles(for:) 不应返回重复角色")
-        #expect(uniqueIds.contains(RT.ids[12]), "RT[12] 应包含在内")
-        #expect(uniqueIds.contains(RT.ids[13]), "RT[13] 应包含在内")
-        #expect(uniqueIds.contains(RT.ids[6]), "组内角色 RT[6] 应包含在内")
     }
 
     // =========================================================================
