@@ -9,7 +9,7 @@ public extension PM {
     typealias PPrivilegeDTO = PrivilegeDTO<DTO.Prepare>
     typealias QPrivilegeDTO = PrivilegeDTO<DTO.Queried>
     
-    struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable, Hashable {
+    struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable {
         let name: String?
         let description: String?
         let policy: String
@@ -245,37 +245,35 @@ extension PM.PrivilegeDTO: Query.Queriable where T == DTO.Queried {
     }
 }
 
-extension PM.PrivilegeDTO where T == DTO.Prepare {
+extension PM.PrivilegeDTO: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(policy)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(name)
+            hasher.combine(description)
+            hasher.combine(policy)
+        } else {
+            hasher.combine(name)
+            hasher.combine(description)
+            hasher.combine(policy)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.policy == rhs.policy
-    }
-}
-
-extension PM.PrivilegeDTO where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(policy)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.policy == rhs.policy &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.name == rhs.name &&
+            lhs.description == rhs.description &&
+            lhs.policy == rhs.policy
+        } else {
+            lhs.name == rhs.name &&
+            lhs.description == rhs.description &&
+            lhs.policy == rhs.policy &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

@@ -14,7 +14,7 @@ public typealias PToken = DTO.Token<DTO.Prepare>
 public typealias QToken = DTO.Token<DTO.Queried>
 
 public extension DTO {
-    struct Token<T: Status>: DTOModel, Sendable, Hashable {
+    struct Token<T: Status>: DTOModel, Sendable {
         public let credential: String
         
         @Protect public internal(set) var tokenEncrypted: Data
@@ -168,37 +168,35 @@ extension DTO.Token: CustomStringConvertible, Loggerable {
     }
 }
 
-extension DTO.Token where T == DTO.Prepare {
+extension DTO.Token: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(credential)
-        hasher.combine(tokenEncrypted)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(credential)
+            hasher.combine(tokenEncrypted)
+        } else {
+            hasher.combine(credential)
+            hasher.combine(id)
+            hasher.combine(token)
+            hasher.combine(userId)
+            hasher.combine(valid)
+            hasher.combine(expireAfter)
+            hasher.combine(createdAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.credential == rhs.credential &&
-        lhs.tokenEncrypted == rhs.tokenEncrypted
-    }
-}
-
-extension DTO.Token where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(credential)
-        hasher.combine(id)
-        hasher.combine(token)
-        hasher.combine(userId)
-        hasher.combine(valid)
-        hasher.combine(expireAfter)
-        hasher.combine(createdAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.credential == rhs.credential &&
-        lhs.id == rhs.id &&
-        lhs.token == rhs.token &&
-        lhs.userId == rhs.userId &&
-        lhs.valid == rhs.valid &&
-        lhs.expireAfter == rhs.expireAfter &&
-        lhs.createdAt == rhs.createdAt
+        if T.self == DTO.Prepare.self {
+            lhs.credential == rhs.credential &&
+            lhs.tokenEncrypted == rhs.tokenEncrypted
+        } else {
+            lhs.credential == rhs.credential &&
+            lhs.id == rhs.id &&
+            lhs.token == rhs.token &&
+            lhs.userId == rhs.userId &&
+            lhs.valid == rhs.valid &&
+            lhs.expireAfter == rhs.expireAfter &&
+            lhs.createdAt == rhs.createdAt
+        }
     }
 }
 

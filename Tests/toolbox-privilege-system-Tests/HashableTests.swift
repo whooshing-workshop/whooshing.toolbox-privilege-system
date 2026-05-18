@@ -58,12 +58,12 @@ struct HashableTests {
         
         let q1 = try QUser.make(from: userModel).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
-        #expect(!(p3 == q1))
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
+        #expect(!p3.like(q1))
         
-        #expect([p1] == [q1])
-        #expect([q1] == [p1])
+        #expect([p1].like([q1]))
+        #expect([q1].like([p1]))
     }
     
     @Test("DomainDTO Hashable & Equatable")
@@ -91,9 +91,9 @@ struct HashableTests {
         
         let q1 = try QDomain.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
-        #expect(!(p3 == q1))
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
+        #expect(!p3.like(q1))
     }
     
     @Test("GroupDTO Hashable & Equatable")
@@ -121,8 +121,8 @@ struct HashableTests {
         
         let q1 = try QGroup.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("RoleDTO Hashable & Equatable")
@@ -150,8 +150,8 @@ struct HashableTests {
         
         let q1 = try QRole.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("PolicyDTO Hashable & Equatable")
@@ -177,9 +177,9 @@ struct HashableTests {
         
         let q1 = try QPolicy<Role>.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
-        #expect(!(p3 == q1))
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
+        #expect(!p3.like(q1))
     }
     
     @Test("UserInfoDTO Hashable & Equatable")
@@ -203,8 +203,8 @@ struct HashableTests {
         
         let q1 = try QUserInfo.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("UserInGroupRelationDTO Hashable & Equatable")
@@ -215,12 +215,16 @@ struct HashableTests {
         umodel.hashedPasswd = "XXX"
         umodel.key = Data()
         umodel.salt = Data()
+        umodel.createdAt = Date()
+        umodel.updatedAt = Date()
         let quser = try QUser.make(from: umodel).get()
         
         let gmodel = UGroup()
         gmodel.name = "TestGroup"
         gmodel.id = UUID()
         gmodel.description = nil
+        gmodel.createdAt = Date()
+        gmodel.updatedAt = Date()
         let qgroup = try QGroup.make(from: gmodel).get()
         
         let p1 = PUserInGroupRelation(user: quser, group: qgroup)
@@ -235,8 +239,8 @@ struct HashableTests {
         
         let q1 = try QUserInGroupRelation.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("TokenDTO Hashable & Equatable")
@@ -255,11 +259,12 @@ struct HashableTests {
         model.token = "TestToken"
         model.valid = true
         model.expireAfter = 7 * 24 * 60
+        model.createdAt = Date()
         
         let q1 = try QToken.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("InfoSliceDTO Hashable & Equatable")
@@ -278,11 +283,13 @@ struct HashableTests {
         model.id = UUID()
         model.description = nil
         model.$userInfo.id = UUID()
+        model.createdAt = Date()
+        model.updatedAt = Date()
         
         let q1 = try QAddressSlice.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("ExtendedInfoDTO Hashable & Equatable")
@@ -298,14 +305,16 @@ struct HashableTests {
         model.id = UUID()
         model.description = nil
         model.$userInfo.id = UUID()
+        model.createdAt = Date()
+        model.updatedAt = Date()
         
         let qSlice = try QAddressSlice.make(from: model).get()
         
         let p1 = PExtendedInfo(addresses: [pSlice])
         let q1 = QExtendedInfo(addresses: [qSlice])
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("PrivilegeDTO Hashable & Equatable")
@@ -331,11 +340,13 @@ struct HashableTests {
         model.policy = policy
         model.description = nil
         model.id = UUID()
+        model.createdAt = Date()
+        model.updatedAt = Date()
         
         let q1 = try PM<ResourceList>.PrivilegeDTO<DTO.Queried>.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @Test("ResourceDTO Hashable & Equatable")
@@ -356,11 +367,13 @@ struct HashableTests {
         let model = PM<ResourceList>.ResourceModel<MockResource>()
         model.data = res
         model.id = UUID()
+        model.createdAt = Date()
+        model.updatedAt = Date()
         
         let q1 = try PM<ResourceList>.ResourceDTO<MockResource, DTO.Queried>.make(from: model).get()
         
-        #expect(p1 == q1)
-        #expect(q1 == p1)
+        #expect(p1.like(q1))
+        #expect(q1.like(p1))
     }
     
     @MainActor

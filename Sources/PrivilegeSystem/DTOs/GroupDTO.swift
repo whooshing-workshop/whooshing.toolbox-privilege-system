@@ -12,7 +12,7 @@ public typealias PGroup = DTO.Group<DTO.Prepare>
 public typealias QGroup = DTO.Group<DTO.Queried>
 
 public extension DTO {
-    struct Group<T: Status>: DTOModel, Sendable, Hashable {
+    struct Group<T: Status>: DTOModel, Sendable {
         public let parentId: UUID?
         public let name: String
         public let description: String?
@@ -209,37 +209,35 @@ extension DTO.Group: Loggerable {
     }
 }
 
-extension DTO.Group where T == DTO.Prepare {
+extension DTO.Group: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(parentId)
-        hasher.combine(name)
-        hasher.combine(description)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(parentId)
+            hasher.combine(name)
+            hasher.combine(description)
+        } else {
+            hasher.combine(parentId)
+            hasher.combine(name)
+            hasher.combine(description)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.parentId == rhs.parentId &&
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description
-    }
-}
-
-extension DTO.Group where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(parentId)
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.parentId == rhs.parentId &&
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.parentId == rhs.parentId &&
+            lhs.name == rhs.name &&
+            lhs.description == rhs.description
+        } else {
+            lhs.parentId == rhs.parentId &&
+            lhs.name == rhs.name &&
+            lhs.description == rhs.description &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

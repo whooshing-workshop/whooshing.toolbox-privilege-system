@@ -52,20 +52,3 @@ public final class Domain: PGModel, @unchecked Sendable {
     
     public typealias MIG = DefaultMIG<Domain>
 }
-
-extension Domain: Hashable {
-    public static func == (lhs: Domain, rhs: Domain) -> Bool {
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
-    }
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-}

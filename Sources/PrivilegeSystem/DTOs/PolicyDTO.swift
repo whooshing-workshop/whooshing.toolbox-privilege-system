@@ -11,7 +11,7 @@ public typealias PPolicy<G: PolicyType> = DTO.Policy<G, DTO.Prepare>
 public typealias QPolicy<G: PolicyType> = DTO.Policy<G, DTO.Queried>
 
 public extension DTO {
-    struct Policy<G: PolicyType, T: Status>: Sendable, Hashable {
+    struct Policy<G: PolicyType, T: Status>: Sendable {
         public let moduleId: UUID
         public let policy: String
         
@@ -106,33 +106,31 @@ extension DTO.Policy: CustomStringConvertible, Loggerable {
     }
 }
 
-extension DTO.Policy where T == DTO.Prepare {
+extension DTO.Policy: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(moduleId)
-        hasher.combine(policy)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(moduleId)
+            hasher.combine(policy)
+        } else {
+            hasher.combine(moduleId)
+            hasher.combine(policy)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.moduleId == rhs.moduleId &&
-        lhs.policy == rhs.policy
-    }
-}
-
-extension DTO.Policy where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(moduleId)
-        hasher.combine(policy)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.moduleId == rhs.moduleId &&
-        lhs.policy == rhs.policy &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.moduleId == rhs.moduleId &&
+            lhs.policy == rhs.policy
+        } else {
+            lhs.moduleId == rhs.moduleId &&
+            lhs.policy == rhs.policy &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

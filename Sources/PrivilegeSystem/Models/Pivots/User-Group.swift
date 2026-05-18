@@ -27,19 +27,3 @@ package class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchec
     
     package typealias MIG = DefaultMIG<UserGroupPivot>
 }
-
-extension UserGroupPivot: Hashable {
-    package static func == (lhs: UserGroupPivot, rhs: UserGroupPivot) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.$user.id == rhs.$user.id &&
-        lhs.$group.id == rhs.$group.id &&
-        lhs.createdAt == rhs.createdAt
-    }
-    
-    package func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine($user.id)
-        hasher.combine($group.id)
-        hasher.combine(createdAt)
-    }
-}

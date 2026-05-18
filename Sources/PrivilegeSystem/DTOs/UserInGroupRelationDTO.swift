@@ -9,7 +9,7 @@ public typealias PUserInGroupRelation = DTO.UserInGroupRelation<DTO.Prepare>
 public typealias QUserInGroupRelation = DTO.UserInGroupRelation<DTO.Queried>
 
 public extension DTO {
-    struct UserInGroupRelation<T: Status>: DTOModel, Sendable, Hashable {
+    struct UserInGroupRelation<T: Status>: DTOModel, Sendable {
         public let user: User<Queried>
         public let group: Group<Queried>
         
@@ -90,31 +90,29 @@ extension DTO.UserInGroupRelation: CustomStringConvertible, Loggerable {
     }
 }
 
-extension DTO.UserInGroupRelation where T == DTO.Prepare {
+extension DTO.UserInGroupRelation: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(user)
-        hasher.combine(group)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(user)
+            hasher.combine(group)
+        } else {
+            hasher.combine(user)
+            hasher.combine(group)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.user == rhs.user &&
-        lhs.group == rhs.group
-    }
-}
-
-extension DTO.UserInGroupRelation where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(user)
-        hasher.combine(group)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.user == rhs.user &&
-        lhs.group == rhs.group &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt
+        if T.self == DTO.Prepare.self {
+            lhs.user == rhs.user &&
+            lhs.group == rhs.group
+        } else {
+            lhs.user == rhs.user &&
+            lhs.group == rhs.group &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt
+        }
     }
 }
 

@@ -14,7 +14,7 @@ public typealias PDomain = DTO.Domain<DTO.Prepare>
 public typealias QDomain = DTO.Domain<DTO.Queried>
 
 public extension DTO {
-    struct Domain<T: Status>: DTOModel, Sendable, Hashable {
+    struct Domain<T: Status>: DTOModel, Sendable {
         public let name: String?
         public let description: String?
         
@@ -202,33 +202,31 @@ extension DTO.Domain: Loggerable {
     }
 }
 
-extension DTO.Domain where T == DTO.Prepare {
+extension DTO.Domain: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-        hasher.combine(description)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(name)
+            hasher.combine(description)
+        } else {
+            hasher.combine(name)
+            hasher.combine(description)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description
-    }
-}
-
-extension DTO.Domain where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.name == rhs.name &&
+            lhs.description == rhs.description
+        } else {
+            lhs.name == rhs.name &&
+            lhs.description == rhs.description &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

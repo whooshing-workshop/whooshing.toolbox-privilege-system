@@ -64,22 +64,13 @@ public final class UGroup: PGModel, @unchecked Sendable {
     }
 }
 
+// 仅仅为了某些小众需求，一般不使用
 extension UGroup: Hashable {
     public static func == (lhs: UGroup, rhs: UGroup) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.$parent.id == rhs.$parent.id &&
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        lhs.id == rhs.id
     }
     
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        hasher.combine($parent.id)
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
     }
 }

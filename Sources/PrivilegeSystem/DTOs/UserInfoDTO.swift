@@ -14,7 +14,7 @@ public typealias PUserInfo = DTO.UserInfo<DTO.Prepare>
 public typealias QUserInfo = DTO.UserInfo<DTO.Queried>
 
 public extension DTO {
-    struct UserInfo<T: Status>: DTOModel, Sendable, Hashable {
+    struct UserInfo<T: Status>: DTOModel, Sendable {
         public let nickname: String
         public let identifier: String
         public let birthday: Date
@@ -266,43 +266,41 @@ extension DTO.UserInfo: CustomStringConvertible, Loggerable {
     }
 }
 
-extension DTO.UserInfo where T == DTO.Prepare {
+extension DTO.UserInfo: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(nickname)
-        hasher.combine(identifier)
-        hasher.combine(birthday)
-        hasher.combine(other)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(nickname)
+            hasher.combine(identifier)
+            hasher.combine(birthday)
+            hasher.combine(other)
+        } else {
+            hasher.combine(nickname)
+            hasher.combine(identifier)
+            hasher.combine(birthday)
+            hasher.combine(other)
+            hasher.combine(id)
+            hasher.combine(userId)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.nickname == rhs.nickname &&
-        lhs.identifier == rhs.identifier &&
-        lhs.birthday == rhs.birthday &&
-        lhs.other == rhs.other
-    }
-}
-
-extension DTO.UserInfo where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(nickname)
-        hasher.combine(identifier)
-        hasher.combine(birthday)
-        hasher.combine(other)
-        hasher.combine(id)
-        hasher.combine(userId)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.nickname == rhs.nickname &&
-        lhs.identifier == rhs.identifier &&
-        lhs.birthday == rhs.birthday &&
-        lhs.other == rhs.other &&
-        lhs.id == rhs.id &&
-        lhs.userId == rhs.userId &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.nickname == rhs.nickname &&
+            lhs.identifier == rhs.identifier &&
+            lhs.birthday == rhs.birthday &&
+            lhs.other == rhs.other
+        } else {
+            lhs.nickname == rhs.nickname &&
+            lhs.identifier == rhs.identifier &&
+            lhs.birthday == rhs.birthday &&
+            lhs.other == rhs.other &&
+            lhs.id == rhs.id &&
+            lhs.userId == rhs.userId &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

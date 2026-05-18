@@ -33,7 +33,7 @@ public extension DTO {
         static var description: String { get }
     }
     
-    struct InfoSlice<G: UserInfoModel, T: Status>: DTOModel, Sendable, Hashable {
+    struct InfoSlice<G: UserInfoModel, T: Status>: DTOModel, Sendable {
         public let value: G.Value
         public let order: Int16
         public let description: String?
@@ -285,25 +285,37 @@ extension DTO.InfoSlice where T == DTO.Prepare {
     }
 }
 
-extension DTO.InfoSlice where T == DTO.Queried {
+extension DTO.InfoSlice: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
-        hasher.combine(order)
-        hasher.combine(description)
-        hasher.combine(id)
-        hasher.combine(userInfoId)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(value)
+            hasher.combine(order)
+            hasher.combine(description)
+        } else {
+            hasher.combine(value)
+            hasher.combine(order)
+            hasher.combine(description)
+            hasher.combine(id)
+            hasher.combine(userInfoId)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.value == rhs.value &&
-        lhs.order == rhs.order &&
-        lhs.description == rhs.description &&
-        lhs.id == rhs.id &&
-        lhs.userInfoId == rhs.userInfoId &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.value == rhs.value &&
+            lhs.order == rhs.order &&
+            lhs.description == rhs.description
+        } else {
+            lhs.value == rhs.value &&
+            lhs.order == rhs.order &&
+            lhs.description == rhs.description &&
+            lhs.id == rhs.id &&
+            lhs.userInfoId == rhs.userInfoId &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

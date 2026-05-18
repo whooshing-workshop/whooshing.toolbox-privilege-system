@@ -58,20 +58,3 @@ public final class Role: PGModel, @unchecked Sendable {
     
     public typealias MIG = DefaultMIG<Role>
 }
-
-extension Role: Hashable {
-    public static func == (lhs: Role, rhs: Role) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.name == rhs.name &&
-        lhs.description == rhs.description &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
-    }
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine(name)
-        hasher.combine(description)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-}

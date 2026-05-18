@@ -39,26 +39,6 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     public typealias MIG = DefaultMIG<PolicyExp<T>>
 }
 
-extension PolicyExp: Hashable {
-    public static func == (lhs: PolicyExp<T>, rhs: PolicyExp<T>) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.$parent.id == rhs.$parent.id &&
-        lhs.moduleId == rhs.moduleId &&
-        lhs.policy == rhs.policy &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
-    }
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine($parent.id)
-        hasher.combine(moduleId)
-        hasher.combine(policy)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-}
-
 package enum PathFormat: Sendable {
     case path
     case route

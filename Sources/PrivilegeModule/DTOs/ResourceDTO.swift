@@ -9,7 +9,7 @@ public extension PM {
     typealias PResource<G: Resource> = ResourceDTO<G, DTO.Prepare> where G.ResourceType == ResourceList, G: Hashable
     typealias QResource<G: Resource> = ResourceDTO<G, DTO.Queried> where G.ResourceType == ResourceList, G: Hashable
     
-    struct ResourceDTO<G: Resource, T: DTO.Status>: DTOModel, Sendable, Hashable where G.ResourceType == ResourceList {
+    struct ResourceDTO<G: Resource, T: DTO.Status>: DTOModel, Sendable where G.ResourceType == ResourceList {
         let data: G
         
         @DTO.Passive() public internal(set) var id: UUID
@@ -170,29 +170,27 @@ extension PM.ResourceDTO: Query.Queriable where T == DTO.Queried {
     }
 }
 
-extension PM.ResourceDTO where T == DTO.Prepare {
+extension PM.ResourceDTO: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(data)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(data)
+        } else {
+            hasher.combine(data)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
-    public static func == (lhs: PrivilegeModule<ResourceList>.ResourceDTO<G, T>, rhs: PrivilegeModule<ResourceList>.ResourceDTO<G, T>) -> Bool {
-        lhs.data == rhs.data
-    }
-}
-
-extension PM.ResourceDTO where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(data)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: PrivilegeModule<ResourceList>.ResourceDTO<G, T>, rhs: PrivilegeModule<ResourceList>.ResourceDTO<G, T>) -> Bool {
-        lhs.data == rhs.data &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        if T.self == DTO.Prepare.self {
+            lhs.data == rhs.data
+        } else {
+            lhs.data == rhs.data &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 

@@ -39,28 +39,6 @@ public final class Token: PGModel, @unchecked Sendable {
     public typealias MIG = DefaultMIG<Token>
 }
 
-extension Token: Hashable {
-    public static func == (lhs: Token, rhs: Token) -> Bool {
-        lhs.id == rhs.id &&
-        lhs.$user.id == rhs.$user.id &&
-        lhs.credential == rhs.credential &&
-        lhs.token == rhs.token &&
-        lhs.valid == rhs.valid &&
-        lhs.expireAfter == rhs.expireAfter &&
-        lhs.createdAt == rhs.createdAt
-    }
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-        hasher.combine($user.id)
-        hasher.combine(credential)
-        hasher.combine(token)
-        hasher.combine(valid)
-        hasher.combine(expireAfter)
-        hasher.combine(createdAt)
-    }
-}
-
 extension Token: ModelCredentialsAuthenticatable {
     public static let usernameKey: KeyPath<Token, Field<String>> = \Token.$credential
     public static let passwordHashKey: KeyPath<Token, Field<String>> = \Token.$token

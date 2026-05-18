@@ -15,7 +15,7 @@ public typealias PUser = DTO.User<DTO.Prepare>
 public typealias QUser = DTO.User<DTO.Queried>
 
 public extension DTO {
-    struct User<T: Status>: DTOModel, Sendable, Hashable {
+    struct User<T: Status>: DTOModel, Sendable {
         public let email: String
         
         @Protect public internal(set) var hashedPasswd: String
@@ -170,31 +170,29 @@ extension DTO.User: Loggerable, CustomStringConvertible {
     }
 }
 
-extension DTO.User where T == DTO.Prepare {
+extension DTO.User: Hashable {
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(email)
-        hasher.combine(hashedPasswd)
+        if T.self == DTO.Prepare.self {
+            hasher.combine(email)
+            hasher.combine(hashedPasswd)
+        } else {
+            hasher.combine(email)
+            hasher.combine(id)
+            hasher.combine(createdAt)
+            hasher.combine(updatedAt)
+        }
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.email == rhs.email &&
-        lhs.hashedPasswd == rhs.hashedPasswd
-    }
-}
-
-extension DTO.User where T == DTO.Queried {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(email)
-        hasher.combine(id)
-        hasher.combine(createdAt)
-        hasher.combine(updatedAt)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.email == rhs.email &&
-        lhs.id == rhs.id &&
-        lhs.createdAt == rhs.createdAt &&
-        lhs.updatedAt == rhs.updatedAt
+        if T.self == DTO.Prepare.self {
+            lhs.email == rhs.email &&
+            lhs.hashedPasswd == rhs.hashedPasswd
+        } else {
+            lhs.email == rhs.email &&
+            lhs.id == rhs.id &&
+            lhs.createdAt == rhs.createdAt &&
+            lhs.updatedAt == rhs.updatedAt
+        }
     }
 }
 
