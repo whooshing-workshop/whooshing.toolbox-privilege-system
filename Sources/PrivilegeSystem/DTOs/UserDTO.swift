@@ -170,24 +170,54 @@ extension DTO.User: Loggerable, CustomStringConvertible {
     }
 }
 
-public func == (lhs: PUser, rhs: QUser) -> Bool {
-    lhs.email == rhs.email
+extension DTO.User where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(email)
+        hasher.combine(hashedPasswd)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.email == rhs.email &&
+        lhs.hashedPasswd == rhs.hashedPasswd
+    }
 }
 
-public func == (lhs: QUser, rhs: PUser) -> Bool {
-    lhs.email == rhs.email
+extension DTO.User where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(email)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.email == rhs.email &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == (lhs: [PUser], rhs: [QUser]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.User where T == DTO.Prepare {
+    func like(_ rhs: QUser) -> Bool {
+        self.email == rhs.email
+    }
 }
 
-public func == (lhs: [QUser], rhs: [PUser]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.User where T == DTO.Queried {
+    func like(_ rhs: PUser) -> Bool {
+        self.email == rhs.email
+    }
 }
 
-public extension Query.Queriable {
-    static func query(on system: PrivilegeSystem) -> Query.Builder<Self> {
-        system.query()
+public extension Collection where Element == PUser {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QUser {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QUser {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PUser {
+        self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }

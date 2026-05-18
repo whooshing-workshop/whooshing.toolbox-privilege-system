@@ -2,7 +2,7 @@ import Foundation
 import ErrorHandle
 @preconcurrency import AnyCodable
 
-public protocol Resource: Sendable, Codable {
+public protocol Resource: Sendable, Codable, Hashable {
     associatedtype ResourceType: ResourceTypeList
     associatedtype Operations: OperationList
     static var type: ResourceType { get }

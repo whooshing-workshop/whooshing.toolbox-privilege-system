@@ -16,6 +16,7 @@ typealias PModule = PrivilegeModule<ResourceList>
 struct TestingShared {
 
     enum TestStage {
+        case hashable
         case account
         case group
         case role
@@ -174,7 +175,7 @@ struct TestingShared {
     
     @MainActor static var privilegeSystem: PrivilegeSystem? = nil
     @MainActor static var privilegeModule: PrivilegeModule<ResourceList>? = nil
-    @MainActor static var testStage: TestStage = .account
+    @MainActor static var testStage: TestStage = .hashable
     
     @MainActor
     static func getSystem() async throws -> (PrivilegeSystem, PrivilegeModule<ResourceList>) {

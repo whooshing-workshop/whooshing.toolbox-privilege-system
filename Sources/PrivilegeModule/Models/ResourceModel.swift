@@ -112,3 +112,23 @@ extension PM {
         public typealias MIG = DefaultMIG<AnyResource>
     }
 }
+
+extension PM.ResourceModel: Hashable {
+    public static func == (lhs: PM<ResourceList>.ResourceModel<T>, rhs: PM<ResourceList>.ResourceModel<T>) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.name == rhs.name &&
+        lhs.type == rhs.type &&
+        lhs.data == rhs.data &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(type)
+        hasher.combine(data)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+}

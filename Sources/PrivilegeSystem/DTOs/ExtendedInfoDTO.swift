@@ -78,22 +78,30 @@ extension DTO.ExtendedInfo: CustomStringConvertible, Loggerable {
     }
 }
 
-public func == (lhs: PExtendedInfo, rhs: QExtendedInfo) -> Bool {
-    lhs.addresses.elementsEqual(rhs.addresses, by: ==) &&
-    lhs.alternateEmails.elementsEqual(rhs.alternateEmails, by: ==) &&
-    lhs.phones.elementsEqual(rhs.phones, by: ==)
+public extension DTO.ExtendedInfo where T == DTO.Prepare {
+    func like(_ rhs: QExtendedInfo) -> Bool {
+        self.addresses.like(rhs.addresses) &&
+        self.alternateEmails.like(rhs.alternateEmails) &&
+        self.phones.like(rhs.phones)
+    }
 }
 
-public func == (lhs: QExtendedInfo, rhs: PExtendedInfo) -> Bool {
-    lhs.addresses.elementsEqual(rhs.addresses, by: ==) &&
-    lhs.alternateEmails.elementsEqual(rhs.alternateEmails, by: ==) &&
-    lhs.phones.elementsEqual(rhs.phones, by: ==)
+public extension DTO.ExtendedInfo where T == DTO.Queried {
+    func like(_ rhs: PExtendedInfo) -> Bool {
+        self.addresses.like(rhs.addresses) &&
+        self.alternateEmails.like(rhs.alternateEmails) &&
+        self.phones.like(rhs.phones)
+    }
 }
 
-public func == (lhs: [PExtendedInfo], rhs: [QExtendedInfo]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension Collection where Element == PExtendedInfo {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QExtendedInfo {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }
 
-public func == (lhs: [QExtendedInfo], rhs: [PExtendedInfo]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension Collection where Element == QExtendedInfo {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PExtendedInfo {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

@@ -209,22 +209,64 @@ extension DTO.Group: Loggerable {
     }
 }
 
-public func == (lhs: PGroup, rhs: QGroup) -> Bool {
-    lhs.parentId == rhs.parentId &&
-    lhs.name == rhs.name &&
-    lhs.description == rhs.description
+extension DTO.Group where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(parentId)
+        hasher.combine(name)
+        hasher.combine(description)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.parentId == rhs.parentId &&
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description
+    }
 }
 
-public func == (lhs: QGroup, rhs: PGroup) -> Bool {
-    lhs.parentId == rhs.parentId &&
-    lhs.name == rhs.name &&
-    lhs.description == rhs.description
+extension DTO.Group where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(parentId)
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.parentId == rhs.parentId &&
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == (lhs: [PGroup], rhs: [QGroup]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Group where T == DTO.Prepare {
+    func like(_ rhs: QGroup) -> Bool {
+        self.parentId == rhs.parentId &&
+        self.name == rhs.name &&
+        self.description == rhs.description
+    }
 }
 
-public func == (lhs: [QGroup], rhs: [PGroup]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Group where T == DTO.Queried {
+    func like(_ rhs: PGroup) -> Bool {
+        self.parentId == rhs.parentId &&
+        self.name == rhs.name &&
+        self.description == rhs.description
+    }
+}
+
+public extension Collection where Element == PGroup {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QGroup {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QGroup {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PGroup {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

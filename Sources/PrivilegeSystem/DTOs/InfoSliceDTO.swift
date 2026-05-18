@@ -271,22 +271,66 @@ extension DTO.InfoSlice: Loggerable {
     }
 }
 
-public func == <T: DTO.UserInfoModel>(lhs: DTO.InfoSlice<T, DTO.Prepare>, rhs: DTO.InfoSlice<T, DTO.Queried>) -> Bool {
-    lhs.value == rhs.value &&
-    lhs.order == rhs.order &&
-    lhs.description == rhs.description
+extension DTO.InfoSlice where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(value)
+        hasher.combine(order)
+        hasher.combine(description)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.value == rhs.value &&
+        lhs.order == rhs.order &&
+        lhs.description == rhs.description
+    }
 }
 
-public func == <T: DTO.UserInfoModel>(lhs: DTO.InfoSlice<T, DTO.Queried>, rhs: DTO.InfoSlice<T, DTO.Prepare>) -> Bool {
-    lhs.value == rhs.value &&
-    lhs.order == rhs.order &&
-    lhs.description == rhs.description
+extension DTO.InfoSlice where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(value)
+        hasher.combine(order)
+        hasher.combine(description)
+        hasher.combine(id)
+        hasher.combine(userInfoId)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.value == rhs.value &&
+        lhs.order == rhs.order &&
+        lhs.description == rhs.description &&
+        lhs.id == rhs.id &&
+        lhs.userInfoId == rhs.userInfoId &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == <T: DTO.UserInfoModel>(lhs: [DTO.InfoSlice<T, DTO.Prepare>], rhs: [DTO.InfoSlice<T, DTO.Queried>]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.InfoSlice where T == DTO.Prepare {
+    func like(_ rhs: QExtendedSlice<G>) -> Bool {
+        self.value == rhs.value &&
+        self.order == rhs.order &&
+        self.description == rhs.description
+    }
 }
 
-public func == <T: DTO.UserInfoModel>(lhs: [DTO.InfoSlice<T, DTO.Queried>], rhs: [DTO.InfoSlice<T, DTO.Prepare>]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.InfoSlice where T == DTO.Queried {
+    func like(_ rhs: PExtendedSlice<G>) -> Bool {
+        self.value == rhs.value &&
+        self.order == rhs.order &&
+        self.description == rhs.description
+    }
+}
+
+public extension Collection {
+    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == QExtendedSlice<T>, Element == PExtendedSlice<T> {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection {
+    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PExtendedSlice<T>, Element == QExtendedSlice<T> {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

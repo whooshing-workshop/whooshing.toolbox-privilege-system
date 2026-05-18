@@ -202,20 +202,58 @@ extension DTO.Domain: Loggerable {
     }
 }
 
-public func == (lhs: PDomain, rhs: QDomain) -> Bool {
-    lhs.name == rhs.name &&
-    lhs.description == rhs.description
+extension DTO.Domain where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description
+    }
 }
 
-public func == (lhs: QDomain, rhs: PDomain) -> Bool {
-    lhs.name == rhs.name &&
-    lhs.description == rhs.description
+extension DTO.Domain where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == (lhs: [PDomain], rhs: [QDomain]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Domain where T == DTO.Prepare {
+    func like(_ rhs: QDomain) -> Bool {
+        self.name == rhs.name &&
+        self.description == rhs.description
+    }
 }
 
-public func == (lhs: [QDomain], rhs: [PDomain]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Domain where T == DTO.Queried {
+    func like(_ rhs: PDomain) -> Bool {
+        self.name == rhs.name &&
+        self.description == rhs.description
+    }
+}
+
+public extension Collection where Element == PDomain {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QDomain {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QDomain {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PDomain {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

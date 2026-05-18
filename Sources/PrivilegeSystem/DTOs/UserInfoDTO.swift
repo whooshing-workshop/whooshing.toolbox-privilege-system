@@ -266,24 +266,72 @@ extension DTO.UserInfo: CustomStringConvertible, Loggerable {
     }
 }
 
-public func == (lhs: PUserInfo, rhs: QUserInfo) -> Bool {
-    lhs.nickname == rhs.nickname &&
-    lhs.identifier == rhs.identifier &&
-    lhs.birthday == rhs.birthday &&
-    lhs.other == rhs.other
+extension DTO.UserInfo where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(nickname)
+        hasher.combine(identifier)
+        hasher.combine(birthday)
+        hasher.combine(other)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.nickname == rhs.nickname &&
+        lhs.identifier == rhs.identifier &&
+        lhs.birthday == rhs.birthday &&
+        lhs.other == rhs.other
+    }
 }
 
-public func == (lhs: QUserInfo, rhs: PUserInfo) -> Bool {
-    lhs.nickname == rhs.nickname &&
-    lhs.identifier == rhs.identifier &&
-    lhs.birthday == rhs.birthday &&
-    lhs.other == rhs.other
+extension DTO.UserInfo where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(nickname)
+        hasher.combine(identifier)
+        hasher.combine(birthday)
+        hasher.combine(other)
+        hasher.combine(id)
+        hasher.combine(userId)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.nickname == rhs.nickname &&
+        lhs.identifier == rhs.identifier &&
+        lhs.birthday == rhs.birthday &&
+        lhs.other == rhs.other &&
+        lhs.id == rhs.id &&
+        lhs.userId == rhs.userId &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == (lhs: [PUserInfo], rhs: [QUserInfo]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.UserInfo where T == DTO.Prepare {
+    func like(_ rhs: QUserInfo) -> Bool {
+        self.nickname == rhs.nickname &&
+        self.identifier == rhs.identifier &&
+        self.birthday == rhs.birthday &&
+        self.other == rhs.other
+    }
 }
 
-public func == (lhs: [QUserInfo], rhs: [PUserInfo]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.UserInfo where T == DTO.Queried {
+    func like(_ rhs: PUserInfo) -> Bool {
+        self.nickname == rhs.nickname &&
+        self.identifier == rhs.identifier &&
+        self.birthday == rhs.birthday &&
+        self.other == rhs.other
+    }
+}
+
+public extension Collection where Element == PUserInfo {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QUserInfo {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QUserInfo {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PUserInfo {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

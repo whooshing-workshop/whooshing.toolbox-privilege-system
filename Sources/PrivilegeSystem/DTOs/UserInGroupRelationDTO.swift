@@ -90,20 +90,56 @@ extension DTO.UserInGroupRelation: CustomStringConvertible, Loggerable {
     }
 }
 
-public func == (lhs: PUserInGroupRelation, rhs: QUserInGroupRelation) -> Bool {
-    lhs.user == rhs.user &&
-    lhs.group == rhs.group
+extension DTO.UserInGroupRelation where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(user)
+        hasher.combine(group)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.user == rhs.user &&
+        lhs.group == rhs.group
+    }
 }
 
-public func == (lhs: QUserInGroupRelation, rhs: PUserInGroupRelation) -> Bool {
-    lhs.user == rhs.user &&
-    lhs.group == rhs.group
+extension DTO.UserInGroupRelation where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(user)
+        hasher.combine(group)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.user == rhs.user &&
+        lhs.group == rhs.group &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt
+    }
 }
 
-public func == (lhs: [PUserInGroupRelation], rhs: [QUserInGroupRelation]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.UserInGroupRelation where T == DTO.Prepare {
+    func like(_ rhs: QUserInGroupRelation) -> Bool {
+        self.user == rhs.user &&
+        self.group == rhs.group
+    }
 }
 
-public func == (lhs: [QUserInGroupRelation], rhs: [PUserInGroupRelation]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.UserInGroupRelation where T == DTO.Queried {
+    func like(_ rhs: PUserInGroupRelation) -> Bool {
+        self.user == rhs.user &&
+        self.group == rhs.group
+    }
+}
+
+public extension Collection where Element == PUserInGroupRelation {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QUserInGroupRelation {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QUserInGroupRelation {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PUserInGroupRelation {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

@@ -168,20 +168,60 @@ extension DTO.Token: CustomStringConvertible, Loggerable {
     }
 }
 
-public func == (lhs: PToken, rhs: QToken) -> Bool {
-    lhs.credential == rhs.credential &&
-    lhs.expireAfter == rhs.expireAfter
+extension DTO.Token where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(credential)
+        hasher.combine(tokenEncrypted)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.credential == rhs.credential &&
+        lhs.tokenEncrypted == rhs.tokenEncrypted
+    }
 }
 
-public func == (lhs: QToken, rhs: PToken) -> Bool {
-    lhs.credential == rhs.credential &&
-    lhs.expireAfter == rhs.expireAfter
+extension DTO.Token where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(credential)
+        hasher.combine(id)
+        hasher.combine(token)
+        hasher.combine(userId)
+        hasher.combine(valid)
+        hasher.combine(expireAfter)
+        hasher.combine(createdAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.credential == rhs.credential &&
+        lhs.id == rhs.id &&
+        lhs.token == rhs.token &&
+        lhs.userId == rhs.userId &&
+        lhs.valid == rhs.valid &&
+        lhs.expireAfter == rhs.expireAfter &&
+        lhs.createdAt == rhs.createdAt
+    }
 }
 
-public func == (lhs: [PToken], rhs: [QToken]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Token where T == DTO.Prepare {
+    func like(_ rhs: QToken) -> Bool {
+        self.credential == rhs.credential
+    }
 }
 
-public func == (lhs: [QToken], rhs: [PToken]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Token where T == DTO.Queried {
+    func like(_ rhs: PToken) -> Bool {
+        self.credential == rhs.credential
+    }
+}
+
+public extension Collection where Element == PToken {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QToken {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QToken {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PToken {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

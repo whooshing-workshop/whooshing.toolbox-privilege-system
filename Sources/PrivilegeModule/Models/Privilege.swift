@@ -53,3 +53,23 @@ extension PM.Privilege: PolicyType {
     public static var namePrefix: String { "privilege" }
     public static var typeId: String { "privilege" }
 }
+
+extension PM.Privilege: Hashable {
+    public static func == (lhs: PM<ResourceList>.Privilege, rhs: PM<ResourceList>.Privilege) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.policy == rhs.policy &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(policy)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+}

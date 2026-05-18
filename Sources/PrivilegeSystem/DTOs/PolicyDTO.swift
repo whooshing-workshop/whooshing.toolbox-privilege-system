@@ -106,20 +106,58 @@ extension DTO.Policy: CustomStringConvertible, Loggerable {
     }
 }
 
-public func == <G: PolicyType>(lhs: PPolicy<G>, rhs: QPolicy<G>) -> Bool {
-    lhs.moduleId == rhs.moduleId &&
-    lhs.policy == rhs.policy
+extension DTO.Policy where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(moduleId)
+        hasher.combine(policy)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.moduleId == rhs.moduleId &&
+        lhs.policy == rhs.policy
+    }
 }
 
-public func == <G: PolicyType>(lhs: QPolicy<G>, rhs: PPolicy<G>) -> Bool {
-    lhs.moduleId == rhs.moduleId &&
-    lhs.policy == rhs.policy
+extension DTO.Policy where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(moduleId)
+        hasher.combine(policy)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.moduleId == rhs.moduleId &&
+        lhs.policy == rhs.policy &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == <G: PolicyType>(lhs: [PPolicy<G>], rhs: [QPolicy<G>]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Policy where T == DTO.Prepare {
+    func like(_ rhs: QPolicy<G>) -> Bool {
+        self.moduleId == rhs.moduleId &&
+        self.policy == rhs.policy
+    }
 }
 
-public func == <G: PolicyType>(lhs: [QPolicy<G>], rhs: [PPolicy<G>]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Policy where T == DTO.Queried {
+    func like(_ rhs: PPolicy<G>) -> Bool {
+        self.moduleId == rhs.moduleId &&
+        self.policy == rhs.policy
+    }
+}
+
+public extension Collection {
+    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == QPolicy<T>, Element == PPolicy<T> {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection {
+    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PPolicy<T>, Element == QPolicy<T> {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }

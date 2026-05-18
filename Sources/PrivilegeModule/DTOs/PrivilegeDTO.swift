@@ -6,7 +6,10 @@ import SQLKit
 import Query
 
 public extension PM {
-    struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable {
+    typealias PPrivilegeDTO = PrivilegeDTO<DTO.Prepare>
+    typealias QPrivilegeDTO = PrivilegeDTO<DTO.Queried>
+    
+    struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable, Hashable {
         let name: String?
         let description: String?
         let policy: String
@@ -239,5 +242,67 @@ extension PM.PrivilegeDTO: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+extension PM.PrivilegeDTO where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(policy)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.policy == rhs.policy
+    }
+}
+
+extension PM.PrivilegeDTO where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(policy)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.policy == rhs.policy &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
+}
+
+public extension PM.PrivilegeDTO where T == DTO.Prepare {
+    func like(_ rhs: PM<ResourceList>.QPrivilegeDTO) -> Bool {
+        self.name == rhs.name &&
+        self.description == rhs.description &&
+        self.policy == rhs.policy
+    }
+}
+
+public extension PM.PrivilegeDTO where T == DTO.Queried {
+    func like(_ rhs: PM<ResourceList>.PPrivilegeDTO) -> Bool {
+        self.name == rhs.name &&
+        self.description == rhs.description &&
+        self.policy == rhs.policy
+    }
+}
+
+public extension Collection {
+    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.QPrivilegeDTO, Element == PM<T>.PPrivilegeDTO {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection {
+    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.PPrivilegeDTO, Element == PM<T>.QPrivilegeDTO {
+        self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }

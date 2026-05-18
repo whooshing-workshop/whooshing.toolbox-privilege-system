@@ -6,7 +6,7 @@ import ResourceMacros
 import AsyncHTTPClient
 import Query
 
-public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable
+public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable, Hashable
 where Self.RawValue == String {}
 
 public typealias PM = PrivilegeModule

@@ -203,20 +203,58 @@ extension DTO.Role: Loggerable {
     }
 }
 
-public func == (lhs: PRole, rhs: QRole) -> Bool {
-    lhs.name == rhs.name &&
-    lhs.description == rhs.description
+extension DTO.Role where T == DTO.Prepare {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description
+    }
 }
 
-public func == (lhs: QRole, rhs: PRole) -> Bool {
-    lhs.name == rhs.name &&
-    lhs.description == rhs.description
+extension DTO.Role where T == DTO.Queried {
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(description)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+    
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
+    }
 }
 
-public func == (lhs: [PRole], rhs: [QRole]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Role where T == DTO.Prepare {
+    func like(_ rhs: QRole) -> Bool {
+        self.name == rhs.name &&
+        self.description == rhs.description
+    }
 }
 
-public func == (lhs: [QRole], rhs: [PRole]) -> Bool {
-    lhs.elementsEqual(rhs, by: ==)
+public extension DTO.Role where T == DTO.Queried {
+    func like(_ rhs: PRole) -> Bool {
+        self.name == rhs.name &&
+        self.description == rhs.description
+    }
+}
+
+public extension Collection where Element == PRole {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QRole {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+public extension Collection where Element == QRole {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PRole {
+        self.elementsEqual(rhs, by: { $0.like($1) })
+    }
 }
