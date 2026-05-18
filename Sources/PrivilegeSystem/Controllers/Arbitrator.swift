@@ -47,7 +47,7 @@ extension PrivilegeSystem {
                 [
                     // 查询用户所在的群组，父群组的所有域权限
                     user.model.$groups.query(on: self.db)
-                        .with(\.$parents) { path in
+                        .with(\.$supers) { path in
                             path.with(\.$ancestor)
                         }
                         .all()
@@ -56,7 +56,7 @@ extension PrivilegeSystem {
                     { groups throws(Errcase.ErrType) in
                         let gs = [UGroup]((
                             groups +
-                            groups.flatMap { $0.parents.map { $0.ancestor } }
+                            groups.flatMap { $0.supers.map { $0.ancestor } }
                         ).uniqued())
                         
                         let ids = try required(throws: Errcase.arbitrateFailed, "取得群组 ID 失败", category: .internal) {
@@ -140,6 +140,7 @@ extension PrivilegeSystem {
         func __judge(
             input: ArbitrateData
         ) -> EventLoopRes<Result, Errcase> {
+            // 取得用户身份的 policy
             ([
                 opa.query.data(
                     from: "/rules" + policyPath(moduleId: input.moduleId, modelId: input.role.roleId, type: Role.self, format: .path) + "/allow",
@@ -151,6 +152,7 @@ extension PrivilegeSystem {
                 .map {
                     (Result.IdKey(type: .role, moduleId: input.moduleId, id: input.role.roleId), $0)
                 }
+            // 取得所有域权限的 policy
             ] + input.domains.map { domainData in
                 opa.query.data(
                     from: "/rules" + policyPath(moduleId: input.moduleId, modelId: domainData.domainId, type: Domain.self, format: .path) + "/allow",
@@ -162,6 +164,7 @@ extension PrivilegeSystem {
                 .map { res in
                     (Result.IdKey(type: .domain, moduleId: input.moduleId, id: domainData.domainId), res)
                 }
+            // 取得资源权限的 policy
             } + input.privileges.map { privilegeData in
                 opa.query.data(
                     from: "/rules" + policyPath(moduleId: input.moduleId, modelId: privilegeData.privilegeId, type: "privilege", format: .path) + "/allow",

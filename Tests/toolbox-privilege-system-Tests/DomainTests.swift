@@ -38,9 +38,7 @@ struct DomainTesting {
     ]
     
     static let defaultPolicy: String = """
-    allow if {
-        true
-    }
+    allow if { true }
     """
     
     // 可以在这里为您定义的每一个域自定义专属 Policy，如果为 nil 则会使用上面的 defaultPolicy

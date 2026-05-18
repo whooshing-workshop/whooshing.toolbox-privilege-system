@@ -128,12 +128,19 @@ struct PolicyTesting {
     // 命名角色（SuperAdmin/Editor/Moderator/Observer）在 MARK 4-5 中与域策略一同验证
 
     
-    // user: 4
-    // role: 6      nil
-    // group: nil   nil
-    // domain:  6   nil
-    //          7   nil
-    // resource: nil
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 6         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: Role-6    ➔  allow if { true }
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("纯角色判定：user4+RT[6]，role 通过，user 直接域(domain6/domain7)也通过")
     func judgeRoleOnly_User4_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -153,8 +160,25 @@ struct PolicyTesting {
         #expect(!domainReports.isEmpty, "user4 有直接赋予的 domain6/domain7，应有 domain 报告")
         #expect(domainReports.count == 2, "domain6 和 domain7 共 2 个 domain 报告")
         #expect(domainReports.values.allSatisfy { $0 }, "domain6/domain7 均 allow if {true} → 全 true")
+        try #require(res.reports.count == 3)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 7         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: Role-7    ➔  allow if { true }
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("纯角色判定：user4 使用 RT[7]，reports 结构验证（含用户直接域）")
     func judgeRoleOnly_User4_ReportsStructure() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -173,9 +197,25 @@ struct PolicyTesting {
         // user4 有直接赋予的 domain6, domain7，无 group
         let domainReports = res.reports.filter { $0.key.type == .domain }
         #expect(domainReports.count == 2, "user4 有 domain6 和 domain7 共 2 个直接域报告")
+        try #require(res.reports.count == 3)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
     }
-
+    
     // SuperAdminRole 完整验证：user0 持有 RT[0]（用户角色），在 group0 中（domain0: global==true）
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // allow
     @Test("纯角色判定：SuperAdminRole(user0) manage_all+global=true → ALLOW")
     func judgeRoleOnly_SuperAdmin_Allowed() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -190,8 +230,24 @@ struct PolicyTesting {
             operation: .manage_all, privilegeIds: []
         ).get()
         #expect(res.result, "SuperAdminRole + manage_all + domain0(global=true) → ALLOW")
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny (operation != manage_all)
+    // false, true
     @Test("纯角色判定：SuperAdminRole(user0) edit → DENY（role 策略不匹配）")
     func judgeRoleOnly_SuperAdmin_Denied() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -206,9 +262,28 @@ struct PolicyTesting {
         #expect(!res.result, "SuperAdminRole 不允许 edit → DENY")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == false)
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == false)
+        #expect(res.reports.elements[1].value == true)
     }
 
     // EditorRole 完整验证：user1 持有 RT[1]（用户角色），在 group1 中（domain1: region==asia）
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 1         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-1    ➔  allow if { input.operation == "edit" } allow if { input.operation == "publish" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // ==================================================
+    // 1: edit -> allow
+    // 2: public -> allow
+    // 3: deny -> false true
     @Test("纯角色判定：EditorRole(user1) edit+region=asia → ALLOW；manage_all → DENY")
     func judgeRoleOnly_Editor() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -223,6 +298,9 @@ struct PolicyTesting {
                 operation: JsonOperation(rawValue: op)!, privilegeIds: []
             ).get()
             #expect(res.result, "EditorRole + \(op) + region=asia → ALLOW")
+            try #require(res.reports.count == 2)
+            #expect(res.reports.elements[0].key.type == .role)
+            #expect(res.reports.elements[1].key.type == .domain)
         }
 
         let denied = try await s.arbitrator.judge(
@@ -231,9 +309,27 @@ struct PolicyTesting {
             operation: .manage_all, privilegeIds: []
         ).get()
         #expect(!denied.result, "EditorRole 不允许 manage_all → DENY")
+        try #require(denied.reports.count == 2)
+        #expect(denied.reports.elements[0].key.type == .role)
+        #expect(denied.reports.elements[1].key.type == .domain)
+        #expect(denied.reports.elements[0].value == false)
+        #expect(denied.reports.elements[1].value == true)
     }
 
     // ModeratorRole 完整验证：user2 持有 RT[2]，在 group2 中（domain2: region==na）
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 2
+    // Target Role: 2         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-2
+    // --------------------------------------------------
+    // Active Role: Role-2    ➔  allow if { input.operation == "moderate" }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> false, true
     @Test("纯角色判定：ModeratorRole(user2) moderate+region=na → ALLOW；edit → DENY")
     func judgeRoleOnly_Moderator() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -247,16 +343,36 @@ struct PolicyTesting {
             operation: .moderate, privilegeIds: []
         ).get()
         #expect(allow.result, "ModeratorRole + moderate + region=na → ALLOW")
-
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
             resource: JsonResource(name: "test", content: ["region": AnyCodable("na")]),
             operation: .edit, privilegeIds: []
         ).get()
         #expect(!deny.result, "ModeratorRole 不允许 edit → DENY")
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == false)
+        #expect(deny.reports.elements[1].value == true)
     }
 
     // ObserverRole 完整验证：user1 持有 RT[3]（用户角色），在 group1（domain1: region==asia）
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // ==================================================
+    // allow
     @Test("纯角色判定：ObserverRole(user1) view+region=asia → ALLOW，reports 结构验证")
     func judgeRoleOnly_Observer_ReportsStructure() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -273,6 +389,9 @@ struct PolicyTesting {
         #expect(res.result, "ObserverRole + view + region=asia → ALLOW")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == true, "role 报告应为 true")
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
     }
 
 
@@ -283,6 +402,18 @@ struct PolicyTesting {
     // user0 可用角色：RT[0](SuperAdmin 用户角色) + RT[3](Observer 组内角色 in group0)
     // group0 绑 domain0: global==true
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // allow
     @Test("角色+单域：role(Observer) ✓ domain ✓ → ALLOW")
     func judgeRoleAndDomain_BothPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -299,8 +430,23 @@ struct PolicyTesting {
         #expect(res.result, "ObserverRole + domain0(global=true) + view → ALLOW")
         #expect(res.reports.filter { $0.key.type == .role }.values.allSatisfy { $0 })
         #expect(res.reports.filter { $0.key.type == .domain }.values.allSatisfy { $0 })
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny -> true, false
     @Test("角色+单域：role(Observer) ✓ domain ✗ (global=false) → DENY")
     func judgeRoleAndDomain_DomainFails() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -315,8 +461,25 @@ struct PolicyTesting {
 
         #expect(!res.result, "domain0 要求 global==true，false 时 DENY")
         #expect(res.reports.filter { $0.key.type == .domain }.values.contains(false))
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == true)
+        #expect(res.reports.elements[1].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny -> false, true
     @Test("角色+单域：role(SuperAdmin) ✗ (operation不匹配) domain ✓ → DENY")
     func judgeRoleAndDomain_RoleFails() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -332,8 +495,25 @@ struct PolicyTesting {
 
         #expect(!res.result, "SuperAdminRole 不允许 view，domain 通过也应 DENY")
         #expect(res.reports.filter { $0.key.type == .role }.values.contains(false))
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == false)
+        #expect(res.reports.elements[1].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny -> false, false
     @Test("角色+单域：role(SuperAdmin) ✗ domain ✗ → DENY")
     func judgeRoleAndDomain_BothFail() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -347,6 +527,11 @@ struct PolicyTesting {
         ).get()
 
         #expect(!res.result, "role(SuperAdmin+view) 和 domain(global=false) 均失败 → DENY")
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == false)
+        #expect(res.reports.elements[1].value == false)
     }
 
     // =========================================================================
@@ -355,6 +540,19 @@ struct PolicyTesting {
     // user1 可用角色: RT[1](Editor), RT[3](Observer) —— 均为用户角色
     // user2 可用角色: RT[2](Moderator) —— 用户角色
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
     @Test("AsiaPacific域(DT.ids[1])：region=asia 时允许，region=na 时拒绝")
     func judgeAsiaPacificDomain() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -368,6 +566,9 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "region=asia → AsiaPacific 域通过 → ALLOW")
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -375,8 +576,26 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "region=na → AsiaPacific 域失败 → DENY")
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 2
+    // Target Role: 2         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-2
+    // --------------------------------------------------
+    // Active Role: Role-2    ➔  allow if { input.operation == "moderate" }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
     @Test("NorthAmerica域(DT.ids[2])：region=na 时允许，region=asia 时拒绝")
     func judgeNorthAmericaDomain() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -390,6 +609,9 @@ struct PolicyTesting {
             operation: .moderate, privilegeIds: []
         ).get()
         #expect(allow.result, "region=na → NorthAmerica 域通过 → ALLOW")
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -397,6 +619,11 @@ struct PolicyTesting {
             operation: .moderate, privilegeIds: []
         ).get()
         #expect(!deny.result, "region=asia → NorthAmerica 域失败 → DENY")
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
     }
 
     // =========================================================================
@@ -405,6 +632,21 @@ struct PolicyTesting {
     // domain0: global==true，domain3: env==sandbox
     // user3 可用角色: RT[4](用户角色, allow if {true}), RT[5](群组角色 via group3, allow if {true})
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 3
+    // Target Role: 4         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-3
+    // --------------------------------------------------
+    // Active Role: Role-4    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-3  ➔  allow if { input.resource.env == "sandbox" }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("双域AND：全部满足 → ALLOW，reports 包含 3 个域")
     func judgeMultiDomain_AllPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -424,8 +666,28 @@ struct PolicyTesting {
         let domainReports = res.reports.filter { $0.key.type == .domain }
         #expect(domainReports.count == 3, "应有 3 个域报告: domain0(群组)+domain3(群组)+domain4(用户直接)")
         #expect(domainReports.values.allSatisfy { $0 })
+        try #require(res.reports.count == 4)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
+        #expect(res.reports.elements[3].key.type == .domain)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 3
+    // Target Role: 4         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-3
+    // --------------------------------------------------
+    // Active Role: Role-4    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-3  ➔  allow if { input.resource.env == "sandbox" }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // deny: true, true, false, true
     @Test("双域AND：domain3(env==sandbox)不满足 → DENY")
     func judgeMultiDomain_Domain3Fails() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -440,8 +702,32 @@ struct PolicyTesting {
 
         #expect(!res.result, "domain3 要求 env==sandbox，缺失 → DENY")
         #expect(res.reports.filter { $0.key.type == .domain }.values.contains(false))
+        try #require(res.reports.count == 4)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
+        #expect(res.reports.elements[3].key.type == .domain)
+        #expect(res.reports.elements[0].value == true)
+        #expect(res.reports.elements[1].value == true)
+        #expect(res.reports.elements[2].value == false)
+        #expect(res.reports.elements[3].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 3
+    // Target Role: 5         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-3
+    // --------------------------------------------------
+    // Active Role: Role-5    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-3  ➔  allow if { input.resource.env == "sandbox" }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // deny: true false true true
     @Test("双域AND：domain0(global==true)不满足 → DENY")
     func judgeMultiDomain_Domain0Fails() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -455,8 +741,32 @@ struct PolicyTesting {
         ).get()
 
         #expect(!res.result, "domain0 要求 global==true，缺失 → DENY")
+        try #require(res.reports.count == 4)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
+        #expect(res.reports.elements[3].key.type == .domain)
+        #expect(res.reports.elements[0].value == true)
+        #expect(res.reports.elements[1].value == false)
+        #expect(res.reports.elements[2].value == true)
+        #expect(res.reports.elements[3].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 3
+    // Target Role: 5         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-3
+    // --------------------------------------------------
+    // Active Role: Role-5    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-3  ➔  allow if { input.resource.env == "sandbox" }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // deny -> true false, false, true
     @Test("双域AND：两个群组域均不满足 → DENY（但 domain4 直接域仍通过）")
     func judgeMultiDomain_BothFail() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -475,6 +785,15 @@ struct PolicyTesting {
         // domain4(allow all) 为 true，所以不能断言所有域均为 false
         let domainReports = res.reports.filter { $0.key.type == .domain }
         #expect(domainReports.values.contains(false), "至少 domain0 或 domain3 不满足 → 应包含 false")
+        try #require(res.reports.count == 4)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
+        #expect(res.reports.elements[3].key.type == .domain)
+        #expect(res.reports.elements[0].value == true)
+        #expect(res.reports.elements[1].value == false)
+        #expect(res.reports.elements[2].value == false)
+        #expect(res.reports.elements[3].value == true)
     }
 
     // =========================================================================
@@ -486,6 +805,26 @@ struct PolicyTesting {
     // domain reports 共 6 个: domain0~3(群组) + domain8,9(用户直接)
     // domain1(asia) 和 domain2(na) 互斥，region 不能同时满足，验证 AND 严格性
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 5
+    // Target Role: 8         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-1
+    // Inherit Group:Group-2
+    // Inherit Group:Group-3
+    // --------------------------------------------------
+    // Active Role: Role-8    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // Bound Domain:Domain-3  ➔  allow if { input.resource.env == "sandbox" }
+    // Bound Domain:Domain-8  ➔  allow if { true }
+    // Bound Domain:Domain-9  ➔  allow if { true }
+    // ==================================================
+    // deny: true, true, true, false, true, true, true
     @Test("四域极端AND：domain1(asia)与domain2(na)互斥 → 始终 DENY")
     func judgeQuadDomain_AlwaysDeny() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -509,13 +848,40 @@ struct PolicyTesting {
         // user5 有 6 个 domain：domain0(群组)+domain1(群组)+domain2(群组)+domain3(群组)+domain8(直接)+domain9(直接)
         #expect(domainReports.count == 6, "6 个 domain: 4 个群组域 + 2 个用户直接域")
         #expect(domainReports.values.contains(false), "domain2(na)与 domain1(asia)互斥 → 应有 false")
+        try #require(res.reports.count == 7)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
+        #expect(res.reports.elements[3].key.type == .domain)
+        #expect(res.reports.elements[4].key.type == .domain)
+        #expect(res.reports.elements[5].key.type == .domain)
+        #expect(res.reports.elements[6].key.type == .domain)
+        #expect(res.reports.elements[0].value == true)
+        #expect(res.reports.elements[1].value == true)
+        #expect(res.reports.elements[2].value == true)
+        #expect(res.reports.elements[3].value == false)
+        #expect(res.reports.elements[4].value == true)
+        #expect(res.reports.elements[5].value == true)
+        #expect(res.reports.elements[6].value == true)
     }
-
 
     // =========================================================================
     // MARK: 8. 组内角色指派场景（RT.ids[3] -> AT.ids[0] in GT.ids[0]）
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
     @Test("组内角色指派：ObserverRole + domain0(global==true) 满足 → ALLOW")
     func judgeInGroupRole_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -529,6 +895,9 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "ObserverRole + domain0 全满足 → ALLOW")
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -536,8 +905,25 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → domain0 失败 → DENY")
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny -> false, true
     @Test("组内角色指派：使用不匹配的 role → DENY（role 策略不通过）")
     func judgeInGroupRole_WrongRole() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -551,12 +937,30 @@ struct PolicyTesting {
         ).get()
 
         #expect(!res.result, "SuperAdminRole 不允许 edit，domain 通过也 DENY")
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == false)
+        #expect(res.reports.elements[1].value == true)
     }
 
     // =========================================================================
     // MARK: 9. 策略语义变更与仲裁
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 8
+    // Target Role: 12        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-2
+    // Inherit Group:Group-10
+    // --------------------------------------------------
+    // Active Role: Role-12   ➔  allow if { true }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // ==================================================
+    // 1: allow
     @Test("Role 策略替换：新语义立即影响仲裁结果（deploy 限制）")
     func rolePolicy_ReplaceAndRejudge() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -574,7 +978,10 @@ struct PolicyTesting {
             operation: .anything, privilegeIds: []
         ).get()
         #expect(before.result, "替换前默认策略允许任何操作")
-
+        try #require(before.reports.count == 2)
+        #expect(before.reports.elements[0].key.type == .role)
+        #expect(before.reports.elements[1].key.type == .domain)
+        
         // 删除旧策略
         let old = try await PolicyExp<Role>.query(on: s.db)
             .filter(\.$parent.$id == targetId).all().get()
@@ -621,6 +1028,20 @@ struct PolicyTesting {
     // MARK: 10. 综合场景
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 1         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-1    ➔  allow if { input.operation == "edit" } allow if { input.operation == "publish" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
+    // 3: deny -> false, true
     @Test("综合：EditorRole + AsiaPacific域，正确地区可编辑，错误地区被拒")
     func comprehensive_EditorInAsiaPacific() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -636,6 +1057,9 @@ struct PolicyTesting {
             operation: .edit, privilegeIds: []
         ).get()
         #expect(allow.result, "EditorRole + region=asia → ALLOW")
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
 
         // ✗ 欧洲地区 + publish（region 不匹配 domain1）
         let denyRegion = try await s.arbitrator.judge(
@@ -644,6 +1068,11 @@ struct PolicyTesting {
             operation: .publish, privilegeIds: []
         ).get()
         #expect(!denyRegion.result, "region=eu → AsiaPacific 域失败 → DENY")
+        try #require(denyRegion.reports.count == 2)
+        #expect(denyRegion.reports.elements[0].key.type == .role)
+        #expect(denyRegion.reports.elements[1].key.type == .domain)
+        #expect(denyRegion.reports.elements[0].value == true)
+        #expect(denyRegion.reports.elements[1].value == false)
 
         // ✗ 正确地区但无权操作
         let denyOp = try await s.arbitrator.judge(
@@ -652,8 +1081,27 @@ struct PolicyTesting {
             operation: .manage_all, privilegeIds: []
         ).get()
         #expect(!denyOp.result, "EditorRole 不允许 manage_all → DENY")
+        try #require(denyOp.reports.count == 2)
+        #expect(denyOp.reports.elements[0].key.type == .role)
+        #expect(denyOp.reports.elements[1].key.type == .domain)
+        #expect(denyOp.reports.elements[0].value == false)
+        #expect(denyOp.reports.elements[1].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 2
+    // Target Role: 2         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-2
+    // --------------------------------------------------
+    // Active Role: Role-2    ➔  allow if { input.operation == "moderate" }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
+    // 3: deny -> false, true
     @Test("综合：ModeratorRole + NorthAmerica域，跨域操作被隔离")
     func comprehensive_ModeratorInNorthAmerica() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -667,6 +1115,9 @@ struct PolicyTesting {
             operation: .moderate, privilegeIds: []
         ).get()
         #expect(allow.result, "ModeratorRole + region=na → ALLOW")
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
 
         let denyAsia = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -674,6 +1125,11 @@ struct PolicyTesting {
             operation: .moderate, privilegeIds: []
         ).get()
         #expect(!denyAsia.result, "region=asia → NorthAmerica 域失败 → DENY")
+        try #require(denyAsia.reports.count == 2)
+        #expect(denyAsia.reports.elements[0].key.type == .role)
+        #expect(denyAsia.reports.elements[1].key.type == .domain)
+        #expect(denyAsia.reports.elements[0].value == true)
+        #expect(denyAsia.reports.elements[1].value == false)
 
         let denyEdit = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -681,8 +1137,31 @@ struct PolicyTesting {
             operation: .edit, privilegeIds: []
         ).get()
         #expect(!denyEdit.result, "ModeratorRole 不允许 edit → DENY")
+        try #require(denyEdit.reports.count == 2)
+        #expect(denyEdit.reports.elements[0].key.type == .role)
+        #expect(denyEdit.reports.elements[1].key.type == .domain)
+        #expect(denyEdit.reports.elements[0].value == false)
+        #expect(denyEdit.reports.elements[1].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 3
+    // Target Role: 4         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-3
+    // --------------------------------------------------
+    // Active Role: Role-4    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-3  ➔  allow if { input.resource.env == "sandbox" }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false, true, true
+    // 3: deny -> true, true, false, true
+    // 4: deny -> true, false, false, true
     @Test("综合：RT[4](默认放行) + GlobalScope+Sandbox 双域，精准访问控制矩阵")
     func comprehensive_ObserverTwoDomains() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -723,6 +1202,19 @@ struct PolicyTesting {
     // MARK: 11. 边界场景
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 6         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: Role-6    ➔  allow if { true }
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("边界：空 privilegeIds 不影响纯角色鉴权")
     func edge_EmptyPrivilegeIds() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -737,6 +1229,21 @@ struct PolicyTesting {
         #expect(res.result, "空 privilegeIds 不影响纯角色鉴权")
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 6         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: Role-6    ➔  allow if { true }
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // Resource:              ➔  allow if { input.operation == "read" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, true, true, false
     @Test("资源权限：privilegeIds 非空时，privilege 策略参与最终 AND")
     func edge_PrivilegePolicyParticipatesInAnd() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -758,6 +1265,11 @@ struct PolicyTesting {
             resource: JsonResource(name: "test", content: [:]), operation: .read, privilegeIds: [privilege.id]
         ).get()
         #expect(allow.result, "role/domain/privilege 均通过 → ALLOW")
+        try #require(allow.reports.count == 4)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        #expect(allow.reports.elements[2].key.type == .domain)
+        #expect(allow.reports.elements[3].key.type == .privilege)
 
         let privilegeKey = PrivilegeSystem.Arbitrator.Result.IdKey(
             type: .privilege, moduleId: m.moduleId, id: privilege.id
@@ -770,10 +1282,36 @@ struct PolicyTesting {
         ).get()
         #expect(!deny.result, "privilege 不允许 write → 整体 DENY")
         #expect(deny.reports[privilegeKey] == false, "privilege 报告应为 false")
+        try #require(deny.reports.count == 4)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[2].key.type == .domain)
+        #expect(deny.reports.elements[3].key.type == .privilege)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == true)
+        #expect(deny.reports.elements[2].value == true)
+        #expect(deny.reports.elements[3].value == false)
 
         try await m.privilege.delete(policy: privilege).get()
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 6         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: Role-6    ➔  allow if { true }
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // Resource:              ➔  allow if { input.operation == "read" }
+    // Resource:              ➔  allow if { input.resource.kind == "file" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, true, true, false, true
+    // 3: deny -> true, true, true, true, false
     @Test("资源权限：多个 privilegeIds 必须全部通过，reports 分别记录")
     func edge_MultiplePrivilegePoliciesAreAnded() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -834,6 +1372,19 @@ struct PolicyTesting {
         }
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 7         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: Role-7    ➔  allow if { true }
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("边界：有直接用户域的无group用户，domain reports 不为空")
     func edge_NoGroupUser_HasDirectDomainReports() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -852,8 +1403,24 @@ struct PolicyTesting {
         #expect(!domainReports.isEmpty, "user4 有直接赋予的 domain6/domain7，应有 domain 报告")
         #expect(domainReports.count == 2, "domain6 和 domain7 共 2 个")
         #expect(domainReports.values.allSatisfy { $0 }, "domain6/domain7 均通过")
+        try #require(res.reports.count == 3)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 9
+    // Target Role: 7         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-11
+    // --------------------------------------------------
+    // Active Role: Role-7    ➔  allow if { true }
+    // Bound Domain:None
+    // ==================================================
+    // allow
     @Test("边界：没有任何域约束的用户，仅产生 role report")
     func edge_NoDomainConstraints_RoleOnlyReport() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -873,6 +1440,18 @@ struct PolicyTesting {
         #expect(res.reports.filter { $0.key.type == .privilege }.isEmpty)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny -> false, true
     @Test("边界：role 失败时 AND 逻辑使最终结果为 false")
     func edge_RoleFailsAndShortCircuit() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -891,8 +1470,26 @@ struct PolicyTesting {
         #expect(!res.result, "role 失败（SuperAdmin 不含 view）→ DENY")
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == false)
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == false)
+        #expect(res.reports.elements[1].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 4
+    // Target Role: 0         [ Unavailable ]
+    // --------------------------------------------------
+    // Inherit Group:None (Direct Mode)
+    // --------------------------------------------------
+    // Active Role: None
+    // Bound Domain:Domain-6  ➔  allow if { true }
+    // Bound Domain:Domain-7  ➔  allow if { true }
+    // ==================================================
+    // Error! role not available
     @Test("边界：传入不属于用户的 role 时，judge 在策略查询前失败")
     func edge_UnavailableRoleRejectedBeforePolicyEvaluation() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -911,6 +1508,21 @@ struct PolicyTesting {
         }
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 6
+    // Target Role: 10        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-6
+    // Inherit Group:Group-7
+    // --------------------------------------------------
+    // Active Role: Role-10   ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("边界：默认域策略 allow if {true} 对所有 resource 放行")
     func edge_DefaultDomainAllowsAll() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -930,6 +1542,10 @@ struct PolicyTesting {
         ).get()
 
         #expect(res.result, "RT[10](allow all) + domain4(allow all) + domain0(global=true) 全通过 → ALLOW")
+        try #require(res.reports.count == 3)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
     }
 
     // =========================================================================
@@ -952,6 +1568,21 @@ struct PolicyTesting {
     // AT.ids[8] → [group10]         继承 domain2 (NorthAmerica)
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 6
+    // Target Role: 10        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-6
+    // Inherit Group:Group-7
+    // --------------------------------------------------
+    // Active Role: Role-10   ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("嵌套群组：子群组用户继承父群组 domain0(global==true) → global=true ALLOW")
     func nestedGroup_InheritParentDomain_Allow() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -971,8 +1602,27 @@ struct PolicyTesting {
         let domainReports = allow.reports.filter { $0.key.type == .domain }
         #expect(!domainReports.isEmpty, "嵌套群组用户应有 domain 报告")
         #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告都应为 true")
+        try #require(allow.reports.count == 3)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        #expect(allow.reports.elements[2].key.type == .domain)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 6
+    // Target Role: 11        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-6
+    // Inherit Group:Group-7
+    // --------------------------------------------------
+    // Active Role: Role-11   ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // allow
     @Test("嵌套群组：父群组角色对直接子群组用户可用，并参与仲裁")
     func nestedGroup_ParentGroupRoleAvailableToChildUser() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -993,10 +1643,27 @@ struct PolicyTesting {
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == true)
         #expect(res.reports.filter { $0.key.type == .domain }.values.allSatisfy { $0 })
+        try #require(res.reports.count == 3)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[2].key.type == .domain)
     }
-
-
-
+    
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 6
+    // Target Role: 4         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-6
+    // Inherit Group:Group-7
+    // --------------------------------------------------
+    // Active Role: Role-4    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // deny -> true, false, true
     @Test("嵌套群组：子群组用户父群组 domain0(global==true) 不满足 → global=false DENY")
     func nestedGroup_InheritParentDomain_Deny() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1013,8 +1680,27 @@ struct PolicyTesting {
 
         let domainReports = deny.reports.filter { $0.key.type == .domain }
         #expect(domainReports.values.contains(false), "domain0 报告应为 false")
+        try #require(deny.reports.count == 3)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[2].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
+        #expect(deny.reports.elements[2].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // deny -> false, true
     @Test("嵌套群组：role 失败时即使父群组域策略全通过也应 DENY")
     func nestedGroup_RoleFailsOverridesDomain() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1034,8 +1720,31 @@ struct PolicyTesting {
         let roleKey = PrivilegeSystem.Arbitrator.Result.IdKey(
             type: .role, moduleId: m.moduleId, id: role.id)
         #expect(res.reports[roleKey] == false)
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
+        #expect(res.reports.elements[0].value == false)
+        #expect(res.reports.elements[1].value == true)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 7
+    // Target Role: 11        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // Inherit Group:Group-2
+    // Inherit Group:Group-8
+    // Inherit Group:Group-9
+    // --------------------------------------------------
+    // Active Role: Role-11   ➔  allow if { true }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // ==================================================
+    // 1: deny -> true, true, false
+    // 2: deny -> true, false, true
+    // 3: deny -> true, false, false
     @Test("嵌套群组：用户在两个不同父群组的子群组中 → 两个父群组域策略均须满足")
     func nestedGroup_MultiParentDomains_MustAllPass() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1053,6 +1762,13 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!denyWithAsia.result, "region=asia → domain1 通过但 domain2(na) 失败 → DENY")
+        try #require(denyWithAsia.reports.count == 3)
+        #expect(denyWithAsia.reports.elements[0].key.type == .role)
+        #expect(denyWithAsia.reports.elements[1].key.type == .domain)
+        #expect(denyWithAsia.reports.elements[2].key.type == .domain)
+        #expect(denyWithAsia.reports.elements[0].value == true)
+        #expect(denyWithAsia.reports.elements[1].value == true)
+        #expect(denyWithAsia.reports.elements[2].value == false)
 
         // 尝试只满足 domain2
         let denyWithNa = try await s.arbitrator.judge(
@@ -1061,6 +1777,13 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!denyWithNa.result, "region=na → domain2 通过但 domain1(asia) 失败 → DENY")
+        try #require(denyWithNa.reports.count == 3)
+        #expect(denyWithNa.reports.elements[0].key.type == .role)
+        #expect(denyWithNa.reports.elements[1].key.type == .domain)
+        #expect(denyWithNa.reports.elements[2].key.type == .domain)
+        #expect(denyWithNa.reports.elements[0].value == true)
+        #expect(denyWithNa.reports.elements[1].value == false)
+        #expect(denyWithNa.reports.elements[2].value == true)
 
         // 两者均不满足
         let denyEmpty = try await s.arbitrator.judge(
@@ -1071,8 +1794,29 @@ struct PolicyTesting {
         #expect(!denyEmpty.result, "无 region → 两个父群组域策略均失败 → DENY")
         let domainReports = denyEmpty.reports.filter { $0.key.type == .domain }
         #expect(domainReports.values.allSatisfy { !$0 }, "所有继承域报告应为 false")
+        try #require(denyEmpty.reports.count == 3)
+        #expect(denyEmpty.reports.elements[0].key.type == .role)
+        #expect(denyEmpty.reports.elements[1].key.type == .domain)
+        #expect(denyEmpty.reports.elements[2].key.type == .domain)
+        #expect(denyEmpty.reports.elements[0].value == true)
+        #expect(denyEmpty.reports.elements[1].value == false)
+        #expect(denyEmpty.reports.elements[2].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 8
+    // Target Role: 12        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-2
+    // Inherit Group:Group-10
+    // --------------------------------------------------
+    // Active Role: Role-12   ➔  allow if { true }
+    // Bound Domain:Domain-2  ➔  allow if { input.resource.region == "na" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
     @Test("嵌套群组：单一子群组用户继承父群组 domain2(region=na)")
     func nestedGroup_SingleChildInheritsParentDomain2() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1087,6 +1831,9 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "region=na → 继承的 domain2 通过 → ALLOW")
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -1094,8 +1841,29 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "region=asia → 继承的 domain2(na) 失败 → DENY")
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 6
+    // Target Role: 10        [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-6
+    // Inherit Group:Group-7
+    // --------------------------------------------------
+    // Active Role: Role-10   ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false, true
     @Test("嵌套群组：子群组直接域策略与父群组继承域策略 AND 叠加验证")
     func nestedGroup_DirectAndInheritedDomainsAND() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1118,6 +1886,11 @@ struct PolicyTesting {
         #expect(passDomainReports.count == 2, "group6/group7 重复获得 domain0/domain4 时，应按 domain id 去重为 2 个报告")
         #expect(passDomainReports.values.allSatisfy { $0 }, "domain0/domain4 均应通过")
 
+        try #require(allPass.reports.count == 3)
+        #expect(allPass.reports.elements[0].key.type == .role)
+        #expect(allPass.reports.elements[1].key.type == .domain)
+        #expect(allPass.reports.elements[2].key.type == .domain)
+        
         // global=false → domain0(继承) 失败 → DENY
         let inheritFail = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -1125,9 +1898,29 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!inheritFail.result, "domain0(继承) 失败 → 整体 DENY")
+        
+        try #require(inheritFail.reports.count == 3)
+        #expect(inheritFail.reports.elements[0].key.type == .role)
+        #expect(inheritFail.reports.elements[1].key.type == .domain)
+        #expect(inheritFail.reports.elements[2].key.type == .domain)
+        #expect(inheritFail.reports.elements[0].value == true)
+        #expect(inheritFail.reports.elements[1].value == false)
+        #expect(inheritFail.reports.elements[2].value == true)
     }
 
-
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
     @Test("嵌套群组：用户直接域权限与所在子群组继承的父群组域权限并行验证")
     func nestedGroup_UserDirectDomainPlusInherited() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1148,6 +1941,10 @@ struct PolicyTesting {
         #expect(!domainReports.isEmpty, "应有 domain 报告")
         #expect(domainReports.count == 1, "domain0 同时来自用户直接域和群组域，reports 应按 domain id 去重")
         #expect(domainReports.values.allSatisfy { $0 }, "所有 domain 报告均为 true")
+        
+        try #require(res.reports.count == 2)
+        #expect(res.reports.elements[0].key.type == .role)
+        #expect(res.reports.elements[1].key.type == .domain)
 
         // global=false → domain0 均失败 → DENY
         let deny = try await s.arbitrator.judge(
@@ -1156,6 +1953,12 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 用户直接域 + 群组域 domain0 均失败 → DENY")
+        
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
     }
 
 
@@ -1175,6 +1978,19 @@ struct PolicyTesting {
     // 本节额外动态 appoint/dismiss：使用 RT.ids[2] 对 AT.ids[8] 进行组内角色指派和撤销。
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 3         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-3    ➔  allow if { input.operation == "view" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false
     @Test("组内角色：RelationTests 中已指派 ObserverRole 到 user0 in group0，judge 通过")
     func inGroupRole_ExistingAssignment_ObserverInGroup0() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1190,7 +2006,11 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(allow.result, "ObserverRole(view) + domain0(global=true) → ALLOW")
-
+        
+        try #require(allow.reports.count == 2)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        
         // domain 失败 → DENY（组内角色不能越过域策略）
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -1198,8 +2018,30 @@ struct PolicyTesting {
             operation: .view, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → domain0 失败 → DENY 即使有组内角色")
+        
+        try #require(deny.reports.count == 2)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 6
+    // Target Role: 4         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // Inherit Group:Group-6
+    // Inherit Group:Group-7
+    // --------------------------------------------------
+    // Active Role: Role-4    ➔  allow if { true }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Bound Domain:Domain-4  ➔  allow if { true }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, false, true
     @Test("组内角色：RelationTests 中已指派 SalesManager(RT.ids[4]) 到 user6 in group6，嵌套域策略和组内角色共同生效")
     func inGroupRole_ExistingAssignment_SalesManagerInGroup6() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1217,6 +2059,11 @@ struct PolicyTesting {
         ).get()
         #expect(allow.result, "SalesManager(allow all) + domain0(global=true) + domain4(allow all) → ALLOW")
 
+        try #require(allow.reports.count == 3)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        #expect(allow.reports.elements[2].key.type == .domain)
+        
         // global=false → 父群组 domain0 失败 → DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -1224,6 +2071,14 @@ struct PolicyTesting {
             operation: .any_operation, privilegeIds: []
         ).get()
         #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY 即使是组内角色")
+        
+        try #require(deny.reports.count == 3)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[2].key.type == .domain)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == false)
+        #expect(deny.reports.elements[2].value == true)
     }
 
     @Test("组内角色：动态 appoint，鉴权立即生效；dismiss 后验证撤销成功")
@@ -1364,6 +2219,20 @@ struct PolicyTesting {
     // MARK: Resource 与 Privilege 的结合测试
     // =========================================================================
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 1         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-1    ➔  allow if { input.operation == "edit" } allow if { input.operation == "publish" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // Resource               ➔  allow if { input.resource.isPrivate == false; input.operation == "edit" }
+    // ==================================================
+    // 1: allow
+    // 2: deny -> true, true, false
     @Test("Resource + Privilege：Privilege 的策略依赖 resource 的属性，当条件满足时 ALLOW")
     func edge_PrivilegeAndResource_Allowed() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1397,6 +2266,11 @@ struct PolicyTesting {
         
         #expect(allow.result, "Resource.isPrivate == false 且 operation == edit，且满足 role/domain，-> ALLOW")
         
+        try #require(allow.reports.count == 3)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        #expect(allow.reports.elements[2].key.type == .privilege)
+        
         // 验证其他操作被拒绝 (role 允许 publish，但 privilege 拒绝)
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
@@ -1412,8 +2286,29 @@ struct PolicyTesting {
         }.get()
         try await m.privilege.delete(policy: privilegeDTO).get()
         try await m.resource.delete(ids: [resourceDTO.id]).get()
+        
+        try #require(deny.reports.count == 3)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[2].key.type == .privilege)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == true)
+        #expect(deny.reports.elements[2].value == false)
     }
 
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 1         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-1    ➔  allow if { input.operation == "edit" } allow if { input.operation == "publish" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // Resource               ➔  allow if { input.resource.isPrivate == false; input.operation == "edit" }
+    // ==================================================
+    // deny -> true, true, false
     @Test("Resource + Privilege：Privilege 的策略依赖 resource 的属性，当条件不满足时 DENY")
     func edge_PrivilegeAndResource_Denied() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1455,8 +2350,42 @@ struct PolicyTesting {
         }.get()
         try await m.privilege.delete(policy: privilegeDTO).get()
         try await m.resource.delete(ids: [resourceDTO.id]).get()
+        
+        try #require(deny.reports.count == 3)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[2].key.type == .privilege)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == true)
+        #expect(deny.reports.elements[2].value == false)
     }
     
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 1
+    // Target Role: 1         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-1
+    // --------------------------------------------------
+    // Active Role: Role-1    ➔  allow if { input.operation == "edit" } allow if { input.operation == "publish" }
+    // Bound Domain:Domain-1  ➔  allow if { input.resource.region == "asia" }
+    // Resource               ➔  allow if { input.resource.ownerId == input.user.id }
+    // ==================================================
+    // 1: allow
+    // ==================================================
+    //  RBAC Privilege Relations Analysis Report
+    // ==================================================
+    // Target User: 0
+    // Target Role: 0         [ Available ]
+    // --------------------------------------------------
+    // Inherit Group:Group-0
+    // --------------------------------------------------
+    // Active Role: Role-0    ➔  allow if { input.operation == "manage_all" }
+    // Bound Domain:Domain-0  ➔  allow if { input.resource.global == true }
+    // Resource               ➔  allow if { input.resource.ownerId == input.user.id }
+    // ==================================================
+    // 2: deny -> true, true, false
     @Test("Resource + Privilege：针对 Directory 的属主判断")
     func edge_DirectoryResource_Owner() async throws {
         let (s, m) = try await TestingShared.getSystem()
@@ -1490,6 +2419,11 @@ struct PolicyTesting {
         
         #expect(allow.result, "Directory.ownerId 等于 user.id → ALLOW")
         
+        try #require(allow.reports.count == 3)
+        #expect(allow.reports.elements[0].key.type == .role)
+        #expect(allow.reports.elements[1].key.type == .domain)
+        #expect(allow.reports.elements[2].key.type == .privilege)
+        
         // 测试非属主被拒绝
         // 使用 user0(SuperAdmin), 其带有 global 的要求
         let otherUser = try await fetchUser(index: 0, s: s)
@@ -1510,6 +2444,14 @@ struct PolicyTesting {
         }.get()
         try await m.privilege.delete(policy: privilegeDTO).get()
         try await m.resource.delete(ids: [resourceDTO.id]).get()
+        
+        try #require(deny.reports.count == 3)
+        #expect(deny.reports.elements[0].key.type == .role)
+        #expect(deny.reports.elements[1].key.type == .domain)
+        #expect(deny.reports.elements[2].key.type == .privilege)
+        #expect(deny.reports.elements[0].value == true)
+        #expect(deny.reports.elements[1].value == true)
+        #expect(deny.reports.elements[2].value == false)
     }
 
     // =========================================================================

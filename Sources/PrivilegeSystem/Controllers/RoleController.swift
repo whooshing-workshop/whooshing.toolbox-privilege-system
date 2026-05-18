@@ -388,7 +388,7 @@ extension PrivilegeSystem.RoleController {
         appointedTo user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
         user.model.$groups.query(on: db)
-            .with(\.$parents) { path in
+            .with(\.$supers) { path in
                 path.with(\.$ancestor)
             }
             .all()
@@ -397,7 +397,7 @@ extension PrivilegeSystem.RoleController {
         { groups in
             let gs = [UGroup]((
                 groups +
-                groups.flatMap { $0.parents.map { $0.ancestor } }
+                groups.flatMap { $0.supers.map { $0.ancestor } }
             ).uniqued())
             
             let groupIds = gs.compactMap { $0.id }
@@ -500,7 +500,7 @@ extension PrivilegeSystem.RoleController {
         for user: DTO.User<DTO.Queried>
     ) -> EventLoopRes<[MTORelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>], Errcase> {
         user.model.$groups.query(on: db)
-            .with(\.$parents) { path in
+            .with(\.$supers) { path in
                 path.with(\.$ancestor)
             }
             .all()
@@ -509,7 +509,7 @@ extension PrivilegeSystem.RoleController {
         { groupRoles throws(Errcase.ErrType) in
             let gs = [UGroup]((
                 groupRoles +
-                groupRoles.flatMap { $0.parents.map { $0.ancestor } }
+                groupRoles.flatMap { $0.supers.map { $0.ancestor } }
             ).uniqued())
             
             // 安全提取所有唯一的群组 UUID 集合

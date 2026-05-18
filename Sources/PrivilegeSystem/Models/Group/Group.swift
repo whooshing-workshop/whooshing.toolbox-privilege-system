@@ -29,7 +29,7 @@ public final class UGroup: PGModel, @unchecked Sendable {
     @Field(fields.name)                             var name: String
     @Field(fields.description)                      var description: String?
     
-    @Children(for: \Path.$descendant)               var parents: [Path]
+    @Children(for: \Path.$descendant)               var supers: [Path]
     @Children(for: \Path.$ancestor)                 var childs: [Path]
     @Siblings(
         through: UserGroupPivot.self,
@@ -55,7 +55,7 @@ public final class UGroup: PGModel, @unchecked Sendable {
     public typealias MIG = DefaultMIG<UGroup>
     
     func fill() -> Self {
-        self.$parents.fromId = self.id
+        self.$supers.fromId = self.id
         self.$childs.fromId = self.id
         self.$users.fromId = self.id
         self.$groupRoles.fromId = self.id

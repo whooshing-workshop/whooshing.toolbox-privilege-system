@@ -7,6 +7,7 @@ import Cryptos
 import NIOFileSystem
 import Foundation
 import AsyncHTTPClient
+import Collections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -36,7 +37,7 @@ struct TestingShared {
     //   user4 -> (无 group, 但有用户直接域)
     //   user5 -> group0 + group1 + group2 + group3 (多域 AND 压力测试)
     // ---------------------------------------------------------------------------
-    static let userInGroups: [Int: [Int]] = [
+    static let userInGroups: OrderedDictionary<Int, [Int]> = [
         0: [0],
         1: [1],
         2: [2],
@@ -71,7 +72,7 @@ struct TestingShared {
     //       ├─ GT.ids[9]  (QualityAssurance) // 测试 embed 后 divorce 清理
     //       └─ GT.ids[10] (Designers)
     // ---------------------------------------------------------------------------
-    static let groupStructures: [Int: [Int]] = [
+    static let groupStructures: OrderedDictionary<Int, [Int]> = [
         0: [6, 7],
         1: [8],
         2: [9, 10]
@@ -86,7 +87,7 @@ struct TestingShared {
     //   domain3 (SandboxEnvironment)-> group3 (BannedUsers)
     // 以上四组构成 PolicyTests 中核心 judge 场景的基础
     // ---------------------------------------------------------------------------
-    static let domainForGroup: [Int: [Int]] = [
+    static let domainForGroup: OrderedDictionary<Int, [Int]> = [
         0: [0],
         1: [1],
         2: [2],
@@ -100,7 +101,7 @@ struct TestingShared {
     //   user3 <- domain4              // 双群组域之外，再叠加一个默认放行直接域
     //   user4 <- domain6 + domain7    // 无 group 用户仍有 domain reports
     //   user5 <- domain8 + domain9    // 四群组域压力测试之外，再叠加两个直接域
-    static let domainForUser: [Int: [Int]] = [
+    static let domainForUser: OrderedDictionary<Int, [Int]> = [
         0: [0],
         4: [3],
         6: [4],
@@ -121,7 +122,7 @@ struct TestingShared {
     //   user6 <- RT[10]
     //   user7 <- RT[11]
     //   user8 <- RT[12] + RT[13]
-    static let roleForUser: [Int: [Int]] = [
+    static let roleForUser: OrderedDictionary<Int, [Int]> = [
         0: [0],
         1: [1],
         2: [2],
@@ -139,7 +140,7 @@ struct TestingShared {
     
     // 角色与群组的从属关系 (roleIdx -> [groupIdx])
     // 群组角色会对该群组及其子群组用户生效。
-    static let roleForGroup: [Int: [Int]] = [
+    static let roleForGroup: OrderedDictionary<Int, [Int]> = [
         3: [5],
         4: [6, 7],
         5: [3],
@@ -155,7 +156,7 @@ struct TestingShared {
     //   role4 (SalesManager) -> user6 在 group6 中
     //   role5 (HRLead)       -> user7 在 group8 中
     // ---------------------------------------------------------------------------
-    static let roleForGroupUser: [Int: [(Int, Int)]] = [
+    static let roleForGroupUser: OrderedDictionary<Int, [(Int, Int)]> = [
         3: [(0, 0)],
         4: [(6, 6)],
         5: [(7, 8)],
