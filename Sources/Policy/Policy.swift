@@ -95,3 +95,16 @@ package func policyPath(
 ) -> String {
     "\(format.prefix)m_\(moduleId.hexString)\(format.sign)\(type)\(format.sign)id_\(modelId.hexString)"
 }
+
+package func assemblePolicy(
+    path: String,
+    policy: String
+) -> String {
+    """
+    package rules.\(path)
+    import data.utils.pg
+    default allow := false
+    
+    \(policy)
+    """
+}

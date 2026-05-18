@@ -126,12 +126,10 @@ public extension PrivilegeModule {
             // 而 OPA 无需进行回滚，因为仅处理一条策略数据，
             // 更新失败意味着其仍保留原数据在 OPA 中
             return db.trans { db in
-                // 先对一般字段进行更新: name, description
-                // 这些字段无需额外的评估
+                // 先将字段更新到数据库中: name, description, policy
                 self.__update(
                     on: db,
                     updater: updater,
-                    allowEmpty: true,
                     label: "资源权限",
                     errThrowing: .privilegeUpdateFailed,
                     filterBuilder: { $0.filter(\.$id == updater.privilegeId) },
@@ -153,25 +151,18 @@ public extension PrivilegeModule {
                         return self.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "取得要更新的 Policy 失败", category: .external)
                     }
                     
-                    return Privilege
-                        .query(on: db)
-                        .filter(\.$id == updater.privilegeId)
-                        .set(\.$policy, to: policy)
-                        .update()
-                        .withError(Errcase.privilegeUpdateFailed, "资源权限策略 SQL 更新失败", category: .internal)
-                        .flatMap
-                    {
-                        let path = policyPath(
-                            moduleId: self.moduleId,
-                            modelId: updater.privilegeId,
-                            type: Privilege.self,
-                            format: .route
-                        )
-                        
-                        return self.opa.policy.save(by: path, content: policy)
-                            .errCast(Errcase.privilegeUpdateFailed, "资源权限策略 OPA 更新失败", category: .internal)
-                            .map { _ in updateRes }
-                    }
+                    let path = policyPath(
+                        moduleId: self.moduleId,
+                        modelId: updater.privilegeId,
+                        type: Privilege.self,
+                        format: .route
+                    )
+                    
+                    let fullPolicy = assemblePolicy(path: path, policy: policy)
+                    
+                    return self.opa.policy.save(by: path, content: fullPolicy)
+                        .errCast(Errcase.privilegeUpdateFailed, "资源权限策略 OPA 更新失败", category: .internal)
+                        .map { _ in updateRes }
                 }
             }
         }

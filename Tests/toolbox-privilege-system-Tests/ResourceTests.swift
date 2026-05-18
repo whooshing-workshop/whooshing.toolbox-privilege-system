@@ -325,6 +325,100 @@ struct ResourceTests {
         try await m.resource.delete(ids: [resourceDTO.id]).get()
     }
     
+    @Test("修改资源权限信息")
+    func privilege_Update() async throws {
+        let (_, m) = try await TestingShared.getSystem()
+        
+        let privileges = try await m.privilege.createWithReturning(privileges: [
+            .init(
+                name: "UpdateTestPrivilege",
+                description: "更新测试专用",
+                policy: "allow if { true }"
+            )
+        ]).get()
+        let privilegeDTO = privileges[0]
+        let privilegeId = privilegeDTO.id
+        
+        // 1. 测试更新 name 和 description (常量形式)
+        let updater1 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
+            .update(name: "Updated Name")
+            .update(description: "Updated Description")
+        
+        let updated1 = try await m.privilege.update(with: updater1).get()
+        #expect(updated1.name == "Updated Name")
+        #expect(updated1.description == "Updated Description")
+        #expect(updated1.policy == "allow if { true }") // policy 不变
+        print("HELLO")
+        // 2. 测试更新 policy (常量形式)
+        let updater2 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
+            .update(policy: "allow if { false }")
+        print("HELLO2")
+        let updated2 = try await m.privilege.update(with: updater2).get()
+        #expect(updated2.name == "Updated Name") // name 保持上次更新的值
+        #expect(updated2.policy == "allow if { false }")
+        
+        // 3. 测试依赖原值的更新 (闭包形式)
+        let updater3 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
+            .update(name: { $0.name! + " - V2" })
+            .update(policy: { _ in "allow if { input.operation == \"edit\" }" })
+        
+        let updated3 = try await m.privilege.update(with: updater3).get()
+        #expect(updated3.name == "Updated Name - V2")
+        #expect(updated3.policy == "allow if { input.operation == \"edit\" }")
+        
+        // 清理
+        try await m.privilege.delete(policy: updated3).get()
+    }
+
+    @Test("完整测试修改资源信息")
+    func resource_Update_Comprehensive() async throws {
+        let (_, m) = try await TestingShared.getSystem()
+        let file = FileResource(name: "comp_test.txt", path: "/tmp/comp.txt", isPrivate: false)
+        let created = try await m.resource.create(resources: [
+            PFileResource(data: file)
+        ]).get()
+        let resourceId = created[0].id
+        
+        // 1. 更新单个字段 (常量形式)
+        let updater1 = PFileResource.Updater(resourceId: resourceId)
+            .update(path: \.isPrivate, value: true)
+        
+        let updated1 = try await m.resource.update(with: updater1).get()
+        #expect(updated1.data.isPrivate == true)
+        #expect(updated1.data.name == "comp_test.txt")
+        
+        // 2. 更新整个 data 对象 (常量形式)
+        let newFile = FileResource(name: "new_comp.txt", path: "/tmp/new_comp.txt", isPrivate: false)
+        let updater2 = PFileResource.Updater(resourceId: resourceId)
+            .update(data: newFile)
+        
+        let updated2 = try await m.resource.update(with: updater2).get()
+        #expect(updated2.data.name == "new_comp.txt")
+        #expect(updated2.data.path == "/tmp/new_comp.txt")
+        
+        // 3. 依赖原值的更新 (闭包形式)
+        let updater3 = PFileResource.Updater(resourceId: resourceId)
+            .update(path: \.name, value: { $0.data.name + " - Updated" })
+        
+        let updated3 = try await m.resource.update(with: updater3).get()
+        #expect(updated3.data.name == "new_comp.txt - Updated")
+        
+        // 4. 依赖原值更新整个 data (闭包形式)
+        let updater4 = PFileResource.Updater(resourceId: resourceId)
+            .update(data: { q in
+                var d = q.data
+                d.path = "/tmp/final.txt"
+                return d
+            })
+        
+        let updated4 = try await m.resource.update(with: updater4).get()
+        #expect(updated4.data.path == "/tmp/final.txt")
+        #expect(updated4.data.name == "new_comp.txt - Updated") // 保持上次的名字
+        
+        // 清理
+        try await m.resource.delete(ids: [resourceId]).get()
+    }
+    
     @Test("删除资源")
     func resource_Delete() async throws {
         let (_, m) = try await TestingShared.getSystem()

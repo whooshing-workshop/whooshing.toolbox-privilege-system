@@ -136,13 +136,14 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         package func generate(
             needsPeek: Bool = false,
             key: PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
-            value: @escaping (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>
+            value: @escaping (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>,
+            policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil
         ) -> Self {
             var updates = self.updates
             updates[key] = value
             return .init(
                 id: self.id,
-                policyUpdate: self.policyUpdate,
+                policyUpdate: policyUpdate ?? self.policyUpdate,
                 updates: updates,
                 needsPeek: self.needsPeek || needsPeek
             )
@@ -166,11 +167,12 @@ public extension PM.PrivilegeDTO.Updater {
     }
     
     func update(policy: @escaping @autoclosure () throws -> String) -> Self {
-        .init(
-            id: self.id,
-            policyUpdate: { _ in try policy() },
-            updates: self.updates,
-            needsPeek: self.needsPeek
+        generate(
+            key: \.policy,
+            value: { builder, _ in
+                builder.set(\.$policy, to: try policy())
+            },
+            policyUpdate: { _ in try policy() }
         )
     }
 }
@@ -191,14 +193,17 @@ public extension PM.PrivilegeDTO.Updater {
     }
     
     func update(policy: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String) -> Self {
-        .init(
-            id: self.id,
+        generate(
+            needsPeek: true,
+            key: \.policy,
+            value: { builder, query in
+                guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+                return builder.set(\.$policy, to: try policy(q))
+            },
             policyUpdate: { query in
                 guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
                 return try policy(q)
-            },
-            updates: self.updates,
-            needsPeek: true
+            }
         )
     }
 }

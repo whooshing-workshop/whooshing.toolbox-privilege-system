@@ -46,13 +46,10 @@ package extension OPAController {
                 )
                 
                 // 准备 policy 的具体内容
-                let policyStr = """
-                package rules.\(path)
-                import data.utils.pg
-                default allow := false
-                
-                \(policy[keyPath: policyKey])    
-                """
+                let policyStr = assemblePolicy(
+                    path: path,
+                    policy: policy[keyPath: policyKey]
+                )
                 
                 // 收集 路径 和 策略内容
                 psData.append((path, policyStr))

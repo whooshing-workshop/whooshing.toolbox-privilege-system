@@ -98,16 +98,13 @@ package extension Controller {
     func __update<T: DTOUpdater>(
         on db: PGDatabase,
         updater: T,
-        allowEmpty: Bool = false,
         label: String,
         errThrowing: E,
         filterBuilder: @Sendable @escaping (QueryBuilder<T.DBModel>) -> QueryBuilder<T.DBModel>,
         dtoBuilder: @Sendable @escaping (T.DBModel) -> Res<T.QueriedDTO, E>
     ) -> EventLoopRes<T.QueriedDTO, E> {
-        if !allowEmpty {
-            guard updater.updates.count > 0 else {
-                return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external))
-            }
+        guard updater.updates.count > 0 else {
+            return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external))
         }
         
         return db.trans { db in
