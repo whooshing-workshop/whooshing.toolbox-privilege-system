@@ -361,6 +361,6 @@ struct RelationsTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .policy
+        TestingShared.testStage = .query
     }
 }

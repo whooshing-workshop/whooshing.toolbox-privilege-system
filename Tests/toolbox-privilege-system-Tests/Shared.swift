@@ -24,6 +24,7 @@ struct TestingShared {
         case resource
         case userInfo
         case relations
+        case query
         case policy
         case end
     }
