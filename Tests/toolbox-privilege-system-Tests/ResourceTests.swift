@@ -160,9 +160,9 @@ struct ResourceTests {
         ]
         
         // 测试创建
-        let createdFiles = try await m.resource.create(resources: fileDtos).get()
-        let createdDirs = try await m.resource.create(resources: dirDtos).get()
-        let createdAliases = try await m.resource.create(resources: aliasDtos).get()
+        let createdFiles = try await m.resource.create(resources: fileDtos)
+        let createdDirs = try await m.resource.create(resources: dirDtos)
+        let createdAliases = try await m.resource.create(resources: aliasDtos)
         
         #expect(createdFiles.count == 3)
         #expect(createdDirs.count == 2)
@@ -193,7 +193,7 @@ struct ResourceTests {
         let file = FileResource(name: "temp.txt", path: "/tmp/temp.txt", isPrivate: false)
         let created = try await m.resource.create(resources: [
             PFileResource(data: file)
-        ]).get()
+        ])
         let resourceId = created[0].id
         
         // 更新 isPrivate 为 true
@@ -204,7 +204,7 @@ struct ResourceTests {
                 return d
             })
         
-        let updated: QFileResource = try await m.resource.update(with: updater).get()
+        let updated: QFileResource = try await m.resource.update(with: updater)
         #expect(updated.data.isPrivate == true)
         #expect(updated.data.name == "temp.txt") // 其余信息不变
     }
@@ -215,7 +215,7 @@ struct ResourceTests {
         let file = FileResource(name: "attach.txt", path: "/tmp/attach.txt", isPrivate: true)
         let resourceDTO = try await m.resource.create(resources: [
             PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).get().first!
+        ]).first!
         
         let suffix = UUID().uuidString
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -224,7 +224,7 @@ struct ResourceTests {
                 description: "附加测试专用",
                 policy: "allow if { true }"
             )
-        ]).get()
+        ])
         let privilegeDTO = privileges[0]
         
         let anyResourceDTO = PModule.AnyResourceDTO.init(resourceDTO)
@@ -232,7 +232,7 @@ struct ResourceTests {
         // 测试 Attach
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
-        }.get()
+        }
 
         // 验证 Attach
         let siblings = try await privilegeDTO.model.$resources.get(on: m.db)
@@ -241,7 +241,7 @@ struct ResourceTests {
         // 测试 Detach
         try await m.privilege.detach {
             [privilegeDTO] => [anyResourceDTO]
-        }.get()
+        }
         
         let siblingsAfter = try await privilegeDTO.model.$resources.get(reload: true, on: m.db)
         
@@ -254,7 +254,7 @@ struct ResourceTests {
         let file = FileResource(name: "query_verify.txt", path: "/tmp/query_verify.txt", isPrivate: true)
         let resourceDTO = try await m.resource.create(resources: [
             PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).get().first!
+        ]).first!
         
         let suffix = UUID().uuidString
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -263,7 +263,7 @@ struct ResourceTests {
                 description: "查询测试专用",
                 policy: "allow if { true }"
             )
-        ]).get()
+        ])
         let privilegeDTO = privileges[0]
         
         let anyResourceDTO = PModule.AnyResourceDTO.init(resourceDTO)
@@ -271,22 +271,22 @@ struct ResourceTests {
         // 先 Attach
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
-        }.get()
+        }
         
         // 1. 测试 privilege(attachedTo:) -> T: Resource
-        let attachedPrivileges = try await m.privilege.privilege(attachedTo: resourceDTO).get()
+        let attachedPrivileges = try await m.privilege.privilege(attachedTo: resourceDTO)
         #expect(attachedPrivileges.contains(where: { $0.id == privilegeDTO.id }))
         
         // 2. 测试 privilege(attachedTo:) -> AnyResourceDTO
-        let attachedPrivilegesAny = try await m.privilege.privilege(attachedTo: anyResourceDTO).get()
+        let attachedPrivilegesAny = try await m.privilege.privilege(attachedTo: anyResourceDTO)
         #expect(attachedPrivilegesAny.contains(where: { $0.id == privilegeDTO.id }))
         
         // 3. 测试 is(privilege:attachedTo:) -> T: Resource
-        let isAttached = try await m.privilege.is(privilege: privilegeDTO, attachedTo: resourceDTO).get()
+        let isAttached = try await m.privilege.is(privilege: privilegeDTO, attachedTo: resourceDTO)
         #expect(isAttached == true)
         
         // 4. 测试 is(privilege:attachedTo:) -> AnyResourceDTO
-        let isAttachedAny = try await m.privilege.is(privilege: privilegeDTO, attachedTo: anyResourceDTO).get()
+        let isAttachedAny = try await m.privilege.is(privilege: privilegeDTO, attachedTo: anyResourceDTO)
         #expect(isAttachedAny == true)
         
         // 5. 测试未绑定的权限
@@ -295,19 +295,19 @@ struct ResourceTests {
                 name: "OtherPrivilege-\(suffix)",
                 policy: "allow if { true }"
             )
-        ]).get()
+        ])
         let otherPrivilegeDTO = otherPrivileges[0]
         
-        let isOtherAttached = try await m.privilege.is(privilege: otherPrivilegeDTO, attachedTo: resourceDTO).get()
+        let isOtherAttached = try await m.privilege.is(privilege: otherPrivilegeDTO, attachedTo: resourceDTO)
         #expect(isOtherAttached == false)
         
         // 清理
         try await m.privilege.detach {
             [privilegeDTO] => [anyResourceDTO]
-        }.get()
-        try await m.privilege.delete(policy: privilegeDTO).get()
-        try await m.privilege.delete(policy: otherPrivilegeDTO).get()
-        try await m.resource.delete(ids: [resourceDTO.id]).get()
+        }
+        try await m.privilege.delete(policy: privilegeDTO)
+        try await m.privilege.delete(policy: otherPrivilegeDTO)
+        try await m.resource.delete(ids: [resourceDTO.id])
     }
     
     @Test("修改资源权限信息")
@@ -320,7 +320,7 @@ struct ResourceTests {
                 description: "更新测试专用",
                 policy: "allow if { true }"
             )
-        ]).get()
+        ])
         let privilegeDTO = privileges[0]
         let privilegeId = privilegeDTO.id
         
@@ -329,7 +329,7 @@ struct ResourceTests {
             .update(name: "Updated Name")
             .update(description: "Updated Description")
         
-        let updated1 = try await m.privilege.update(with: updater1).get()
+        let updated1 = try await m.privilege.update(with: updater1)
         #expect(updated1.name == "Updated Name")
         #expect(updated1.description == "Updated Description")
         #expect(updated1.policy == "allow if { true }") // policy 不变
@@ -338,7 +338,7 @@ struct ResourceTests {
         let updater2 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
             .update(policy: "allow if { false }")
         print("HELLO2")
-        let updated2 = try await m.privilege.update(with: updater2).get()
+        let updated2 = try await m.privilege.update(with: updater2)
         #expect(updated2.name == "Updated Name") // name 保持上次更新的值
         #expect(updated2.policy == "allow if { false }")
         
@@ -347,12 +347,12 @@ struct ResourceTests {
             .update(name: { $0.name! + " - V2" })
             .update(policy: { _ in "allow if { input.operation == \"edit\" }" })
         
-        let updated3 = try await m.privilege.update(with: updater3).get()
+        let updated3 = try await m.privilege.update(with: updater3)
         #expect(updated3.name == "Updated Name - V2")
         #expect(updated3.policy == "allow if { input.operation == \"edit\" }")
         
         // 清理
-        try await m.privilege.delete(policy: updated3).get()
+        try await m.privilege.delete(policy: updated3)
     }
 
     @Test("完整测试修改资源信息")
@@ -361,7 +361,7 @@ struct ResourceTests {
         let file = FileResource(name: "comp_test.txt", path: "/tmp/comp.txt", isPrivate: false)
         let created: [QFileResource] = try await m.resource.create(resources: [
             PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).get()
+        ])
         let resourceId = created[0].id
         
         // 1. 更新单个字段 (常量形式)
@@ -372,7 +372,7 @@ struct ResourceTests {
                 return d
             })
         
-        let updated1: QFileResource = try await m.resource.update(with: updater1).get()
+        let updated1: QFileResource = try await m.resource.update(with: updater1)
         #expect(updated1.data.isPrivate == true)
         #expect(updated1.data.name == "comp_test.txt")
         
@@ -381,7 +381,7 @@ struct ResourceTests {
         let updater2 = PFileResource.Updater(resourceId: resourceId)
             .update(data: newFile)
         
-        let updated2: QFileResource = try await m.resource.update(with: updater2).get()
+        let updated2: QFileResource = try await m.resource.update(with: updater2)
         #expect(updated2.data.name == "new_comp.txt")
         #expect(updated2.data.path == "/tmp/new_comp.txt")
         
@@ -393,7 +393,7 @@ struct ResourceTests {
                 return d
             })
         
-        let updated3: QFileResource = try await m.resource.update(with: updater3).get()
+        let updated3: QFileResource = try await m.resource.update(with: updater3)
         #expect(updated3.data.name == "new_comp.txt - Updated")
         
         // 4. 依赖原值更新整个 data (闭包形式)
@@ -404,12 +404,12 @@ struct ResourceTests {
                 return d
             })
         
-        let updated4: QFileResource = try await m.resource.update(with: updater4).get()
+        let updated4: QFileResource = try await m.resource.update(with: updater4)
         #expect(updated4.data.path == "/tmp/final.txt")
         #expect(updated4.data.name == "new_comp.txt - Updated") // 保持上次的名字
         
         // 清理
-        try await m.resource.delete(ids: [resourceId]).get()
+        try await m.resource.delete(ids: [resourceId])
     }
     
     @Test("删除资源")
@@ -418,10 +418,10 @@ struct ResourceTests {
         let file = FileResource(name: "delete.txt", path: "/tmp/delete.txt", isPrivate: true)
         let resourceDTO: QFileResource = try await m.resource.create(resources: [
             PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).get().first!
+        ]).first!
         
         // 删除资源
-        try await m.resource.delete(ids: [resourceDTO.id]).get()
+        try await m.resource.delete(ids: [resourceDTO.id])
         
         // 验证删除
         let count = try await PModule.ResourceModel<FileResource>.query(on: m.db)

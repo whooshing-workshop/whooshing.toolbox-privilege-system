@@ -83,14 +83,14 @@ struct DomainTesting {
     @Test("创建域")
     func create() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        _ = try await s.domain.create(domains: Self.domains).get()
+        _ = try await s.domain.create(domains: Self.domains)
     }
     
     @Test("查询域信息和组装")
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QDomain.self).count().get() == Self.domains.count)
+        #expect(try await s.query(QDomain.self).count() == Self.domains.count)
         
         Self.ids = []
         for domainParam in Self.domains {
@@ -98,7 +98,7 @@ struct DomainTesting {
                 try await s.query(QDomain.self)
                     .filter(\.name == domainParam.name)
                     .first()
-                    .get()
+                    
             )
             Self.ids.append(u.id)
         }
@@ -108,7 +108,7 @@ struct DomainTesting {
     @Test("为每个域创建默认策略")
     func createPolicies() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let allDomains = try await s.query(QDomain.self).all().get()
+        let allDomains = try await s.query(QDomain.self).all()
         let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
         for (i, domain) in domains.enumerated() {
@@ -120,20 +120,20 @@ struct DomainTesting {
             )
             _ = try await s.policy.create(to: Domain.self) {
                 [policy] => domain.id
-            }.get()
+            }
         }
     }
     
     @Test("验证域策略是否成功添加")
     func verifyPolicies() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allDomains = try await s.query(QDomain.self).all().get()
+        let allDomains = try await s.query(QDomain.self).all()
         let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
         for domain in domains {
             let policies = try await PolicyExp<Domain>.query(on: s.db)
                 .filter(\.$parent.$id == domain.id)
-                .all().get()
+                .all()
             
             #expect(!policies.isEmpty, "域 \(domain.name) 应当至少包含一条关联策略")
         }
@@ -145,10 +145,10 @@ struct DomainTesting {
         let targetId = Self.ids[13] // PartnerNetwork
 
         let existing = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
+            .filter(\.$parent.$id == targetId).all()
         for p in existing {
             let qp = try QPolicy<Domain>.make(from: p).get()
-            try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
+            try await s.policy.delete(from: Domain.self, policy: qp => targetId)
         }
 
         let newPolicy = PPolicy<Domain>(
@@ -157,17 +157,17 @@ struct DomainTesting {
         )
         let returned = try await s.policy.createWithReturning(to: Domain.self) {
             [newPolicy] => targetId
-        }.get()
+        }
 
         let policies = try #require(returned[targetId])
         #expect(policies.count == 1)
         #expect(policies[0].policy.contains("partner"))
 
         for qp in policies {
-            try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
+            try await s.policy.delete(from: Domain.self, policy: qp => targetId)
         }
         let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Domain.self) { [def] => targetId }.get()
+        try await s.policy.create(to: Domain.self) { [def] => targetId }
     }
 
     @Test("Domain 策略删除：从 DB 移除，计数减少 1，并可恢复")
@@ -176,23 +176,23 @@ struct DomainTesting {
         let targetId = Self.ids[12] // LegacySystem
 
         let before = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
+            .filter(\.$parent.$id == targetId).all()
         guard let first = before.first else {
             Issue.record("DT.ids[12](LegacySystem) 应有策略")
             return
         }
 
         let qp = try QPolicy<Domain>.make(from: first).get()
-        try await s.policy.delete(from: Domain.self, policy: qp => targetId).get()
+        try await s.policy.delete(from: Domain.self, policy: qp => targetId)
 
         let after = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
+            .filter(\.$parent.$id == targetId).count()
         #expect(after == before.count - 1, "删除后应少 1 条")
 
         let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Domain.self) { [def] => targetId }.get()
+        try await s.policy.create(to: Domain.self) { [def] => targetId }
         let restored = try await PolicyExp<Domain>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
+            .filter(\.$parent.$id == targetId).count()
         #expect(restored == before.count, "恢复后数量应与原来一致")
     }
     
@@ -201,7 +201,7 @@ struct DomainTesting {
         let (s, _) = try await TestingShared.getSystem()
         
         for (updater, msg, verifier) in Self.updates {
-            let res = try await s.domain.update(with: updater).get()
+            let res = try await s.domain.update(with: updater)
             #expect(verifier(res), "验证失败: \(msg)")
         }
     }
@@ -209,32 +209,32 @@ struct DomainTesting {
     @Test("域多重关联与撤除测试")
     func assignAndUnassignAll() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all().get()
-        let groups = try await s.query(QGroup.self).all().get()
-        let domains = try await s.query(QDomain.self).all().get()
+        let users = try await s.query(QUser.self).all()
+        let groups = try await s.query(QGroup.self).all()
+        let domains = try await s.query(QDomain.self).all()
         
         let user = users[2]
         let group = groups[2]
         let domain = domains[2]
         
         // 1. Domain <-> User
-        try await s.domain.assign { [domain] => [user] }.get()
+        try await s.domain.assign { [domain] => [user] }
         let count1 = try await UserDomainPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(count1 == 1)
-        try await s.domain.unassign { [domain] => [user] }.get()
+        try await s.domain.unassign { [domain] => [user] }
         let count2 = try await UserDomainPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(count2 == 0)
 
         // 2. Domain <-> Group
-        try await s.domain.assign { [domain] => [group] }.get()
+        try await s.domain.assign { [domain] => [group] }
         let count3 = try await DomainGroupPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(count3 == 1)
-        try await s.domain.unassign { [domain] => [group] }.get()
+        try await s.domain.unassign { [domain] => [group] }
         let count4 = try await DomainGroupPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(count4 == 0)
     }
     
@@ -244,25 +244,25 @@ struct DomainTesting {
         
         let tempDomain = try await s.domain.create(domains: [
             .init(name: "TempDeleteDomain", description: "临时删除测试域")
-        ]).get()
+        ])
         
-        let countBefore = try await s.query(QDomain.self).count().get()
+        let countBefore = try await s.query(QDomain.self).count()
         #expect(countBefore == Self.domains.count + 1)
         
         let tempId = try #require(tempDomain.first?.id)
-        try await s.domain.delete(domainIds: [tempId]).get()
+        try await s.domain.delete(domainIds: [tempId])
         
-        let countAfter = try await s.query(QDomain.self).count().get()
+        let countAfter = try await s.query(QDomain.self).count()
         #expect(countAfter == Self.domains.count, "删除后域数量应恢复")
         
         let found = try await s.query(QDomain.self)
             .filter(\.name == "TempDeleteDomain")
-            .first().get()
+            .first()
         #expect(found == nil, "被删除的域不应被查询到")
         
         // allSatisfy = false 应不抛异常
         let nonExistentId = UUID()
-        try await s.domain.delete(domainIds: [nonExistentId], allSatisfy: false).get()
+        try await s.domain.delete(domainIds: [nonExistentId], allSatisfy: false)
     }
 
     @Test("清理验证：所有域均至少有 1 条策略")
@@ -270,7 +270,7 @@ struct DomainTesting {
         let (s, _) = try await TestingShared.getSystem()
         for (i, domainId) in Self.ids.enumerated() {
             let count = try await PolicyExp<Domain>.query(on: s.db)
-                .filter(\.$parent.$id == domainId).count().get()
+                .filter(\.$parent.$id == domainId).count()
             if count < 1 {
                 Issue.record("DT.ids[\(i)] 域应至少有 1 条策略，当前 \(count) 条")
             }

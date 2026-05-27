@@ -23,7 +23,7 @@ struct QueryTests {
         let user = try await s.query(QUser.self)
             .filter(\.email == email)
             .first()
-            .get()
+            
             
         #expect(user != nil)
         #expect(user?.email == email)
@@ -37,7 +37,7 @@ struct QueryTests {
         let results = try await s.query(QUser.self)
             .join(QUserInfo.self, on: \QUser.id == \QUserInfo.userId)
             .first()
-            .get()
+            
             
         // 如果有匹配的数据，results 不为 nil
         // 这里只是验证 API 是否能正常执行不报错
@@ -55,7 +55,7 @@ struct QueryTests {
                 group.filter(\.email == "user2@gmail.com")
             }
             .page(with: 1, size: 10)
-            .get()
+            
             
         print("Group result count: \(results.items.count)")
     }
@@ -66,7 +66,7 @@ struct QueryTests {
         
         let page = try await s.query(QUser.self)
             .page(with: 1, size: 2)
-            .get()
+            
             
         #expect(page.items.count <= 2)
         #expect(page.metadata.page == 1)
@@ -93,7 +93,7 @@ struct QueryTests {
                 counter.add(res.count)
                 print("Chunked \(res.count) items")
             }
-            .get()
+            
             
         print("Total items chunked: \(counter.value)")
     }
@@ -106,7 +106,7 @@ struct QueryTests {
         let domain = try await s.query(QDomain.self)
             .filter(\.name == "GlobalScope")
             .first()
-            .get()
+            
             
         print("Domain result: \(String(describing: domain))")
         
@@ -114,7 +114,7 @@ struct QueryTests {
         let group = try await s.query(QGroup.self)
             .filter(\.name == "AdministratorGroup")
             .first()
-            .get()
+            
             
         print("Group result: \(String(describing: group))")
     }
@@ -126,7 +126,7 @@ struct QueryTests {
         let users = try await s.query(QUser.self)
             .sort(\.email, .descending)
             .page(with: 1, size: 10)
-            .get()
+            
             
         print("Sorted users: \(users.items.map { $0.email })")
     }
@@ -135,7 +135,7 @@ struct QueryTests {
     func testAggregate() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let count = try await s.query(QUser.self).count().get()
+        let count = try await s.query(QUser.self).count()
         print("Total users count: \(count)")
         
         #expect(count >= 0)

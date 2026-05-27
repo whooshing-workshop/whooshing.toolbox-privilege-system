@@ -89,14 +89,14 @@ struct RoleTesting {
     @Test("创建角色")
     func create() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        _ = try await s.role.create(roles: Self.roles).get()
+        _ = try await s.role.create(roles: Self.roles)
     }
     
     @Test("查询并验证角色")
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QRole.self).count().get() == Self.roles.count)
+        #expect(try await s.query(QRole.self).count() == Self.roles.count)
         
         Self.ids = []
         for roleParam in Self.roles {
@@ -104,7 +104,7 @@ struct RoleTesting {
                 try await s.query(QRole.self)
                     .filter(\.name == roleParam.name)
                     .first()
-                    .get()
+                    
             )
             Self.ids.append(u.id)
         }
@@ -114,7 +114,7 @@ struct RoleTesting {
     @Test("为每个角色创建默认策略")
     func createPolicies() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let allRoles = try await s.query(QRole.self).all().get()
+        let allRoles = try await s.query(QRole.self).all()
         let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
         for (i, role) in roles.enumerated() {
@@ -126,20 +126,20 @@ struct RoleTesting {
             )
             _ = try await s.policy.create(to: Role.self) {
                 [policy] => role.id
-            }.get()
+            }
         }
     }
     
     @Test("验证角色策略是否成功添加")
     func verifyPolicies() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allRoles = try await s.query(QRole.self).all().get()
+        let allRoles = try await s.query(QRole.self).all()
         let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
         for role in roles {
             let policies = try await PolicyExp<Role>.query(on: s.db)
                 .filter(\.$parent.$id == role.id)
-                .all().get()
+                .all()
             
             #expect(!policies.isEmpty, "角色 \(role.name) 应当至少包含一条关联策略")
         }
@@ -151,10 +151,10 @@ struct RoleTesting {
         let targetId = Self.ids[13] // DevOpsEngineer
 
         let existing = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
+            .filter(\.$parent.$id == targetId).all()
         for p in existing {
             let qp = try QPolicy<Role>.make(from: p).get()
-            try await s.policy.delete(from: Role.self, policy: qp => targetId).get()
+            try await s.policy.delete(from: Role.self, policy: qp => targetId)
         }
 
         let newPolicy = PPolicy<Role>(
@@ -163,7 +163,7 @@ struct RoleTesting {
         )
         let returned = try await s.policy.createWithReturning(to: Role.self) {
             [newPolicy] => targetId
-        }.get()
+        }
 
         let policies = try #require(returned[targetId], "返回字典中应有 targetId 对应的条目")
         #expect(policies.count == 1)
@@ -171,10 +171,10 @@ struct RoleTesting {
         #expect(policies[0].policy.contains("devops"))
 
         for qp in policies {
-            try await s.policy.delete(from: Role.self, policy: qp => targetId).get()
+            try await s.policy.delete(from: Role.self, policy: qp => targetId)
         }
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }.get()
+        try await s.policy.create(to: Role.self) { [def] => targetId }
     }
 
     @Test("Role 策略删除：从 DB 移除，计数减少 1，并可恢复")
@@ -183,23 +183,23 @@ struct RoleTesting {
         let targetId = Self.ids[12] // ContentReviewer
 
         let before = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).all().get()
+            .filter(\.$parent.$id == targetId).all()
         guard let first = before.first else {
             Issue.record("RT.ids[12](ContentReviewer) 应有策略")
             return
         }
 
         let qp = try QPolicy<Role>.make(from: first).get()
-        try await s.policy.delete(from: Role.self, policy: qp => targetId).get()
+        try await s.policy.delete(from: Role.self, policy: qp => targetId)
 
         let after = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
+            .filter(\.$parent.$id == targetId).count()
         #expect(after == before.count - 1, "删除后应少 1 条")
 
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }.get()
+        try await s.policy.create(to: Role.self) { [def] => targetId }
         let restored = try await PolicyExp<Role>.query(on: s.db)
-            .filter(\.$parent.$id == targetId).count().get()
+            .filter(\.$parent.$id == targetId).count()
         #expect(restored == before.count, "恢复后数量应与原来一致")
     }
     
@@ -208,7 +208,7 @@ struct RoleTesting {
         let (s, _) = try await TestingShared.getSystem()
         
         for (updater, msg, verifier) in Self.updates {
-            let res = try await s.role.update(with: updater).get()
+            let res = try await s.role.update(with: updater)
             #expect(verifier(res), "验证失败: \(msg)")
         }
     }
@@ -216,49 +216,49 @@ struct RoleTesting {
     @Test("角色多重关联与撤除测试")
     func appointAndDismissAll() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all().get()
-        let groups = try await s.query(QGroup.self).all().get()
-        let roles = try await s.query(QRole.self).all().get()
+        let users = try await s.query(QUser.self).all()
+        let groups = try await s.query(QGroup.self).all()
+        let roles = try await s.query(QRole.self).all()
         
         let user = users[1]
         let group = groups[1]
         let role = roles[1]
         
         // 1. Role <-> User
-        try await s.role.appoint { [role] => [user] }.get()
+        try await s.role.appoint { [role] => [user] }
         let c1 = try await UserRolePivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(c1 == 1)
-        try await s.role.dismiss { [role] => [user] }.get()
+        try await s.role.dismiss { [role] => [user] }
         let c2 = try await UserRolePivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(c2 == 0)
 
         // 2. Role <-> Group
-        try await s.role.appoint { [role] => [group] }.get()
+        try await s.role.appoint { [role] => [group] }
         let c3 = try await RoleGroupPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(c3 == 1)
-        try await s.role.dismiss { [role] => [group] }.get()
+        try await s.role.dismiss { [role] => [group] }
         let c4 = try await RoleGroupPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(c4 == 0)
 
         // 3. Role <-> UserInGroup
         // 先建立 User <-> Group 关系才能指派组内用户的角色
-        try await s.group.join { [user] => [group] }.get()
-        let uig = try await s.group.query(relations: [user =| group]).get()
-        try await s.role.appoint { [role] => uig }.get()
+        try await s.group.join { [user] => [group] }
+        let uig = try await s.group.query(relations: [user =| group])
+        try await s.role.appoint { [role] => uig }
         let c5 = try await RoleUserInGroupPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(c5 == 1)
-        try await s.role.dismiss { [role] => uig }.get()
+        try await s.role.dismiss { [role] => uig }
         let c6 = try await RoleUserInGroupPivot.query(on: s.db)
-            .count().get()
+            .count()
         #expect(c6 == 0)
         
         // 扫尾清理 User <-> Group
-        try await s.group.kick { [user] => [group] }.get()
+        try await s.group.kick { [user] => [group] }
     }
     
     @Test("角色删除测试")
@@ -268,25 +268,25 @@ struct RoleTesting {
         // 临时创建一个角色用于删除测试
         let tempRole = try await s.role.create(roles: [
             .init(name: "TempDeleteRole", description: "临时删除测试角色")
-        ]).get()
+        ])
         
-        let countBefore = try await s.query(QRole.self).count().get()
+        let countBefore = try await s.query(QRole.self).count()
         #expect(countBefore == Self.roles.count + 1)
         
         let tempId = try #require(tempRole.first?.id)
-        try await s.role.delete(roleIds: [tempId]).get()
+        try await s.role.delete(roleIds: [tempId])
         
-        let countAfter = try await s.query(QRole.self).count().get()
+        let countAfter = try await s.query(QRole.self).count()
         #expect(countAfter == Self.roles.count, "删除后角色数量应恢复")
         
         let found = try await s.query(QRole.self)
             .filter(\.name == "TempDeleteRole")
-            .first().get()
+            .first()
         #expect(found == nil, "被删除的角色不应被查询到")
         
         // 忳照 allSatisfy = false 不抛异常
         let nonExistentId = UUID()
-        try await s.role.delete(roleIds: [nonExistentId], allSatisfy: false).get()
+        try await s.role.delete(roleIds: [nonExistentId], allSatisfy: false)
     }
 
     @Test("清理验证：所有角色均至少有 1 条策略")
@@ -294,7 +294,7 @@ struct RoleTesting {
         let (s, _) = try await TestingShared.getSystem()
         for (i, roleId) in Self.ids.enumerated() {
             let count = try await PolicyExp<Role>.query(on: s.db)
-                .filter(\.$parent.$id == roleId).count().get()
+                .filter(\.$parent.$id == roleId).count()
             if count < 1 {
                 Issue.record("RT.ids[\(i)] 角色应至少有 1 条策略，当前 \(count) 条")
             }

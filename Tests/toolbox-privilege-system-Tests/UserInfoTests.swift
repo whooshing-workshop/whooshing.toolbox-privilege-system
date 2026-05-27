@@ -201,24 +201,24 @@ struct UserinfoTesting {
     func create() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        try await s.userInfo.create { Self.infos }.get()
+        try await s.userInfo.create { Self.infos }
     }
     
     @Test("查询用户信息")
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QUserInfo.self).count().get() == Self.infos.count)
-        #expect(try await s.query(QAddressSlice.self).count().get() == Self.infos.reduce(0) { $0 + $1.2.addresses.count })
-        #expect(try await s.query(QAlternateEmailSlice.self).count().get() == Self.infos.reduce(0) { $0 + $1.2.alternateEmails.count })
-        #expect(try await s.query(QPhoneSlice.self).count().get() == Self.infos.reduce(0) { $0 + $1.2.phones.count })
+        #expect(try await s.query(QUserInfo.self).count() == Self.infos.count)
+        #expect(try await s.query(QAddressSlice.self).count() == Self.infos.reduce(0) { $0 + $1.2.addresses.count })
+        #expect(try await s.query(QAlternateEmailSlice.self).count() == Self.infos.reduce(0) { $0 + $1.2.alternateEmails.count })
+        #expect(try await s.query(QPhoneSlice.self).count() == Self.infos.reduce(0) { $0 + $1.2.phones.count })
         
         for userInfo in Self.infos {
             let ui = try #require(
                 try await s.query(QUserInfo.self)
                     .filter(\.identifier == userInfo.1.identifier)
                     .first()
-                    .get()
+                    
             )
             
             var addresses: [UUID] = []
@@ -230,7 +230,7 @@ struct UserinfoTesting {
                     try await s.query(QAddressSlice.self)
                         .filter(\.value == address.value)
                         .first()
-                        .get()
+                        
                 )
                 
                 addresses.append(addr.id)
@@ -241,7 +241,7 @@ struct UserinfoTesting {
                     try await s.query(QAlternateEmailSlice.self)
                         .filter(\.value == email.value)
                         .first()
-                        .get()
+                        
                 )
                 
                 emails.append(e.id)
@@ -252,7 +252,7 @@ struct UserinfoTesting {
                     try await s.query(QPhoneSlice.self)
                         .filter(\.value == phone.value)
                         .first()
-                        .get()
+                        
                 )
                 
                 phones.append(p.id)
@@ -268,7 +268,7 @@ struct UserinfoTesting {
     func fetchQuery() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let infos = try await s.infoSlice.fetch(for: AT.ids[0]).get()
+        let infos = try await s.infoSlice.fetch(for: AT.ids[0])
         #expect(infos.addresses.like(Self.infos[0].2.addresses))
         #expect(infos.alternateEmails.like(Self.infos[0].2.alternateEmails))
         #expect(infos.phones.like(Self.infos[0].2.phones))
@@ -285,7 +285,7 @@ struct UserinfoTesting {
                         .join(QAddressSlice.self, on: \QUserInfo.id == \QAddressSlice.userInfoId)
                         .filter(QAddressSlice.self, \.value == address.value)
                         .first()
-                        .get()
+                        
                 )
                 
                 #expect(res.nickname == info.1.nickname)
@@ -298,7 +298,7 @@ struct UserinfoTesting {
                         .join(QAlternateEmailSlice.self, on: \QUserInfo.id == \QAlternateEmailSlice.userInfoId)
                         .filter(QAlternateEmailSlice.self, \.value == email.value)
                         .first()
-                        .get()
+                        
                 )
                 
                 #expect(res.nickname == info.1.nickname)
@@ -311,7 +311,7 @@ struct UserinfoTesting {
                         .join(QPhoneSlice.self, on: \QUserInfo.id == \QPhoneSlice.userInfoId)
                         .filter(QPhoneSlice.self, \.value == phone.value)
                         .first()
-                        .get()
+                        
                 )
                 
                 #expect(res.nickname == info.1.nickname)
@@ -326,22 +326,22 @@ struct UserinfoTesting {
         
         for (infoUpdate, addressUpdate, emailUpdate, phoneUpdate) in Self.updates {
             if let iu = infoUpdate {
-                let res = try await s.userInfo.update(with: iu.0).get()
+                let res = try await s.userInfo.update(with: iu.0)
                 #expect(iu.2(res), .init(stringLiteral: iu.1))
             }
 
             if let au = addressUpdate {
-                let res = try await s.infoSlice.update(with: au.0).get()
+                let res = try await s.infoSlice.update(with: au.0)
                 #expect(au.2(res), .init(stringLiteral: au.1))
             }
             
             if let eu = emailUpdate {
-                let res = try await s.infoSlice.update(with: eu.0).get()
+                let res = try await s.infoSlice.update(with: eu.0)
                 #expect(eu.2(res), .init(stringLiteral: eu.1))
             }
             
             if let pu = phoneUpdate {
-                let res = try await s.infoSlice.update(with: pu.0).get()
+                let res = try await s.infoSlice.update(with: pu.0)
                 #expect(pu.2(res), .init(stringLiteral: pu.1))
             }
         }
@@ -354,7 +354,7 @@ struct UserinfoTesting {
         // 使用一个未建立信息的用户（AT.ids[2]）临时创建 UserInfo
         let userId = AT.ids[2]
         
-        let countBefore = try await s.query(QUserInfo.self).count().get()
+        let countBefore = try await s.query(QUserInfo.self).count()
         
         try await s.userInfo.create {
             [
@@ -363,30 +363,30 @@ struct UserinfoTesting {
                     => PExtendedInfo(addresses: [], alternateEmails: [], phones: [])
                 )
             ]
-        }.get()
+        }
         
-        let countMid = try await s.query(QUserInfo.self).count().get()
+        let countMid = try await s.query(QUserInfo.self).count()
         #expect(countMid == countBefore + 1)
         
         // 获取刚创建的 Info ID
         let tempInfo = try #require(
             try await s.query(QUserInfo.self)
                 .filter(\.identifier == "temp_id_delete_test")
-                .first().get()
+                .first()
         )
         
-        try await s.userInfo.delete(infoIds: [tempInfo.id]).get()
+        try await s.userInfo.delete(infoIds: [tempInfo.id])
         
-        let countAfter = try await s.query(QUserInfo.self).count().get()
+        let countAfter = try await s.query(QUserInfo.self).count()
         #expect(countAfter == countBefore, "删除 UserInfo 后数量应恢复")
         
         let found = try await s.query(QUserInfo.self)
             .filter(\.identifier == "temp_id_delete_test")
-            .first().get()
+            .first()
         #expect(found == nil, "被删除的 UserInfo 不应被查询到")
         
         // allSatisfy = false 不抛异常
-        try await s.userInfo.delete(infoIds: [UUID()], allSatisfy: false).get()
+        try await s.userInfo.delete(infoIds: [UUID()], allSatisfy: false)
     }
     
     @Test("扩展信息切片删除测试")
@@ -398,32 +398,32 @@ struct UserinfoTesting {
         let existingInfo = try #require(
             try await s.query(QUserInfo.self)
                 .filter(\.userId == userId)
-                .first().get()
+                .first()
         )
         
         // 临时添加一个地址切片
-        let sliceBefore = try await s.query(QAddressSlice.self).count().get()
+        let sliceBefore = try await s.query(QAddressSlice.self).count()
         
         let newSlices = try await s.infoSlice.create(
             for: existingInfo.id,
             extendedInfos: [PAddressSlice(value: "TempCity_DeleteTest", order: 99)]
-        ).get()
+        )
         #expect(!newSlices.isEmpty)
-        #expect(try await s.query(QAddressSlice.self).count().get() == sliceBefore + 1)
+        #expect(try await s.query(QAddressSlice.self).count() == sliceBefore + 1)
         
         let sliceId = try #require(newSlices.first?.id)
-        try await s.infoSlice.delete(infoIds: [sliceId], type: DTO.Address.self).get()
+        try await s.infoSlice.delete(infoIds: [sliceId], type: DTO.Address.self)
         
-        let sliceAfter = try await s.query(QAddressSlice.self).count().get()
+        let sliceAfter = try await s.query(QAddressSlice.self).count()
         #expect(sliceAfter == sliceBefore, "切片删除后数量应恢复")
         
         let found = try await s.query(QAddressSlice.self)
             .filter(\.value == "TempCity_DeleteTest")
-            .first().get()
+            .first()
         #expect(found == nil, "被删除的切片不应被查询到")
         
         // allSatisfy = false 不抛异常
-        try await s.infoSlice.delete(infoIds: [UUID()], allSatisfy: false, type: DTO.Address.self).get()
+        try await s.infoSlice.delete(infoIds: [UUID()], allSatisfy: false, type: DTO.Address.self)
     }
     
     @MainActor
