@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import Fluent
+import ResourceMacros
 @preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
@@ -93,7 +94,8 @@ enum DirectoryOperation: String, OperationList {
 typealias PDirectoryResource = PModule.PResource<DirectoryResource>
 typealias QDirectoryResource = PModule.QResource<DirectoryResource>
 
-struct DirectoryResource: Resource, Hashable {
+@Resource
+struct DirectoryResource: Hashable {
     typealias ResourceType = ResourceList
     typealias Operations = DirectoryOperation
 
@@ -101,22 +103,6 @@ struct DirectoryResource: Resource, Hashable {
     var name: String
     var path: String
     var ownerId: UUID
-
-    var json: [String: AnyCodable] {
-        return [
-            "name": AnyCodable(name),
-            "path": AnyCodable(path),
-            "ownerId": AnyCodable(ownerId.uuidString)
-        ]
-    }
-
-    static var mirrors: [PartialKeyPath<DirectoryResource>: [String]] {
-        return [
-            \.name: ["name"],
-            \.path: ["path"],
-            \.ownerId: ["ownerId"]
-        ]
-    }
 }
 
 enum AliasOperation: String, OperationList {
@@ -126,27 +112,14 @@ enum AliasOperation: String, OperationList {
 typealias PAliasResource = PModule.PResource<AliasResource>
 typealias QAliasResource = PModule.QResource<AliasResource>
 
-struct AliasResource: Resource, Hashable {
+@Resource
+struct AliasResource: Hashable {
     typealias ResourceType = ResourceList
     typealias Operations = AliasOperation
 
     static let type: ResourceList = .alias
     var name: String
     var targetId: UUID
-
-    var json: [String: AnyCodable] {
-        return [
-            "name": AnyCodable(name),
-            "targetId": AnyCodable(targetId.uuidString)
-        ]
-    }
-
-    static var mirrors: [PartialKeyPath<AliasResource>: [String]] {
-        return [
-            \.name: ["name"],
-            \.targetId: ["targetId"]
-        ]
-    }
 }
 
 @Suite("资源及资源关系 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))

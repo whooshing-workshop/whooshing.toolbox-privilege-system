@@ -4,6 +4,7 @@ import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
+import ResourceMacros
 
 public extension PrivilegeModule {
     final class ResourceController: Controller {

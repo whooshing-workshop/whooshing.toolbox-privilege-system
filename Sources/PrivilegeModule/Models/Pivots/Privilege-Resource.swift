@@ -1,6 +1,7 @@
 import PgSQL
 import Policy
 import Fluent
+import ResourceMacros
 
 extension PrivilegeModule {
     typealias PrivilegeAnyResourcePivot = Pivot<PrivilegeAnyResource>

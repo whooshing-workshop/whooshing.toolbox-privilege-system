@@ -3,6 +3,11 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
+// MARK: - ResourceMacro
+
+/// 为 struct/class 生成 `Resource` 协议中 `json` 与 `mirrors` 的实现。
+/// 扫描所有非 static 的存储属性（包括带属性包装器的属性），
+/// 按属性名生成对应的 AnyCodable 条目（json）和 KeyPath 映射（mirrors）。
 public struct ResourceMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -11,227 +16,114 @@ public struct ResourceMacro: ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        try ExtensionExpansion(
-            protocolName: "Resource",
-            of: node,
-            attachedTo: declaration,
-            providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context
-        )
-    }
-}
 
-public struct LabelMacro: ExtensionMacro {
-    public static func expansion(
-        of node: AttributeSyntax,
-        attachedTo declaration: some DeclGroupSyntax,
-        providingExtensionsOf type: some TypeSyntaxProtocol,
-        conformingTo protocols: [TypeSyntax],
-        in context: some MacroExpansionContext
-    ) throws -> [ExtensionDeclSyntax] {
-        try ExtensionExpansion(
-            protocolName: "Label",
-            of: node,
-            attachedTo: declaration,
-            providingExtensionsOf: type,
-            conformingTo: protocols,
-            in: context
-        )
-    }
-}
-
-func ExtensionExpansion(
-    protocolName: String,
-    of node: AttributeSyntax,
-    attachedTo declaration: some DeclGroupSyntax,
-    providingExtensionsOf type: some TypeSyntaxProtocol,
-    conformingTo protocols: [TypeSyntax],
-    in context: some MacroExpansionContext,
-    extraMember: () throws -> String = { "" }
-) throws -> [ExtensionDeclSyntax] {
-    
-    guard
-        declaration.is(StructDeclSyntax.self) ||
-        declaration.is(ClassDeclSyntax.self)
-    else {
-        fatalError("编译失败：该宏定义的对象仅能是 struct 或 class")
-    }
-    
-    var includeVars = false
-    var includeLets = false
-    var includePropertyWrappers = false
-    var andStratege = false
-    
-    if let funcCall = node
-        .arguments?
-        .as(LabeledExprListSyntax.self)?
-        .first?
-        .expression
-        .as(FunctionCallExprSyntax.self),
-       let funcName = funcCall
-        .calledExpression
-        .as(MemberAccessExprSyntax.self)?
-        .declName
-        .baseName
-        .text
-    {
-        andStratege = funcName == "and"
-        
-        for element in funcCall.arguments {
-            guard let enumName = element.expression
-                .as(MemberAccessExprSyntax.self)?
-                .declName
-                .baseName
-                .identifier?
-                .name
-            else {
-                continue
-            }
-            
-            switch enumName {
-            case "lets": includeLets = true
-            case "vars": includeVars = true
-            case "propertyWrappers": includePropertyWrappers = true
-            default: continue
-            }
-        }
-    } else {
-        includeLets = false
-        includeVars = false
-        includePropertyWrappers = true
-        andStratege = false
-    }
-    
-    let includeOperation: (VariableDeclSyntax) -> Bool = { decl in
-        var res = true
-        if andStratege {
-            if includeLets { res = res && decl.bindingSpecifier.trimmedDescription == "let" }
-            if includeVars { res = res && decl.bindingSpecifier.trimmedDescription == "var" }
-            if includePropertyWrappers { res = res && decl.attributes.count > 0 }
-            return res
-        } else {
-            return (
-                (includeLets && decl.bindingSpecifier.trimmedDescription == "let") ||
-                (includeVars && decl.bindingSpecifier.trimmedDescription == "var") ||
-                (includePropertyWrappers && decl.attributes.count > 0)
-            )
-        }
-    }
-    
-    let members = Array(declaration.memberBlock.members)
-    
-    var keypaths: [String] = []
-    for member in members {
         guard
-            let variableDecl = member.decl.as(VariableDeclSyntax.self),
-            !variableDecl.modifiers.contains(where: { $0.name.text == "static" }),
-            includeOperation(variableDecl),
-            let binding = variableDecl.bindings.first
+            declaration.is(StructDeclSyntax.self) ||
+            declaration.is(ClassDeclSyntax.self)
         else {
-            continue
+            throw MacroError.notStructOrClass
         }
-        
-        let varName = binding.pattern.trimmedDescription
-        
-        keypaths.append("""
-        "\(varName)": \\.\(varName)
-        """)
-    }
-    
-    let res: DeclSyntax = try """
-    extension \(type.trimmed): \(raw: protocolName) {
-        \(raw: extraMember())
-        public static var vars: [String: PartialKeyPath<Self>] {\(raw: keypaths.count == 0 ? "[:]" : "[\n\(keypaths.joined(separator: ",\n"))\n]")}
-    }
-    """
-    
-    guard let extensionDecl = res.as(ExtensionDeclSyntax.self) else {
-        fatalError("编译错误：无法生成 extension")
+
+        // 收集所有非 static 的存储属性名
+        let propNames = storedPropertyNames(in: declaration)
+
+        // 构造 json 字典内容，例如：
+        //   "name": AnyCodable(name),
+        let jsonEntries = propNames
+            .map { "            \"\($0)\": AnyCodable(\($0))" }
+            .joined(separator: ",\n")
+
+        let jsonBody: String
+        if propNames.isEmpty {
+            jsonBody = "[:]"
+        } else {
+            jsonBody = "[\n\(jsonEntries)\n        ]"
+        }
+
+        // 构造 mirrors 字典内容，例如：
+        //   \.name: ["name"],
+        let mirrorEntries = propNames
+            .map { "            \\.\($0): [\"\($0)\"]" }
+            .joined(separator: ",\n")
+
+        let mirrorsBody: String
+        if propNames.isEmpty {
+            mirrorsBody = "[:]"
+        } else {
+            mirrorsBody = "[\n\(mirrorEntries)\n        ]"
+        }
+
+        let extensionSrc: DeclSyntax = """
+        extension \(type.trimmed): Resource {
+            public var json: [String: AnyCodable] {
+                \(raw: jsonBody)
+            }
+            public static var mirrors: [PartialKeyPath<Self>: [String]] {
+                \(raw: mirrorsBody)
+            }
+        }
+        """
+
+        guard let extensionDecl = extensionSrc.as(ExtensionDeclSyntax.self) else {
+            throw MacroError.expansionFailed
+        }
+
+        return [extensionDecl]
     }
 
-    return [extensionDecl]
-}
+    // MARK: - Helpers
 
-/// 根据 ExprSyntax 推断类型，返回字符串表示的类型
-func inferTypeString(from expr: ExprSyntax) -> String {
-    
-    if expr.is(IntegerLiteralExprSyntax.self) {
-        return "Int"
-    } else if expr.is(FloatLiteralExprSyntax.self) {
-        return "Double"
-    } else if expr.is(StringLiteralExprSyntax.self) {
-        return "String"
-    } else if expr.is(BooleanLiteralExprSyntax.self) {
-        return "Bool"
-    } else if let arrayExpr = expr.as(ArrayExprSyntax.self) {
-        var t: String? = nil
-        for element in arrayExpr.elements {
-            let type = inferTypeString(from: element.expression)
-            if let resT = t {
-                if resT != type {
-                    t = nil
-                    break
-                }
-            } else {
-                t = type
+    /// 返回 DeclGroupSyntax 中所有非 static 存储属性的名称（按声明顺序）。
+    private static func storedPropertyNames(in declaration: some DeclGroupSyntax) -> [String] {
+        declaration.memberBlock.members.compactMap { member -> String? in
+            guard
+                let varDecl = member.decl.as(VariableDeclSyntax.self),
+                // 排除 static 属性
+                !varDecl.modifiers.contains(where: { $0.name.text == "static" }),
+                // 排除计算属性（有 getter body）
+                let binding = varDecl.bindings.first,
+                !isComputedProperty(binding),
+                let nameToken = binding.pattern.as(IdentifierPatternSyntax.self)
+            else {
+                return nil
             }
+            return nameToken.identifier.text
         }
-        
-        return "[\(t ?? "Any")]"
-    } else if let dictExpr = expr.as(DictionaryExprSyntax.self) {
-        guard let elements = dictExpr.content.as(DictionaryElementListSyntax.self) else {
-            return "[AnyHashable: Any]"
+    }
+
+    /// 若绑定带有 getter（accessor block），则为计算属性。
+    private static func isComputedProperty(_ binding: PatternBindingSyntax) -> Bool {
+        guard let accessor = binding.accessorBlock else { return false }
+        switch accessor.accessors {
+        case .accessors:
+            return true
+        case .getter:
+            return true
         }
-        
-        var keyT: String? = nil
-        var kSetted = false
-        var valueT: String? = nil
-        var vSetted = false
-        for element in elements {
-            let keyType = inferTypeString(from: element.key)
-            let valueType = inferTypeString(from: element.value)
-            
-            if !kSetted {
-                if let kt = keyT {
-                    if kt != keyType {
-                        keyT = nil
-                        kSetted = true
-                    }
-                } else {
-                    keyT = keyType
-                }
-            }
-            
-            if !vSetted {
-                if let vt = valueT {
-                    if vt != valueType {
-                        valueT = nil
-                        vSetted = true
-                    }
-                } else {
-                    valueT = valueType
-                }
-            }
-            
-            if kSetted && vSetted { break }
-        }
-        
-        return "[\(keyT ?? "AnyHashable"): \(valueT ?? "Any")]"
-    } else if let tupleExpr = expr.as(TupleExprSyntax.self) {
-        let types = tupleExpr.elements.map { inferTypeString(from: $0.expression) }
-        return "(\(types.joined(separator: ", ")))"
-    } else if expr.is(NilLiteralExprSyntax.self) {
-        return "NULL"
-    } else {
-        return "Unknown"
     }
 }
+
+// MARK: - MacroError
+
+enum MacroError: Error, CustomStringConvertible {
+    case notStructOrClass
+    case expansionFailed
+
+    var description: String {
+        switch self {
+        case .notStructOrClass:
+            return "@Resource 宏只能应用于 struct 或 class"
+        case .expansionFailed:
+            return "@Resource 宏展开失败，无法生成 extension 代码"
+        }
+    }
+}
+
+// MARK: - Plugin
 
 @main
-struct MyMacroPlugin: CompilerPlugin {
+struct ResourceMacroPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         ResourceMacro.self,
-        LabelMacro.self
     ]
 }

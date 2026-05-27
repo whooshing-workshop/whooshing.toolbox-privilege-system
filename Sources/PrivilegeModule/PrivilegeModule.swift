@@ -5,9 +5,7 @@ import FluentPostgresDriver
 import ResourceMacros
 import AsyncHTTPClient
 import Query
-
-public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable, Hashable
-where Self.RawValue == String {}
+import ResourceMacros
 
 public typealias PM = PrivilegeModule
 

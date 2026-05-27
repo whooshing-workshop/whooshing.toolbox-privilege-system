@@ -32,7 +32,7 @@ let package = Package(
         .target(
             name: "ResourceMacros",
             dependencies: [
-                .target(name: "MacroImplements"),
+                .target(name: "MacroImplements")
             ]
         ),
         .target(

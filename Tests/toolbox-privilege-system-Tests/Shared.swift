@@ -8,6 +8,7 @@ import NIOFileSystem
 import Foundation
 import AsyncHTTPClient
 import Collections
+@testable import ResourceMacros
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 

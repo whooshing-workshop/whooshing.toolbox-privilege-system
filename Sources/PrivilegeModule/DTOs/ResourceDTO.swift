@@ -4,6 +4,7 @@ import ErrorHandle
 import Collections
 import SQLKit
 import Query
+import ResourceMacros
 
 public extension PM {
     typealias PResource<G: Resource> = ResourceDTO<G, DTO.Prepare> where G.ResourceType == ResourceList, G: Hashable

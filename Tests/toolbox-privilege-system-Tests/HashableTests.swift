@@ -1,9 +1,10 @@
 import Vapor
 import Testing
+import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import ResourceMacros
 @testable import Policy
-import AnyCodable
 
 enum MockOperation: String, OperationList {
     case read

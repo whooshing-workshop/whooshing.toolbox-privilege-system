@@ -2,6 +2,7 @@ import PgSQL
 import Foundation
 import Policy
 import Fluent
+import ResourceMacros
 @preconcurrency import AnyCodable
 
 extension PM {

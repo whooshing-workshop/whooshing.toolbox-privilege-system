@@ -6,6 +6,7 @@ import SQLKit
 import ErrorHandle
 import NIOAdvanced
 import OPA
+import ResourceMacros
 
 public extension PrivilegeModule {
     final class PrivilegeController: OPAController {

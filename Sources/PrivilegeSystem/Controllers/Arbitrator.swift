@@ -8,6 +8,7 @@ import OPA
 import PrivilegeModule
 import Collections
 import LoggingAdvanced
+import ResourceMacros
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {

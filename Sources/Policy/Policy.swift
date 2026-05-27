@@ -14,7 +14,7 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     public struct Fields: PGFields {
         public let id = PGField("id", .uuid)                            .primary
-        public let parentId = PGField("\(T.namePrefix)_id", .uuid)     .required
+        public let parentId = PGField("\(T.namePrefix)_id", .uuid)      .required
                                                                         .foreign(T.Model.self, .id, onDelete: .cascade)
         public let moduleId = PGField("module_id", .uuid)               .required
         public let policy = PGField("policy", .string)                  .required
@@ -26,7 +26,7 @@ public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     let fields = Fields()
     
-    @ID(key: .id)                      public var id: UUID?
+    @ID(key: .id)                                   public var id: UUID?
     
     @Parent(fields.parentId)                        public var parent: T.Model
     @Field(fields.moduleId)                         public var moduleId: UUID

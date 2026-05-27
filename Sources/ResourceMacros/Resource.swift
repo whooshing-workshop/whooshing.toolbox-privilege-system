@@ -15,3 +15,7 @@ public protocol Resource: Sendable, Codable, Hashable {
 
 public protocol OperationList: Sendable, Codable, CaseIterable, RawRepresentable
 where Self.RawValue == String {}
+
+
+public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable, Hashable
+where Self.RawValue == String {}
