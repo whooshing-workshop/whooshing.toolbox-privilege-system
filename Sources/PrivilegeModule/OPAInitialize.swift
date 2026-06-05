@@ -1,10 +1,12 @@
 import OPA
 import Policy
 import ErrorHandle
+import Logging
+import LoggingAdvanced
 
 extension PrivilegeModule {
-    func opaInitialize() async throws {
-        let policies = try await required(throws: Errcase.opaInitFailed, "取得资源权限数据失败", category: .internal) {
+    func opaInitialize(logger: Logger) async throws(BscError<Errcase>) {
+        let policies = try await logger.required(throws: Errcase.opaInitFailed, "从数据库查询资源权限数据失败", category: .internal) {
             try await Privilege.query(on: db).all().map {
                 (
                     policyPath(moduleId: moduleId, modelId: try $0.requireID(), type: Privilege.self, format: .path),
@@ -14,9 +16,11 @@ extension PrivilegeModule {
         }
         
         for (path, policy) in policies {
-            try await required(throws: Errcase.opaInitFailed, "OPA 注入权限数据失败", category: .internal) {
+            try await logger.required(throws: Errcase.opaInitFailed, "OPA 注入权限数据失败", category: .internal) {
                 _ = try await opa.policy.save(by: path, content: policy)
             }
         }
+        
+        logger.info("OPA 数据同步完成")
     }
 }

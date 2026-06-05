@@ -6,10 +6,12 @@ import ResourceMacros
 import AsyncHTTPClient
 import Query
 import ResourceMacros
+import Logging
+import LoggingAdvanced
 
 public typealias PM = PrivilegeModule
 
-public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
+public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
     @frozen
     public struct Debuging: Sendable {
         /// 是否启用 PostgreSQL tde 加密功能
@@ -44,7 +46,12 @@ public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
         self.eventLoop = eventLoop
         self.dbs = Databases(threadPool: .singleton, on: eventLoop)
         
+        let initLogger = logger.derive(subId: "sysinit", metadata: ["moduleId": .stringConvertible(moduleId), "eventLoop": .id(eventLoop)])
+        
+        initLogger.info("正在初始化权限模块")
+        
         do {
+            initLogger.info("正在准备数据库")
             self.dbs.use(.postgres(configuration: dbConfigure), as: .psql)
             
             let migs = Migrations()
@@ -56,36 +63,41 @@ public struct PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
             let mig = Migrator(
                 databases: self.dbs,
                 migrations: migs,
-                logger: logger,
+                logger: initLogger,
                 on: eventLoop,
-                migrationLogLevel: logger.logLevel
+                migrationLogLevel: initLogger.logLevel
             )
             try await mig.setupIfNeeded().get()
             try await mig.prepareBatch().get()
+            
+            initLogger.info("数据库准备成功")
         } catch {
             await self.dbs.shutdownAsync()
             try? await eventLoop.shutdownGracefully()
-            throw Errcase.databaseInitFailed.d("数据库迁移失败", category: .internal).subErr(error)
+            throw initLogger.errThrow(Errcase.databaseInitFailed.d("数据库迁移失败", category: .internal).subErr(error))
         }
         
-        guard let db = self.dbs.database(logger: logger, on: eventLoop) else {
-            throw Errcase.databaseInitFailed.d("数据库获取失败", category: .internal)
+        guard let db = self.dbs.database(logger: initLogger, on: eventLoop) else {
+            throw initLogger.errThrow(Errcase.databaseInitFailed.d("数据库获取失败", category: .internal))
         }
         
         guard let db = db as? PGDatabase else {
-            throw Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internal)
+            throw initLogger.errThrow(Errcase.databaseInitFailed.d("数据库并非 PostgreSQL 数据库", category: .internal))
         }
         
         self.moduleId = moduleId
-        self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: logger.derive(subId: "opa")))
+        self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: initLogger.derive(subId: "opa")))
         self.db = db
         
-        self.privilege = .init(db: db, opa: opa, moduleId: moduleId, eventLoop: eventLoop)
-        self.resource = .init(db: db, eventLoop: eventLoop)
+        self.privilege = .init(db: db, opa: opa, moduleId: moduleId, eventLoop: eventLoop, logger: logger.derive(subId: "privilege"))
+        self.resource = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "resource"))
         
-        try await required(throws: Errcase.opaInitFailed) {
-            try await opaInitialize()
-        }
+        initLogger.info("权限控制器模块初始化完成")
+        
+        initLogger.info("正在进行 OPA 数据同步")
+        try await opaInitialize(logger: initLogger.derive(subId: "opasync"))
+        
+        initLogger.info("权限模块初始化完成")
     }
 }
 

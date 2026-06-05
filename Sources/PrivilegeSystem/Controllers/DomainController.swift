@@ -5,21 +5,27 @@ import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
+import Logging
 
 extension PrivilegeSystem {
     public final class DomainController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
+        
         let policyController: PolicyController
+        
+        public let logger: Logger
         
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
-            policyController: PolicyController
+            policyController: PolicyController,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
             self.policyController = policyController
+            self.logger = logger
         }
         
         public func create(

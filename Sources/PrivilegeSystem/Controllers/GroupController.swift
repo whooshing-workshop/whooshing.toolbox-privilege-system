@@ -5,18 +5,23 @@ import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
+import Logging
 
 extension PrivilegeSystem {
     public final class GroupController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
+        public let logger: Logger
+        
         init(
             db: PGDatabase,
-            eventLoop: EventLoop
+            eventLoop: EventLoop,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
+            self.logger = logger
         }
         
         public func create(

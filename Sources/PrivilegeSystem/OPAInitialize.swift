@@ -1,10 +1,12 @@
 import OPA
 import Policy
 import ErrorHandle
+import Logging
+import LoggingAdvanced
 
 extension PrivilegeSystem {
-    func opaInitialize() async throws(BscError<Errcase>) {
-        let rolePolicies = try await required(throws: Errcase.opaInitFailed, "取得角色权限数据失败", category: .internal) {
+    func opaInitialize(logger: Logger) async throws(BscError<Errcase>) {
+        let rolePolicies = try await logger.required(throws: Errcase.opaInitFailed, "从数据库查询角色权限数据失败", category: .internal) {
             try await RolePolicy.query(on: db).all().map {
                 (
                     policyPath(moduleId: $0.moduleId, modelId: $0.$parent.id, type: Role.self, format: .path),
@@ -13,7 +15,7 @@ extension PrivilegeSystem {
             }
         }
         
-        let domainPolicies = try await required(throws: Errcase.opaInitFailed, "取得域权限数据失败", category: .internal) {
+        let domainPolicies = try await logger.required(throws: Errcase.opaInitFailed, "从数据库查询域权限数据失败", category: .internal) {
             try await DomainPolicy.query(on: db).all().map {
                 (
                     policyPath(moduleId: $0.moduleId, modelId: $0.$parent.id, type: Domain.self, format: .path),
@@ -23,9 +25,11 @@ extension PrivilegeSystem {
         }
         
         for (path, policy) in rolePolicies + domainPolicies {
-            try await required(throws: Errcase.opaInitFailed, "OPA 注入权限数据失败", category: .internal) {
+            try await logger.required(throws: Errcase.opaInitFailed, "OPA 同步注入权限数据失败", category: .internal) {
                 _ = try await opa.policy.save(by: path, content: policy)
             }
         }
+        
+        logger.info("OPA 数据同步完成")
     }
 }

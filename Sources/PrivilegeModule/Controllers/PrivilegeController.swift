@@ -7,6 +7,7 @@ import ErrorHandle
 import NIOAdvanced
 import OPA
 import ResourceMacros
+import Logging
 
 public extension PrivilegeModule {
     final class PrivilegeController: OPAController {
@@ -15,7 +16,10 @@ public extension PrivilegeModule {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         package let opa: OPA
+        
         let moduleId: UUID
+        
+        public let logger: Logger
         
         public typealias S = PM<ResourceList>
         
@@ -23,12 +27,14 @@ public extension PrivilegeModule {
             db: PGDatabase,
             opa: OPA,
             moduleId: UUID,
-            eventLoop: EventLoop
+            eventLoop: EventLoop,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
             self.opa = opa
             self.moduleId = moduleId
+            self.logger = logger
         }
         
         public func create(

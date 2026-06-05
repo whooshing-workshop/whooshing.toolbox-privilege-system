@@ -3,16 +3,20 @@ import ErrorHandle
 import Foundation
 import Collections
 import FluentPostgresDriver
+import Logging
+import LoggingAdvanced
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
-    func systemInitialize(dbConfigure: SQLPostgresConfiguration) async throws(BscError<Errcase>) {
-        let regos = try loadRegos()
-        let sqls = try loadSQLs()
+    func systemInitialize(dbConfigure: SQLPostgresConfiguration, logger: Logger) async throws(BscError<Errcase>) {
+        let regos = try loadRegos(logger: logger)
+        logger.info("Rego 脚本加载完成")
+        let sqls = try loadSQLs(logger: logger)
+        logger.info("SQL 函数加载完成")
         
         // SQL 函数注入
         for (_, sql) in sqls {
-            _ = try await required(throws: Errcase.databaseInitFailed, "将 SQL Function 注入数据库失败", category: .internal) {
+            _ = try await logger.required(throws: Errcase.databaseInitFailed, "将 SQL Function 注入数据库失败", category: .internal) {
                 try await self.db.query(sql).get()
             }
         }
@@ -23,11 +27,11 @@ extension PrivilegeSystem {
             let database = dbConfigure.coreConfiguration.database,
             let password = dbConfigure.coreConfiguration.password
         else {
-            throw Errcase.databaseInitFailed.d("连接参数缺失，无法初始化 REGO", category: .external)
+            throw logger.errThrow(Errcase.databaseInitFailed.d("连接参数缺失，无法初始化 REGO", category: .external))
         }
         
         // REGO 数据库连接参数注入
-        try await required(throws: Errcase.databaseInitFailed, "写入 OPA data 时失败", category: .internal) {
+        try await logger.required(throws: Errcase.databaseInitFailed, "向 OPA 注入 数据库连接参数 时失败", category: .internal) {
             _ = try await opa.data.save(
                 on: "/",
                 ifNoneMatch: nil,
@@ -41,15 +45,17 @@ extension PrivilegeSystem {
         
         // REGO 基本命令注入
         for (path, content) in regos {
-            try await required(throws: Errcase.databaseInitFailed, "写入 OPA policy 时失败", category: .internal) {
+            try await logger.required(throws: Errcase.databaseInitFailed, "向 OPA 注入 REGO 基本命令 时失败", category: .internal) {
                 _ = try await opa.policy.save(by: path, content: content)
             }
         }
+        
+        logger.info("系统加载完成")
     }
     
-    private func loadRegos() throws(BscError<Errcase>) -> OrderedDictionary<String, String> {
+    private func loadRegos(logger: Logger) throws(BscError<Errcase>) -> OrderedDictionary<String, String> {
         guard let rootURL = Bundle.module.resourceURL?.appendingPathComponent("Regos") else {
-            throw Errcase.regoLoadFailed.d("未找到 Bundle", category: .internal)
+            throw logger.errThrow(Errcase.regoLoadFailed.d("未找到 Bundle", category: .internal))
         }
         
         var allURLs: [URL] = []
@@ -82,7 +88,7 @@ extension PrivilegeSystem {
             let components = relativePath.deletingPathExtension().components(separatedBy: "/")
             let cleanKey = components.map { stripPrefix($0) }.joined(separator: ".")
             
-            policies[cleanKey] = try required(throws: Errcase.regoLoadFailed, "加载 Rego 内容失败", category: .internal) {
+            policies[cleanKey] = try logger.required(throws: Errcase.regoLoadFailed, "加载 Rego 内容失败", category: .internal) {
                 try String(contentsOf: fileURL)
             }
         }
@@ -90,9 +96,9 @@ extension PrivilegeSystem {
         return policies
     }
     
-    private func loadSQLs() throws(BscError<Errcase>) -> OrderedDictionary<String, String> {
+    private func loadSQLs(logger: Logger) throws(BscError<Errcase>) -> OrderedDictionary<String, String> {
         guard let rootURL = Bundle.module.resourceURL?.appendingPathComponent("SQLFunctions") else {
-            throw Errcase.sqlLoadFailed.d("未找到 Bundle", category: .internal)
+            throw logger.errThrow(Errcase.sqlLoadFailed.d("未找到 Bundle", category: .internal))
         }
         
         var allURLs: [URL] = []
@@ -116,7 +122,7 @@ extension PrivilegeSystem {
             let fileName = fileURL.deletingPathExtension().lastPathComponent
             let cleanKey = stripPrefix(fileName)
             
-            sqlDict[cleanKey] = try required(throws: Errcase.sqlLoadFailed, "加载 SQL 内容失败", category: .internal) {
+            sqlDict[cleanKey] = try logger.required(throws: Errcase.sqlLoadFailed, "加载 SQL 内容失败", category: .internal) {
                 try String(contentsOf: fileURL, encoding: .utf8)
             }
         }

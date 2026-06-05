@@ -4,14 +4,20 @@ import NIOAdvanced
 import PgSQL
 import Vapor
 import ErrorHandle
+import Logging
 
 package protocol Controller: AnyObject, Sendable where E.ErrType == BscError<E> {
     associatedtype E: ErrList
     var db: PGDatabase { get }
     var eventLoop: EventLoop { get }
+    var logger: Logger { get }
 }
 
 package extension Controller {
+    func getActionLogger() -> Logger {
+        self.logger.derive(metadata: ["action-id": .stringConvertible(UUID())])
+    }
+    
     func __create<T, G, M: PGModel>(
         on db: PGDatabase,
         dtos: [T],
@@ -113,14 +119,15 @@ package extension Controller {
                 updaterRes = filterBuilder(T.DBModel.query(on: db))
                     .first()
                     .withError(errThrowing, "查询\(label)失败", category: .internal)
-                    .flatMapThrowing { data throws(E.ErrType) in
-                        guard let d = data else {
-                            throw errThrowing.d("\(label)不存在", category: .external)
-                        }
-                        return try required(throws: errThrowing, category: .internal) {
-                            try dtoBuilder(d).get()
-                        }
+                    .flatMapThrowing
+                { data throws(E.ErrType) in
+                    guard let d = data else {
+                        throw errThrowing.d("\(label)不存在", category: .external)
                     }
+                    return try required(throws: errThrowing, category: .internal) {
+                        try dtoBuilder(d).get()
+                    }
+                }
             } else {
                 updaterRes = db.eventLoop.makeSucceededResult(nil)
             }

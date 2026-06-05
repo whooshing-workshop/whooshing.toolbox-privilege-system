@@ -7,6 +7,7 @@ import DataConvertable
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
+import Logging
 
 extension PrivilegeSystem {
     /// 权限服务层，提供权限相关的业务接口
@@ -14,18 +15,27 @@ extension PrivilegeSystem {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
+        public let logger: Logger
+        
         init(
             db: PGDatabase,
-            eventLoop: EventLoop
+            eventLoop: EventLoop,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
+            self.logger = logger
         }
         
         public func register(
             for user: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
-            db.trans { db in
+            let logger = getActionLogger()
+            
+            logger.info("执行 账号注册 操作", metadata: ["user": .string(user.email)])
+            logger.debug("操作参数", metadata: ["": .data(user)])
+            
+            return db.trans { db in
                 db.eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
                     try user.raw().get()
                 }.flatMap { user in
@@ -40,14 +50,18 @@ extension PrivilegeSystem {
                         guard let user = res else {
                             throw .init(.userRegisterFailed, "用户未保存在数据库中，未知错误", category: .internal)
                         }
-                        return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
+                        let res = try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
                             try required(throws: Errcase.userRegisterFailed, category: .internal) {
                                 try DTO.User.make(from: user).get()
                             }
                         }
+                        
+                        logger.info("账号注册 操作执行成功")
+                        
+                        return res
                     }
                 }
-            }
+            }.logIfFail(logger: logger)
         }
         
         public func login(
@@ -136,16 +150,16 @@ extension PrivilegeSystem {
                     
                     // 检查口令是否正确
                     let keyData = try required(throws: Errcase.userAuthenticateFailed, "密钥字节解析失败", category: .external) {
-                        try Base64String(tokenResult.token).dataRes.get()                                                             // 取得密钥的字节码
+                        try Base64String(tokenResult.token).dataRes.get()                           // 取得密钥的字节码
                     }
                     
-                    let key = Crypto.Symm.Key.new(data: keyData)                                                                // 转为 AES 密钥类型
+                    let key = Crypto.Symm.Key.new(data: keyData)                                    // 转为 AES 密钥类型
                     let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户 Token 失败", category: .external) {
-                        try Crypto.Symm.decrypt(token.tokenEncrypted, key: key).get()                                                 // 解密 tokenEncrypted
+                        try Crypto.Symm.decrypt(token.tokenEncrypted, key: key).get()               // 解密 tokenEncrypted
                     }
 
                     guard keyData == authData else {
-                        throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external)                               // key 是否一致
+                        throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external)    // key 是否一致
                     }
                     return key
                 }

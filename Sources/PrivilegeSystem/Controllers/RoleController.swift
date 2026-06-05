@@ -5,24 +5,30 @@ import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
+import Logging
 
 extension PrivilegeSystem {
     public final class RoleController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
+        
         let groupController: GroupController
         let policyController: PolicyController
+        
+        public let logger: Logger
         
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
             groupController: GroupController,
-            policyController: PolicyController
+            policyController: PolicyController,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
             self.groupController = groupController
             self.policyController = policyController
+            self.logger = logger
         }
         
         public func create(
@@ -342,129 +348,6 @@ public extension PrivilegeSystem.RoleController {
 }
 
 extension PrivilegeSystem.RoleController {
-    // 检查某角色对于某用户是否可用
-    func __is(
-        on db: PGDatabase,
-        role: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
-    ) -> EventLoopRes<Bool, Errcase> {
-        [
-            __is(on: db, userRole: role, appointedTo: user),
-            __verify(on: db, groupRole: role, appointedTo: user).map { !$0.isEmpty },
-            __verify(on: db, userInGroupRole: role, appointedTo: user).map { !$0.isEmpty }
-        ].flatten(on: db.eventLoop).map { $0.reduce(false) { $0 || $1 } }
-    }
-    
-    // 检查某角色是否被任命某用户
-    func __is(
-        on db: PGDatabase,
-        userRole: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
-    ) -> EventLoopRes<Bool, Errcase> {
-        user.model.$roles.query(on: db)
-            .filter(\.$id == userRole.id)
-            .first()
-            .withError(Errcase.userRoleCheckFailed, "从数据库查询失败", category: .internal)
-            .map { $0 != nil }
-    }
-    
-    // 检查某角色是否被任命某群组为群组角色
-    func __is(
-        on db: PGDatabase,
-        groupRole: DTO.Role<DTO.Queried>,
-        appointedTo group: DTO.Group<DTO.Queried>
-    ) -> EventLoopRes<Bool, Errcase> {
-        group.model.$groupRoles.query(on: db)
-            .filter(\.$id == groupRole.id)
-            .first()
-            .withError(Errcase.groupRoleCheckFailed, "从数据库查询失败", category: .internal)
-            .map { $0 != nil }
-    }
-    
-    // 验证某群组角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
-    func __verify(
-        on db: PGDatabase,
-        groupRole: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
-    ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
-        user.model.$groups.query(on: db)
-            .with(\.$supers) { path in
-                path.with(\.$ancestor)
-            }
-            .all()
-            .withError(Errcase.groupRoleVerifyFailed, "取得用户所加入的所有群组失败", category: .internal)
-            .flatMap
-        { groups in
-            let gs = [UGroup]((
-                groups +
-                groups.flatMap { $0.supers.map { $0.ancestor } }
-            ).uniqued())
-            
-            let groupIds = gs.compactMap { $0.id }
-            
-            guard !groupIds.isEmpty else {
-                return db.eventLoop.makeSucceededResult([])
-            }
-            
-            let groupsLookup = Dictionary(uniqueKeysWithValues: gs.map { ($0.id, $0) })
-            
-            return RoleGroupPivot.query(on: db)
-                .filter(\.$primaryModel.$id == groupRole.id)
-                .filter(\.$secondaryModel.$id ~~ groupIds)
-                .all()
-                .withError(Errcase.groupRoleVerifyFailed, "校验群组角色关联失败", category: .internal)
-                .flatMapThrowing
-            { pivots throws(Errcase.ErrType) in
-                try required(throws: Errcase.groupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
-                    // 逆向匹配，把中间表捞出来的关联群组 ID 还原为完整的 Group DTO
-                    try pivots.compactMap { pivot -> DTO.Group<DTO.Queried>? in
-                        let pivotGroupId = pivot.$secondaryModel.id
-                        
-                        // 凭借外键 ID 从刚才的 lookup 字典中 O(1) 瞬间揪出原生态的、带树状血缘的 UGroup 实体
-                        guard let associatedGroup = groupsLookup[pivotGroupId] else { return nil }
-                        
-                        // 将其整装转换为你需要的 DTO.Group 并交付出去
-                        return try DTO.Group<DTO.Queried>.make(from: associatedGroup).get()
-                    }
-                }
-            }
-        }
-    }
-    
-    // 验证某组内角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
-    func __verify(
-        on db: PGDatabase,
-        userInGroupRole: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
-    ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
-        RoleUserInGroupPivot.query(on: db)
-            .filter(\.$primaryModel.$id == userInGroupRole.id)
-            .join(UserGroupPivot.self, on: \RoleUserInGroupPivot.$secondaryModel.$id == \UserGroupPivot.$id)
-            .filter(UserGroupPivot.self, \.$user.$id == user.id)
-            .with(\.$secondaryModel) { userInGroup in
-                // 通过 eager load，强行把内层中间表，以及中间表背后的 UGroup 实体全部批量捎带出来
-                userInGroup.with(\.$group)
-            }
-            .all()
-            .withError(Errcase.userInGroupRoleVerifyFailed, "验证组内特指派角色可用性失败", category: .internal)
-            .flatMapThrowing
-        { pivots throws(Errcase.ErrType) in
-            try required(throws: Errcase.userInGroupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
-                // 穿透复合中间表，抓出最内层的 UGroup 并映射为 Group DTO
-                try pivots.map { pivot -> DTO.Group<DTO.Queried> in
-                    // 1. 从二级表拿到内层表 UserGroupPivot
-                    let userGroupRelation = pivot.secondaryModel
-                    // 2. 从内层表拿到我们刚刚用 .with(\.$group) 提前预加载好的 UGroup 物理实体
-                    let rawGroup = userGroupRelation.group
-                    // 3. 完美转化为安全、干净的 DTO.Group 容器交付出去
-                    return try DTO.Group<DTO.Queried>.make(from: rawGroup).get()
-                }
-            }
-        }
-    }
-}
-
-extension PrivilegeSystem.RoleController {
     // 取得 某用户 所有可用的 角色
     func __roles(
         on db: PGDatabase,
@@ -630,6 +513,129 @@ extension PrivilegeSystem.RoleController {
                             right: groupDTO // 指派来源的直接群组（一端）
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+extension PrivilegeSystem.RoleController {
+    // 检查某角色对于某用户是否可用
+    func __is(
+        on db: PGDatabase,
+        role: DTO.Role<DTO.Queried>,
+        appointedTo user: DTO.User<DTO.Queried>
+    ) -> EventLoopRes<Bool, Errcase> {
+        [
+            __is(on: db, userRole: role, appointedTo: user),
+            __verify(on: db, groupRole: role, appointedTo: user).map { !$0.isEmpty },
+            __verify(on: db, userInGroupRole: role, appointedTo: user).map { !$0.isEmpty }
+        ].flatten(on: db.eventLoop).map { $0.reduce(false) { $0 || $1 } }
+    }
+    
+    // 检查某角色是否被任命某用户
+    func __is(
+        on db: PGDatabase,
+        userRole: DTO.Role<DTO.Queried>,
+        appointedTo user: DTO.User<DTO.Queried>
+    ) -> EventLoopRes<Bool, Errcase> {
+        user.model.$roles.query(on: db)
+            .filter(\.$id == userRole.id)
+            .first()
+            .withError(Errcase.userRoleCheckFailed, "从数据库查询失败", category: .internal)
+            .map { $0 != nil }
+    }
+    
+    // 检查某角色是否被任命某群组为群组角色
+    func __is(
+        on db: PGDatabase,
+        groupRole: DTO.Role<DTO.Queried>,
+        appointedTo group: DTO.Group<DTO.Queried>
+    ) -> EventLoopRes<Bool, Errcase> {
+        group.model.$groupRoles.query(on: db)
+            .filter(\.$id == groupRole.id)
+            .first()
+            .withError(Errcase.groupRoleCheckFailed, "从数据库查询失败", category: .internal)
+            .map { $0 != nil }
+    }
+    
+    // 验证某群组角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
+    func __verify(
+        on db: PGDatabase,
+        groupRole: DTO.Role<DTO.Queried>,
+        appointedTo user: DTO.User<DTO.Queried>
+    ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
+        user.model.$groups.query(on: db)
+            .with(\.$supers) { path in
+                path.with(\.$ancestor)
+            }
+            .all()
+            .withError(Errcase.groupRoleVerifyFailed, "取得用户所加入的所有群组失败", category: .internal)
+            .flatMap
+        { groups in
+            let gs = [UGroup]((
+                groups +
+                groups.flatMap { $0.supers.map { $0.ancestor } }
+            ).uniqued())
+            
+            let groupIds = gs.compactMap { $0.id }
+            
+            guard !groupIds.isEmpty else {
+                return db.eventLoop.makeSucceededResult([])
+            }
+            
+            let groupsLookup = Dictionary(uniqueKeysWithValues: gs.map { ($0.id, $0) })
+            
+            return RoleGroupPivot.query(on: db)
+                .filter(\.$primaryModel.$id == groupRole.id)
+                .filter(\.$secondaryModel.$id ~~ groupIds)
+                .all()
+                .withError(Errcase.groupRoleVerifyFailed, "校验群组角色关联失败", category: .internal)
+                .flatMapThrowing
+            { pivots throws(Errcase.ErrType) in
+                try required(throws: Errcase.groupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
+                    // 逆向匹配，把中间表捞出来的关联群组 ID 还原为完整的 Group DTO
+                    try pivots.compactMap { pivot -> DTO.Group<DTO.Queried>? in
+                        let pivotGroupId = pivot.$secondaryModel.id
+                        
+                        // 凭借外键 ID 从刚才的 lookup 字典中 O(1) 瞬间揪出原生态的、带树状血缘的 UGroup 实体
+                        guard let associatedGroup = groupsLookup[pivotGroupId] else { return nil }
+                        
+                        // 将其整装转换为你需要的 DTO.Group 并交付出去
+                        return try DTO.Group<DTO.Queried>.make(from: associatedGroup).get()
+                    }
+                }
+            }
+        }
+    }
+    
+    // 验证某组内角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
+    func __verify(
+        on db: PGDatabase,
+        userInGroupRole: DTO.Role<DTO.Queried>,
+        appointedTo user: DTO.User<DTO.Queried>
+    ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
+        RoleUserInGroupPivot.query(on: db)
+            .filter(\.$primaryModel.$id == userInGroupRole.id)
+            .join(UserGroupPivot.self, on: \RoleUserInGroupPivot.$secondaryModel.$id == \UserGroupPivot.$id)
+            .filter(UserGroupPivot.self, \.$user.$id == user.id)
+            .with(\.$secondaryModel) { userInGroup in
+                // 通过 eager load，强行把内层中间表，以及中间表背后的 UGroup 实体全部批量捎带出来
+                userInGroup.with(\.$group)
+            }
+            .all()
+            .withError(Errcase.userInGroupRoleVerifyFailed, "验证组内特指派角色可用性失败", category: .internal)
+            .flatMapThrowing
+        { pivots throws(Errcase.ErrType) in
+            try required(throws: Errcase.userInGroupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
+                // 穿透复合中间表，抓出最内层的 UGroup 并映射为 Group DTO
+                try pivots.map { pivot -> DTO.Group<DTO.Queried> in
+                    // 1. 从二级表拿到内层表 UserGroupPivot
+                    let userGroupRelation = pivot.secondaryModel
+                    // 2. 从内层表拿到我们刚刚用 .with(\.$group) 提前预加载好的 UGroup 物理实体
+                    let rawGroup = userGroupRelation.group
+                    // 3. 完美转化为安全、干净的 DTO.Group 容器交付出去
+                    return try DTO.Group<DTO.Queried>.make(from: rawGroup).get()
                 }
             }
         }

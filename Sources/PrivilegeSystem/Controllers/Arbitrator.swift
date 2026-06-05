@@ -9,6 +9,7 @@ import PrivilegeModule
 import Collections
 import LoggingAdvanced
 import ResourceMacros
+import Logging
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
@@ -16,18 +17,23 @@ extension PrivilegeSystem {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         package let opa: OPA
+        
+        public let logger: Logger
+        
         let roleController: RoleController
         
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
             opa: OPA,
-            roleController: RoleController
+            roleController: RoleController,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
             self.opa = opa
             self.roleController = roleController
+            self.logger = logger
         }
         
         public func judge<T: Resource>(

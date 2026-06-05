@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import OPA
 import PrivilegeModule
+import Logging
 
 extension PrivilegeSystem {
     public final class PolicyController: SystemOPAController {
@@ -13,14 +14,18 @@ extension PrivilegeSystem {
         package let eventLoop: EventLoop
         package let opa: OPA
         
+        public let logger: Logger
+        
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
-            opa: OPA
+            opa: OPA,
+            logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
             self.opa = opa
+            self.logger = logger
         }
         
         public func create<T: PolicyType>(
