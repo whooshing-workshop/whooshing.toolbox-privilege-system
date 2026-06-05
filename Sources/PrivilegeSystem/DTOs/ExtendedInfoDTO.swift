@@ -73,8 +73,10 @@ extension DTO.ExtendedInfo: CustomStringConvertible, Loggerable {
         ])
     }
     
-    public var description: String {
-        logDescription
+    public var description: String { logDescription }
+    
+    public var summaryDescription: String {
+        "ExtendedInfo(addr:\(addresses.count), email:\(alternateEmails.count), phone:\(phones.count))"
     }
 }
 

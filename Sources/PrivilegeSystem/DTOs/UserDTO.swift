@@ -168,6 +168,13 @@ extension DTO.User: Loggerable, CustomStringConvertible {
             "data": AnyCodable(data)
         ])
     }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            "User(\(id.shortString), \(email))" :
+            "User(\(email))"
+    }
 }
 
 extension DTO.User: Hashable {

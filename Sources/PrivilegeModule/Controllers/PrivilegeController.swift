@@ -40,6 +40,8 @@ public extension PrivilegeModule {
         public func create(
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<Void, Errcase> {
+            let logger = getActionLogger()
+            logger.info("执行 创建资源权限 操作", metadata: ["count": .stringConvertible(privileges.count)])
             let mappedPrivileges = privileges.map { p in
                 var newP = p
                 newP.id = UUID()
@@ -65,12 +67,15 @@ public extension PrivilegeModule {
                     raw.id = mid                    // 资源策略 fluent 模型的 id 必须指定，否则 fluent 会随机创建
                     return raw
                 }
-            ).map { _ in }
+            )
+            .map { _ in logger.info("创建资源权限 操作成功") }
         }
         
         public func createWithReturning(
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
+            let logger = getActionLogger()
+            logger.info("执行 创建资源权限（返回） 操作", metadata: ["count": .stringConvertible(privileges.count)])
             let mappedPrivileges = privileges.map { p in
                 var newP = p
                 newP.id = UUID()
@@ -99,12 +104,15 @@ public extension PrivilegeModule {
                     }
                 }
             }
+            .map { logger.info("创建资源权限（返回） 操作成功"); return $0 }
         }
         
         public func delete(
             policy: PrivilegeDTO<DTO.Queried>
         ) -> EventLoopRes<Void, Errcase> {
-            __deletePolicy(
+            let logger = getActionLogger()
+            logger.info("执行 删除资源权限 操作", metadata: ["privilegeId": .stringConvertible(policy.id)])
+            return __deletePolicy(
                 on: db,
                 policy: policy,
                 policyType: Privilege.self,
@@ -118,11 +126,15 @@ public extension PrivilegeModule {
                 moduleId: { _ in moduleId },
                 modelIdKey: \.id
             )
+            .map { _ in logger.info("删除资源权限 操作成功") }
         }
         
         public func update(
             with updater: PrivilegeDTO<DTO.Prepare>.Updater
         ) -> EventLoopRes<PrivilegeDTO<DTO.Queried>, Errcase> {
+            let logger = getActionLogger()
+            logger.info("执行 更新资源权限 操作", metadata: ["privilegeId": .stringConvertible(updater.privilegeId)])
+            
             guard updater.updates.count > 0 else {
                 return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external)
             }
@@ -172,6 +184,7 @@ public extension PrivilegeModule {
                         .map { _ in updateRes }
                 }
             }
+            .map { logger.info("更新资源权限 操作成功"); return $0 }
         }
     }
 }
@@ -206,7 +219,10 @@ public extension PrivilegeModule.PrivilegeController {
     func attach(
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 资源权限附加资源 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("资源权限附加资源关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -215,6 +231,7 @@ public extension PrivilegeModule.PrivilegeController {
             siblingBuilder: { $0.model.$resources },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { _ in logger.info("资源权限附加资源 操作成功") }
     }
     
     // MARK: - 资源权限解除
@@ -224,7 +241,10 @@ public extension PrivilegeModule.PrivilegeController {
     func detach(
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase>  {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 资源权限解除资源 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("资源权限解除资源关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -233,6 +253,7 @@ public extension PrivilegeModule.PrivilegeController {
             siblingBuilder: { $0.model.$resources },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { _ in logger.info("资源权限解除资源 操作成功") }
     }
 }
 

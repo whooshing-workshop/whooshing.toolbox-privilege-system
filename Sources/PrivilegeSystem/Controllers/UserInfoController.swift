@@ -38,7 +38,9 @@ extension PrivilegeSystem {
             infoIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
+            let logger = getActionLogger()
+            logger.info("执行 删除用户信息 操作", metadata: ["count": .stringConvertible(infoIds.count)])
+            return __delete(
                 on: db,
                 User.Info.self,
                 ids: infoIds,
@@ -48,12 +50,16 @@ extension PrivilegeSystem {
                 fieldBuilder: { $0.field(\.$id) },
                 filterBuilder: { $0.filter(\.$id ~~ infoIds) }
             )
+            .map { _ in logger.info("删除用户信息 操作成功") }
+            .logIfFail(logger: logger)
         }
         
         public func update(
             with updater: DTO.UserInfo<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase> {
-            __update(
+            let logger = getActionLogger()
+            logger.info("执行 更新用户信息 操作", metadata: ["userInfoId": .stringConvertible(updater.userInfoId)])
+            return __update(
                 on: db,
                 updater: updater,
                 label: "用户信息",
@@ -61,6 +67,8 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.userInfoId) },
                 dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
             )
+            .map { logger.info("更新用户信息 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
     }
 }
@@ -69,7 +77,9 @@ public extension PrivilegeSystem.UserInfoController {
     func create(
         relations: [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        db.trans { db in
+        let logger = getActionLogger()
+        logger.info("执行 创建用户信息 操作", metadata: ["count": .stringConvertible(relations.count)])
+        return db.trans { db in
             let infos = relations.map { $0.right.left.raw(for: $0.left) }
             return infos
                 .create(on: db)
@@ -100,5 +110,7 @@ public extension PrivilegeSystem.UserInfoController {
                 .flatten(on: db.eventLoop)
             }
         }
+        .map { _ in logger.info("创建用户信息 操作成功") }
+        .logIfFail(logger: logger)
     }
 }

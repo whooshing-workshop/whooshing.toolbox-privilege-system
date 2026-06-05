@@ -44,8 +44,20 @@ extension PrivilegeSystem {
             operation: T.Operations,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
+            let logger = getActionLogger()
+            logger.info("执行 权限仲裁 操作", metadata: [
+                "user": .stringConvertible(user.id),
+                "role": .stringConvertible(role.id),
+                "moduleId": .stringConvertible(moduleId),
+                "operation": .string(operation.rawValue)
+            ])
+            logger.debug("操作参数", metadata: [
+                "resource": .string("\(resource)"),
+                "privilegeIds": .string("\(privilegeIds)")
+            ])
+            
             // 检查所提供的 role 是否是 user 可用的身份，否则报错
-            roleController.is(role: role, appointedTo: user).flatMap {
+            return roleController.is(role: role, appointedTo: user).flatMap {
                 $0 ?
                 self.db.eventLoop.makeSucceededResult(()) :
                 self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的 Role 并非对 User 可用", category: .external)
@@ -142,6 +154,8 @@ extension PrivilegeSystem {
                     )
                 }
             }
+            .map { logger.info("权限仲裁 操作执行成功"); return $0 }
+            .logIfFail(logger: logger)
         }
         
         func __judge(

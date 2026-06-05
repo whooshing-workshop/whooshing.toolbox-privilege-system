@@ -4,6 +4,8 @@ import ErrorHandle
 import Collections
 import SQLKit
 import Query
+import DataConvertable
+import LoggingAdvanced
 
 public extension PM {
     typealias PPrivilegeDTO = PrivilegeDTO<DTO.Prepare>
@@ -302,5 +304,24 @@ public extension Collection {
 public extension Collection {
     func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.PPrivilegeDTO, Element == PM<T>.QPrivilegeDTO {
         self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+// MARK: - Loggerable
+
+extension PM.PrivilegeDTO: Loggerable {
+    public var logDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        var parts: [String] = []
+        if let name = name { parts.append("name:\(name)") }
+        if isQueried { parts.append("id:\(id)") }
+        return "Privilege(\(parts.joined(separator: ", ")))"
+    }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            name == nil ? "Privilege(\(id.shortString))" : "Privilege(\(id.shortString), \(name!))" :
+            "Privilege(\(name ?? "unsaved"))"
     }
 }

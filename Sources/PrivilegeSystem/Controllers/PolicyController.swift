@@ -33,7 +33,11 @@ extension PrivilegeSystem {
             @MTORelationBuilder<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-            create(to: model, relations: content())
+            let logger = getActionLogger()
+            logger.info("执行 创建策略 操作", metadata: ["type": .string(String(describing: model))])
+            return create(to: model, relations: content())
+                .map { logger.info("创建策略 操作成功") }
+                .logIfFail(logger: logger)
         }
         
         public func createWithReturning<T: PolicyType>(
@@ -41,14 +45,20 @@ extension PrivilegeSystem {
             @MTORelationBuilder<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
         ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase> {
-            createWithReturning(to: model, relations: content())
+            let logger = getActionLogger()
+            logger.info("执行 创建策略（返回） 操作", metadata: ["type": .string(String(describing: model))])
+            return createWithReturning(to: model, relations: content())
+                .map { logger.info("创建策略（返回） 操作成功"); return $0 }
+                .logIfFail(logger: logger)
         }
         
         public func delete<T: PolicyType>(
             from model: T.Type = T.self,
             policy: OTORelation<DTO.Policy<T, DTO.Queried>, T.Model.IDValue>
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-            __deletePolicy(
+            let logger = getActionLogger()
+            logger.info("执行 删除策略 操作", metadata: ["type": .string(String(describing: model)), "policyId": .stringConvertible(policy.left.id)])
+            return __deletePolicy(
                 on: db,
                 policy: policy,
                 policyType: T.self,
@@ -62,6 +72,8 @@ extension PrivilegeSystem {
                 moduleId: { $0.left.moduleId },
                 modelIdKey: \.right
             )
+            .map { logger.info("删除策略 操作成功") }
+            .logIfFail(logger: logger)
         }
     }
 }
@@ -71,14 +83,22 @@ public extension PrivilegeSystem.PolicyController {
         to model: T.Type,
         relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __create(on: db, to: model, relations: relations)
+        let logger = getActionLogger()
+        logger.info("执行 创建策略（数组） 操作", metadata: ["type": .string(String(describing: model)), "count": .stringConvertible(relations.count)])
+        return __create(on: db, to: model, relations: relations)
+            .map { _ in logger.info("创建策略（数组） 操作成功") }
+            .logIfFail(logger: logger)
     }
     
     func createWithReturning<T: PolicyType>(
         to model: T.Type,
         relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
     ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase> {
-        __createWithReturning(on: db, to: model, relations: relations)
+        let logger = getActionLogger()
+        logger.info("执行 创建策略（数组返回） 操作", metadata: ["type": .string(String(describing: model)), "count": .stringConvertible(relations.count)])
+        return __createWithReturning(on: db, to: model, relations: relations)
+            .map { logger.info("创建策略（数组返回） 操作成功"); return $0 }
+            .logIfFail(logger: logger)
     }
 }
 

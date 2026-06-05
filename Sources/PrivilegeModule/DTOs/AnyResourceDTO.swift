@@ -4,6 +4,8 @@ import ErrorHandle
 import Collections
 import SQLKit
 import Query
+import DataConvertable
+import LoggingAdvanced
 @preconcurrency import AnyCodable
 
 public extension PM {
@@ -74,5 +76,16 @@ extension PM.AnyResourceDTO: Query.Queriable {
             .field(Model.self, \.$data)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
+    }
+}
+
+// MARK: - Loggerable
+
+extension PM.AnyResourceDTO: Loggerable {
+    public var logDescription: String {
+        "AnyResource(id:\(id))"
+    }
+    public var summaryDescription: String {
+        "AnyResource(\(id.shortString))"
     }
 }

@@ -29,7 +29,9 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
             // 创建组，需要修改 groups 表，也需要修改 group_paths 内接表
             // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
-            db.trans { db in
+            let logger = getActionLogger()
+            logger.info("执行 创建用户组 操作", metadata: ["count": .stringConvertible(groups.count)])
+            return db.trans { db in
                 self.__create(
                     on: db,
                     dtos: groups,
@@ -75,6 +77,8 @@ extension PrivilegeSystem {
                     }.flatten(on: db.eventLoop).map { res }
                 }
             }
+            .map { logger.info("创建用户组 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
         
         public func delete(
@@ -85,7 +89,9 @@ extension PrivilegeSystem {
             // 再从 groups 主表中批量删除表
             // 同时，删除父组意味着其下的所有子群组也会被删除
             // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
-            db.trans { db in
+            let logger = getActionLogger()
+            logger.info("执行 删除用户组 操作", metadata: ["count": .stringConvertible(groupIds.count)])
+            return db.trans { db in
                 self.__satisfyCheck(
                     on: db,
                     UGroup.self,
@@ -128,13 +134,15 @@ extension PrivilegeSystem {
                         }
                     }
                 }
-            }
+            }.logIfFail(logger: logger)
         }
         
         public func update(
             with updater: DTO.Group<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Group<DTO.Queried>, Errcase> {
-            __update(
+            let logger = getActionLogger()
+            logger.info("执行 更新用户组 操作", metadata: ["groupId": .stringConvertible(updater.groupId)])
+            return __update(
                 on: db,
                 updater: updater,
                 label: "用户群组",
@@ -142,6 +150,8 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.groupId) },
                 dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
             )
+            .map { logger.info("更新用户组 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
     }
 }
@@ -172,7 +182,10 @@ public extension PrivilegeSystem.GroupController {
     func join(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 用户加入群组 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("用户加入群组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -181,6 +194,8 @@ public extension PrivilegeSystem.GroupController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { _ in logger.info("用户加入群组 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     // MARK: - 用户移出群组
@@ -188,7 +203,10 @@ public extension PrivilegeSystem.GroupController {
     func kick(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 用户移出群组 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("用户移出群组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -197,6 +215,8 @@ public extension PrivilegeSystem.GroupController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { _ in logger.info("用户移出群组 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     // MARK: - 群组移动至父群组
@@ -204,9 +224,11 @@ public extension PrivilegeSystem.GroupController {
     func move(
         _ relation: OTORelation<DTO.Group<DTO.Queried>, DTO.Group<DTO.Queried>?>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        db.trans { db in
+        let logger = getActionLogger()
+        logger.info("执行 群组移动 操作", metadata: ["groupId": .stringConvertible(relation.left.id), "targetParentId": .string(relation.right.map { $0.id.uuidString } ?? "nil")])
+        return db.trans { tdb in
             // 新上级不能是自己，也不能是自己的子孙（防止形成环形死循环）
-            UGroup.Path.query(on: db)
+            UGroup.Path.query(on: tdb)
                 .filter(\.$ancestor.$id == relation.left.id)
                 .all()
                 .withError(PrivilegeSystem.Errcase.groupMoveFailed, "获取子树失败", category: .internal)
@@ -217,18 +239,18 @@ public extension PrivilegeSystem.GroupController {
                 
                 // 检查：如果新上级在 subTreeIDs 里面，立刻抛出异常熔断
                 if let superId = relation.right?.id, subTreeIDs.contains(superId) {
-                    return db.eventLoop.makeFailedResult(PrivilegeSystem.Errcase.groupMoveFailed, "不可将群组移动到自己或子群中", category: .external) // 非法操作拦截
+                    return tdb.eventLoop.makeFailedResult(PrivilegeSystem.Errcase.groupMoveFailed, "不可将群组移动到自己或子群中", category: .external) // 非法操作拦截
                 }
                 
                 // 更新主表 groups
                 relation.left.model.$parent.id = relation.right?.id
                 
-                return relation.left.model.update(on: db)
+                return relation.left.model.update(on: tdb)
                     .withError(PrivilegeSystem.Errcase.groupMoveFailed, "更新群组主表上级失败", category: .internal)
                     .flatMap
                 {
                     // 只要后代在 B 圈子里，且祖先不在 B 圈子里（属于外部老祖先），通通干掉
-                    UGroup.Path.query(on: db)
+                    UGroup.Path.query(on: tdb)
                         .filter(\.$descendant.$id ~~ subTreeIDs)
                         .filter(\.$ancestor.$id !~ subTreeIDs)
                         .delete()
@@ -237,11 +259,11 @@ public extension PrivilegeSystem.GroupController {
                     {
                         // 如果是移到最顶层（新上级为 nil），到这一步旧链断完就结束了，直接返回成功
                         guard let superId = relation.right?.id else {
-                            return db.eventLoop.makeSucceededVoidResult()
+                            return tdb.eventLoop.makeSucceededVoidResult()
                         }
                         
                         // 捞出“新父级 X 及其所有祖先”，跟“B 及其子孙”进行交叉组合
-                        return UGroup.Path.query(on: db)
+                        return UGroup.Path.query(on: tdb)
                             .filter(\.$descendant.$id == superId)
                             .all()
                             .withError(PrivilegeSystem.Errcase.groupMoveFailed, "获取新父级祖先链失败", category: .internal)
@@ -256,15 +278,17 @@ public extension PrivilegeSystem.GroupController {
                                     // 新距离 = 祖先到X的距离 + 子孙到B的距离 + 1
                                     newPath.depth = superPath.depth + subPath.depth + 1
                                     
-                                    return newPath.save(on: db)
+                                    return newPath.save(on: tdb)
                                         .withError(PrivilegeSystem.Errcase.groupMoveFailed, "批量重建新链失败", category: .internal)
                                 }
-                            }.flatten(on: db.eventLoop)
+                            }.flatten(on: tdb.eventLoop)
                         }
                     }
                 }
             }
         }
+        .map { logger.info("群组移动 操作成功") }
+        .logIfFail(logger: logger)
     }
 }
 

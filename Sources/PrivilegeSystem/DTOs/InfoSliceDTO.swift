@@ -269,6 +269,13 @@ extension DTO.InfoSlice: Loggerable {
             "data": AnyCodable(data)
         ])
     }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            "InfoSlice(\(id.shortString), \(G.description), order:\(order))" :
+            "InfoSlice(\(G.description), order:\(order))"
+    }
 }
 
 extension DTO.InfoSlice where T == DTO.Prepare {

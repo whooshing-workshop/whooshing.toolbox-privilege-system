@@ -48,14 +48,20 @@ extension PrivilegeSystem {
         public func create(
             roles: [DTO.Role<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Role<DTO.Queried>], Errcase> {
-            __create(on: db, roles: roles)
+            let logger = getActionLogger()
+            logger.info("执行 创建角色 操作", metadata: ["count": .stringConvertible(roles.count)])
+            return __create(on: db, roles: roles)
+                .map { logger.info("创建角色 操作成功"); return $0 }
+                .logIfFail(logger: logger)
         }
         
         public func delete(
             roleIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
+            let logger = getActionLogger()
+            logger.info("执行 删除角色 操作", metadata: ["count": .stringConvertible(roleIds.count)])
+            return __delete(
                 on: db,
                 Role.self,
                 ids: roleIds,
@@ -65,12 +71,16 @@ extension PrivilegeSystem {
                 fieldBuilder: { $0.field(\.$id) },
                 filterBuilder: { $0.filter(\.$id ~~ roleIds) }
             )
+            .map { logger.info("删除角色 操作成功") }
+            .logIfFail(logger: logger)
         }
         
         public func update(
             with updater: DTO.Role<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {
-            __update(
+            let logger = getActionLogger()
+            logger.info("执行 更新角色 操作", metadata: ["roleId": .stringConvertible(updater.roleId)])
+            return __update(
                 on: db,
                 updater: updater,
                 label: "角色",
@@ -78,6 +88,8 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.roleId) },
                 dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
             )
+            .map { logger.info("更新角色 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
     }
 }
@@ -86,7 +98,9 @@ public extension PrivilegeSystem.RoleController {
     func create(
         relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        db.trans { db in
+        let logger = getActionLogger()
+        logger.info("执行 创建角色（含策略） 操作", metadata: ["count": .stringConvertible(relations.count)])
+        return db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__create(
                     on: db,
@@ -95,12 +109,16 @@ public extension PrivilegeSystem.RoleController {
                 )
             }
         }
+        .map { logger.info("创建角色（含策略） 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func createWithReturning(
         relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<[UUID: [DTO.Policy<Role, DTO.Queried>]], PrivilegeSystem.Errcase> {
-        db.trans { db in
+        let logger = getActionLogger()
+        logger.info("执行 创建角色（含策略返回） 操作", metadata: ["count": .stringConvertible(relations.count)])
+        return db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(
                     on: db,
@@ -109,6 +127,8 @@ public extension PrivilegeSystem.RoleController {
                 )
             }
         }
+        .map { logger.info("创建角色（含策略返回） 操作成功"); return $0 }
+        .logIfFail(logger: logger)
     }
 }
 
@@ -165,7 +185,10 @@ public extension PrivilegeSystem.RoleController {
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色任命用户 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色任命用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -174,12 +197,17 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$users },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("角色任命用户 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色任命用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色任命用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -188,12 +216,17 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("角色任命用户组 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色任命组内用户 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色任命组内用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -202,12 +235,17 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$usersInGroup },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("角色任命组内用户 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func appoint(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色任命组内用户（Prepare） 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色任命组内用户（Prepare）关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -216,13 +254,18 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$usersInGroup },
             modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
         )
+        .map { logger.info("角色任命组内用户（Prepare） 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     // MARK: - 角色撤职
     func dismiss(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色撤職用户 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色撤職用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -231,12 +274,17 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$users },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("角色撤職用户 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func dismiss(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色撤職用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色撤職用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -245,12 +293,17 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("角色撤職用户组 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func dismiss(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色撤職组内用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -259,12 +312,17 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$usersInGroup },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("角色撤職组内用户 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func dismiss(
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 角色撤職组内用户（Prepare） 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("角色撤職组内用户（Prepare）关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -273,6 +331,8 @@ public extension PrivilegeSystem.RoleController {
             siblingBuilder: { $0.model.$usersInGroup },
             modelsBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
         )
+        .map { logger.info("角色撤職组内用户（Prepare） 操作成功") }
+        .logIfFail(logger: logger)
     }
 }
 

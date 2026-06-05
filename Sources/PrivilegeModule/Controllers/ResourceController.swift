@@ -29,7 +29,9 @@ public extension PrivilegeModule {
         public func create<T: Resource>(
             resources: [ResourceDTO<T, DTO.Prepare>]
         ) -> EventLoopRes<[ResourceDTO<T, DTO.Queried>], Errcase> {
-            __create(
+            let logger = getActionLogger()
+            logger.info("执行 创建资源 操作", metadata: ["count": .stringConvertible(resources.count)])
+            return __create(
                 on: db,
                 dtos: resources,
                 label: "资源",
@@ -37,13 +39,17 @@ public extension PrivilegeModule {
                 modelBuilder: { $0.raw() },
                 dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0.fill()) }
             )
+            .map { logger.info("创建资源 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
         
         public func delete(
             ids: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
+            let logger = getActionLogger()
+            logger.info("执行 删除资源 操作", metadata: ["count": .stringConvertible(ids.count)])
+            return __delete(
                 on: db,
                 AnyResource.self,
                 ids: ids,
@@ -53,12 +59,16 @@ public extension PrivilegeModule {
                 fieldBuilder: { $0.field(\.$id) },
                 filterBuilder: { $0.filter(\.$id ~~ ids) }
             )
+            .map { logger.info("删除资源 操作成功") }
+            .logIfFail(logger: logger)
         }
         
         public func update<T: Resource>(
             with updater: ResourceDTO<T, DTO.Prepare>.Updater
         ) -> EventLoopRes<ResourceDTO<T, DTO.Queried>, Errcase> {
-            __update(
+            let logger = getActionLogger()
+            logger.info("执行 更新资源 操作", metadata: ["resourceId": .stringConvertible(updater.resourceId)])
+            return __update(
                 on: db,
                 updater: updater,
                 label: "资源",
@@ -66,6 +76,8 @@ public extension PrivilegeModule {
                 filterBuilder: { $0.filter(\.$id == updater.resourceId) },
                 dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) }
             )
+            .map { logger.info("更新资源 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
     }
 }

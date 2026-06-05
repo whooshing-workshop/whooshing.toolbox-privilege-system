@@ -45,14 +45,20 @@ extension PrivilegeSystem {
         public func create(
             domains: [DTO.Domain<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Domain<DTO.Queried>], Errcase> {
-            __create(on: db, domains: domains)
+            let logger = getActionLogger()
+            logger.info("执行 创建域权限 操作", metadata: ["count": .stringConvertible(domains.count)])
+            return __create(on: db, domains: domains)
+                .map { logger.info("创建域权限 操作成功"); return $0 }
+                .logIfFail(logger: logger)
         }
         
         public func delete(
             domainIds: [UUID],
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
+            let logger = getActionLogger()
+            logger.info("执行 删除域权限 操作", metadata: ["count": .stringConvertible(domainIds.count)])
+            return __delete(
                 on: db,
                 Domain.self,
                 ids: domainIds,
@@ -62,12 +68,16 @@ extension PrivilegeSystem {
                 fieldBuilder: { $0.field(\.$id) },
                 filterBuilder: { $0.filter(\.$id ~~ domainIds) }
             )
+            .map { logger.info("删除域权限 操作成功") }
+            .logIfFail(logger: logger)
         }
         
         public func update(
             with updater: DTO.Domain<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Domain<DTO.Queried>, Errcase> {
-            __update(
+            let logger = getActionLogger()
+            logger.info("执行 更新域权限 操作", metadata: ["domainId": .stringConvertible(updater.domainId)])
+            return __update(
                 on: db,
                 updater: updater,
                 label: "域权限",
@@ -75,6 +85,8 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.domainId) },
                 dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
             )
+            .map { logger.info("更新域权限 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
     }
 }
@@ -83,7 +95,9 @@ public extension PrivilegeSystem.DomainController {
     func create(
         relations: [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        db.trans { db in
+        let logger = getActionLogger()
+        logger.info("执行 创建域权限（含策略） 操作", metadata: ["count": .stringConvertible(relations.count)])
+        return db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__create(
                     on: db,
@@ -92,12 +106,16 @@ public extension PrivilegeSystem.DomainController {
                 )
             }
         }
+        .map { logger.info("创建域权限（含策略） 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func createWithReturning(
         relations: [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
     ) -> EventLoopRes<[UUID: [DTO.Policy<Domain, DTO.Queried>]], PrivilegeSystem.Errcase> {
-        db.trans { db in
+        let logger = getActionLogger()
+        logger.info("执行 创建域权限（含策略返回） 操作", metadata: ["count": .stringConvertible(relations.count)])
+        return db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(
                     on: db,
@@ -106,6 +124,8 @@ public extension PrivilegeSystem.DomainController {
                 )
             }
         }
+        .map { logger.info("创建域权限（含策略返回） 操作成功"); return $0 }
+        .logIfFail(logger: logger)
     }
 }
         
@@ -149,7 +169,10 @@ public extension PrivilegeSystem.DomainController {
     func assign(
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 域权限指派用户 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("域权限指派用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -158,12 +181,17 @@ public extension PrivilegeSystem.DomainController {
             siblingBuilder: { $0.model.$users },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("域权限指派用户 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func assign(
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 域权限指派用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("域权限指派用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .attach,
@@ -172,6 +200,8 @@ public extension PrivilegeSystem.DomainController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("域权限指派用户组 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     // MARK: - 域权限撤销
@@ -179,7 +209,10 @@ public extension PrivilegeSystem.DomainController {
     func unassign(
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 域权限撤销用户 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("域权限撤销用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -188,12 +221,17 @@ public extension PrivilegeSystem.DomainController {
             siblingBuilder: { $0.model.$users },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("域权限撤销用户 操作成功") }
+        .logIfFail(logger: logger)
     }
     
     func unassign(
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        __manyToMany(
+        let logger = getActionLogger()
+        logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
+        logger.debug("域权限撤销用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        return __manyToMany(
             on: db,
             relations,
             action: .detach,
@@ -202,6 +240,8 @@ public extension PrivilegeSystem.DomainController {
             siblingBuilder: { $0.model.$groups },
             modelsBuilder: { $0.eventLoop.makeSucceededResult($1.map { $0.model }) }
         )
+        .map { logger.info("域权限撤销用户组 操作成功") }
+        .logIfFail(logger: logger)
     }
 }
 

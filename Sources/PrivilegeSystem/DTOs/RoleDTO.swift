@@ -7,6 +7,7 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 import AnyCodable
+import DataConvertable
 
 package typealias RoleModel = Role
 
@@ -200,6 +201,13 @@ extension DTO.Role: Loggerable {
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
+    }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            "Role(\(id.shortString), \(name))" :
+            "Role(\(name))"
     }
 }
 

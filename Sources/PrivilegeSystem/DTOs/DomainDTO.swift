@@ -5,6 +5,8 @@ import ErrorHandle
 import Collections
 import PrivilegeModule
 import Query
+import SQLKit
+import DataConvertable
 import LoggingAdvanced
 import AnyCodable
 
@@ -199,6 +201,13 @@ extension DTO.Domain: Loggerable {
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
+    }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            name == nil ? "Domain(\(id.shortString))" : "Domain(\(id.shortString), \(name!))" :
+            "Domain(\(name ?? "unsaved"))"
     }
 }
 

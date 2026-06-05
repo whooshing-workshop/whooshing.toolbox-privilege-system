@@ -2,6 +2,7 @@ import Fluent
 import Foundation
 import ErrorHandle
 import PrivilegeModule
+import DataConvertable
 import LoggingAdvanced
 import AnyCodable
 
@@ -87,6 +88,10 @@ extension DTO.UserInGroupRelation: CustomStringConvertible, Loggerable {
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
+    }
+    
+    public var summaryDescription: String {
+        "UserInGroup(\(user.summaryDescription) ∈ \(group.summaryDescription))"
     }
 }
 

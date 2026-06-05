@@ -27,7 +27,11 @@ extension PrivilegeSystem {
             for infoId: UUID,
             extendedInfos: [DTO.InfoSlice<T, DTO.Prepare>]
         ) -> EventLoopRes<[DTO.InfoSlice<T, DTO.Queried>], Errcase> where T.Value == String {
-            __create(on: db, for: infoId, extendedInfos: extendedInfos)
+            let logger = getActionLogger()
+            logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "count": .stringConvertible(extendedInfos.count)])
+            return __create(on: db, for: infoId, extendedInfos: extendedInfos)
+                .map { logger.info("创建用户扩展信息 操作成功"); return $0 }
+                .logIfFail(logger: logger)
         }
         
         public func delete<T: DTO.UserInfoModel>(
@@ -35,7 +39,9 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true,
             type: T.Type = T.self
         ) -> EventLoopRes<Void, Errcase> {
-            __delete(
+            let logger = getActionLogger()
+            logger.info("执行 删除用户扩展信息 操作", metadata: ["count": .stringConvertible(infoIds.count)])
+            return __delete(
                 on: db,
                 User.Info.Extended<T.Model>.self,
                 ids: infoIds,
@@ -45,12 +51,16 @@ extension PrivilegeSystem {
                 fieldBuilder: { $0.field(\.$id) },
                 filterBuilder: { $0.filter(\.$id ~~ infoIds) }
             )
+            .map { _ in logger.info("删除用户扩展信息 操作成功") }
+            .logIfFail(logger: logger)
         }
         
         public func update<T>(
             with updater: DTO.InfoSlice<T, DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.InfoSlice<T, DTO.Queried>, Errcase> {
-            __update(
+            let logger = getActionLogger()
+            logger.info("执行 更新用户扩展信息 操作", metadata: ["infoSliceId": .stringConvertible(updater.infoSliceId)])
+            return __update(
                 on: db,
                 updater: updater,
                 label: "用户扩展信息",
@@ -58,10 +68,14 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.infoSliceId) },
                 dtoBuilder: { DTO.InfoSlice<T, DTO.Queried>.make(from: $0) }
             )
+            .map { logger.info("更新用户扩展信息 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
         
         public func fetch(for userId: UUID) -> EventLoopRes<DTO.ExtendedInfo<DTO.Queried>, Errcase> {
-            User.Info.query(on: db)
+            let logger = getActionLogger()
+            logger.info("执行 查询用户扩展信息 操作", metadata: ["userId": .stringConvertible(userId)])
+            return User.Info.query(on: db)
                 .with(\.$addresses)
                 .with(\.$alternateEmails)
                 .with(\.$phones)
@@ -82,6 +96,8 @@ extension PrivilegeSystem {
                     )
                 }
             }
+            .map { logger.info("查询用户扩展信息 操作成功"); return $0 }
+            .logIfFail(logger: logger)
         }
     }
 }

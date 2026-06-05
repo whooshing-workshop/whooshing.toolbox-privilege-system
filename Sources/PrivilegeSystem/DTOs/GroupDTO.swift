@@ -4,7 +4,9 @@ import Policy
 import ErrorHandle
 import Collections
 import PrivilegeModule
+import SQLKit
 import Query
+import DataConvertable
 import LoggingAdvanced
 import AnyCodable
 
@@ -206,6 +208,13 @@ extension DTO.Group: Loggerable {
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
+    }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            "Group(\(id.shortString), \(name))" :
+            "Group(\(name))"
     }
 }
 

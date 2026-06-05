@@ -264,6 +264,13 @@ extension DTO.UserInfo: CustomStringConvertible, Loggerable {
             "data": AnyCodable(data)
         ])
     }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            "UserInfo(\(id.shortString), \(nickname))" :
+            "UserInfo(\(nickname))"
+    }
 }
 
 extension DTO.UserInfo: Hashable {

@@ -166,6 +166,14 @@ extension DTO.Token: CustomStringConvertible, Loggerable {
             "data": AnyCodable(data)
         ])
     }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        let credPrefix = String(self.credential.prefix(4))
+        return isQueried ?
+            "Token(\(id.shortString), cred:\(credPrefix)****)" :
+            "Token(cred:\(credPrefix)****)"
+    }
 }
 
 extension DTO.Token: Hashable {

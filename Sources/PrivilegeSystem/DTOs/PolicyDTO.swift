@@ -4,6 +4,7 @@ import Policy
 import ErrorHandle
 import PrivilegeModule
 import Query
+import DataConvertable
 import LoggingAdvanced
 import AnyCodable
 
@@ -103,6 +104,13 @@ extension DTO.Policy: CustomStringConvertible, Loggerable {
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
+    }
+    
+    public var summaryDescription: String {
+        let isQueried = T.self == DTO.Queried.self
+        return isQueried ?
+            "Policy(\(id.shortString), module:\(moduleId.shortString))" :
+            "Policy(module:\(moduleId))"
     }
 }
 
