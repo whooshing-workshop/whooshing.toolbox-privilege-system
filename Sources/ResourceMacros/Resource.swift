@@ -32,11 +32,15 @@ public extension Resource {
     }
 }
 
-public struct AnyOperation: Sendable, Decodable {
+public struct AnyOperation: Sendable, Decodable, Loggerable, CustomStringConvertible {
     public let rawValue: String
     
     public init<T: OperationList>(op: T) {
         self.rawValue = op.rawValue
+    }
+    
+    public var description: String {
+        self.rawValue
     }
 }
 
