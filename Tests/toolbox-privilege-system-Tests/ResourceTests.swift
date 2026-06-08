@@ -227,7 +227,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = PModule.AnyResourceDTO.init(resourceDTO)
+        let anyResourceDTO = AnyResourceDTO(resourceDTO)
         
         // 测试 Attach
         try await m.privilege.attach {
@@ -266,7 +266,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = PModule.AnyResourceDTO.init(resourceDTO)
+        let anyResourceDTO = AnyResourceDTO(resourceDTO)
         
         // 先 Attach
         try await m.privilege.attach {
