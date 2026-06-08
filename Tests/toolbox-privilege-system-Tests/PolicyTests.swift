@@ -2656,6 +2656,6 @@ struct PolicyTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .end
+        TestingShared.testStage = .advancePolicy
     }
 }

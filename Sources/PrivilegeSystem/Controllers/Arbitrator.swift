@@ -165,7 +165,7 @@ extension PrivilegeSystem {
                 }
             }.map { res in
                 logger.info("权限仲裁 操作执行成功", metadata: ["result": .summaryData(res)])
-                logger.debug("仲裁结果结果", metadata: ["result": .data(res)])
+                logger.debug("仲裁结果", metadata: ["result": .data(res)])
                 return res
             }.logIfFail(logger: logger, metadata: [
                 "user": .data(user),

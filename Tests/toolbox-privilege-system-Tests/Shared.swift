@@ -29,6 +29,7 @@ struct TestingShared {
         case relations
         case query
         case policy
+        case advancePolicy
         case end
     }
     
