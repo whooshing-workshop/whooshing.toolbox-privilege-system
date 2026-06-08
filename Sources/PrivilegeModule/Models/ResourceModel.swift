@@ -5,59 +5,50 @@ import Fluent
 import ResourceMacros
 @preconcurrency import AnyCodable
 
-extension PM {
-    public final class AnyResource: PGModel, @unchecked Sendable  {
-        public static var name: String { "resources" }
-        
-        public struct Fields: PGFields {
-            let id = PGField("id", .uuid)                               .primary
-            let name = PGField("name", .string)                         .required
-            let type = PGField("type",
-                .enum(ResourceList.self, as: "resource_type")
-            )                                                           .required
-            let data = PGField("data", .json)                           .required
-            let createdAt = PGField("created_at", .datetime)            .required
-            let updatedAt = PGField("updated_at", .datetime)            .required
-            
-            public init() {}
-        }
-        
-        let fields = Fields()
-        
-        @ID(key: .id)                               public var id: UUID?
-        
-        @Field(fields.name)                         var name: String
-        @Enum(fields.type)                          var type: ResourceList
-        @Field(fields.data)                         var data: [String: AnyCodable]
-        
-        @Siblings(
-            through: PrivilegeAnyResourcePivot.self,
-            from: \.$secondaryModel,
-            to: \.$primaryModel
-        )                                           var privileges: [Privilege]
-        
-        @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
-        @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
+public final class AnyResource: PGModel, @unchecked Sendable  {
+    public static var name: String { "resources" }
+    
+    public struct Fields: PGFields {
+        let id = PGField("id", .uuid)                               .primary
+        let name = PGField("name", .string)                         .required
+        let type = PGField("type", .string)                         .required
+        let data = PGField("data", .json)                           .required
+        let createdAt = PGField("created_at", .datetime)            .required
+        let updatedAt = PGField("updated_at", .datetime)            .required
         
         public init() {}
-        
-        init<T>(from resource: ResourceModel<T>) {
-            self.id = resource.id
-            self.name = resource.name
-            self.type = resource.type
-            self.data = resource.data.json
-            self.createdAt = resource.createdAt
-            self.updatedAt = resource.updatedAt
-            
-            self.$id.exists = resource.$id.exists
-            self._$idExists = resource._$idExists
-            self._$id.exists = resource._$id.exists
-            self.$privileges.fromId = self.id
-        }
-        
-        public typealias MIG = DefaultMIG<AnyResource>
     }
+    
+    let fields = Fields()
+    
+    @ID(key: .id)                               public var id: UUID?
+    
+    @Field(fields.name)                         var name: String
+    @Field(fields.type)                         var type: String
+    @Field(fields.data)                         var data: [String: AnyCodable]
+    
+    @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
+    @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
+    
+    public init() {}
+    
+    init<T, G>(from resource: PrivilegeModule<G>.ResourceModel<T>) {
+        self.id = resource.id
+        self.name = resource.name
+        self.type = resource.type.rawValue
+        self.data = resource.data.json
+        self.createdAt = resource.createdAt
+        self.updatedAt = resource.updatedAt
+        
+        self.$id.exists = resource.$id.exists
+        self._$idExists = resource._$idExists
+        self._$id.exists = resource._$id.exists
+    }
+    
+    public typealias MIG = DefaultMIG<AnyResource>
+}
 
+extension PM {
     public final class ResourceModel<T: Resource>: PGModel, @unchecked Sendable where T.ResourceType == ResourceList  {
         public static var name: String { "resources" }
         

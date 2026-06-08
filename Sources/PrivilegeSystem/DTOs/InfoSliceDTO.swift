@@ -9,6 +9,7 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 public typealias EIAddress = DTO.Address
 public typealias EIAlternateEmail = DTO.AlternateEmail

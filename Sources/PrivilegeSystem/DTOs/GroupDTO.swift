@@ -9,6 +9,7 @@ import Query
 import DataConvertable
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 public typealias PGroup = DTO.Group<DTO.Prepare>
 public typealias QGroup = DTO.Group<DTO.Queried>

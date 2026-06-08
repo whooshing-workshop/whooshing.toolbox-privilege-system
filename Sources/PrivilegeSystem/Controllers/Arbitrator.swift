@@ -36,24 +36,25 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
-        public func judge<T: Resource>(
+        public func judge(
             moduleId: UUID,
             user: DTO.User<DTO.Queried>,
             role: DTO.Role<DTO.Queried>,
-            resource: T,
-            operation: T.Operations,
+            resource: AnyResourceDTO,
+            operation: AnyOperation,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 权限仲裁 操作", metadata: [
-                "user": .stringConvertible(user.id),
-                "role": .stringConvertible(role.id),
-                "moduleId": .stringConvertible(moduleId),
-                "operation": .string(operation.rawValue)
+                "moduleId": .stringConvertible(moduleId.shortString),
+                "user": .summaryData(user),
+                "role": .summaryData(role),
+                "operation": .string(operation.rawValue),
+                "resource:": .string(resource.name)
             ])
             logger.debug("操作参数", metadata: [
-                "resource": .string("\(resource)"),
-                "privilegeIds": .string("\(privilegeIds)")
+                "resource": .string("\(resource.data)"),
+                "privilegeIds": .array(privilegeIds.map { .init(stringLiteral: $0.shortString) })
             ])
             
             // 检查所提供的 role 是否是 user 可用的身份，否则报错
@@ -105,7 +106,7 @@ extension PrivilegeSystem {
                                     
                                     return DomainData(
                                         domainId: try pivot.primaryModel.requireID(),
-                                        resource: resource.json,
+                                        resource: resource.data,
                                         operation: operation.rawValue,
                                         user: user,
                                         group: try .make(from: associatedGroup).get()
@@ -123,7 +124,7 @@ extension PrivilegeSystem {
                             try domains.map { domain in
                                 DomainData(
                                     domainId: try domain.requireID(),
-                                    resource: resource.json,
+                                    resource: resource.data,
                                     operation: operation.rawValue,
                                     user: user,
                                     group: nil
@@ -138,14 +139,14 @@ extension PrivilegeSystem {
                             domains: domainDatas.flatMap { $0 },
                             role: .init(
                                 roleId: role.id,
-                                resource: resource.json,
+                                resource: resource.data,
                                 operation: operation.rawValue,
                                 user: user
                             ),
                             privileges: privilegeIds.map {
                                 .init(
                                     privilegeId: $0,
-                                    resource: resource.json,
+                                    resource: resource.data,
                                     operation: operation.rawValue,
                                     user: user
                                 )

@@ -8,61 +8,74 @@ import DataConvertable
 import LoggingAdvanced
 @preconcurrency import AnyCodable
 
-public extension PM {
-    struct AnyResourceDTO: DTOModel, Sendable {
-        package typealias T = DTO.Queried
-        
-        public let id: UUID
-        public let data: [String: AnyCodable]
-        public let createdAt: Date
-        public let updatedAt: Date
-        
-        package typealias AssociatedModel = AnyResource
-        private let m: AssociatedModel?
-        
-        public init<T>(_ resource: ResourceDTO<T, DTO.Queried>) {
-            self = Self.init(
-                id: resource.id,
-                data: resource.data.json,
-                createdAt: resource.createdAt,
-                updatedAt: resource.updatedAt,
-                model: .init(from: resource.model)
+public struct AnyResourceDTO: DTOModel, Sendable {
+    package typealias T = DTO.Queried
+    
+    public let id: UUID
+    public let type: String
+    public let name: String
+    public let data: [String: AnyCodable]
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package typealias AssociatedModel = AnyResource
+    private let m: AssociatedModel?
+    
+    public init<T, G>(_ resource: PrivilegeModule<G>.ResourceDTO<T, DTO.Queried>) {
+        self = Self.init(
+            id: resource.id,
+            name: resource.data.name,
+            type: resource.data.rtype.rawValue,
+            data: resource.data.json,
+            createdAt: resource.createdAt,
+            updatedAt: resource.updatedAt,
+            model: .init(from: resource.model)
+        )
+    }
+    
+    init(
+        id: UUID,
+        name: String,
+        type: String,
+        data: [String: AnyCodable],
+        createdAt: Date,
+        updatedAt: Date,
+        model: AssociatedModel?
+    ) {
+        self.id = id
+        self.name = name
+        self.type = type
+        self.data = data
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.m = model
+    }
+    
+    package var model: AnyResource {
+        guard let m = m else {
+            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
+        }
+        return m
+    }
+    
+    public static func make(from model: AnyResource) -> Res<Self, Errcase> {
+        .init(throws: .resourceDTOFailed, category: .internal) {
+            Self.init(
+                id: try model.requireID(),
+                name: model.name,
+                type: model.type,
+                data: model.data,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
             )
-        }
-        
-        init(id: UUID, data: [String: AnyCodable], createdAt: Date, updatedAt: Date, model: AssociatedModel?) {
-            self.id = id
-            self.data = data
-            self.createdAt = createdAt
-            self.updatedAt = updatedAt
-            self.m = model
-        }
-        
-        package var model: AnyResource {
-            guard let m = m else {
-                fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-            }
-            return m
-        }
-        
-        public static func make(from model: PM<ResourceList>.AnyResource) -> Res<Self, PrivilegeModule.Errcase> {
-            .init(throws: .resourceDTOFailed, category: .internal) {
-                Self.init(
-                    id: try model.requireID(),
-                    data: model.data,
-                    createdAt: model.createdAt,
-                    updatedAt: model.updatedAt,
-                    model: model
-                )
-            }
         }
     }
 }
 
-extension PM.AnyResourceDTO: Query.Queriable {
-    public typealias S = PM<ResourceList>
-    public typealias Model = S.AnyResource
-    public typealias ErrorType = S.Errcase
+extension AnyResourceDTO: Query.Queriable {
+    public typealias Model = AnyResource
+    public typealias ErrorType = Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.id: \.$id,
         \.data: \.$data,
@@ -81,7 +94,7 @@ extension PM.AnyResourceDTO: Query.Queriable {
 
 // MARK: - Loggerable
 
-extension PM.AnyResourceDTO: Loggerable {
+extension AnyResourceDTO: Loggerable {
     public var logDescription: String {
         "AnyResource(id:\(id))"
     }

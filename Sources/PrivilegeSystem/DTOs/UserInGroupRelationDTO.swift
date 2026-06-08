@@ -5,6 +5,7 @@ import PrivilegeModule
 import DataConvertable
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 public typealias PUserInGroupRelation = DTO.UserInGroupRelation<DTO.Prepare>
 public typealias QUserInGroupRelation = DTO.UserInGroupRelation<DTO.Queried>

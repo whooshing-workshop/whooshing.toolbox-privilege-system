@@ -7,6 +7,7 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 public typealias PExtendedInfo = DTO.ExtendedInfo<DTO.Prepare>
 public typealias QExtendedInfo = DTO.ExtendedInfo<DTO.Queried>

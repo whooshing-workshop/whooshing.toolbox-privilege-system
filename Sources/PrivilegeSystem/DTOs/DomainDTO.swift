@@ -9,6 +9,7 @@ import SQLKit
 import DataConvertable
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 package typealias DomainModel = Domain
 

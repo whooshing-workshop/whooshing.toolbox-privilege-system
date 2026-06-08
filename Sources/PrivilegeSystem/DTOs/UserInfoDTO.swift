@@ -9,6 +9,7 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 public typealias PUserInfo = DTO.UserInfo<DTO.Prepare>
 public typealias QUserInfo = DTO.UserInfo<DTO.Queried>

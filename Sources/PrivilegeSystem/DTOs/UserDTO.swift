@@ -8,6 +8,7 @@ import PrivilegeModule
 import Query
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 package typealias UserModel = User
 

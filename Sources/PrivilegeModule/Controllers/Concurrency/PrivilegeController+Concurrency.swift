@@ -38,15 +38,15 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: Attach / Detach (result-builder overloads)
 
     func attach(
-        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) async throws(S.Errcase.ErrType) {
         try await attach(content).get()
     }
 
     func detach(
-        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) async throws(S.Errcase.ErrType) {
         try await detach(content).get()
     }
@@ -54,13 +54,13 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: Attach / Detach (array overloads)
 
     func attach(
-        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) async throws(S.Errcase.ErrType) {
         try await attach(relations: relations).get()
     }
 
     func detach(
-        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) async throws(S.Errcase.ErrType) {
         try await detach(relations: relations).get()
     }
@@ -74,7 +74,7 @@ public extension PrivilegeModule.PrivilegeController {
     }
 
     func privilege(
-        attachedTo resource: S.AnyResourceDTO
+        attachedTo resource: AnyResourceDTO
     ) async throws(Errcase.ErrType) -> [S.PrivilegeDTO<DTO.Queried>] {
         try await privilege(attachedTo: resource).get()
     }
@@ -90,7 +90,7 @@ public extension PrivilegeModule.PrivilegeController {
 
     func `is`(
         privilege: S.PrivilegeDTO<DTO.Queried>,
-        attachedTo resource: S.AnyResourceDTO
+        attachedTo resource: AnyResourceDTO
     ) async throws(Errcase.ErrType) -> Bool {
         try await self.is(privilege: privilege, attachedTo: resource).get()
     }

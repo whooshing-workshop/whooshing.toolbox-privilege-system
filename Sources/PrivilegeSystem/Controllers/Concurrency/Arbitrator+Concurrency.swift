@@ -10,12 +10,12 @@ import ResourceMacros
 // MARK: - Arbitrator Concurrency (Arbitrator.swift)
 
 extension PrivilegeSystem.Arbitrator {
-    public func judge<T: Resource>(
+    public func judge(
         moduleId: UUID,
         user: DTO.User<DTO.Queried>,
         role: DTO.Role<DTO.Queried>,
-        resource: T,
-        operation: T.Operations,
+        resource: AnyResourceDTO,
+        operation: AnyOperation,
         privilegeIds: [UUID]
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Result {
         try await judge(

@@ -7,6 +7,7 @@ import Query
 import DataConvertable
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 public typealias PPolicy<G: PolicyType> = DTO.Policy<G, DTO.Prepare>
 public typealias QPolicy<G: PolicyType> = DTO.Policy<G, DTO.Queried>

@@ -32,8 +32,8 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
             
-            logger.info("执行 账号注册 操作", metadata: ["user": .string(user.email)])
-            logger.debug("操作参数", metadata: ["": .data(user)])
+            logger.info("执行 账号注册 操作", metadata: ["user": .summaryData(user)])
+            logger.debug("操作参数", metadata: ["user": .data(user)])
             
             return db.trans { db in
                 db.eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
@@ -60,7 +60,7 @@ extension PrivilegeSystem {
                     logger.info("账号注册 操作执行成功")
                     return $0
                 }
-            }.logIfFail(logger: logger)
+            }.logIfFail(logger: logger, metadata: ["user": .data(user)])
         }
         
         public func login(
@@ -68,7 +68,8 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<DTO.Token<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
             
-            logger.info("执行 账号登录 操作", metadata: ["user": .string(userData.email)])
+            logger.info("执行 账号登录 操作", metadata: ["user": .summaryData(userData)])
+            logger.debug("操作参数", metadata: ["user": .data(userData)])
             
             return db.trans { db in
                 User.query(on: db)
@@ -116,7 +117,7 @@ extension PrivilegeSystem {
                     logger.info("账号登录 操作执行成功", metadata: ["user": .string(userData.email)])
                     return $0
                 }
-            }.logIfFail(logger: logger)
+            }.logIfFail(logger: logger, metadata: ["user": .data(userData)])
         }
 
         public func authenticate(
@@ -124,18 +125,19 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<Crypto.Symm.Key, Errcase> {
             let logger = getActionLogger()
             
-            logger.info("执行 Token 鉴权 操作", metadata: ["credential": .string(token.credential)])
+            logger.info("执行 Token 鉴权 操作", metadata: ["token": .summaryData(token)])
+            logger.debug("操作参数", metadata: ["token": .data(token)])
             
             return db.trans { db in
                 db.eventLoop.submitResult { () throws(Errcase.ErrType) in
                     guard token.tokenEncrypted.count == 60 else {
-                        throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes，而得到 \(token.tokenEncrypted.count) bytes", category: .external)
+                        throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes", category: .external)
                     }
                 }.flatMap {
                     Token.query(on: db)
                         .filter(\.$credential == token.credential)
                         .first()
-                        .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败，凭据: \(token.credential)", category: .internal)
+                        .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败", category: .internal)
                 }.flatMapThrowing { token throws(Errcase.ErrType) in
                     guard let t = token else {
                         throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external)
@@ -144,7 +146,7 @@ extension PrivilegeSystem {
                 }.flatMap { token in
                     token.$user
                         .load(on: db)
-                        .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败，凭据: \(token.credential)", category: .internal)
+                        .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败", category: .internal)
                         .map { @Sendable in token }
                 }.flatMapThrowing { tokenResult throws(Errcase.ErrType) in
                     // 检查是否有效
@@ -176,7 +178,7 @@ extension PrivilegeSystem {
                     logger.info("Token 鉴权 操作执行成功")
                     return $0
                 }
-            }.logIfFail(logger: logger)
+            }.logIfFail(logger: logger, metadata: ["token": .data(token)])
         }
         
         public func changePassword(
@@ -192,7 +194,8 @@ extension PrivilegeSystem {
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
             
-            logger.info("执行 修改密码 操作", metadata: ["user": .string(userData.email)])
+            logger.info("执行 修改密码 操作", metadata: ["user": .summaryData(userData)])
+            logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPasswd.count)])
             
             return db.trans { db in
                 User.query(on: db)
@@ -228,10 +231,10 @@ extension PrivilegeSystem {
                         try .make(from: user).get()
                     }
                 }.map {
-                    logger.info("修改密码 操作执行成功", metadata: ["user": .string(userData.email)])
+                    logger.info("修改密码 操作执行成功")
                     return $0
                 }
-            }.logIfFail(logger: logger)
+            }.logIfFail(logger: logger, metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPasswd.count)])
         }
     }
 }

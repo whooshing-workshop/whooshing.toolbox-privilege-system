@@ -144,18 +144,6 @@ package extension DTOUpdater {
     }
 }
 
-package func formatQuery(_ query: [String: AnyCodable]) -> String {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    
-    do {
-        let data = try encoder.encode(query)
-        return String(data: data, encoding: .utf8) ?? "\(query)"
-    } catch {
-        return "\(query)"
-    }
-}
-
 extension DTO.Passive: Equatable where T: Equatable {
     public static func == (lhs: DTO.Passive<T>, rhs: DTO.Passive<T>) -> Bool {
         lhs.value == rhs.value

@@ -7,6 +7,7 @@ import DataConvertable
 import Query
 import LoggingAdvanced
 import AnyCodable
+import ResourceMacros
 
 package typealias TokenModel = Token
 
@@ -147,13 +148,10 @@ extension DTO.Token: CustomStringConvertible, Loggerable {
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
         let isQueried = T.self == DTO.Queried.self
         
-        let credPrefix = String(self.credential.prefix(4))
-        let credDisplay = "\(credPrefix)****"
-        
         let data: [String: AnyCodable] = [
             "id": AnyCodable(isQueried ? "\(self.id)" : nil),
             "user_id": AnyCodable(isQueried ? "\(self.userId)" : nil),
-            "credential": AnyCodable(credDisplay),
+            "credential": AnyCodable(credential),
             "token": AnyCodable("[PROTECTED_KEY]"),
             "token_encrypted": AnyCodable("[BINARY_DATA]"),
             "valid": AnyCodable(isQueried ? self.valid : nil),
@@ -169,10 +167,9 @@ extension DTO.Token: CustomStringConvertible, Loggerable {
     
     public var summaryDescription: String {
         let isQueried = T.self == DTO.Queried.self
-        let credPrefix = String(self.credential.prefix(4))
         return isQueried ?
-            "Token(\(id.shortString), cred:\(credPrefix)****)" :
-            "Token(cred:\(credPrefix)****)"
+            "Token(\(id.shortString), cred:\(credential))" :
+            "Token(cred:\(credential))"
     }
 }
 

@@ -1,8 +1,10 @@
 import Foundation
 import ErrorHandle
+import Logging
+import LoggingAdvanced
 @preconcurrency import AnyCodable
 
-public protocol Resource: Sendable, Codable, Hashable {
+public protocol Resource: Sendable, Codable, Hashable, Loggerable, CustomStringConvertible {
     associatedtype ResourceType: ResourceTypeList
     associatedtype Operations: OperationList
     static var type: ResourceType { get }
@@ -19,3 +21,33 @@ where Self.RawValue == String {}
 
 public protocol ResourceTypeList: Sendable, Codable, CaseIterable, RawRepresentable, Hashable
 where Self.RawValue == String {}
+
+public extension Resource {
+    var description: String {
+        formatQuery(self.json)
+    }
+    
+    var rtype: ResourceType {
+        Self.type
+    }
+}
+
+public struct AnyOperation: Sendable, Decodable {
+    public let rawValue: String
+    
+    public init<T: OperationList>(op: T) {
+        self.rawValue = op.rawValue
+    }
+}
+
+package func formatQuery(_ query: [String: AnyCodable]) -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    
+    do {
+        let data = try encoder.encode(query)
+        return String(data: data, encoding: .utf8) ?? "\(query)"
+    } catch {
+        return "\(query)"
+    }
+}

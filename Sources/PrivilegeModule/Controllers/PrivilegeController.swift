@@ -195,8 +195,8 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
     func attach(
-        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase> {
         attach(relations: content())
     }
@@ -204,8 +204,8 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限解除
     
     func detach(
-        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>
-        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>
+        _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase>  {
         detach(relations: content())
     }
@@ -217,7 +217,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 附加权限动作要求资源与权限都必须已存在与数据库中
     /// 任一不存在都会导致失败
     func attach(
-        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 资源权限附加资源 操作", metadata: ["relations": relations.asSummaryMetadata])
@@ -239,7 +239,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 解除权限动作的 Resource 无需从数据库中查得
     /// 可以实例化 AnyResource 类型的 Resource 并赋值 UUID
     func detach(
-        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, S.AnyResourceDTO>]
+        relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
         logger.info("执行 资源权限解除资源 操作", metadata: ["relations": relations.asSummaryMetadata])
@@ -267,7 +267,7 @@ public extension PrivilegeModule.PrivilegeController {
     }
     
     func privilege(
-        attachedTo resource: S.AnyResourceDTO
+        attachedTo resource: AnyResourceDTO
     ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
         __privilege(on: db, attachedTo: resource)
     }
@@ -283,7 +283,7 @@ public extension PrivilegeModule.PrivilegeController {
     
     func `is`(
         privilege: S.PrivilegeDTO<DTO.Queried>,
-        attachedTo resource: S.AnyResourceDTO
+        attachedTo resource: AnyResourceDTO
     ) -> EventLoopRes<Bool, Errcase> {
         __is(on: db, privilege: privilege, attachedTo: resource)
     }
@@ -308,14 +308,17 @@ extension PrivilegeModule.PrivilegeController {
     // 取得 某资源 的所有资源权限
     func __privilege(
         on db: PGDatabase,
-        attachedTo resource: S.AnyResourceDTO
+        attachedTo resource: AnyResourceDTO
     ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
-        resource.model.$privileges.get(on: db)
+        S.PrivilegeAnyResourcePivot.query(on: db)
+            .filter(\.$secondaryModel.$id == resource.id)
+            .with(\.$primaryModel)
+            .all()
             .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)
             .flatMapThrowing
-        { privileges throws(Errcase.ErrType) in
+        { maps throws(Errcase.ErrType) in
             try required(throws: Errcase.privilegeFetchFailed, "转为 DTO 失败", category: .internal) {
-                try privileges.map { try S.PrivilegeDTO<DTO.Queried>.make(from: $0).get() }
+                try maps.map { try S.PrivilegeDTO<DTO.Queried>.make(from: $0.primaryModel).get() }
             }
         }
     }
@@ -339,12 +342,12 @@ extension PrivilegeModule.PrivilegeController {
     func __is(
         on db: PGDatabase,
         privilege: S.PrivilegeDTO<DTO.Queried>,
-        attachedTo resource: S.AnyResourceDTO
+        attachedTo resource: AnyResourceDTO
     ) -> EventLoopRes<Bool, Errcase> {
-        resource.model.$privileges.query(on: db)
-            .filter(\.$id == privilege.id)
+        S.PrivilegeAnyResourcePivot.query(on: db)
+            .filter(\.$secondaryModel.$id == resource.id)
             .first()
-            .withError(Errcase.privilegeCheckFailed, "从数据库查询失败", category: .internal)
+            .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)
             .map { $0 != nil }
     }
 }

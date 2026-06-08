@@ -8,6 +8,7 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 import DataConvertable
+import ResourceMacros
 
 package typealias RoleModel = Role
 
