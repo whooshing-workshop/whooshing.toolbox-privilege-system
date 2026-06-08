@@ -251,12 +251,12 @@ extension PM.ResourceDTO: Loggerable {
         let dataMap: [String: AnyCodable]
         if T.self == DTO.Prepare.self {
             dataMap = [
-                "data": AnyCodable(String(describing: self.data))
+                "data": AnyCodable(self.data)
             ]
         } else {
             dataMap = [
                 "id": AnyCodable("\(self.id)"),
-                "data": AnyCodable(String(describing: self.data)),
+                "data": AnyCodable(self.data),
                 "created_at": AnyCodable("\(self.createdAt)"),
                 "updated_at": AnyCodable("\(self.updatedAt)")
             ]
