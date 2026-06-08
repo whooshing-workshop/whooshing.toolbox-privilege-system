@@ -231,8 +231,8 @@ public extension PrivilegeModule.PrivilegeController {
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 资源权限附加资源 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("资源权限附加资源关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 资源权限附加资源 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("资源权限附加资源关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -253,8 +253,8 @@ public extension PrivilegeModule.PrivilegeController {
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
-        logger.info("执行 资源权限解除资源 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("资源权限解除资源关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 资源权限解除资源 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("资源权限解除资源关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,

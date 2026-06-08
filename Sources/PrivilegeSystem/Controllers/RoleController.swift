@@ -203,8 +203,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色任命用户 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色任命用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命用户关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -222,8 +222,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色任命用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色任命用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色任命用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命用户组关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -241,8 +241,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色任命组内用户 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色任命组内用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命组内用户关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -260,8 +260,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色任命组内用户（Prepare） 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色任命组内用户（Prepare）关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色任命组内用户（Prepare） 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命组内用户（Prepare）关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -280,8 +280,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色撤職用户 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色撤職用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職用户关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -299,8 +299,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色撤職用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色撤職用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色撤職用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職用户组关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -318,8 +318,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色撤職组内用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職组内用户关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -337,8 +337,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色撤職组内用户（Prepare） 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("角色撤職组内用户（Prepare）关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 角色撤職组内用户（Prepare） 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職组内用户（Prepare）关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,

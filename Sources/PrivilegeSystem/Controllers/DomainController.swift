@@ -187,8 +187,8 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 域权限指派用户 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("域权限指派用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限指派用户关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -206,8 +206,8 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 域权限指派用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("域权限指派用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 域权限指派用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限指派用户组关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -227,8 +227,8 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 域权限撤销用户 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("域权限撤销用户关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限撤销用户关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -246,8 +246,8 @@ public extension PrivilegeSystem.DomainController {
         relations: [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("域权限撤销用户组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限撤销用户组关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,

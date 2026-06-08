@@ -187,33 +187,3 @@ extension MTMRelation: Loggerable where Left: Loggerable, Right: Loggerable {
         return "[\(lefts)] → [\(rights)]"
     }
 }
-
-// MARK: - Collection helpers for Relation logging
-
-public extension Collection where Element: Loggerable {
-    /// info 级：所有关系的摘要，以 " | " 分隔，附序号
-    var relationsSummary: String {
-        guard !isEmpty else { return "(无关系)" }
-        return enumerated()
-            .map { i, r in "[\(i)] \(r.summaryDescription)" }
-            .joined(separator: " | ")
-    }
-    
-    /// debug 级：所有关系的完整描述，多行格式
-    var relationsDetail: String {
-        guard !isEmpty else { return "(无关系)" }
-        return enumerated()
-            .map { i, r in "  [\(i)] \(r.logDescription)" }
-            .joined(separator: "\n")
-    }
-    
-    /// 转为 Logger.Metadata 摘要值
-    var asSummaryMetadata: Logger.MetadataValue {
-        .string(relationsSummary)
-    }
-    
-    /// 转为 Logger.Metadata 详情值
-    var asDetailMetadata: Logger.MetadataValue {
-        .string(relationsDetail)
-    }
-}

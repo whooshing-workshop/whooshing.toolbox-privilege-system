@@ -194,8 +194,8 @@ public extension PrivilegeSystem.GroupController {
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 用户加入群组 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("用户加入群组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 用户加入群组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("用户加入群组关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
@@ -215,8 +215,8 @@ public extension PrivilegeSystem.GroupController {
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 用户移出群组 操作", metadata: ["relations": relations.asSummaryMetadata])
-        logger.debug("用户移出群组关系详情", metadata: ["detail": relations.asDetailMetadata])
+        logger.info("执行 用户移出群组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("用户移出群组关系详情", metadata: ["detail": .data(relations)])
         return __manyToMany(
             on: db,
             relations,
