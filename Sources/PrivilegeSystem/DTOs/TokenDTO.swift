@@ -146,18 +146,27 @@ extension DTO.Token: Query.Queriable where T == DTO.Queried {
 extension DTO.Token: CustomStringConvertible, Loggerable {
     public var description: String {
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        let isQueried = T.self == DTO.Queried.self
         
-        let data: [String: AnyCodable] = [
-            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
-            "user_id": AnyCodable(isQueried ? "\(self.userId)" : nil),
-            "credential": AnyCodable(credential),
-            "token": AnyCodable("[PROTECTED_KEY]"),
-            "token_encrypted": AnyCodable("[BINARY_DATA]"),
-            "valid": AnyCodable(isQueried ? self.valid : nil),
-            "expire_after": AnyCodable(self.expireAfter),
-            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil)
-        ]
+        let data: [String: AnyCodable]
+        if T.self == DTO.Prepare.self {
+            data = [
+                "credential": AnyCodable(credential),
+                "token": AnyCodable("[PROTECTED_KEY]"),
+                "token_encrypted": AnyCodable("[BINARY_DATA]"),
+                "expire_after": AnyCodable(self.expireAfter)
+            ]
+        } else {
+            data = [
+                "id": AnyCodable("\(self.id)"),
+                "user_id": AnyCodable("\(self.userId)"),
+                "credential": AnyCodable(credential),
+                "token": AnyCodable("[PROTECTED_KEY]"),
+                "token_encrypted": AnyCodable("[BINARY_DATA]"),
+                "valid": AnyCodable(self.valid),
+                "expire_after": AnyCodable(self.expireAfter),
+                "created_at": AnyCodable("\(self.createdAt)")
+            ]
+        }
 
         return formatQuery([
             "status": AnyCodable(statusLabel),

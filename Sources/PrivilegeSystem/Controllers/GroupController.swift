@@ -30,7 +30,8 @@ extension PrivilegeSystem {
             // 创建组，需要修改 groups 表，也需要修改 group_paths 内接表
             // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
             let logger = getActionLogger()
-            logger.info("执行 创建用户组 操作", metadata: ["count": .stringConvertible(groups.count)])
+            logger.info("执行 创建用户组 操作", metadata: ["groups": .summaryData(groups)])
+            logger.debug("操作参数", metadata: ["groups": .data(groups)])
             return db.trans { db in
                 self.__create(
                     on: db,
@@ -90,7 +91,8 @@ extension PrivilegeSystem {
             // 同时，删除父组意味着其下的所有子群组也会被删除
             // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
             let logger = getActionLogger()
-            logger.info("执行 删除用户组 操作", metadata: ["count": .stringConvertible(groupIds.count)])
+            logger.info("执行 删除用户组 操作", metadata: ["groupIds": .summaryData(groupIds)])
+            logger.debug("操作参数", metadata: ["groupIds": .data(groupIds)])
             return db.trans { db in
                 self.__satisfyCheck(
                     on: db,

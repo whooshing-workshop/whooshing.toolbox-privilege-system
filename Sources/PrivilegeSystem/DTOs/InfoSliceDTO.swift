@@ -252,18 +252,26 @@ extension DTO.InfoSlice: Query.Queriable where T == DTO.Queried, G.Value == Stri
 
 extension DTO.InfoSlice: Loggerable {
     public var logDescription: String {
-        let isQueried = G.self == DTO.Queried.self
-        let statusLabel = "\(G.self)".components(separatedBy: ".").last ?? "\(G.self)"
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
         
-        let data: [String: AnyCodable] = [
-            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
-            "user_info_id": AnyCodable(isQueried ? "\(self.userInfoId)" : nil),
-            "value": AnyCodable("[PROTECTED]"),
-            "order": AnyCodable(self.order),
-            "description": AnyCodable(self.description),
-            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
-            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
-        ]
+        let data: [String: AnyCodable]
+        if T.self == DTO.Prepare.self {
+            data = [
+                "value": AnyCodable("[PROTECTED]"),
+                "order": AnyCodable(self.order),
+                "description": AnyCodable(self.description)
+            ]
+        } else {
+            data = [
+                "id": AnyCodable("\(self.id)"),
+                "user_info_id": AnyCodable("\(self.userInfoId)"),
+                "value": AnyCodable("[PROTECTED]"),
+                "order": AnyCodable(self.order),
+                "description": AnyCodable(self.description),
+                "created_at": AnyCodable("\(self.createdAt)"),
+                "updated_at": AnyCodable("\(self.updatedAt)")
+            ]
+        }
 
         return formatQuery([
             "status": AnyCodable(statusLabel),

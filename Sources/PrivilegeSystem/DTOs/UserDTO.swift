@@ -153,16 +153,23 @@ extension DTO.User: Query.Queriable where T == DTO.Queried {
 
 extension DTO.User: Loggerable, CustomStringConvertible {
     public var description: String {
-        let isQueried = T.self == DTO.Queried.self
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
         
-        let data: [String: AnyCodable] = [
-            "id": AnyCodable(isQueried ? String(describing: self.id) : "null (pre-save)"),
-            "email": AnyCodable(self.email),
-            "hashed_passwd": AnyCodable("[PROTECTED]"),
-            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
-            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
-        ]
+        let data: [String: AnyCodable]
+        if T.self == DTO.Prepare.self {
+            data = [
+                "email": AnyCodable(self.email),
+                "hashed_passwd": AnyCodable("[PROTECTED]")
+            ]
+        } else {
+            data = [
+                "id": AnyCodable("\(self.id)"),
+                "email": AnyCodable(self.email),
+                "hashed_passwd": AnyCodable("[PROTECTED]"),
+                "created_at": AnyCodable("\(self.createdAt)"),
+                "updated_at": AnyCodable("\(self.updatedAt)")
+            ]
+        }
 
         return formatQuery([
             "status": AnyCodable(statusLabel),

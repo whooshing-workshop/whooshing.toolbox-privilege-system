@@ -193,17 +193,25 @@ extension DTO.Group: Query.Queriable where T == DTO.Queried {
 
 extension DTO.Group: Loggerable {
     public var logDescription: String {
-        let isQueried = T.self == DTO.Queried.self
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
         
-        let data: [String: AnyCodable] = [
-            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
-            "parent_id": AnyCodable(self.parentId.map { "\($0)" }),
-            "name": AnyCodable(self.name),
-            "description": AnyCodable(self.description),
-            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil),
-            "updated_at": AnyCodable(isQueried ? "\(self.updatedAt)" : nil)
-        ]
+        let data: [String: AnyCodable]
+        if T.self == DTO.Prepare.self {
+            data = [
+                "parent_id": AnyCodable(self.parentId.map { "\($0)" }),
+                "name": AnyCodable(self.name),
+                "description": AnyCodable(self.description)
+            ]
+        } else {
+            data = [
+                "id": AnyCodable("\(self.id)"),
+                "parent_id": AnyCodable(self.parentId.map { "\($0)" }),
+                "name": AnyCodable(self.name),
+                "description": AnyCodable(self.description),
+                "created_at": AnyCodable("\(self.createdAt)"),
+                "updated_at": AnyCodable("\(self.updatedAt)")
+            ]
+        }
 
         return formatQuery([
             "status": AnyCodable(statusLabel),

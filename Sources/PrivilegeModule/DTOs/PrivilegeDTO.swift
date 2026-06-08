@@ -311,11 +311,21 @@ public extension Collection {
 
 extension PM.PrivilegeDTO: Loggerable {
     public var logDescription: String {
-        let isQueried = T.self == DTO.Queried.self
         var parts: [String] = []
-        if let name = name { parts.append("name:\(name)") }
-        if isQueried { parts.append("id:\(id)") }
-        return "Privilege(\(parts.joined(separator: ", ")))"
+        if T.self == DTO.Prepare.self {
+            if let name = name { parts.append("name:\(name)") }
+            if let description = description { parts.append("description:\(description)") }
+            parts.append("policy:\(policy)")
+        } else {
+            parts.append("id:\(id)")
+            if let name = name { parts.append("name:\(name)") }
+            if let description = description { parts.append("description:\(description)") }
+            parts.append("policy:\(policy)")
+            parts.append("createdAt:\(createdAt)")
+            parts.append("updatedAt:\(updatedAt)")
+        }
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        return "Privilege[\(statusLabel)](\(parts.joined(separator: ", ")))"
     }
     
     public var summaryDescription: String {

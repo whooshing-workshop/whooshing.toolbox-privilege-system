@@ -28,7 +28,8 @@ extension PrivilegeSystem {
             extendedInfos: [DTO.InfoSlice<T, DTO.Prepare>]
         ) -> EventLoopRes<[DTO.InfoSlice<T, DTO.Queried>], Errcase> where T.Value == String {
             let logger = getActionLogger()
-            logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "count": .stringConvertible(extendedInfos.count)])
+            logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "extendedInfos": .summaryData(extendedInfos)])
+            logger.debug("操作参数", metadata: ["extendedInfos": .data(extendedInfos)])
             return __create(on: db, for: infoId, extendedInfos: extendedInfos)
                 .map { logger.info("创建用户扩展信息 操作成功"); return $0 }
                 .logIfFail(logger: logger)
@@ -40,7 +41,8 @@ extension PrivilegeSystem {
             type: T.Type = T.self
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 删除用户扩展信息 操作", metadata: ["count": .stringConvertible(infoIds.count)])
+            logger.info("执行 删除用户扩展信息 操作", metadata: ["infoIds": .summaryData(infoIds)])
+            logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
             return __delete(
                 on: db,
                 User.Info.Extended<T.Model>.self,

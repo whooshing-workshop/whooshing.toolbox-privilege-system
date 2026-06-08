@@ -75,15 +75,22 @@ public func =| (
 
 extension DTO.UserInGroupRelation: CustomStringConvertible, Loggerable {
     public var description: String {
-        let isQueried = T.self == DTO.Queried.self
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
         
-        let data: [String: AnyCodable] = [
-            "id": AnyCodable(isQueried ? "\(self.id)" : nil),
-            "user_id": AnyCodable("\(self.user.id)"),
-            "group_id": AnyCodable("\(self.group.id)"),
-            "created_at": AnyCodable(isQueried ? "\(self.createdAt)" : nil)
-        ]
+        let data: [String: AnyCodable]
+        if T.self == DTO.Prepare.self {
+            data = [
+                "user_id": AnyCodable("\(self.user.id)"),
+                "group_id": AnyCodable("\(self.group.id)")
+            ]
+        } else {
+            data = [
+                "id": AnyCodable("\(self.id)"),
+                "user_id": AnyCodable("\(self.user.id)"),
+                "group_id": AnyCodable("\(self.group.id)"),
+                "created_at": AnyCodable("\(self.createdAt)")
+            ]
+        }
 
         return formatQuery([
             "status": AnyCodable(statusLabel),

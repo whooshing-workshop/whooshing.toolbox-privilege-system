@@ -2,6 +2,7 @@ import Foundation
 import Fluent
 import PgSQL
 import Collections
+import LoggingAdvanced
 import NIOConcurrencyHelpers
 @preconcurrency import AnyCodable
 

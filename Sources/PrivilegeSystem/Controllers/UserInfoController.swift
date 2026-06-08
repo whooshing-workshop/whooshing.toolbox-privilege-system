@@ -39,7 +39,8 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 删除用户信息 操作", metadata: ["count": .stringConvertible(infoIds.count)])
+            logger.info("执行 删除用户信息 操作", metadata: ["infoIds": .summaryData(infoIds)])
+            logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
             return __delete(
                 on: db,
                 User.Info.self,
@@ -78,7 +79,8 @@ public extension PrivilegeSystem.UserInfoController {
         relations: [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 创建用户信息 操作", metadata: ["count": .stringConvertible(relations.count)])
+        logger.info("执行 创建用户信息 操作", metadata: ["relations": .summaryData(relations)])
+            logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return db.trans { db in
             let infos = relations.map { $0.right.left.raw(for: $0.left) }
             return infos

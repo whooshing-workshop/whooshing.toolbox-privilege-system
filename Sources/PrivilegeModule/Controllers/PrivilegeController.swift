@@ -41,7 +41,8 @@ public extension PrivilegeModule {
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 创建资源权限 操作", metadata: ["count": .stringConvertible(privileges.count)])
+            logger.info("执行 创建资源权限 操作", metadata: ["privileges": .summaryData(privileges)])
+            logger.debug("操作参数", metadata: ["privileges": .data(privileges)])
             let mappedPrivileges = privileges.map { p in
                 var newP = p
                 newP.id = UUID()
@@ -75,7 +76,8 @@ public extension PrivilegeModule {
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 创建资源权限（返回） 操作", metadata: ["count": .stringConvertible(privileges.count)])
+            logger.info("执行 创建资源权限（返回） 操作", metadata: ["privileges": .summaryData(privileges)])
+            logger.debug("操作参数", metadata: ["privileges": .data(privileges)])
             let mappedPrivileges = privileges.map { p in
                 var newP = p
                 newP.id = UUID()

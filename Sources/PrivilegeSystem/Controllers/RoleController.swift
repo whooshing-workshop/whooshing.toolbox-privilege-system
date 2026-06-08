@@ -49,7 +49,8 @@ extension PrivilegeSystem {
             roles: [DTO.Role<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Role<DTO.Queried>], Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 创建角色 操作", metadata: ["count": .stringConvertible(roles.count)])
+            logger.info("执行 创建角色 操作", metadata: ["roles": .summaryData(roles)])
+            logger.debug("操作参数", metadata: ["roles": .data(roles)])
             return __create(on: db, roles: roles)
                 .map { logger.info("创建角色 操作成功"); return $0 }
                 .logIfFail(logger: logger)
@@ -60,7 +61,8 @@ extension PrivilegeSystem {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 删除角色 操作", metadata: ["count": .stringConvertible(roleIds.count)])
+            logger.info("执行 删除角色 操作", metadata: ["roleIds": .summaryData(roleIds)])
+            logger.debug("操作参数", metadata: ["roleIds": .data(roleIds)])
             return __delete(
                 on: db,
                 Role.self,
@@ -99,7 +101,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 创建角色（含策略） 操作", metadata: ["count": .stringConvertible(relations.count)])
+        logger.info("执行 创建角色（含策略） 操作", metadata: ["relations": .summaryData(relations)])
+            logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__create(
@@ -117,7 +120,8 @@ public extension PrivilegeSystem.RoleController {
         relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
     ) -> EventLoopRes<[UUID: [DTO.Policy<Role, DTO.Queried>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 创建角色（含策略返回） 操作", metadata: ["count": .stringConvertible(relations.count)])
+        logger.info("执行 创建角色（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
+            logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return db.trans { db in
             self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(

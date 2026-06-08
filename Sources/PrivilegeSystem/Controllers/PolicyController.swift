@@ -84,7 +84,8 @@ public extension PrivilegeSystem.PolicyController {
         relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 创建策略（数组） 操作", metadata: ["type": .string(String(describing: model)), "count": .stringConvertible(relations.count)])
+        logger.info("执行 创建策略（数组） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
+        logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return __create(on: db, to: model, relations: relations)
             .map { _ in logger.info("创建策略（数组） 操作成功") }
             .logIfFail(logger: logger)
@@ -95,7 +96,8 @@ public extension PrivilegeSystem.PolicyController {
         relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
     ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 创建策略（数组返回） 操作", metadata: ["type": .string(String(describing: model)), "count": .stringConvertible(relations.count)])
+        logger.info("执行 创建策略（数组返回） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
+        logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return __createWithReturning(on: db, to: model, relations: relations)
             .map { logger.info("创建策略（数组返回） 操作成功"); return $0 }
             .logIfFail(logger: logger)

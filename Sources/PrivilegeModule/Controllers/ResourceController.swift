@@ -30,7 +30,8 @@ public extension PrivilegeModule {
             resources: [ResourceDTO<T, DTO.Prepare>]
         ) -> EventLoopRes<[ResourceDTO<T, DTO.Queried>], Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 创建资源 操作", metadata: ["count": .stringConvertible(resources.count)])
+            logger.info("执行 创建资源 操作", metadata: ["resources": .summaryData(resources)])
+            logger.debug("操作参数", metadata: ["resources": .data(resources)])
             return __create(
                 on: db,
                 dtos: resources,
@@ -48,7 +49,8 @@ public extension PrivilegeModule {
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 删除资源 操作", metadata: ["count": .stringConvertible(ids.count)])
+            logger.info("执行 删除资源 操作", metadata: ["ids": .summaryData(ids)])
+            logger.debug("操作参数", metadata: ["ids": .data(ids)])
             return __delete(
                 on: db,
                 AnyResource.self,
