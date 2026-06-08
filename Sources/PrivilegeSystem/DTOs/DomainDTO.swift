@@ -145,7 +145,7 @@ public extension DTO.Domain.Updater {
     }
 }
 
-extension DTO.Domain: Encodable where T == DTO.Queried {
+extension DTO.Domain: Encodable {
     enum CodingKeys: String, CodingKey {
         case name
         case description
@@ -157,10 +157,13 @@ extension DTO.Domain: Encodable where T == DTO.Queried {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(name, forKey: .name)
-        try container.encode(description, forKey: .description)
-        try container.encode(id, forKey: .id)
-        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        try container.encodeIfPresent(description, forKey: .description)
+        
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        }
     }
 }
 

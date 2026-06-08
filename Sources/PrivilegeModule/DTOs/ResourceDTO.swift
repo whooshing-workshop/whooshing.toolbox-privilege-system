@@ -143,12 +143,22 @@ func jsonbSetSql<V: Encodable>(field: String, path: [String], value: V) throws -
     return .init("jsonb_set(\(field), '\(pathArray)', '\(jsonString)')")
 }
 
-extension PM.ResourceDTO: Encodable where T == DTO.Queried {
+extension PM.ResourceDTO: Encodable {
     enum CodingKeys: CodingKey {
         case data
         case id
         case createdAt
         case updatedAt
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(data, forKey: .data)
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(self.createdAt, forKey: .createdAt)
+            try container.encode(self.updatedAt, forKey: .updatedAt)
+        }
     }
 }
 

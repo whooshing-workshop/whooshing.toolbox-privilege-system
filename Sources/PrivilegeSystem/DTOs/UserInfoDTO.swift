@@ -192,7 +192,7 @@ public extension DTO.UserInfo.Updater {
     }
 }
 
-extension DTO.UserInfo: Encodable where T == DTO.Queried {
+extension DTO.UserInfo: Encodable {
     enum CodingKeys: String, CodingKey {
         case userId
         case nickname
@@ -206,14 +206,16 @@ extension DTO.UserInfo: Encodable where T == DTO.Queried {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(userId, forKey: .userId)
         try container.encode(nickname, forKey: .nickname)
         try container.encode(identifier, forKey: .identifier)
         try container.encode(birthday, forKey: .birthday)
         try container.encode(other, forKey: .other)
-        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(userId, forKey: .userId)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        }
     }
 }
 

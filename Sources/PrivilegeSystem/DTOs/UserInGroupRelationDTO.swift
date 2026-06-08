@@ -154,3 +154,22 @@ public extension Collection where Element == QUserInGroupRelation {
         self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }
+
+extension DTO.UserInGroupRelation: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case user
+        case group
+        case id
+        case createdAt = "created_at"
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(user, forKey: .user)
+        try container.encode(group, forKey: .group)
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+        }
+    }
+}

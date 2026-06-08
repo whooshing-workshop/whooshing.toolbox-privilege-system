@@ -213,14 +213,27 @@ public extension PM.PrivilegeDTO.Updater {
     }
 }
 
-extension PM.PrivilegeDTO: Encodable where T == DTO.Queried {
-    enum CodingKeys: CodingKey {
+extension PM.PrivilegeDTO: Encodable {
+    enum CodingKeys: String, CodingKey {
         case name
         case description
         case policy
         case id
-        case createdAt
-        case updatedAt
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encode(policy, forKey: .policy)
+        
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        }
     }
 }
 

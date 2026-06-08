@@ -115,9 +115,10 @@ extension User: ModelAuthenticatable {
     }
 }
 
-extension DTO.User: Encodable where T == DTO.Queried {
+extension DTO.User: Encodable {
     enum CodingKeys: String, CodingKey {
         case email
+        case hashedPasswd = "hashed_passwd"
         case id
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -125,10 +126,12 @@ extension DTO.User: Encodable where T == DTO.Queried {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
         try container.encode(email, forKey: .email)
-        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        if T.self == DTO.Queried.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        }
     }
 }
 

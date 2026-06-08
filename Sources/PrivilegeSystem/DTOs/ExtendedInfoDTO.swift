@@ -58,7 +58,7 @@ extension DTO.ExtendedInfo where T == DTO.Queried {
     }
 }
 
-extension DTO.ExtendedInfo: Encodable where T == DTO.Queried {}
+extension DTO.ExtendedInfo: Encodable {}
 
 extension DTO.ExtendedInfo: CustomStringConvertible, Loggerable {
     public var logDescription: String {

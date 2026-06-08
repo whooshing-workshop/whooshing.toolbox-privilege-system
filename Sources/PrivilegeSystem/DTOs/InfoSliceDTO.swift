@@ -203,7 +203,7 @@ public extension DTO.InfoSlice.Updater {
     }
 }
 
-extension DTO.InfoSlice: Encodable where T == DTO.Queried {
+extension DTO.InfoSlice: Encodable {
     enum CodingKeys: String, CodingKey {
         case value
         case order
@@ -216,12 +216,15 @@ extension DTO.InfoSlice: Encodable where T == DTO.Queried {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
         try container.encode(value, forKey: .value)
         try container.encode(order, forKey: .order)
         try container.encode(description, forKey: .description)
-        try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-        try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(userInfoId, forKey: .userInfoId)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        }
     }
 }
 

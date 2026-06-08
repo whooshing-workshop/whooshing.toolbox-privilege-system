@@ -175,3 +175,24 @@ public extension Collection {
         self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }
+
+extension DTO.Policy: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case moduleId = "module_id"
+        case policy
+        case id
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(moduleId, forKey: .moduleId)
+        try container.encode(policy, forKey: .policy)
+        if T.self != DTO.Prepare.self {
+            try container.encode(id, forKey: .id)
+            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
+            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+        }
+    }
+}
