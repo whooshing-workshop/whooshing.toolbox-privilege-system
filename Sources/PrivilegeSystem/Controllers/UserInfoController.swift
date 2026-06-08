@@ -59,7 +59,8 @@ extension PrivilegeSystem {
             with updater: DTO.UserInfo<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 更新用户信息 操作", metadata: ["userInfoId": .stringConvertible(updater.userInfoId)])
+            logger.info("执行 更新用户信息 操作", metadata: ["data": .summaryData(updater)])
+            logger.debug("更新用户信息 详细请求数据", metadata: ["data": .data(updater)])
             return __update(
                 on: db,
                 updater: updater,
@@ -68,7 +69,11 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.userInfoId) },
                 dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
             )
-            .map { logger.info("更新用户信息 操作成功"); return $0 }
+            .map { 
+                logger.info("更新用户信息 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("更新用户信息 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
     }
@@ -80,7 +85,7 @@ public extension PrivilegeSystem.UserInfoController {
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建用户信息 操作", metadata: ["relations": .summaryData(relations)])
-            logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return db.trans { db in
             let infos = relations.map { $0.right.left.raw(for: $0.left) }
             return infos

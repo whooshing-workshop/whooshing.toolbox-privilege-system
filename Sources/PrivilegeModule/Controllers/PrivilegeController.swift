@@ -106,7 +106,11 @@ public extension PrivilegeModule {
                     }
                 }
             }
-            .map { logger.info("创建资源权限（返回） 操作成功"); return $0 }
+            .map { 
+                logger.info("创建资源权限（返回） 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建资源权限（返回） 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
         }
         
         public func delete(
@@ -135,7 +139,8 @@ public extension PrivilegeModule {
             with updater: PrivilegeDTO<DTO.Prepare>.Updater
         ) -> EventLoopRes<PrivilegeDTO<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 更新资源权限 操作", metadata: ["privilegeId": .stringConvertible(updater.privilegeId)])
+            logger.info("执行 更新资源权限 操作", metadata: ["data": .summaryData(updater)])
+            logger.debug("更新资源权限 详细请求数据", metadata: ["data": .data(updater)])
             
             guard updater.updates.count > 0 else {
                 return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external)
@@ -186,7 +191,11 @@ public extension PrivilegeModule {
                         .map { _ in updateRes }
                 }
             }
-            .map { logger.info("更新资源权限 操作成功"); return $0 }
+            .map { 
+                logger.info("更新资源权限 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("更新资源权限 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
         }
     }
 }

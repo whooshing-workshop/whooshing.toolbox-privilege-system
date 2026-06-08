@@ -275,3 +275,15 @@ public extension Collection where Element == QRole {
         self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }
+
+
+extension DTO.Role.Updater: Loggerable {
+    public var logDescription: String {
+        return formatQuery([
+            "target_id": AnyCodable(id.shortString),
+            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
+        ])
+    }
+    public var description: String { logDescription }
+    public var summaryDescription: String { "RoleUpdater(\(id.shortString), updates: \(updates.keys.count))" }
+}

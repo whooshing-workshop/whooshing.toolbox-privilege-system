@@ -78,7 +78,11 @@ extension PrivilegeSystem {
                     }.flatten(on: db.eventLoop).map { res }
                 }
             }
-            .map { logger.info("创建用户组 操作成功"); return $0 }
+            .map { 
+                logger.info("创建用户组 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建用户组 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
         
@@ -143,7 +147,8 @@ extension PrivilegeSystem {
             with updater: DTO.Group<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Group<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 更新用户组 操作", metadata: ["groupId": .stringConvertible(updater.groupId)])
+            logger.info("执行 更新用户组 操作", metadata: ["data": .summaryData(updater)])
+            logger.debug("更新用户组 详细请求数据", metadata: ["data": .data(updater)])
             return __update(
                 on: db,
                 updater: updater,
@@ -152,7 +157,11 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.groupId) },
                 dtoBuilder: { DTO.Group<DTO.Queried>.make(from: $0) }
             )
-            .map { logger.info("更新用户组 操作成功"); return $0 }
+            .map { 
+                logger.info("更新用户组 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("更新用户组 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
     }

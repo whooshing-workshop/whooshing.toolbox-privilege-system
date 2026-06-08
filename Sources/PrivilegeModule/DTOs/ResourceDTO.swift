@@ -5,6 +5,9 @@ import Collections
 import SQLKit
 import Query
 import ResourceMacros
+import LoggingAdvanced
+import AnyCodable
+import DataConvertable
 
 public extension PM {
     typealias PResource<G: Resource> = ResourceDTO<G, DTO.Prepare> where G.ResourceType == ResourceList, G: Hashable
@@ -226,5 +229,42 @@ public extension Collection {
 public extension Collection {
     func like<C, T, G>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.PResource<G>, Element == PM<T>.QResource<G> {
         self.elementsEqual(rhs, by: { $0.like($1) })
+    }
+}
+
+
+extension PM.ResourceDTO.Updater: Loggerable {
+    public var logDescription: String {
+        return formatQuery([
+            "target_id": AnyCodable(id.shortString),
+            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
+        ])
+    }
+    public var description: String { logDescription }
+    public var summaryDescription: String { "ResourceUpdater(\(id.shortString), updates: \(updates.keys.count))" }
+}
+
+extension PM.ResourceDTO: Loggerable {
+    public var logDescription: String {
+        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+        
+        let dataMap: [String: AnyCodable]
+        if T.self == DTO.Prepare.self {
+            dataMap = [
+                "data": AnyCodable(String(describing: self.data))
+            ]
+        } else {
+            dataMap = [
+                "id": AnyCodable("\(self.id)"),
+                "data": AnyCodable(String(describing: self.data)),
+                "created_at": AnyCodable("\(self.createdAt)"),
+                "updated_at": AnyCodable("\(self.updatedAt)")
+            ]
+        }
+
+        return formatQuery([
+            "status": AnyCodable(statusLabel),
+            "data": AnyCodable(dataMap)
+        ])
     }
 }

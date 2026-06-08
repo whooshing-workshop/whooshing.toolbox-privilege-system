@@ -40,7 +40,11 @@ public extension PrivilegeModule {
                 modelBuilder: { $0.raw() },
                 dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0.fill()) }
             )
-            .map { logger.info("创建资源 操作成功"); return $0 }
+            .map { 
+                logger.info("创建资源 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建资源 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
         
@@ -69,7 +73,8 @@ public extension PrivilegeModule {
             with updater: ResourceDTO<T, DTO.Prepare>.Updater
         ) -> EventLoopRes<ResourceDTO<T, DTO.Queried>, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 更新资源 操作", metadata: ["resourceId": .stringConvertible(updater.resourceId)])
+            logger.info("执行 更新资源 操作", metadata: ["data": .summaryData(updater)])
+            logger.debug("更新资源 详细请求数据", metadata: ["data": .data(updater)])
             return __update(
                 on: db,
                 updater: updater,
@@ -78,7 +83,11 @@ public extension PrivilegeModule {
                 filterBuilder: { $0.filter(\.$id == updater.resourceId) },
                 dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) }
             )
-            .map { logger.info("更新资源 操作成功"); return $0 }
+            .map { 
+                logger.info("更新资源 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("更新资源 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
     }

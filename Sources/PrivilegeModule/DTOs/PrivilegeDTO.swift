@@ -6,6 +6,8 @@ import SQLKit
 import Query
 import DataConvertable
 import LoggingAdvanced
+import ResourceMacros
+import AnyCodable
 
 public extension PM {
     typealias PPrivilegeDTO = PrivilegeDTO<DTO.Prepare>
@@ -347,4 +349,16 @@ extension PM.PrivilegeDTO: Loggerable {
             name == nil ? "Privilege(\(id.shortString))" : "Privilege(\(id.shortString), \(name!))" :
             "Privilege(\(name ?? "unsaved"))"
     }
+}
+
+
+extension PM.PrivilegeDTO.Updater: Loggerable {
+    public var logDescription: String {
+        return formatQuery([
+            "target_id": AnyCodable(id.shortString),
+            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
+        ])
+    }
+    public var description: String { logDescription }
+    public var summaryDescription: String { "PrivilegeUpdater(\(id.shortString), updates: \(updates.keys.count))" }
 }

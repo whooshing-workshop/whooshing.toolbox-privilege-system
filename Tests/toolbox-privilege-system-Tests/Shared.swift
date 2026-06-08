@@ -8,6 +8,8 @@ import NIOFileSystem
 import Foundation
 import AsyncHTTPClient
 import Collections
+import Logging
+import LoggingAdvanced
 @testable import ResourceMacros
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
@@ -178,6 +180,11 @@ struct TestingShared {
     @MainActor static var privilegeSystem: PrivilegeSystem? = nil
     @MainActor static var privilegeModule: PrivilegeModule<ResourceList>? = nil
     @MainActor static var testStage: TestStage = .hashable
+    @MainActor static let loggingSystem: Void = {
+        var factory = LoggingFactory()
+        factory.add("Console")
+        factory.bootstrap()
+    }()
     
     @MainActor
     static func getSystem() async throws -> (PrivilegeSystem, PrivilegeModule<ResourceList>) {
@@ -188,16 +195,24 @@ struct TestingShared {
             return (system, module)
         }
         
+        _ = loggingSystem
+        
         let pool = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         let eventLoop = pool.next()
         
         let proxy: HTTPClient.Configuration.Proxy? = try isPortOpen(host: "localhost", port: 9090) ? .server(host: "localhost", port: 9090) : nil
         
+        var sysLogger = Logger(label: "Privilege-System-Testing")
+        var modLogger = Logger(label: "Privilege-Module-Testing")
+        
+        sysLogger.logLevel = .debug
+        modLogger.logLevel = .debug
+        
         let s = try await PrivilegeSystem(
             eventLoop: eventLoop,
             dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_system", tls: .disable),
             opaConfigure: .init(host: opaHost, port: opaPort, proxy: proxy),
-            logger: .init(label: "Privilege-System-Testing"),
+            logger: sysLogger,
             debuging: .init(tdeEncrypt: false)
         )
         
@@ -206,7 +221,7 @@ struct TestingShared {
             eventLoop: eventLoop,
             dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_module", tls: .disable),
             opaConfigure: .init(host: opaHost, port: opaPort, proxy: proxy),
-            logger: .init(label: "Privilege-Module-Testing"),
+            logger: modLogger,
             debuging: .init(tdeEncrypt: false)
         )
 

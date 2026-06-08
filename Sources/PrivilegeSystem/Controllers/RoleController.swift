@@ -52,7 +52,11 @@ extension PrivilegeSystem {
             logger.info("执行 创建角色 操作", metadata: ["roles": .summaryData(roles)])
             logger.debug("操作参数", metadata: ["roles": .data(roles)])
             return __create(on: db, roles: roles)
-                .map { logger.info("创建角色 操作成功"); return $0 }
+                .map { 
+                logger.info("创建角色 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建角色 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
                 .logIfFail(logger: logger)
         }
         
@@ -81,7 +85,8 @@ extension PrivilegeSystem {
             with updater: DTO.Role<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 更新角色 操作", metadata: ["roleId": .stringConvertible(updater.roleId)])
+            logger.info("执行 更新角色 操作", metadata: ["data": .summaryData(updater)])
+            logger.debug("更新角色 详细请求数据", metadata: ["data": .data(updater)])
             return __update(
                 on: db,
                 updater: updater,
@@ -90,7 +95,11 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.roleId) },
                 dtoBuilder: { DTO.Role<DTO.Queried>.make(from: $0) }
             )
-            .map { logger.info("更新角色 操作成功"); return $0 }
+            .map { 
+                logger.info("更新角色 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("更新角色 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
     }
@@ -131,7 +140,11 @@ public extension PrivilegeSystem.RoleController {
                 )
             }
         }
-        .map { logger.info("创建角色（含策略返回） 操作成功"); return $0 }
+        .map { 
+                logger.info("创建角色（含策略返回） 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建角色（含策略返回） 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
         .logIfFail(logger: logger)
     }
 }

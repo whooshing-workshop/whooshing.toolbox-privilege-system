@@ -365,3 +365,15 @@ public extension Collection {
         self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }
+
+
+extension DTO.InfoSlice.Updater: Loggerable {
+    public var logDescription: String {
+        return formatQuery([
+            "target_id": AnyCodable(id.shortString),
+            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
+        ])
+    }
+    public var description: String { logDescription }
+    public var summaryDescription: String { "InfoSliceUpdater(\(id.shortString), updates: \(updates.keys.count))" }
+}

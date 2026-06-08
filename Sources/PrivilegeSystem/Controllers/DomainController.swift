@@ -49,7 +49,11 @@ extension PrivilegeSystem {
             logger.info("执行 创建域权限 操作", metadata: ["domains": .summaryData(domains)])
             logger.debug("操作参数", metadata: ["domains": .data(domains)])
             return __create(on: db, domains: domains)
-                .map { logger.info("创建域权限 操作成功"); return $0 }
+                .map { 
+                logger.info("创建域权限 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建域权限 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
                 .logIfFail(logger: logger)
         }
         
@@ -78,7 +82,8 @@ extension PrivilegeSystem {
             with updater: DTO.Domain<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Domain<DTO.Queried>, Errcase> {
             let logger = getActionLogger()
-            logger.info("执行 更新域权限 操作", metadata: ["domainId": .stringConvertible(updater.domainId)])
+            logger.info("执行 更新域权限 操作", metadata: ["data": .summaryData(updater)])
+            logger.debug("更新域权限 详细请求数据", metadata: ["data": .data(updater)])
             return __update(
                 on: db,
                 updater: updater,
@@ -87,7 +92,11 @@ extension PrivilegeSystem {
                 filterBuilder: { $0.filter(\.$id == updater.domainId) },
                 dtoBuilder: { DTO.Domain<DTO.Queried>.make(from: $0) }
             )
-            .map { logger.info("更新域权限 操作成功"); return $0 }
+            .map { 
+                logger.info("更新域权限 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("更新域权限 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
             .logIfFail(logger: logger)
         }
     }
@@ -99,7 +108,7 @@ public extension PrivilegeSystem.DomainController {
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建域权限（含策略） 操作", metadata: ["relations": .summaryData(relations)])
-            logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__create(
@@ -118,7 +127,7 @@ public extension PrivilegeSystem.DomainController {
     ) -> EventLoopRes<[UUID: [DTO.Policy<Domain, DTO.Queried>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建域权限（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
-            logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        logger.debug("操作参数", metadata: ["relations": .data(relations)])
         return db.trans { db in
             self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
                 self.policyController.__createWithReturning(
@@ -128,7 +137,11 @@ public extension PrivilegeSystem.DomainController {
                 )
             }
         }
-        .map { logger.info("创建域权限（含策略返回） 操作成功"); return $0 }
+        .map { 
+                logger.info("创建域权限（含策略返回） 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建域权限（含策略返回） 结果详细数据", metadata: ["data": .data($0)])
+                return $0 
+            }
         .logIfFail(logger: logger)
     }
 }
