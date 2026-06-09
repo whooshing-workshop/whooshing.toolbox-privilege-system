@@ -28,7 +28,9 @@ let package = Package(
         .target(
             name: "ResourceMacros",
             dependencies: [
-                .target(name: "MacroImplements")
+                .target(name: "MacroImplements"),
+                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
+                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic")
             ]
         ),
         .target(
