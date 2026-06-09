@@ -1,8 +1,13 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.3
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 import CompilerPluginSupport
+
+// #if 编译器版本判断宏
+#if !compiler(>=6.3)
+#error("本仓库使用了 Swift 6.3+ 的高级特性，请升级您的 Xcode 或 Swift 工具链至 6.3 以上版本！")
+#endif
 
 let package = Package(
     name: "whooshing.toolbox-privilege-system",
