@@ -40,14 +40,13 @@ public extension PrivilegeModule {
         /// 只有被成功创建并写入数据库的资源，才会获取到一个全局唯一的 ID，
         /// 这个 ID 是后续通过 OPA 进行鉴权的基石。
         ///
-        /// - Parameter resources: 一组 `DTO.Prepare` 状态的资源数据包装对象。
-        /// - Returns: 返回落库完毕、包含 ID 字段的 `ResourceDTO<T, DTO.Queried>` 数组。
+        /// - Parameter resources: 一组遵循 `Resource` 协议的具体资源对象（例如 `FileResource`）。
+        /// - Returns: 返回落库完毕、包含 ID 字段的 `ResourceDTO<T>` 数组。
         ///
         /// ```swift
-        /// let docResource = PM.DTO.Resource<PM.DTO.Prepare>(
-        ///     moduleId: module.moduleId,
+        /// let docResource = JsonResource(
         ///     name: "Secret_Doc",
-        ///     type: "document"
+        ///     content: ["isPrivate": AnyCodable(true)]
         /// )
         /// let resourceDTO = try await module.resource.create(resources: [docResource]).first!
         /// ```

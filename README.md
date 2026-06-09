@@ -125,7 +125,7 @@ let docResource = JsonResource(
 
 // 资源落库
 let resourceDTO = try await module.resource.create(
-    resources: [PM.ResourceDTO(data: docResource)]
+    resources: [docResource]
 ).first!
 let anyResourceDTO = AnyResourceDTO(resourceDTO)
 
