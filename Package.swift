@@ -20,13 +20,9 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.3.0"),
-//        .package(url: "https://github.com/Flight-School/AnyCodable", from: "0.6.7"),
-//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-basic.git", from: "1.5.0"),
-        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-basic"),
-//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-pgsql.git", from: "1.0.5")
-        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-pgsql"),
-//        .package(url: "https://github.com/SJJC-Team/whooshing.toolbox-opa", from: "1.0.1")
-        .package(path: "/Users/clwang/GitHub/whooshing.toolbox-opa")
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.5.2"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.0.7"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.2")
     ],
     targets: [
         .target(

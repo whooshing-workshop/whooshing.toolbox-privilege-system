@@ -1,5 +1,6 @@
 import Fluent
 import PgSQL
+import Foundation
 import NIOAdvanced
 import PrivilegeModule
 

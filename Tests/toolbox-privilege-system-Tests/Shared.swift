@@ -175,8 +175,8 @@ struct TestingShared {
     static let dbPort = Int(ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_PORT"] ?? "5432")!
     static let dbListening = try! isPortOpen(host: dbHost, port: dbPort)
     
-    static let opaHost = ProcessInfo.processInfo.environment["GITHUB_OPA_TESTING_HOST"] ?? "localhost"
-    static let opaPort = Int(ProcessInfo.processInfo.environment["GITHUB_OPA_TESTING_PORT"] ?? "8181")!
+    static let opaHost = ProcessInfo.processInfo.environment["GITHUB_EOPA_TESTING_HOST"] ?? "localhost"
+    static let opaPort = Int(ProcessInfo.processInfo.environment["GITHUB_EOPA_TESTING_PORT"] ?? "8181")!
     static let opaListening = try! isPortOpen(host: opaHost, port: opaPort)
     
     @MainActor static var privilegeSystem: PrivilegeSystem? = nil

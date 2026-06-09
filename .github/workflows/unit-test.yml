@@ -1,0 +1,31 @@
+name: Unit Test
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  pull_request: { types: [opened, reopened, synchronize, ready_for_review] }
+  push: { branches: [ develop ] }
+
+jobs:
+  unit-tests:
+    uses: whooshing-workshop/ci/.github/workflows/run-unit-tests.yml@develop
+    with:
+      ios_scheme_name: whooshing.toolbox-privilege-system
+      work_dir: "."
+
+      with_release_mode_testing: true
+      with_musl: false
+      with_api_check: false
+      with_tsan: false
+      ios_xcodebuild_action: ''
+
+      with_eopa_host: "localhost"
+      with_eopa_port: 8181
+      with_eopa_version: "v1.45.1"
+      
+      with_pg_configs: |
+        woo privilege_system testing 5432 privilege_module
+
+    secrets: inherit

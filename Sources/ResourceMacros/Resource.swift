@@ -91,6 +91,14 @@ public struct AnyOperation: Sendable, Decodable, Loggerable, CustomStringConvert
     public var description: String {
         self.rawValue
     }
+    
+    public var summaryDescription: String {
+        self.rawValue
+    }
+    
+    public var logDescription: String {
+        self.rawValue
+    }
 }
 
 package func formatQuery(_ query: [String: AnyCodable]) -> String {

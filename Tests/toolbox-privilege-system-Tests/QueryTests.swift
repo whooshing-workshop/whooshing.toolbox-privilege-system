@@ -92,7 +92,7 @@ struct QueryTests {
             .chunk(max: 2) { res in
                 counter.add(res.count)
                 print("Chunked \(res.count) items")
-            }
+            }.get()
             
             
         print("Total items chunked: \(counter.value)")

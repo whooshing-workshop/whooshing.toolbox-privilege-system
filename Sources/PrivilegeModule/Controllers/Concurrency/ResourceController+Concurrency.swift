@@ -2,6 +2,7 @@ import Fluent
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
+import Foundation
 import ResourceMacros
 
 // MARK: - ResourceController Concurrency (ResourceController.swift)

@@ -5,6 +5,7 @@ import FluentPostgresDriver
 import ResourceMacros
 import AsyncHTTPClient
 import Query
+import Foundation
 import ResourceMacros
 import Logging
 import LoggingAdvanced
