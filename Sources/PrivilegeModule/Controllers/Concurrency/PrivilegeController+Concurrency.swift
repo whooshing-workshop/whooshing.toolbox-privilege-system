@@ -68,7 +68,7 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: Privilege query
 
     func privilege<T: Resource>(
-        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+        attachedTo resource: S.ResourceDTO<T>
     ) async throws(Errcase.ErrType) -> [S.PrivilegeDTO<DTO.Queried>] {
         try await privilege(attachedTo: resource).get()
     }
@@ -83,7 +83,7 @@ public extension PrivilegeModule.PrivilegeController {
 
     func `is`<T: Resource>(
         privilege: S.PrivilegeDTO<DTO.Queried>,
-        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+        attachedTo resource: S.ResourceDTO<T>
     ) async throws(Errcase.ErrType) -> Bool {
         try await self.is(privilege: privilege, attachedTo: resource).get()
     }

@@ -81,7 +81,7 @@ struct AdvancePolicyTesting {
         
         let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_pass", description: "Advance SQL Pass", policy: passPolicyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
-        let resourceDTO = try await m.resource.create(resources: [PM.ResourceDTO(data: jsonResource)]).first!
+        let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = AnyResourceDTO(resourceDTO)
         
         try await m.privilege.attach {
@@ -108,7 +108,7 @@ struct AdvancePolicyTesting {
         
         let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_fail", description: "Advance SQL Fail", policy: failPolicyText)]).first!
         let failJsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
-        let failResourceDTO = try await m.resource.create(resources: [PM.ResourceDTO(data: failJsonResource)]).first!
+        let failResourceDTO = try await m.resource.create(resources: [failJsonResource]).first!
         let failAnyResourceDTO = AnyResourceDTO(failResourceDTO)
 
         try await m.privilege.attach {
@@ -180,7 +180,7 @@ struct AdvancePolicyTesting {
         
         let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_time", description: "Advance Time Module", policy: policyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
-        let resourceDTO = try await m.resource.create(resources: [PM.ResourceDTO(data: jsonResource)]).first!
+        let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = AnyResourceDTO(resourceDTO)
         
         try await m.privilege.attach {

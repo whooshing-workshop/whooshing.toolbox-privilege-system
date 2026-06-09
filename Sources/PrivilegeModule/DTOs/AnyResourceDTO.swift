@@ -21,7 +21,7 @@ public struct AnyResourceDTO: DTOModel, Sendable {
     package typealias AssociatedModel = AnyResource
     private let m: AssociatedModel?
     
-    public init<T, G>(_ resource: PrivilegeModule<G>.ResourceDTO<T, DTO.Queried>) {
+    public init<T, G>(_ resource: PrivilegeModule<G>.ResourceDTO<T>) {
         self = Self.init(
             id: resource.id,
             name: resource.data.name,

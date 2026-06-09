@@ -12,8 +12,7 @@ enum FileOperation: String, OperationList {
     case execute
 }
 
-typealias PFileResource = PModule.PResource<FileResource>
-typealias QFileResource = PModule.QResource<FileResource>
+typealias QFileResource = PModule.ResourceDTO<FileResource>
 
 struct FileResource: Resource, Hashable {
     typealias ResourceType = ResourceList
@@ -91,8 +90,7 @@ enum DirectoryOperation: String, OperationList {
     case deleteChild
 }
 
-typealias PDirectoryResource = PModule.PResource<DirectoryResource>
-typealias QDirectoryResource = PModule.QResource<DirectoryResource>
+typealias QDirectoryResource = PModule.ResourceDTO<DirectoryResource>
 
 @Resource
 struct DirectoryResource: Hashable {
@@ -109,8 +107,7 @@ enum AliasOperation: String, OperationList {
     case resolve
 }
 
-typealias PAliasResource = PModule.PResource<AliasResource>
-typealias QAliasResource = PModule.QResource<AliasResource>
+typealias QAliasResource = PModule.ResourceDTO<AliasResource>
 
 @Resource
 struct AliasResource: Hashable {
@@ -145,18 +142,18 @@ struct ResourceTests {
         let alias1 = AliasResource(name: "shortcut_to_report", targetId: UUID())
         
         let fileDtos = [
-            PFileResource(data: file1),
-            PFileResource(data: file2),
-            PFileResource(data: file3)
+            file1,
+            file2,
+            file3
         ]
         
         let dirDtos = [
-            PDirectoryResource(data: dir1),
-            PDirectoryResource(data: dir2)
+            dir1,
+            dir2
         ]
         
         let aliasDtos = [
-            PAliasResource(data: alias1)
+            alias1
         ]
         
         // 测试创建
@@ -192,12 +189,12 @@ struct ResourceTests {
         let (_, m) = try await TestingShared.getSystem()
         let file = FileResource(name: "temp.txt", path: "/tmp/temp.txt", isPrivate: false)
         let created = try await m.resource.create(resources: [
-            PFileResource(data: file)
+            file
         ])
         let resourceId = created[0].id
         
         // 更新 isPrivate 为 true
-        let updater = PFileResource.Updater(resourceId: resourceId)
+        let updater = QFileResource.Updater(resourceId: resourceId)
             .update(data: { q in
                 var d = q.data
                 d.isPrivate = true
@@ -213,9 +210,7 @@ struct ResourceTests {
     func resource_Privilege_AttachDetach() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let file = FileResource(name: "attach.txt", path: "/tmp/attach.txt", isPrivate: true)
-        let resourceDTO = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).first!
+        let resourceDTO = try await m.resource.create(resources: [file]).first!
         
         let suffix = UUID().uuidString
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -252,9 +247,7 @@ struct ResourceTests {
     func resource_Privilege_QueryAndVerify() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let file = FileResource(name: "query_verify.txt", path: "/tmp/query_verify.txt", isPrivate: true)
-        let resourceDTO = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).first!
+        let resourceDTO = try await m.resource.create(resources: [file]).first!
         
         let suffix = UUID().uuidString
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -359,13 +352,11 @@ struct ResourceTests {
     func resource_Update_Comprehensive() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let file = FileResource(name: "comp_test.txt", path: "/tmp/comp.txt", isPrivate: false)
-        let created: [QFileResource] = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ])
+        let created: [QFileResource] = try await m.resource.create(resources: [file])
         let resourceId = created[0].id
         
         // 1. 更新单个字段 (常量形式)
-        let updater1 = PFileResource.Updater(resourceId: resourceId)
+        let updater1 = QFileResource.Updater(resourceId: resourceId)
             .update(data: { q in
                 var d = q.data
                 d.isPrivate = true
@@ -378,7 +369,7 @@ struct ResourceTests {
         
         // 2. 更新整个 data 对象 (常量形式)
         let newFile = FileResource(name: "new_comp.txt", path: "/tmp/new_comp.txt", isPrivate: false)
-        let updater2 = PFileResource.Updater(resourceId: resourceId)
+        let updater2 = QFileResource.Updater(resourceId: resourceId)
             .update(data: newFile)
         
         let updated2: QFileResource = try await m.resource.update(with: updater2)
@@ -386,7 +377,7 @@ struct ResourceTests {
         #expect(updated2.data.path == "/tmp/new_comp.txt")
         
         // 3. 依赖原值的更新 (闭包形式)
-        let updater3 = PFileResource.Updater(resourceId: resourceId)
+        let updater3 = QFileResource.Updater(resourceId: resourceId)
             .update(data: { q in
                 var d = q.data
                 d.name = q.data.name + " - Updated"
@@ -397,7 +388,7 @@ struct ResourceTests {
         #expect(updated3.data.name == "new_comp.txt - Updated")
         
         // 4. 依赖原值更新整个 data (闭包形式)
-        let updater4 = PFileResource.Updater(resourceId: resourceId)
+        let updater4 = QFileResource.Updater(resourceId: resourceId)
             .update(data: { q in
                 var d = q.data
                 d.path = "/tmp/final.txt"
@@ -416,9 +407,7 @@ struct ResourceTests {
     func resource_Delete() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let file = FileResource(name: "delete.txt", path: "/tmp/delete.txt", isPrivate: true)
-        let resourceDTO: QFileResource = try await m.resource.create(resources: [
-            PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
-        ]).first!
+        let resourceDTO: QFileResource = try await m.resource.create(resources: [file]).first!
         
         // 删除资源
         try await m.resource.delete(ids: [resourceDTO.id])

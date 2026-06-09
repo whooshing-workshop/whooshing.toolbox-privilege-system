@@ -328,7 +328,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter resource: 需要探查的资源对象 `S.ResourceDTO<T, DTO.Queried>`。
     /// - Returns: 与该资源绑定的策略集合 `EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase>`。
     func privilege<T: Resource>(
-        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+        attachedTo resource: S.ResourceDTO<T>
     ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
         __privilege(on: db, attachedTo: resource)
     }
@@ -353,7 +353,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: 如果存在绑定关系则返回 `true`，否则 `false`。
     func `is`<T: Resource>(
         privilege: S.PrivilegeDTO<DTO.Queried>,
-        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+        attachedTo resource: S.ResourceDTO<T>
     ) -> EventLoopRes<Bool, Errcase> {
         __is(on: db, privilege: privilege, attachedTo: resource)
     }
@@ -376,7 +376,7 @@ extension PrivilegeModule.PrivilegeController {
     // 取得 某资源 的所有资源权限
     func __privilege<T: Resource>(
         on db: PGDatabase,
-        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+        attachedTo resource: S.ResourceDTO<T>
     ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
         resource.model.$privileges.get(on: db)
             .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)
@@ -412,7 +412,7 @@ extension PrivilegeModule.PrivilegeController {
     func __is<T: Resource>(
         on db: PGDatabase,
         privilege: S.PrivilegeDTO<DTO.Queried>,
-        attachedTo resource: S.ResourceDTO<T, DTO.Queried>
+        attachedTo resource: S.ResourceDTO<T>
     ) -> EventLoopRes<Bool, Errcase> {
         resource.model.$privileges.query(on: db)
             .filter(\.$id == privilege.id)

@@ -10,10 +10,9 @@ import AnyCodable
 import DataConvertable
 
 public extension PM {
-    typealias PResource<G: Resource> = ResourceDTO<G, DTO.Prepare> where G.ResourceType == ResourceList, G: Hashable
-    typealias QResource<G: Resource> = ResourceDTO<G, DTO.Queried> where G.ResourceType == ResourceList, G: Hashable
-    
-    struct ResourceDTO<G: Resource, T: DTO.Status>: DTOModel, Sendable where G.ResourceType == ResourceList {
+    struct ResourceDTO<G: Resource>: DTOModel, Sendable where G.ResourceType == ResourceList {
+        package typealias T = DTO.Queried
+        
         let data: G
         
         @DTO.Passive() public internal(set) var id: UUID
@@ -34,14 +33,8 @@ public extension PM {
     }
 }
 
-public extension PM.ResourceDTO where T == DTO.Prepare {
-    init(data: G) {
-        self = Self.init(_data: data, _model: nil)
-    }
-}
-
-extension PM.ResourceDTO where T == DTO.Queried {
-    var model: PM<ResourceList>.ResourceModel<G> {
+extension PM.ResourceDTO {
+    package var model: PM<ResourceList>.ResourceModel<G> {
         guard let m = m else {
             fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
         }
@@ -62,20 +55,14 @@ extension PM.ResourceDTO where T == DTO.Queried {
     }
 }
 
-extension PM.ResourceDTO where T == DTO.Prepare {
-    func raw() -> PM<ResourceList>.ResourceModel<G> {
-        .init(from: data)
-    }
-}
-
-public extension PM.ResourceDTO where T == DTO.Prepare {
+public extension PM.ResourceDTO {
     struct Updater: @unchecked Sendable {
         public let resourceId: UUID
         package var id: UUID { resourceId }
         
         package let updates: OrderedDictionary<
             AnyKeyPath,
-            (QueryBuilder<AssociatedModel>, PM<ResourceList>.ResourceDTO<G, DTO.Queried>?) throws -> QueryBuilder<AssociatedModel>
+            (QueryBuilder<AssociatedModel>, PM<ResourceList>.ResourceDTO<G>?) throws -> QueryBuilder<AssociatedModel>
         >
         package let needsPeek: Bool
         
@@ -89,7 +76,7 @@ public extension PM.ResourceDTO where T == DTO.Prepare {
             id: UUID,
             updates: OrderedDictionary<
                 AnyKeyPath,
-                (QueryBuilder<AssociatedModel>, PM<ResourceList>.ResourceDTO<G, DTO.Queried>?) throws -> QueryBuilder<AssociatedModel>
+                (QueryBuilder<AssociatedModel>, PM<ResourceList>.ResourceDTO<G>?) throws -> QueryBuilder<AssociatedModel>
             >,
             needsPeek: Bool
         ) {
@@ -104,14 +91,14 @@ extension PM.ResourceDTO.Updater: DTOUpdater {}
 
 public extension PM.ResourceDTO.Updater {
     func update(data: @escaping @autoclosure () throws -> G) -> Self {
-        generate(key: \PM.ResourceDTO<G, T>.data) { builder, _ in
+        generate(key: \PM.ResourceDTO<G>.data) { builder, _ in
             builder.set(\.$data, to: try data())
         }
     }
 }
 
 public extension PM.ResourceDTO.Updater {
-    func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> V) -> Self {
+    func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping (PM<ResourceList>.ResourceDTO<G>) throws -> V) -> Self {
         generate(needsPeek: true, key: path) { builder, data in
             guard let d = data else { fatalError("应当提供 Data 结果，却没有提供") }
             let field = PM<ResourceList>.ResourceModel<G>.Fields().data
@@ -129,8 +116,8 @@ public extension PM.ResourceDTO.Updater {
         }
     }
     
-    func update(data: @escaping (PM<ResourceList>.ResourceDTO<G, DTO.Queried>) throws -> G) -> Self {
-        generate(needsPeek: true, key: \PM.ResourceDTO<G, T>.data) { builder, _data in
+    func update(data: @escaping (PM<ResourceList>.ResourceDTO<G>) throws -> G) -> Self {
+        generate(needsPeek: true, key: \PM.ResourceDTO<G>.data) { builder, _data in
             guard let d = _data else { fatalError("应当提供 Data 结果，却没有提供") }
             return builder.set(\.$data, to: try data(d))
         }
@@ -165,7 +152,7 @@ extension PM.ResourceDTO: Encodable {
     }
 }
 
-extension PM.ResourceDTO: Query.Queriable where T == DTO.Queried {
+extension PM.ResourceDTO: Query.Queriable {
     public typealias Model = S.ResourceModel<G>
     public typealias ErrorType = S.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -186,52 +173,19 @@ extension PM.ResourceDTO: Query.Queriable where T == DTO.Queried {
 
 extension PM.ResourceDTO: Hashable {
     public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(data)
-        } else {
-            hasher.combine(data)
-            hasher.combine(id)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
-        }
+        hasher.combine(data)
+        hasher.combine(id)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.data == rhs.data
-        } else {
-            lhs.data == rhs.data &&
-            lhs.id == rhs.id &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
-        }
+        lhs.data == rhs.data &&
+        lhs.id == rhs.id &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.updatedAt == rhs.updatedAt
     }
 }
-
-public extension PM.ResourceDTO where T == DTO.Prepare {
-    func like(_ rhs: PM<ResourceList>.QResource<G>) -> Bool {
-        self.data == rhs.data
-    }
-}
-
-public extension PM.ResourceDTO where T == DTO.Queried {
-    func like(_ rhs: PM<ResourceList>.PResource<G>) -> Bool {
-        self.data == rhs.data
-    }
-}
-
-public extension Collection {
-    func like<C, T, G>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.QResource<G>, Element == PM<T>.PResource<G> {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-public extension Collection {
-    func like<C, T, G>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.PResource<G>, Element == PM<T>.QResource<G> {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
 
 extension PM.ResourceDTO.Updater: Loggerable {
     public var logDescription: String {

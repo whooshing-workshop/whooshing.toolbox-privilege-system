@@ -350,33 +350,6 @@ struct HashableTests {
         #expect(q1.like(p1))
     }
     
-    @Test("ResourceDTO Hashable & Equatable")
-    func testResourceDTO() async throws {
-        let res = MockResource(name: "TestRes")
-        let date = Date()
-        
-        var p1 = PM<ResourceList>.ResourceDTO<MockResource, DTO.Prepare>(_data: res, _model: nil)
-        var p2 = PM<ResourceList>.ResourceDTO<MockResource, DTO.Prepare>(_data: res, _model: nil)
-        
-        p1.createdAt = date
-        p1.updatedAt = date
-        p2.createdAt = date
-        p2.updatedAt = date
-        
-        #expect(p1 == p2)
-        
-        let model = PM<ResourceList>.ResourceModel<MockResource>()
-        model.data = res
-        model.id = UUID()
-        model.createdAt = Date()
-        model.updatedAt = Date()
-        
-        let q1 = try PM<ResourceList>.ResourceDTO<MockResource, DTO.Queried>.make(from: model).get()
-        
-        #expect(p1.like(q1))
-        #expect(q1.like(p1))
-    }
-    
     @MainActor
     @Test("测试结束")
     func end() async throws {

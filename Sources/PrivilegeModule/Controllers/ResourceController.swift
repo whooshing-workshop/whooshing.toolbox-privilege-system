@@ -52,8 +52,8 @@ public extension PrivilegeModule {
         /// let resourceDTO = try await module.resource.create(resources: [docResource]).first!
         /// ```
         public func create<T: Resource>(
-            resources: [ResourceDTO<T, DTO.Prepare>]
-        ) -> EventLoopRes<[ResourceDTO<T, DTO.Queried>], Errcase> {
+            resources: [T]
+        ) -> EventLoopRes<[ResourceDTO<T>], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源 操作", metadata: ["resources": .summaryData(resources)])
             logger.debug("操作参数", metadata: ["resources": .data(resources)])
@@ -62,8 +62,8 @@ public extension PrivilegeModule {
                 dtos: resources,
                 label: "资源",
                 errThrowing: .resourceCreateFailed,
-                modelBuilder: { $0.raw() },
-                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0.fill()) }
+                modelBuilder: { ResourceModel<T>.init(from: $0) },
+                dtoBuilder: { ResourceDTO<T>.make(from: $0.fill()) }
             )
             .map { 
                 logger.info("创建资源 操作成功", metadata: ["data": .summaryData($0)])
@@ -109,8 +109,8 @@ public extension PrivilegeModule {
         /// - Parameter updater: `ResourceDTO<T, DTO.Prepare>.Updater` 更新执行器。
         /// - Returns: `ResourceDTO<T, DTO.Queried>`
         public func update<T: Resource>(
-            with updater: ResourceDTO<T, DTO.Prepare>.Updater
-        ) -> EventLoopRes<ResourceDTO<T, DTO.Queried>, Errcase> {
+            with updater: ResourceDTO<T>.Updater
+        ) -> EventLoopRes<ResourceDTO<T>, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新资源 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新资源 详细请求数据", metadata: ["data": .data(updater)])
@@ -120,7 +120,7 @@ public extension PrivilegeModule {
                 label: "资源",
                 errThrowing: .resourceUpdateFailed,
                 filterBuilder: { $0.filter(\.$id == updater.resourceId) },
-                dtoBuilder: { ResourceDTO<T, DTO.Queried>.make(from: $0) }
+                dtoBuilder: { ResourceDTO<T>.make(from: $0) }
             )
             .map { 
                 logger.info("更新资源 操作成功", metadata: ["data": .summaryData($0)])

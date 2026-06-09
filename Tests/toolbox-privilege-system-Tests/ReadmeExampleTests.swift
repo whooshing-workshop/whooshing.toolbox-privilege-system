@@ -50,7 +50,7 @@ struct ReadmeExampleTests {
             content: ["isPrivate": AnyCodable(true)]
         )
         let resourceDTO = try await module.resource.create(
-            resources: [PM.ResourceDTO(data: docResource)]
+            resources: [docResource]
         ).first!
         let anyResourceDTO = AnyResourceDTO(resourceDTO)
         

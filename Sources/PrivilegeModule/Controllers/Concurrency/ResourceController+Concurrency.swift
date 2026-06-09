@@ -10,8 +10,8 @@ public extension PrivilegeModule.ResourceController {
     typealias S = PM<ResourceList>
 
     func create<T: Resource>(
-        resources: [S.ResourceDTO<T, DTO.Prepare>]
-    ) async throws(PrivilegeModule.Errcase.ErrType) -> [S.ResourceDTO<T, DTO.Queried>] {
+        resources: [T]
+    ) async throws(PrivilegeModule.Errcase.ErrType) -> [S.ResourceDTO<T>] {
         try await create(resources: resources).get()
     }
 
@@ -23,8 +23,8 @@ public extension PrivilegeModule.ResourceController {
     }
 
     func update<T: Resource>(
-        with updater: S.ResourceDTO<T, DTO.Prepare>.Updater
-    ) async throws(PrivilegeModule.Errcase.ErrType) -> S.ResourceDTO<T, DTO.Queried> {
+        with updater: S.ResourceDTO<T>.Updater
+    ) async throws(PrivilegeModule.Errcase.ErrType) -> S.ResourceDTO<T> {
         try await update(with: updater).get()
     }
 }
