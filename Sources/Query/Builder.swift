@@ -3,15 +3,33 @@ import Fluent
 import ErrorHandle
 import NIOAdvanced
 
+/// `PrivilegeSystem` 和 `PrivilegeModule` 使用的类型安全查询 DSL。
+///
+/// `Query` 包装 Fluent 的 `QueryBuilder`，让调用方使用 DTO KeyPath 编写过滤、
+/// 连接、排序、分页和聚合查询，而不必直接接触 Fluent Model KeyPath。
+///
+/// ```swift
+/// let page = try await system.query(QUser.self)
+///     .filter(\.email == "user1@example.com")
+///     .sort(\.createdAt, .descending)
+///     .page(with: 1, size: 20)
+/// ```
 public enum Query {
+    /// 可以被查询 DSL 读取的 DTO。
     public protocol Queriable: Sendable {
+        /// DTO 背后的 Fluent Model。
         associatedtype Model: PGModel
+        /// Fluent 数据行转换为 DTO 时使用的错误命名空间。
         associatedtype ErrorType: ErrList
+        /// DTO KeyPath 到 Fluent Model KeyPath 的映射。
         static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] { get }
+        /// 添加重建该 DTO 所需的所有字段。
         static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base>
+        /// 将 Fluent Model 转换为 DTO。
         static func make(from: Model) -> Res<Self, ErrorType>
     }
     
+    /// 可链式调用的类型化查询构建器。
     public struct Builder<Model: Queriable> {
         let query: QueryBuilder<Model.Model>
         
@@ -19,16 +37,21 @@ public enum Query {
             self.query = query
         }
         
+        /// 选择 joined DTO 所需的所有字段。
+        ///
+        /// 当 join 查询除了基础模型字段外，还需要 joined 模型字段时调用。
         @discardableResult
         public func fields<Joined>(for model: Joined.Type) -> Self where Joined: Queriable {
             .init(query: Joined.buildAllFields(query))
         }
         
+        /// 在基础 DTO 上添加过滤条件。
         @discardableResult
         public func filter<Value>(_ filter: ValueFilter<Model, Value>) -> Self {
             .init(query: query.filter(filter.filter))
         }
         
+        /// 在 joined DTO 上添加过滤条件。
         @discardableResult
         public func filter<Joined, Value>(
             _ schema: Joined.Type,
@@ -37,6 +60,7 @@ public enum Query {
             .init(query: query.filter(Joined.Model.self, filter.filter))
         }
         
+        /// 使用单个 join 条件连接另一个 DTO 模型。
         @discardableResult
         public func join<Foreign>(
             _ foreign: Foreign.Type,
@@ -46,6 +70,7 @@ public enum Query {
             .init(query: query.join(Foreign.Model.self, on: filter.joinFilter, method: method))
         }
         
+        /// 使用复合 join 条件连接另一个 DTO 模型。
         @discardableResult
         public func join<Foreign>(
             _ foreign: Foreign.Type,
@@ -55,6 +80,16 @@ public enum Query {
             .init(query: query.join(Foreign.Model.self, on: filter.wrapped, method: method))
         }
         
+        /// 添加分组过滤表达式。
+        ///
+        /// ```swift
+        /// let users = try await system.query(QUser.self)
+        ///     .group(.or) { group in
+        ///         group.filter(\.email == "a@example.com")
+        ///         group.filter(\.email == "b@example.com")
+        ///     }
+        ///     .all()
+        /// ```
         @discardableResult
         public func group(
             _ relation: DatabaseQuery.Filter.Relation = .and,

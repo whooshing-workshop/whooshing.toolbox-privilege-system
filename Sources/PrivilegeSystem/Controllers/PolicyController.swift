@@ -14,6 +14,7 @@ extension PrivilegeSystem {
         package let eventLoop: EventLoop
         package let opa: OPA
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         init(
@@ -28,6 +29,15 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 批量创建并绑定系统级策略（使用链式构造器模式）。
+        ///
+        /// 系统级策略（如角色策略、域策略）被直接指派到对应的实体模型上。
+        /// 创建成功后，OPA 将自动载入新分配的策略。
+        ///
+        /// - Parameters:
+        ///   - model: 目标策略类型（如 `Role.self` 或 `Domain.self`）。
+        ///   - content: `@MTORelationBuilder` 闭包，用于声明策略对象与实体 UUID 的关系。
+        /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
         public func create<T: PolicyType>(
             to model: T.Type,
             @MTORelationBuilder<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>
@@ -40,6 +50,15 @@ extension PrivilegeSystem {
                 .logIfFail(logger: logger)
         }
         
+        /// 批量创建、绑定系统级策略，并在成功后返回完整的查询状态策略 DTO。
+        ///
+        /// 与 `create` 类似，但在写入数据库和同步 OPA 成功后，会提取出包含已分配 UUID 和正确元数据的 `DTO.Queried` 状态对象。
+        /// 这对于后续修改或删除策略操作至关重要。
+        ///
+        /// - Parameters:
+        ///   - model: 目标策略类型（如 `Role.self` 或 `Domain.self`）。
+        ///   - content: `@MTORelationBuilder` 闭包。
+        /// - Returns: 按绑定的目标模型 ID 分组的策略列表 `EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase>`。
         public func createWithReturning<T: PolicyType>(
             to model: T.Type,
             @MTORelationBuilder<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>
@@ -52,6 +71,14 @@ extension PrivilegeSystem {
                 .logIfFail(logger: logger)
         }
         
+        /// 删除指定的系统级策略。
+        ///
+        /// 策略一旦删除，会立刻同步移除 OPA 中的相关判定规则。这可能改变现存成员的访问权限。
+        ///
+        /// - Parameters:
+        ///   - model: 目标策略类型（如 `Role.self` 或 `Domain.self`）。默认为自身。
+        ///   - policy: 一个 1:1 关系描述体，指明要删除的具体策略对象及其从属的实体 UUID。
+        /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
         public func delete<T: PolicyType>(
             from model: T.Type = T.self,
             policy: OTORelation<DTO.Policy<T, DTO.Queried>, T.Model.IDValue>
@@ -79,6 +106,12 @@ extension PrivilegeSystem {
 }
 
 public extension PrivilegeSystem.PolicyController {
+    /// 批量创建并绑定系统级策略（直接传参模式）。
+    ///
+    /// - Parameters:
+    ///   - model: 目标策略类型（如 `Role.self` 或 `Domain.self`）。
+    ///   - relations: 策略与实体对应关系的数组。
+    /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
     func create<T: PolicyType>(
         to model: T.Type,
         relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
@@ -91,6 +124,12 @@ public extension PrivilegeSystem.PolicyController {
             .logIfFail(logger: logger)
     }
     
+    /// 批量创建并绑定系统级策略，同时返回插入后的结果（直接传参模式）。
+    ///
+    /// - Parameters:
+    ///   - model: 目标策略类型（如 `Role.self` 或 `Domain.self`）。
+    ///   - relations: 策略与实体对应关系的数组。
+    /// - Returns: 按实体 ID 分组返回所有被分配的查询状态策略。
     func createWithReturning<T: PolicyType>(
         to model: T.Type,
         relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]

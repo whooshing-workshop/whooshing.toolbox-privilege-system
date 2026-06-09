@@ -8,12 +8,22 @@ import PrivilegeModule
 import Logging
 
 extension PrivilegeSystem {
+    /// 域权限控制器，提供域的创建、更新、删除及关系指派接口。
+    ///
+    /// 域（Domain）是权限系统中的一个环境隔离层。它可以被指派给用户或群组，
+    /// 代表该用户或群组在一个特定维度（如：“公司A”，“项目B”）下拥有一组策略约束。
+    ///
+    /// - `create(domains:)` / `create(relations:)`：单独创建域或附带 OPA 策略一同创建。
+    /// - `assign` / `unassign`：将域指派给用户或群组，或从中撤销。
+    ///
+    /// 域本身不支持层级嵌套（不像群组），但可以附加域策略，供 `Arbitrator` 进行仲裁时作为附加环境约束。
     public final class DomainController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
         let policyController: PolicyController
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         init(
@@ -28,6 +38,18 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 批量创建域并附带 OPA 策略。
+        ///
+        /// 允许在声明域的同时将一条或多条 `DTO.Policy` 关联到该域。底层通过事务保证原子性。
+        ///
+        /// - Parameter content: `MTORelationBuilder` 闭包，用于构建域与策略间的多对一关系。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
+        ///
+        /// ```swift
+        /// try await system.domain.create {
+        ///     [domainPolicyDTO] => domainDTO
+        /// }.get()
+        /// ```
         public func create(
             @MTORelationBuilder<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
@@ -35,6 +57,10 @@ extension PrivilegeSystem {
             self.create(relations: content())
         }
         
+        /// 批量创建域并附带 OPA 策略，返回存入的策略查询结构。
+        ///
+        /// - Parameter content: `MTORelationBuilder` 闭包，用于构建域与策略间的多对一关系。
+        /// - Returns: 一个字典，Key为域的 ID，Value 为该域关联的策略查询对象 `DTO.Policy<Domain, DTO.Queried>`。
         public func createWithReturning(
             @MTORelationBuilder<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Domain, DTO.Prepare>, DTO.Domain<DTO.Prepare>>]
@@ -42,6 +68,16 @@ extension PrivilegeSystem {
             self.createWithReturning(relations: content())
         }
         
+        /// 批量创建裸域（无策略附带）。
+        ///
+        /// - Parameter domains: 一组准备落库的域对象。
+        /// - Returns: 成功后返回携带数据库 UUID 的查询对象 `DTO.Domain<DTO.Queried>` 数组。
+        ///
+        /// ```swift
+        /// let domains = try await system.domain.create(
+        ///     domains: [.init(name: "DomainA", description: "This is A")]
+        /// ).get()
+        /// ```
         public func create(
             domains: [DTO.Domain<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Domain<DTO.Queried>], Errcase> {
@@ -57,6 +93,12 @@ extension PrivilegeSystem {
                 .logIfFail(logger: logger)
         }
         
+        /// 根据 ID 批量删除域。
+        ///
+        /// - Parameters:
+        ///   - domainIds: 欲删除域的 UUID 数组。
+        ///   - allSatisfy: 是否必须满足全部删除（若传入的 ID 存在未删除的部分则报错回滚）。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
             domainIds: [UUID],
             allSatisfy: Bool = true
@@ -78,6 +120,10 @@ extension PrivilegeSystem {
             .logIfFail(logger: logger)
         }
         
+        /// 更新指定域的元信息。
+        ///
+        /// - Parameter updater: 更新器对象 `DTO.Domain<DTO.Prepare>.Updater`。
+        /// - Returns: 更新完毕的域对象 `DTO.Domain<DTO.Queried>`。
         public func update(
             with updater: DTO.Domain<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Domain<DTO.Queried>, Errcase> {
@@ -149,6 +195,16 @@ public extension PrivilegeSystem.DomainController {
 public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限指派
     
+    /// 将一个或多个域指派给一个或多个用户。
+    ///
+    /// 此操作支持闭包式的多对多 DSL 构建方式：
+    /// ```swift
+    /// try await system.domain.assign {
+    ///     [domainA, domainB] => [user1, user2]
+    /// }.get()
+    /// ```
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
         @MTMRelationBuilder<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>
         _ content: @Sendable @escaping () -> [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
@@ -156,6 +212,10 @@ public extension PrivilegeSystem.DomainController {
         assign(relations: content())
     }
     
+    /// 将一个或多个域指派给一个或多个群组。
+    ///
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
         @MTMRelationBuilder<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>
         _ content: @Sendable @escaping () -> [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]
@@ -165,6 +225,10 @@ public extension PrivilegeSystem.DomainController {
     
     // MARK: - 域权限撤销
     
+    /// 撤销特定用户对某些域的指派关系。
+    ///
+    /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
         @MTMRelationBuilder<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>
         _ content: @Sendable @escaping () -> [MTMRelation<DTO.Domain<DTO.Queried>, DTO.User<DTO.Queried>>]
@@ -172,6 +236,10 @@ public extension PrivilegeSystem.DomainController {
         unassign(relations: content())
     }
     
+    /// 撤销特定群组对某些域的指派关系。
+    ///
+    /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
         @MTMRelationBuilder<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>
         _ content: @Sendable @escaping () -> [MTMRelation<DTO.Domain<DTO.Queried>, DTO.Group<DTO.Queried>>]

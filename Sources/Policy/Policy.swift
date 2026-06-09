@@ -2,12 +2,24 @@ import PgSQL
 import Fluent
 import Foundation
 
+/// 拥有 OPA 策略的模型类型。
+///
+/// `Role`、`Domain` 和模块内的 `Privilege` Model 都会实现 `PolicyType`。
+/// 该协议提供策略表命名和 OPA 路径所需的元数据，供 `PolicyExp` 和策略控制器使用。
 public protocol PolicyType: Sendable where Model.IDValue == UUID {
+    /// 拥有策略行的 Fluent Model。
     associatedtype Model: PGModel
+    /// 策略表和外键字段使用的数据库前缀。
     static var namePrefix: String { get }
+    /// 标识策略类别的 OPA 路径片段。
     static var typeId: String { get }
 }
 
+/// 保存某个策略拥有者的一条 OPA 策略表达式的 Fluent Model。
+///
+/// 泛型参数 `T` 决定策略表名和 parent 外键。业务代码通常通过 `PolicyController`、
+/// `RoleController`、`DomainController` 或 `PrivilegeController` 创建策略，而不是
+/// 直接构造 `PolicyExp`。
 public final class PolicyExp<T: PolicyType>: PGModel, @unchecked Sendable {
     
     public static var name: String { T.namePrefix + "_policies" }

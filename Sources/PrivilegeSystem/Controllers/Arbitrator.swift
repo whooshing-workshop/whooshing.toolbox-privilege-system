@@ -13,6 +13,30 @@ import Logging
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
+    /// 权限仲裁控制器。
+    ///
+    /// `Arbitrator` 会把一次鉴权请求拆成三类策略判断：
+    /// 角色策略、用户/群组/父群组域策略，以及可选的资源权限策略。最终结果是所有
+    /// 策略结果的逻辑 AND：任意一个策略返回 `false`，整体就会拒绝。
+    ///
+    /// ```swift
+    /// let result = try await system.arbitrator.judge(
+    ///     moduleId: module.moduleId,
+    ///     user: user,
+    ///     role: role,
+    ///     resource: ["global": AnyCodable(true)],
+    ///     operation: "manage_all",
+    ///     privilegeIds: []
+    /// )
+    ///
+    /// if result.result {
+    ///     // 允许访问
+    /// }
+    /// ```
+    ///
+    /// - Important: 传入的 `role` 必须已经属于 `user`。它可以是用户直接角色、
+    ///   用户所在群组的群组角色，或用户在某个群组内的组内角色。否则仲裁会在查询
+    ///   OPA 策略前失败。
     public final class Arbitrator: SystemOPAController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
@@ -36,6 +60,33 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 使用类型化资源执行权限仲裁。
+        ///
+        /// 该重载适合已经通过 `PrivilegeModule.ResourceController` 创建并查询到资源
+        /// 的场景。资源的 JSON 内容会作为 `input.resource` 传给 OPA。
+        ///
+        /// ```swift
+        /// let anyResource = AnyResourceDTO(fileResource)
+        /// let result = try await system.arbitrator.judge(
+        ///     moduleId: module.moduleId,
+        ///     user: user,
+        ///     role: role,
+        ///     resource: anyResource,
+        ///     operation: AnyOperation(op: FileOperation.read),
+        ///     privilegeIds: [readPrivilege.id]
+        /// )
+        /// ```
+        ///
+        /// - Parameters:
+        ///   - moduleId: 参与仲裁的业务模块 ID。
+        ///   - user: 请求访问资源的用户。
+        ///   - role: 本次访问选择使用的角色。
+        ///   - resource: 类型擦除后的资源 DTO。
+        ///   - operation: 本次访问的操作。
+        ///   - privilegeIds: 需要额外参与判断的资源权限 ID。传空数组时只判断角色和域。
+        ///
+        /// - Returns: 包含最终布尔结果和每条策略报告的仲裁结果。
+        /// - Throws: 当角色不属于用户、数据库数据收集失败或 OPA 查询失败时返回错误。
         public func judge(
             moduleId: UUID,
             user: DTO.User<DTO.Queried>,
@@ -254,19 +305,33 @@ extension PrivilegeSystem {
 }
 
 extension PrivilegeSystem.Arbitrator {
+    /// 一次权限仲裁的结果。
+    ///
+    /// `result` 是所有策略报告经过 AND 之后的最终结果；`reports` 保留每条策略的
+    /// 原始布尔结果，便于调试为什么某次访问被允许或拒绝。
     public struct Result: Sendable, CustomStringConvertible, Loggerable {
+        /// 仲裁报告中一条策略结果的唯一键。
         public struct IdKey: Sendable, Hashable {
+            /// 策略所属类别。
             public enum T: Sendable, Hashable {
+                /// 角色策略。
                 case role
+                /// 域策略。
                 case domain
+                /// 资源权限策略。
                 case privilege
             }
+            /// 策略类别。
             public let type: T
+            /// 策略所属模块 ID。
             public let moduleId: UUID
+            /// role、domain 或 privilege 的 ID。
             public let id: UUID
         }
         
+        /// 最终仲裁结果。
         public private(set) var result: Bool
+        /// 每条 role/domain/privilege 策略的独立结果。
         public private(set) var reports: OrderedDictionary<IdKey, Bool>
         
         mutating func and(result: Bool) {

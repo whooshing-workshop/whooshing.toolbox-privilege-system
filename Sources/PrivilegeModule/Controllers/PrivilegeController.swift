@@ -10,6 +10,16 @@ import ResourceMacros
 import Logging
 
 public extension PrivilegeModule {
+    /// 资源权限控制器，负责对当前模块下的资源操作许可（Privilege）进行定义、维护、以及向 OPA 下发策略规则。
+    ///
+    /// 这里的“资源权限”代表着某种具体操作或行为规范的策略脚本，例如：允许只有文档的所有者才能删除文档。
+    /// 可以将它通过 `attach` 和 `detach` 分配给一个或多个 `Resource`。当角色试图访问资源时，系统将一并提取角色策略和资源策略，
+    /// 交由 OPA 仲裁决定放行还是拒绝。
+    ///
+    /// - `create` / `createWithReturning`: 注册新的权限与底层 Rego 策略脚本。
+    /// - `update`: 更新权限的元数据或修正底层 Rego 策略脚本。
+    /// - `delete`: 废除并从系统中清除一项权限。
+    /// - `attach` / `detach`: 将一项策略绑定至指定的系统资源实体，或者解除绑定。
     final class PrivilegeController: OPAController {
         package typealias E = Errcase
         
@@ -17,8 +27,10 @@ public extension PrivilegeModule {
         package let eventLoop: EventLoop
         package let opa: OPA
         
+        /// 模块内部的唯一标识 UUID
         let moduleId: UUID
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         public typealias S = PM<ResourceList>
@@ -37,6 +49,12 @@ public extension PrivilegeModule {
             self.logger = logger
         }
         
+        /// 创建并向系统和 OPA 同步一组资源权限（无返回数据版）。
+        ///
+        /// 适合用于应用初始化时的静默数据装配场景。
+        ///
+        /// - Parameter privileges: 一组预备状态的资源权限 DTO 集合。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<Void, Errcase> {
@@ -72,6 +90,13 @@ public extension PrivilegeModule {
             .map { _ in logger.info("创建资源权限 操作成功") }
         }
         
+        /// 创建并向系统和 OPA 同步一组资源权限，且返回创建成功后的完整对象。
+        ///
+        /// 创建时自动为策略分配随机生成的 UUID，成功落库并同步到 OPA 后，可以取得查询状态（`DTO.Queried`）的权限对象。
+        /// 只有取得分配过 ID 的 `PrivilegeDTO<DTO.Queried>`，后续才可以用于与资源的关联绑定（`attach`）。
+        ///
+        /// - Parameter privileges: 一组预备状态的资源权限 DTO 集合。
+        /// - Returns: 已成功保存到数据库中并下发给 OPA 的权限 DTO 列表。
         public func createWithReturning(
             privileges: [PrivilegeDTO<DTO.Prepare>]
         ) -> EventLoopRes<[PrivilegeDTO<DTO.Queried>], Errcase> {
@@ -113,6 +138,12 @@ public extension PrivilegeModule {
             }
         }
         
+        /// 将某项具体的策略从系统与 OPA 中连根拔起。
+        ///
+        /// 一旦从系统抹除，曾经附加于资源上的此项策略关系也将失效和级联被删除，影响面较大。
+        /// 
+        /// - Parameter policy: 处于已查询状态的目标策略 `PrivilegeDTO<DTO.Queried>`。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
             policy: PrivilegeDTO<DTO.Queried>
         ) -> EventLoopRes<Void, Errcase> {
@@ -135,6 +166,13 @@ public extension PrivilegeModule {
             .map { _ in logger.info("删除资源权限 操作成功") }
         }
         
+        /// 更新一项权限的信息与策略内容。
+        ///
+        /// 使用事务确保安全：优先同步执行数据库数据更新，一旦 OPA 返回同步错误，则立即撤回对本地数据库的改动，
+        /// 防止 OPA 数据集与本地状态割裂。
+        ///
+        /// - Parameter updater: `PrivilegeDTO<DTO.Prepare>.Updater` 更新执行器。
+        /// - Returns: `EventLoopRes<PrivilegeDTO<DTO.Queried>, Errcase>` 更新完成的新对象。
         public func update(
             with updater: PrivilegeDTO<DTO.Prepare>.Updater
         ) -> EventLoopRes<PrivilegeDTO<DTO.Queried>, Errcase> {
@@ -205,6 +243,13 @@ public extension PrivilegeModule.PrivilegeController {
     
     // MARK: - 资源权限附加
     
+    /// 将多个权限绑定至多个资源（使用链式构造器模式）。
+    ///
+    /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
+    /// 只有在成功执行绑定后，基于对应资源的请求鉴权才会经过这些权限策略的验证。
+    ///
+    /// - Parameter content: `@MTMRelationBuilder` 提供用于建立关系的 DSL 闭包。
+    /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
         @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>
         _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
@@ -214,6 +259,13 @@ public extension PrivilegeModule.PrivilegeController {
     
     // MARK: - 资源权限解除
     
+    /// 将多个权限从多个资源上解绑（使用链式构造器模式）。
+    ///
+    /// 解除权限动作会使特定资源不再受到指定的策略脚本约束。
+    /// 解除绑定时，权限对象必须通过数据库拉取，但被操作的资源可直接实例化 `AnyResource` 包装体并赋 UUID。
+    ///
+    /// - Parameter content: `@MTMRelationBuilder` 提供用于解绑关系的 DSL 闭包。
+    /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func detach(
         @MTMRelationBuilder<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>
         _ content: @Sendable @escaping () -> [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
@@ -225,8 +277,8 @@ public extension PrivilegeModule.PrivilegeController {
 public extension PrivilegeModule.PrivilegeController {
     // MARK: - 资源权限附加
     
-    /// 附加权限动作要求资源与权限都必须已存在与数据库中
-    /// 任一不存在都会导致失败
+    /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
+    /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase> {
@@ -247,8 +299,8 @@ public extension PrivilegeModule.PrivilegeController {
     
     // MARK: - 资源权限解除
     
-    /// 解除权限动作的 Resource 无需从数据库中查得
-    /// 可以实例化 AnyResource 类型的 Resource 并赋值 UUID
+    /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
+    /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
     func detach(
         relations: [MTMRelation<S.PrivilegeDTO<DTO.Queried>, AnyResourceDTO>]
     ) -> EventLoopRes<Void, S.Errcase>  {
@@ -271,12 +323,20 @@ public extension PrivilegeModule.PrivilegeController {
 // MARK: - 资源权限验证与查询
 
 public extension PrivilegeModule.PrivilegeController {
+    /// 取得附加到特定类型化资源的所有策略集。
+    ///
+    /// - Parameter resource: 需要探查的资源对象 `S.ResourceDTO<T, DTO.Queried>`。
+    /// - Returns: 与该资源绑定的策略集合 `EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase>`。
     func privilege<T: Resource>(
         attachedTo resource: S.ResourceDTO<T, DTO.Queried>
     ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
         __privilege(on: db, attachedTo: resource)
     }
     
+    /// 取得附加到任意擦除类型资源上的所有策略集。
+    ///
+    /// - Parameter resource: 擦除了具体类型的资源包装体 `AnyResourceDTO`。
+    /// - Returns: 与该资源绑定的策略集合 `EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase>`。
     func privilege(
         attachedTo resource: AnyResourceDTO
     ) -> EventLoopRes<[S.PrivilegeDTO<DTO.Queried>], Errcase> {
@@ -285,6 +345,12 @@ public extension PrivilegeModule.PrivilegeController {
 }
 
 public extension PrivilegeModule.PrivilegeController {
+    /// 判定特定的策略对象是否正绑定于该具体类型资源之上。
+    ///
+    /// - Parameters:
+    ///   - privilege: 需要检验是否存在的权限策略。
+    ///   - resource: 目标探查对象资源。
+    /// - Returns: 如果存在绑定关系则返回 `true`，否则 `false`。
     func `is`<T: Resource>(
         privilege: S.PrivilegeDTO<DTO.Queried>,
         attachedTo resource: S.ResourceDTO<T, DTO.Queried>
@@ -292,6 +358,12 @@ public extension PrivilegeModule.PrivilegeController {
         __is(on: db, privilege: privilege, attachedTo: resource)
     }
     
+    /// 判定特定的策略对象是否正绑定于该擦除类型资源之上。
+    ///
+    /// - Parameters:
+    ///   - privilege: 需要检验是否存在的权限策略。
+    ///   - resource: 目标探查对象资源 `AnyResourceDTO`。
+    /// - Returns: 如果存在绑定关系则返回 `true`，否则 `false`。
     func `is`(
         privilege: S.PrivilegeDTO<DTO.Queried>,
         attachedTo resource: AnyResourceDTO

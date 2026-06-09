@@ -8,10 +8,21 @@ import PrivilegeModule
 import Logging
 
 extension PrivilegeSystem {
+    /// 群组控制器，提供对于群组结构的完整生命周期管理。
+    ///
+    /// 群组是一系列用户的集合。在系统中，群组可以具有**层级结构**，通过在创建时指定 `parentId` 
+    /// 或通过 `move` 操作更改其父节点，即可实现复杂的树状组织结构。
+    ///
+    /// - `create`: 创建单层或多层群组。
+    /// - `join` / `kick`: 管理群组内的成员（用户）。
+    /// - `move`: 将子群组移动至不同的父群组下。
+    ///
+    /// 底层使用 `group_paths` 表（闭包表 Closure Table 模式）实现高效的层级继承与查询。
     public final class GroupController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         init(
@@ -24,6 +35,18 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 创建并持久化一批群组。
+        ///
+        /// 创建时如果指定了 `parentId`，系统会自动维护层级闭包表（Closure Table）的深度路径。
+        ///
+        /// - Parameter groups: 准备入库的群组列表（`DTO.Prepare` 状态）。
+        /// - Returns: `DTO.Group<DTO.Queried>` 表示已成功存入数据库的群组列表，包含 `id`。
+        ///
+        /// ```swift
+        /// let childGroup = try await system.group.create(
+        ///     groups: [.init(name: "SubGroup", parentId: parentGroup.id)]
+        /// ).get().first!
+        /// ```
         public func create(
             groups: [DTO.Group<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Group<DTO.Queried>], Errcase> {
@@ -86,6 +109,13 @@ extension PrivilegeSystem {
             .logIfFail(logger: logger)
         }
         
+        /// 删除指定的群组。
+        ///
+        /// 连带删除该群组在闭包表中的所有后代关联，以及级联切除子群组树。
+        /// - Parameters:
+        ///   - groupIds: 要删除的群组 ID 集合。
+        ///   - allSatisfy: 是否必须满足全部找到并删除。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
             groupIds: [UUID],
             allSatisfy: Bool = true
@@ -143,6 +173,11 @@ extension PrivilegeSystem {
             }.logIfFail(logger: logger)
         }
         
+        /// 更新群组。
+        ///
+        /// 仅用于更新基本信息如名称。不适用于层级关系的变更，如果需要变更层级结构，请使用 `move` 函数。
+        /// - Parameter updater: 更新器对象 `DTO.Group<DTO.Prepare>.Updater`。
+        /// - Returns: `DTO.Group<DTO.Queried>`
         public func update(
             with updater: DTO.Group<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Group<DTO.Queried>, Errcase> {
@@ -170,6 +205,10 @@ extension PrivilegeSystem {
 public extension PrivilegeSystem.GroupController {
     // MARK: - 用户加入群组
     
+    /// 将一个或多个用户加入到特定群组。
+    ///
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
         @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
         _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
@@ -179,6 +218,10 @@ public extension PrivilegeSystem.GroupController {
     
     // MARK: - 用户移出群组
     
+    /// 将一个或多个用户从群组中移出。
+    ///
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
         @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
         _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
@@ -190,6 +233,10 @@ public extension PrivilegeSystem.GroupController {
 public extension PrivilegeSystem.GroupController {
     // MARK: - 用户加入群组
     
+    /// 将一个或多个用户加入到特定群组。
+    ///
+    /// - Parameter relations: `MTMRelation` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -211,6 +258,10 @@ public extension PrivilegeSystem.GroupController {
     
     // MARK: - 用户移出群组
     
+    /// 将一个或多个用户从特定群组移除。
+    ///
+    /// - Parameter relations: `MTMRelation` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
         relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -232,6 +283,12 @@ public extension PrivilegeSystem.GroupController {
     
     // MARK: - 群组移动至父群组
     
+    /// 移动整个群组（含子群组）到新的父群组节点下。
+    ///
+    /// 底层将自动完成闭包表记录的重建及死锁检查。
+    ///
+    /// - Parameter relation: `OTORelation` 描述从源群组到目标群组（可以为 nil）的一对一关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
     func move(
         _ relation: OTORelation<DTO.Group<DTO.Queried>, DTO.Group<DTO.Queried>?>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -304,6 +361,14 @@ public extension PrivilegeSystem.GroupController {
 }
 
 public extension PrivilegeSystem.GroupController {
+    /// 查询“某用户在某群组的组内关系（UserInGroupRelation）”是否存在并转换为查询模型。
+    ///
+    /// `UserInGroupRelation` 一般用于指派特定的组内角色给某个用户。
+    ///
+    /// - Parameters:
+    ///   - relations: 预期需查询的关系，包含用户 DTO 和群组 DTO。
+    ///   - strict: 如果为 `true`，查出的记录条数不匹配预期的 `relations` 长度则抛出失败。
+    /// - Returns: `EventLoopRes<[DTO.UserInGroupRelation<DTO.Queried>], Errcase>`
     func query(
         relations: [DTO.UserInGroupRelation<DTO.Prepare>],
         strict: Bool = true

@@ -30,6 +30,7 @@ struct TestingShared {
         case query
         case policy
         case advancePolicy
+        case readmeExamples
         case end
     }
     

@@ -7,12 +7,21 @@ import PrivilegeModule
 import Logging
 
 extension PrivilegeSystem {
+    /// 用户信息控制器，负责管理用户的基本和扩展信息（UserInfo）。
+    ///
+    /// 允许用户具备多样化的资料存储（例如生日、性别、姓名等），并且支持通过
+    /// `InfoSliceController` 附带更深层次的扩展切片数据（如多个电话号码、多个备用邮箱）。
+    ///
+    /// - `create`: 一次性创建某用户的资料及所有扩展切片数据。
+    /// - `update`: 更新用户主信息的元数据。
+    /// - `delete`: 删除特定用户信息。
     public final class UserInfoController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
         let infoSliceController: InfoSliceController
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         init(
@@ -27,6 +36,13 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 创建带有附加切片信息的完整用户档案。
+        ///
+        /// 允许为特定的用户指派一个综合的配置集，包含了主表的 `UserInfo` 及附表 `ExtendedInfo` 
+        /// （邮箱、电话、住址切片等）。
+        ///
+        /// - Parameter content: `OTOChainRelationBuilder` 构建链式关系的闭包。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
             @OTOChainRelationBuilder<UUID, DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
@@ -34,6 +50,12 @@ extension PrivilegeSystem {
             create(relations: content())
         }
         
+        /// 根据 ID 批量删除用户信息记录。
+        ///
+        /// - Parameters:
+        ///   - infoIds: 要删除的信息记录 UUID 列表。
+        ///   - allSatisfy: 是否必须所有指定的 ID 都存在且删除成功。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
             infoIds: [UUID],
             allSatisfy: Bool = true
@@ -55,6 +77,10 @@ extension PrivilegeSystem {
             .logIfFail(logger: logger)
         }
         
+        /// 更新用户信息主表字段。
+        ///
+        /// - Parameter updater: `DTO.UserInfo<DTO.Prepare>.Updater` 对象。
+        /// - Returns: 更新完成的 `DTO.UserInfo<DTO.Queried>`。
         public func update(
             with updater: DTO.UserInfo<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase> {

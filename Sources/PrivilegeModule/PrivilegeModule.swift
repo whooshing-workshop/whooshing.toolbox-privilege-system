@@ -9,10 +9,41 @@ import ResourceMacros
 import Logging
 import LoggingAdvanced
 
+/// `PrivilegeModule` 的简短命名空间别名。
+///
+/// 该别名可以让资源和权限 DTO 类型更易读：
+///
+/// ```swift
+/// let dto = PM<ResourceList>.ResourceDTO<FileResource, DTO.Prepare>(data: file)
+/// ```
 public typealias PM = PrivilegeModule
 
+/// 服务模块本地的资源权限模块。
+///
+/// `PrivilegeModule` 为一个业务模块保存资源记录和资源权限策略。当
+/// `Arbitrator.judge` 收到 `privilegeIds` 时，中心 `PrivilegeSystem` 会让这些
+/// 模块级 OPA 策略参与最终鉴权。
+///
+/// ```swift
+/// enum ResourceList: String, ResourceTypeList {
+///     case file
+/// }
+///
+/// let module = try await PrivilegeModule<ResourceList>(
+///     moduleId: UUID(),
+///     eventLoop: eventLoop,
+///     dbConfigure: moduleDatabase,
+///     opaConfigure: .init(host: "localhost", port: 8181),
+///     logger: .init(label: "PrivilegeModule"),
+///     debuging: .init(tdeEncrypt: false)
+/// )
+/// ```
+///
+/// - Note: `ResourceList` 是该模块资源类型的封闭集合。每一个具体资源类型都需要
+///   从这个集合中选择一个 case 作为自己的 `type`。
 public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
     @frozen
+    /// 模块启动阶段使用的调试选项。
     public struct Debuging: Sendable {
         /// 是否启用 PostgreSQL tde 加密功能
         ///
@@ -26,15 +57,34 @@ public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
         }
     }
     
+    /// 资源权限的创建、更新、删除和资源绑定控制器。
     public let privilege: PrivilegeController
+    /// 类型化资源的创建、更新、删除和查询控制器。
     public let resource: ResourceController
     
+    /// 执行数据库和 OPA 操作所使用的事件循环。
     public let eventLoop: EventLoop
+    /// 稳定的模块标识，用于 OPA 策略路径和仲裁报告。
     public let moduleId: UUID
     let dbs: Databases
     let db: PGDatabase
     let opa: OPA
     
+    /// 创建并加载资源权限模块。
+    ///
+    /// 初始化器会准备模块数据库，并把持久化的资源权限策略同步到 OPA 中
+    /// `moduleId` 对应的路径下。
+    ///
+    /// - Parameters:
+    ///   - moduleId: 业务模块的稳定标识。
+    ///   - eventLoop: 数据库和 OPA 操作使用的事件循环。
+    ///   - dbConfigure: 模块数据库的 PostgreSQL 连接配置。
+    ///   - opaConfigure: OPA 地址、端口和可选代理配置。
+    ///   - logger: 模块控制器使用的根日志器。
+    ///   - debuging: 可选测试/调试开关。生产环境一般不需要传入。
+    ///
+    /// - Throws: 当数据库迁移、数据库获取、OPA 初始化或策略同步失败时抛出
+    ///   `PrivilegeModule.Errcase.ErrType`。
     public init(
         moduleId: UUID,
         eventLoop: EventLoop,
@@ -101,12 +151,30 @@ public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
     }
 }
 
+/// OPA 服务连接配置。
+///
+/// 同一个鉴权图中的 `PrivilegeSystem` 和各个 `PrivilegeModule` 应连接到同一个 OPA。
 public struct OPAConfiguration: Sendable {
+    /// 连接 OPA 使用的 URL scheme。
     public let scheme: OPA.ConnectionArgument.Scheme
+    /// OPA 主机名或 IP 地址。
     public let host: String
+    /// OPA TCP 端口。
     public let port: Int
+    /// 可选 HTTP 代理，常用于本地调试或 CI 路由。
     public let proxy: HTTPClient.Configuration.Proxy?
     
+    /// 创建 OPA 连接配置。
+    ///
+    /// ```swift
+    /// let opa = OPAConfiguration(host: "localhost", port: 8181)
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - scheme: OPA 连接 scheme，默认使用 HTTP。
+    ///   - host: OPA 主机，默认是 `localhost`。
+    ///   - port: OPA 端口，默认是 `8181`。
+    ///   - proxy: 可选 HTTP 代理。
     public init(
         scheme: OPA.ConnectionArgument.Scheme = .http,
         host: String = "localhost",
@@ -132,6 +200,15 @@ public struct OPAConfiguration: Sendable {
 }
 
 public extension PrivilegeModule {
+    /// 为某个模块 DTO 创建类型安全查询。
+    ///
+    /// ```swift
+    /// let resources = try await module.query(AnyResourceDTO.self)
+    ///     .page(with: 1, size: 20)
+    /// ```
+    ///
+    /// - Parameter type: 要查询的 DTO 类型。大多数情况下 Swift 可以自动推断。
+    /// - Returns: 针对该 DTO 配置好的 `Query.Builder`。
     func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
         .init(query: T.Model.query(on: db))
     }

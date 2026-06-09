@@ -8,6 +8,16 @@ import PrivilegeModule
 import Logging
 
 extension PrivilegeSystem {
+    /// 角色控制器，提供对于角色（Role）的创建、更新、删除以及指派和查询功能。
+    ///
+    /// 角色（Role）在权限系统中代表一组权限或行为的抽象。它可以通过以下方式被指派：
+    /// 1. 直接指派给用户（用户角色）。
+    /// 2. 指派给群组，那么群组内所有成员默认继承该角色（群组角色）。
+    /// 3. 在特定群组上下文下指派给某个用户，即该角色仅在用户身处该群组的语境时生效（组内角色）。
+    ///
+    /// - `create` / `delete` / `update`: 角色的生命周期管理。
+    /// - `appoint` / `dismiss`: 进行角色的指派或撤销指派。支持多对多操作。
+    /// - `roles` / `verify` / `is`: 动态查询和验证角色指派情况。
     public final class RoleController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
@@ -15,6 +25,7 @@ extension PrivilegeSystem {
         let groupController: GroupController
         let policyController: PolicyController
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         init(
@@ -31,6 +42,18 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 批量创建角色并附带 OPA 策略。
+        ///
+        /// 允许在声明角色的同时将一条或多条 `DTO.Policy` 关联到该角色。底层通过事务保证原子性。
+        ///
+        /// - Parameter content: `MTORelationBuilder` 闭包，用于构建角色与策略间的多对一关系。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
+        ///
+        /// ```swift
+        /// try await system.role.create {
+        ///     [rolePolicyDTO] => roleDTO
+        /// }.get()
+        /// ```
         public func create(
             @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
@@ -38,6 +61,10 @@ extension PrivilegeSystem {
             create(relations: content())
         }
         
+        /// 批量创建角色并附带 OPA 策略，返回存入的策略查询结构。
+        ///
+        /// - Parameter content: `MTORelationBuilder` 闭包，用于构建角色与策略间的多对一关系。
+        /// - Returns: 一个字典，Key为角色的 ID，Value 为该角色关联的策略查询对象 `DTO.Policy<Role, DTO.Queried>`。
         public func createWithReturning(
             @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
             _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
@@ -45,6 +72,16 @@ extension PrivilegeSystem {
             createWithReturning(relations: content())
         }
         
+        /// 批量创建裸角色（无策略附带）。
+        ///
+        /// - Parameter roles: 一组准备落库的角色对象。
+        /// - Returns: 成功后返回携带数据库 UUID 的查询对象 `DTO.Role<DTO.Queried>` 数组。
+        ///
+        /// ```swift
+        /// let roles = try await system.role.create(
+        ///     roles: [.init(name: "Admin", description: "Administrator Role")]
+        /// ).get()
+        /// ```
         public func create(
             roles: [DTO.Role<DTO.Prepare>]
         ) -> EventLoopRes<[DTO.Role<DTO.Queried>], Errcase> {
@@ -60,6 +97,12 @@ extension PrivilegeSystem {
                 .logIfFail(logger: logger)
         }
         
+        /// 根据 ID 批量删除角色。
+        ///
+        /// - Parameters:
+        ///   - roleIds: 欲删除角色的 UUID 数组。
+        ///   - allSatisfy: 是否必须满足全部删除（若传入的 ID 存在未删除的部分则报错回滚）。
+        /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
             roleIds: [UUID],
             allSatisfy: Bool = true
@@ -81,6 +124,10 @@ extension PrivilegeSystem {
             .logIfFail(logger: logger)
         }
         
+        /// 更新指定角色的元信息。
+        ///
+        /// - Parameter updater: 更新器对象 `DTO.Role<DTO.Prepare>.Updater`。
+        /// - Returns: 更新完毕的角色对象 `DTO.Role<DTO.Queried>`。
         public func update(
             with updater: DTO.Role<DTO.Prepare>.Updater
         ) -> EventLoopRes<DTO.Role<DTO.Queried>, Errcase> {

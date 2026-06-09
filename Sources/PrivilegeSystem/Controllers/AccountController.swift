@@ -10,11 +10,39 @@ import PrivilegeModule
 import Logging
 
 extension PrivilegeSystem {
-    /// 权限服务层，提供权限相关的业务接口
+    /// 权限服务层，提供权限相关的业务接口，负责账号注册、登录、Token 鉴权和密码修改等。
+    ///
+    /// `AccountController` 是处理 `User` 和 `Token` 数据结构生命周期的核心控制器。
+    /// 它封装了底层数据库交互、双层盐化哈希密码验证、以及对称加密令牌机制，提供安全的无状态凭据验证。
+    ///
+    /// ### 账号注册
+    /// 通过传入含有电子邮箱和一次性哈希密码（如 SHA256 等客户端完成的一次哈希）的 `DTO.User<DTO.Prepare>`，
+    /// 可进行账号注册。控制器会自动在数据库中生成专有随机盐值并执行第二次哈希，从而落库：
+    ///
+    /// ```swift
+    /// let userAuth = try await system.account.register(
+    ///     email: "hello@example.com",
+    ///     password: "hashedPasswordFromClient"
+    /// )
+    /// print("Registered user ID: \(userAuth.user.id)")
+    /// ```
+    ///
+    /// ### 登录与鉴权
+    /// 鉴权机制以令牌（Token）为核心，基于生成对称加密密钥（Crypto.Symm.Key）完成：
+    ///
+    /// ```swift
+    /// // 登录并获取 Token 凭证
+    /// let loginRes = try await system.account.login(by: userDto)
+    /// let tokenStr = loginRes.token.tokenEncrypted // 包含验证信息的加密密文
+    ///
+    /// // 后续基于 tokenStr 发起请求鉴权
+    /// let authKey = try await system.account.authenticate(token: receivedTokenDTO)
+    /// ```
     public final class AccountController: SystemController {
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
+        /// 操作记录日志器。
         public let logger: Logger
         
         init(
@@ -27,6 +55,18 @@ extension PrivilegeSystem {
             self.logger = logger
         }
         
+        /// 注册一个新账户，并将账户数据保存到数据库中。
+        ///
+        /// 注册接口会针对 `password` 字段（假设为已哈希的明文或直接明文）进行加盐（Salt）和双重哈希处理。
+        ///
+        /// - Parameter user: 用于注册的 `DTO.User<DTO.Prepare>` 准备对象，须包含有效的邮箱与基础密码数据。
+        /// - Returns: 一个包裹在事件循环中的 `EventLoopRes` 结果，执行成功将返回注册完毕的 `DTO.User<DTO.Queried>`。
+        ///
+        /// ```swift
+        /// let dto = try DTO.User<DTO.Prepare>(email: "a@a.com", password: "pwd")
+        /// let userQuery = try await system.account.register(for: dto).get()
+        /// print("成功注册！", userQuery.id)
+        /// ```
         public func register(
             for user: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
@@ -63,6 +103,19 @@ extension PrivilegeSystem {
             }.logIfFail(logger: logger, metadata: ["user": .data(user)])
         }
         
+        /// 验证用户凭据并登录，系统将为其生成并返回令牌认证 DTO。
+        ///
+        /// 该方法使用用户的密码和邮箱数据，如果数据库验证一致，则该账户下所有以前活动的登录 Token 都将被删除，
+        /// 重新为其生成一个新的凭证与加密对称密钥（Token）。
+        ///
+        /// - Parameter userData: 具有登录必要数据（如密码与邮箱）的用户对象。
+        /// - Returns: 返回经过授权生成的鉴权 `DTO.Token<DTO.Queried>` 数据。
+        ///
+        /// ```swift
+        /// let loginDto = try DTO.User<DTO.Prepare>(email: "test@domain.com", password: "pwd")
+        /// let token = try await system.account.login(by: loginDto).get()
+        /// print("登录完成，Token的加密体为: \(token.tokenEncrypted)")
+        /// ```
         public func login(
             by userData: DTO.User<DTO.Prepare>
         ) -> EventLoopRes<DTO.Token<DTO.Queried>, Errcase> {
@@ -120,6 +173,19 @@ extension PrivilegeSystem {
             }.logIfFail(logger: logger, metadata: ["user": .data(userData)])
         }
 
+        /// 对传入的 Token 发起鉴权并还原为加密用对称密钥。
+        ///
+        /// 接收请求上下文中提供的 Token 令牌。如果令牌格式合法、在有效期内且在数据库内验证一致，将还原为一个对称密钥。
+        ///
+        /// - Parameter token: 构建自外部的 `DTO.Token<DTO.Prepare>`。
+        /// - Returns: 若鉴权成功，将返回可供解密使用的 `Crypto.Symm.Key` 对称密钥。
+        ///
+        /// ```swift
+        /// // 假装请求中的 header 里拿到 token 字符串
+        /// let reqTokenString = req.headers["Authorization"].first!
+        /// let tokenDto = DTO.Token<DTO.Prepare>(tokenString: reqTokenString)
+        /// let key = try await system.account.authenticate(token: tokenDto).get()
+        /// ```
         public func authenticate(
             token: DTO.Token<DTO.Prepare>
         ) -> EventLoopRes<Crypto.Symm.Key, Errcase> {
@@ -181,6 +247,15 @@ extension PrivilegeSystem {
             }.logIfFail(logger: logger, metadata: ["token": .data(token)])
         }
         
+        /// 为已知用户修改密码（以 Data 格式提供新哈希）。
+        ///
+        /// 用户的现有凭据 `userData` 中必须包含正确的旧密码哈希。
+        /// 密码替换将触发重新生成盐值的操作。
+        ///
+        /// - Parameters:
+        ///   - userData: `DTO.User` 实例，提供用户的电子邮箱及**当前正确的哈希密码**。
+        ///   - hashedPasswd: Data 格式的新的哈希密码流。
+        /// - Returns: `DTO.User<DTO.Queried>` 用户新的查询对象。
         public func changePassword(
             for userData: DTO.User<DTO.Prepare>,
             to hashedPasswd: Data
@@ -188,6 +263,22 @@ extension PrivilegeSystem {
             changePassword(for: userData, to: hashedPasswd.base64EncodedString())
         }
         
+        /// 为已知用户修改密码（以 String 格式提供新哈希）。
+        ///
+        /// 用户的现有凭据 `userData` 中必须包含正确的旧密码哈希。验证通过后，
+        /// 系统将为新密码 `hashedPasswd` 生成全新的随机盐值并覆盖记录。
+        ///
+        /// - Parameters:
+        ///   - userData: `DTO.User` 实例，提供用户的电子邮箱及**当前正确的哈希密码**。
+        ///   - hashedPasswd: Base64 或其他格式编码的新字符串哈希密码。
+        /// - Returns: `DTO.User<DTO.Queried>` 密码已更改的查询对象。
+        ///
+        /// ```swift
+        /// let newUserData = try await system.account.changePassword(
+        ///     for: oldUserDto,
+        ///     to: "brandNewHashedPwdStr"
+        /// ).get()
+        /// ```
         public func changePassword(
             for userData: DTO.User<DTO.Prepare>,
             to hashedPasswd: String

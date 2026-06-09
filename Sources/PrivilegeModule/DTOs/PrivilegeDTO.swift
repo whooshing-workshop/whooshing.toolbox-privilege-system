@@ -10,13 +10,23 @@ import ResourceMacros
 import AnyCodable
 
 public extension PM {
+    /// 准备写入数据库的资源权限 DTO。
     typealias PPrivilegeDTO = PrivilegeDTO<DTO.Prepare>
+    /// 已从数据库查询出的资源权限 DTO。
     typealias QPrivilegeDTO = PrivilegeDTO<DTO.Queried>
     
+    /// 资源权限 DTO。
+    ///
+    /// 每个资源权限都包含一段 OPA policy。创建后可通过
+    /// `PrivilegeController.attach` 绑定到资源，并在 `Arbitrator.judge` 的
+    /// `privilegeIds` 参数中参与最终鉴权。
     struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable {
-        let name: String?
-        let description: String?
-        let policy: String
+        /// 权限名称。
+        public let name: String?
+        /// 权限说明。
+        public let description: String?
+        /// OPA 策略表达式。控制器会自动包装 package、import 和默认 allow。
+        public let policy: String
         
         @DTO.Passive public internal(set) var id: UUID
         @DTO.Passive public internal(set) var createdAt: Date
@@ -41,6 +51,15 @@ public extension PM {
 }
 
 public extension PM.PrivilegeDTO where T == DTO.Prepare {
+    /// 创建一个待保存的资源权限。
+    ///
+    /// ```swift
+    /// let privilege = PM<ResourceList>.PPrivilegeDTO(
+    ///     name: "ReadFile",
+    ///     description: "允许读取文件",
+    ///     policy: "allow if { input.operation == \"read\" }"
+    /// )
+    /// ```
     init(
         name: String? = nil,
         description: String? = nil,
@@ -85,7 +104,9 @@ extension PM.PrivilegeDTO where T == DTO.Prepare {
 }
 
 public extension PM.PrivilegeDTO where T == DTO.Prepare {
+    /// 资源权限更新器。
     struct Updater: @unchecked Sendable {
+        /// 要更新的资源权限 ID。
         public let privilegeId: UUID
         package var id: UUID { privilegeId }
         
@@ -161,18 +182,21 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
 extension PM.PrivilegeDTO.Updater: DTOUpdater {}
 
 public extension PM.PrivilegeDTO.Updater {
+    /// 更新权限名称。
     func update(name: @escaping @autoclosure () throws -> String?) -> Self {
         generate(key: \.name) { builder, _ in
             builder.set(\.$name, to: try name())
         }
     }
     
+    /// 更新权限说明。
     func update(description: @escaping @autoclosure () throws -> String?) -> Self {
         generate(key: \.description) { builder, _ in
             builder.set(\.$description, to: try description())
         }
     }
     
+    /// 更新权限策略，并同步更新 OPA 中对应的策略内容。
     func update(policy: @escaping @autoclosure () throws -> String) -> Self {
         generate(
             key: \.policy,
@@ -185,6 +209,7 @@ public extension PM.PrivilegeDTO.Updater {
 }
 
 public extension PM.PrivilegeDTO.Updater {
+    /// 基于当前数据库值更新权限名称。
     func update(name: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) -> Self {
         generate(needsPeek: true, key: \.name) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
@@ -192,6 +217,7 @@ public extension PM.PrivilegeDTO.Updater {
         }
     }
     
+    /// 基于当前数据库值更新权限说明。
     func update(description: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) -> Self {
         generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
@@ -199,6 +225,7 @@ public extension PM.PrivilegeDTO.Updater {
         }
     }
     
+    /// 基于当前数据库值更新权限策略，并同步更新 OPA 中对应的策略内容。
     func update(policy: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String) -> Self {
         generate(
             needsPeek: true,

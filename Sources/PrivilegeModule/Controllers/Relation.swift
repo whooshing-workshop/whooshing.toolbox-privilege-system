@@ -1,40 +1,74 @@
 import Logging
 import LoggingAdvanced
 
+/// 控制器 result builder 使用的一对一关系。
+///
+/// 使用 `=>` 运算符创建关系：
+///
+/// ```swift
+/// let relation = role => user
+/// ```
 public struct OTORelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+    /// 左侧对象。
     public let left: Left
+    /// 右侧对象。
     public let right: Right
     
+    /// 创建一对一关系。
     public init(left: Left, right: Right) {
         self.left = left
         self.right = right
     }
 }
 
+/// 控制器 result builder 使用的多对一关系。
+///
+/// ```swift
+/// [policy] => role.id
+/// ```
 public struct MTORelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+    /// 左侧对象集合。
     public let left: [Left]
+    /// 右侧对象。
     public let right: Right
     
+    /// 创建多对一关系。
     public init(left: [Left], right: Right) {
         self.left = left
         self.right = right
     }
 }
 
+/// 控制器 result builder 使用的一对多关系。
+///
+/// ```swift
+/// role => [userA, userB]
+/// ```
 public struct OTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+    /// 左侧对象。
     public let left: Left
+    /// 右侧对象集合。
     public let right: [Right]
     
+    /// 创建一对多关系。
     public init(left: Left, right: [Right]) {
         self.left = left
         self.right = right
     }
 }
 
+/// 控制器 result builder 使用的多对多关系。
+///
+/// ```swift
+/// [privilege] => [AnyResourceDTO(resource)]
+/// ```
 public struct MTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+    /// 左侧对象集合。
     public let left: [Left]
+    /// 右侧对象集合。
     public let right: [Right]
     
+    /// 创建多对多关系。
     public init(left: [Left], right: [Right]) {
         self.left = left
         self.right = right
@@ -55,18 +89,22 @@ precedencegroup MappingPrecedence {
 
 infix operator => : MappingPrecedence
 
+/// 构建一对一关系。
 public func => <L, R>(left: L, right: R) -> OTORelation<L, R> {
     .init(left: left, right: right)
 }
 
+/// 构建多对一关系。
 public func => <L, R>(left: [L], right: R) -> MTORelation<L, R> {
     .init(left: left, right: right)
 }
 
+/// 构建一对多关系。
 public func => <L, R>(left: L, right: [R]) -> OTMRelation<L, R> {
     .init(left: left, right: right)
 }
 
+/// 构建多对多关系。
 public func => <L, R>(left: [L], right: [R]) -> MTMRelation<L, R> {
     .init(left: left, right: right)
 }
