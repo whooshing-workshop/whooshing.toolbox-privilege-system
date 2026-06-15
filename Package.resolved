@@ -1,5 +1,5 @@
 {
-  "originHash" : "0430d773864a613db5bc3b0c00cdfaa7ec2f02d1b5d7b8391aaf27fa72bc2b65",
+  "originHash" : "738a639be2edc3830b23f987a36c62d4a633169873a43655e8d5928a98fa47cd",
   "pins" : [
     {
       "identity" : "anycodable",
@@ -213,8 +213,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
       "state" : {
-        "revision" : "2aed77ae5ec9a86d8fe42c12275e4c2653a286ee",
-        "version" : "1.13.1"
+        "revision" : "92448c359f00ebe36ae97d3bd9086f13c7692b5a",
+        "version" : "1.13.2"
       }
     },
     {
@@ -310,10 +310,10 @@
     {
       "identity" : "swift-system",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-system",
+      "location" : "https://github.com/apple/swift-system.git",
       "state" : {
-        "revision" : "669763cfd5806a67e21972d7e5e2d6b80b1ea985",
-        "version" : "1.6.5"
+        "revision" : "7502b711c92a17741fa625d722b0ccbd595d8ed1",
+        "version" : "1.7.2"
       }
     },
     {
@@ -339,8 +339,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/whooshing-workshop/whooshing-vapor.git",
       "state" : {
-        "revision" : "4509bbf3fd9d800fbf379af3eacf03f77322a5e1",
-        "version" : "1.1.0"
+        "revision" : "230fd07405494ffb8f786c375a6f8d67c381e2ae",
+        "version" : "1.1.2"
       }
     },
     {
@@ -348,8 +348,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git",
       "state" : {
-        "revision" : "10e1abdaca8b4118007bc0a9cbbcfc2658b97feb",
-        "version" : "1.5.2"
+        "revision" : "3dca6053273c7c3cc655f91f3e34fd8c45795c9d",
+        "version" : "1.5.9"
       }
     },
     {
@@ -366,8 +366,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git",
       "state" : {
-        "revision" : "10a033c361ab5a3a42707690c3bab18bd81d9d2c",
-        "version" : "1.0.7"
+        "revision" : "7028a3bb0b766d91e42cf41e6843d19e4874b08a",
+        "version" : "1.0.9"
       }
     }
   ],

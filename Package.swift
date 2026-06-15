@@ -23,8 +23,8 @@ let package = Package(
         .library( name: "PrivilegeModule", targets: ["PrivilegeModule"] )
     ],
     dependencies: [
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.5.2"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.0.7"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.5.9"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.0.9"),
         .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.3"),
         .package(url: "https://github.com/Flight-School/AnyCodable", from: "0.6.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),

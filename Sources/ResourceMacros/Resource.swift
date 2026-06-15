@@ -100,15 +100,3 @@ public struct AnyOperation: Sendable, Decodable, Loggerable, CustomStringConvert
         self.rawValue
     }
 }
-
-package func formatQuery(_ query: [String: AnyCodable]) -> String {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    
-    do {
-        let data = try encoder.encode(query)
-        return String(data: data, encoding: .utf8) ?? "\(query)"
-    } catch {
-        return "\(query)"
-    }
-}
