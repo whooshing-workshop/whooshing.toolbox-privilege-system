@@ -10,87 +10,116 @@ import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
 
-package typealias UserModel = User
-
-public typealias PUser = DTO.User<DTO.Prepare>
-public typealias QUser = DTO.User<DTO.Queried>
-
-public extension DTO {
-    struct User<T: Status>: DTOModel, Sendable {
-        public let email: String
-        
-        @Protect public internal(set) var hashedPasswd: String
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var createdAt: Date
-        @Passive public internal(set) var updatedAt: Date
-        
-        package typealias AssociatedModel = UserModel
-        private let m: AssociatedModel?
-        
-        init(
-            _email: String,
-            _model: AssociatedModel?
-        ) {
-            self.email = _email
-            self.m = _model
-        }
-    }
-}
-
-public extension DTO.User where T == DTO.Prepare {
-    // 这里的 hashedPasswd 只有第一层密码加密，存入数据库之前要进行第二次加密
-    init(email: String, hashedPasswd: String) {
-        self = Self.init(_email: email, _model: nil)
-        self.hashedPasswd = hashedPasswd
+public struct PUser: DTO.Prepare {
+    public typealias QueriedModel = QUser
+    public let id: UUID?
+    public let email: String
+    public let hashedPassword: String
+    
+    // 这里的 hashedPassword 只有第一层密码加密，存入数据库之前要进行第二次加密
+    public init(
+        id: UUID? = nil,
+        email: String,
+        hashedPassword: String
+    ) {
+        self.id = id
+        self.email = email
+        self.hashedPassword = hashedPassword
     }
     
-    init(email: String, hashedPasswd: Data) {
-        self = Self.init(email: email, hashedPasswd: hashedPasswd.base64EncodedString())
-    }
-}
-
-extension DTO.User where T == DTO.Queried {
-    var model: User {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
+    public init(email: String, hashedPassword: Data) {
+        self = Self.init(email: email, hashedPassword: hashedPassword.base64EncodedString())
     }
     
-    public static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internal) {
-            var n = Self.init(
-                _email: model.email,
-                _model: model
-            )
-            n.$id = try model.requireID()
-            n.$createdAt = model.createdAt
-            n.$updatedAt = model.updatedAt
-            return n
-        }
+    // 不记录 hashed_password 属性
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .email: .init(self.email)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case email
+        case hashedPassword = "hashed_password"
     }
 }
 
-extension DTO.User where T == DTO.Prepare {
+public struct QUser: DTO.Queried {
+    public typealias PrepareModel = PUser
+    public let id: UUID
+    public let email: String
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package let __m: User?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(id),
+        .email: .init(email),
+        .createdAt: .init(createdAt),
+        .updatedAt: .init(updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case email
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(
+        id: UUID,
+        email: String,
+        createdAt: Date,
+        updatedAt: Date,
+        model: SQLModel?
+    ) {
+        self.id = id
+        self.email = email
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.email = try container.decode(String.self, forKey: .email)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.__m = nil
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.email, forKey: .email)
+        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension PUser: __Prepare {
     func raw() -> Res<User, PrivilegeSystem.Errcase> {
         .init(throws: .userDTOFailed, category: .internal) {
             let user = User()
+            user.id = id
             user.email = email
             // 为用户创建一个用户加密密钥
             user.key = Crypto.Symm.makeKey().data
-            (user.salt, user.hashedPasswd) = try Self.doubleEncode(hashedPasswd: hashedPasswd).get()
+            (user.salt, user.hashedPassword) = try Self.doubleEncode(hashedPassword: hashedPassword).get()
             return user
         }
     }
-    
-    static func doubleEncode(hashedPasswd: String) -> Res<(salt: Data, passwdEncoded: String), PrivilegeSystem.Errcase> {
+        
+    static func doubleEncode(hashedPassword: String) -> Res<(salt: Data, passwdEncoded: String), PrivilegeSystem.Errcase> {
         .init(throws: .userDTOFailed, category: .internal) {
             // 生成随即盐
             let salt = Crypto.randomDataGenerate()
             // 对用户密码进行第二重加盐哈希
             let passwd = try required(throws: PrivilegeSystem.Errcase.userRegisterFailed, "对密码进行二次哈希时失败", category: .internal) {
-                try Crypto.hash(Base64String(hashedPasswd).dataRes.get() + salt)
+                try Crypto.hash(Base64String(hashedPassword).dataRes.get() + salt)
             }
             
             return (salt, passwd.base64EncodedString())
@@ -98,53 +127,22 @@ extension DTO.User where T == DTO.Prepare {
     }
 }
 
-extension User: ModelAuthenticatable {
-    public static let usernameKey: KeyPath<User, Field<String>> = \User.$email
-    public static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPasswd
-    
-    public func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
-        // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果
-        let passwd = try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
-            try Base64String(password).dataRes.get()
-        }
-        // 对客户端密码设置后置盐，并再次哈希
-        let hashed = Crypto.hash(passwd + self.salt)
-        return try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
-            try hashed == Base64String(self.hashedPasswd).dataRes.get()
+extension QUser: __Queried {
+    public typealias Failure = PrivilegeSystem.Errcase
+    public static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
+        .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                email: model.email,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
+            )
         }
     }
 }
 
-extension DTO.User: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case email
-        case hashedPasswd = "hashed_passwd"
-        case id
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(email, forKey: .email)
-        if T.self == DTO.Queried.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
-        }
-    }
-}
-
-extension DTO.User: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.email = try container.decode(String.self, forKey: .email)
-        self.m = nil
-        self.hashedPasswd = try container.decode(String.self, forKey: .hashedPasswd)
-    }
-}
-
-extension DTO.User: Query.Queriable where T == DTO.Queried {
+extension QUser: Query.Queriable {
     public typealias Model = User
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -163,86 +161,21 @@ extension DTO.User: Query.Queriable where T == DTO.Queried {
     }
 }
 
-extension DTO.User: Loggerable, CustomStringConvertible {
-    public var description: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "email": AnyCodable(self.email),
-                "hashed_passwd": AnyCodable("[PROTECTED]")
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "email": AnyCodable(self.email),
-                "hashed_passwd": AnyCodable("[PROTECTED]"),
-                "created_at": AnyCodable("\(self.createdAt)"),
-                "updated_at": AnyCodable("\(self.updatedAt)")
-            ]
-        }
+// MARK: - ModelAuthenticatable
 
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
+extension User: ModelAuthenticatable {
+    public static let usernameKey: KeyPath<User, Field<String>> = \User.$email
+    public static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPassword
     
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "User(\(id.shortString), \(email))" :
-            "User(\(email))"
-    }
-}
-
-extension DTO.User: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(email)
-            hasher.combine(hashedPasswd)
-        } else {
-            hasher.combine(email)
-            hasher.combine(id)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
+    public func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+        // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果
+        let passwd = try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
+            try Base64String(password).dataRes.get()
         }
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.email == rhs.email &&
-            lhs.hashedPasswd == rhs.hashedPasswd
-        } else {
-            lhs.email == rhs.email &&
-            lhs.id == rhs.id &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
+        // 对客户端密码设置后置盐，并再次哈希
+        let hashed = Crypto.hash(passwd + self.salt)
+        return try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
+            try hashed == Base64String(self.hashedPassword).dataRes.get()
         }
-    }
-}
-
-public extension DTO.User where T == DTO.Prepare {
-    func like(_ rhs: QUser) -> Bool {
-        self.email == rhs.email
-    }
-}
-
-public extension DTO.User where T == DTO.Queried {
-    func like(_ rhs: PUser) -> Bool {
-        self.email == rhs.email
-    }
-}
-
-public extension Collection where Element == PUser {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QUser {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-public extension Collection where Element == QUser {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PUser {
-        self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }

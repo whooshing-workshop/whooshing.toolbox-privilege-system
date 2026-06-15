@@ -9,12 +9,12 @@ import PrivilegeModule
 extension PrivilegeSystem.InfoSliceController {
     public func create<T>(
         for infoId: UUID,
-        extendedInfos: [DTO.InfoSlice<T, DTO.Prepare>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.InfoSlice<T, DTO.Queried>] where T.Value == String {
+        extendedInfos: [PInfoSlice<T>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QInfoSlice<T>] where T.Value == String {
         try await create(for: infoId, extendedInfos: extendedInfos).get()
     }
 
-    public func delete<T: DTO.UserInfoModel>(
+    public func delete<T: UserInfoModel>(
         infoIds: [UUID],
         allSatisfy: Bool = true,
         type: T.Type = T.self
@@ -23,12 +23,12 @@ extension PrivilegeSystem.InfoSliceController {
     }
 
     public func update<T>(
-        with updater: DTO.InfoSlice<T, DTO.Prepare>.Updater
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.InfoSlice<T, DTO.Queried> {
+        with updater: PInfoSlice<T>.Updater
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QInfoSlice<T> {
         try await update(with: updater).get()
     }
 
-    public func fetch(for userId: UUID) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.ExtendedInfo<DTO.Queried> {
+    public func fetch(for userId: UUID) async throws(PrivilegeSystem.Errcase.ErrType) -> QExtendedInfo {
         try await fetch(for: userId).get()
     }
 }

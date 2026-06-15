@@ -12,7 +12,7 @@ public final class User: PGModel, @unchecked Sendable {
     public struct Fields: PGFields {
         let id = PGField("id", .uuid)                               .primary
         let email = PGField("email", .string)                       .required.unique
-        let hashedPasswd = PGField("hashed_passwd", .string)        .required
+        let hashedPassword = PGField("hashed_password", .string)    .required
         let key = PGField("key", .data)                             .required
         let salt = PGField("salt", .data)                           .required
         let createdAt = PGField("created_at", .datetime)            .required
@@ -26,11 +26,11 @@ public final class User: PGModel, @unchecked Sendable {
     @ID(key: .id)                               public var id: UUID?
     
     @Field(fields.email)                        var email: String
-    @Field(fields.hashedPasswd)                 var hashedPasswd: String
+    @Field(fields.hashedPassword)               var hashedPassword: String
     @Field(fields.key)                          var key: Data
     @Field(fields.salt)                         var salt: Data
     
-    @OptionalChild(for: \Token.$user)           var token: Token!
+    @OptionalChild(for: \__Token.$user)         var token: __Token!
     
     @Siblings(
         through: UserGroupPivot.self,

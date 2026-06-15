@@ -8,8 +8,8 @@ import PrivilegeModule
 
 extension PrivilegeSystem.UserInfoController {
     public func create(
-        @OTOChainRelationBuilder<UUID, DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>
-        _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
+        @OTOChainRelationBuilder<UUID, PUserInfo, PExtendedInfo>
+        _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await create(content).get()
     }
@@ -22,13 +22,13 @@ extension PrivilegeSystem.UserInfoController {
     }
 
     public func update(
-        with updater: DTO.UserInfo<DTO.Prepare>.Updater
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.UserInfo<DTO.Queried> {
+        with updater: PUserInfo.Updater
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QUserInfo {
         try await update(with: updater).get()
     }
 
     public func create(
-        relations: [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
+        relations: [OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await create(relations: relations).get()
     }

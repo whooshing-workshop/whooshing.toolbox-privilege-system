@@ -2435,7 +2435,7 @@ struct PolicyTesting {
         
         let jsonResource = JsonResource(name: "public_doc.txt", content: ["isPrivate": AnyCodable(false), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         // Privilege 策略：要求 input.resource.isPrivate == false 且 operation == edit
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -2510,7 +2510,7 @@ struct PolicyTesting {
         // 这是一个私有文件
         let jsonResource = JsonResource(name: "secret_keys.env", content: ["isPrivate": AnyCodable(true), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         // Privilege 策略：要求 input.resource.isPrivate == false
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -2584,7 +2584,7 @@ struct PolicyTesting {
         
         let jsonResource = JsonResource(name: "user_home", content: ["ownerId": AnyCodable(user.id.uuidString), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         // Privilege 策略：仅要求操作者是属主 (无特定 operation 要求，只要通过 role)
         let privileges = try await m.privilege.createWithReturning(privileges: [

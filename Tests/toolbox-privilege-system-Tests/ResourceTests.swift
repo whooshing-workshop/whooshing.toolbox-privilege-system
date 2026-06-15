@@ -222,7 +222,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         // 测试 Attach
         try await m.privilege.attach {
@@ -259,7 +259,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         // 先 Attach
         try await m.privilege.attach {
@@ -270,7 +270,7 @@ struct ResourceTests {
         let attachedPrivileges = try await m.privilege.privilege(attachedTo: resourceDTO)
         #expect(attachedPrivileges.contains(where: { $0.id == privilegeDTO.id }))
         
-        // 2. 测试 privilege(attachedTo:) -> AnyResourceDTO
+        // 2. 测试 privilege(attachedTo:) -> AnyResource
         let attachedPrivilegesAny = try await m.privilege.privilege(attachedTo: anyResourceDTO)
         #expect(attachedPrivilegesAny.contains(where: { $0.id == privilegeDTO.id }))
         
@@ -278,7 +278,7 @@ struct ResourceTests {
         let isAttached = try await m.privilege.is(privilege: privilegeDTO, attachedTo: resourceDTO)
         #expect(isAttached == true)
         
-        // 4. 测试 is(privilege:attachedTo:) -> AnyResourceDTO
+        // 4. 测试 is(privilege:attachedTo:) -> AnyResource
         let isAttachedAny = try await m.privilege.is(privilege: privilegeDTO, attachedTo: anyResourceDTO)
         #expect(isAttachedAny == true)
         
@@ -318,7 +318,7 @@ struct ResourceTests {
         let privilegeId = privilegeDTO.id
         
         // 1. 测试更新 name 和 description (常量形式)
-        let updater1 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
+        let updater1 = PM<ResourceList>.PPrivilege.Updater(privilegeId: privilegeId)
             .update(name: "Updated Name")
             .update(description: "Updated Description")
         
@@ -328,7 +328,7 @@ struct ResourceTests {
         #expect(updated1.policy == "allow if { true }") // policy 不变
         print("HELLO")
         // 2. 测试更新 policy (常量形式)
-        let updater2 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
+        let updater2 = PM<ResourceList>.PPrivilege.Updater(privilegeId: privilegeId)
             .update(policy: "allow if { false }")
         print("HELLO2")
         let updated2 = try await m.privilege.update(with: updater2)
@@ -336,7 +336,7 @@ struct ResourceTests {
         #expect(updated2.policy == "allow if { false }")
         
         // 3. 测试依赖原值的更新 (闭包形式)
-        let updater3 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>.Updater(privilegeId: privilegeId)
+        let updater3 = PM<ResourceList>.PPrivilege.Updater(privilegeId: privilegeId)
             .update(name: { $0.name! + " - V2" })
             .update(policy: { _ in "allow if { input.operation == \"edit\" }" })
         

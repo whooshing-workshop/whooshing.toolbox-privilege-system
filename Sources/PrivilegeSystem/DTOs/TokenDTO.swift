@@ -9,117 +9,212 @@ import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
 
-package typealias TokenModel = Token
-
-public typealias PToken = DTO.Token<DTO.Prepare>
-public typealias QToken = DTO.Token<DTO.Queried>
-
-public extension DTO {
-    struct Token<T: Status>: DTOModel, Sendable {
-        public let credential: String
-        
-        @Protect public internal(set) var tokenEncrypted: Data
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var token: String
-        @Passive public internal(set) var userId: UUID
-        @Passive public internal(set) var valid: Bool
-        @Passive public internal(set) var expireAfter: Int
-        @Passive public internal(set) var createdAt: Date
-        
-        package typealias AssociatedModel = TokenModel
-        private let m: AssociatedModel?
-        
-        init(
-            _credential: String,
-            _model: AssociatedModel?
-        ) {
-            self.credential = _credential
-            self.m = _model
-            self.expireAfter = 7 * 24 * 60      // 7 days, minute as unit
-        }
-    }
-}
-
-public extension DTO.Token where T == DTO.Prepare {
-    init(
+public struct Token: DTO.Model {
+    public let credential: String
+    public let tokenEncrypted: Data
+    
+    public init(
         credential: String,
         tokenEncrypted: Data
     ) {
-        self = Self.init(_credential: credential, _model: nil)
+        self.credential = credential
         self.tokenEncrypted = tokenEncrypted
     }
-}
-
-public extension DTO.Token where T == DTO.Queried {
-    func toPrepare() -> Res<DTO.Token<DTO.Prepare>, PrivilegeSystem.Errcase> {
-        .init { () throws(PrivilegeSystem.Errcase.ErrType) in
-            let keyData = try required(throws: PrivilegeSystem.Errcase.tokenDTOFailed, "密钥字节解析失败", category: .external) {
-                try Base64String(self.token).dataRes.get()
-            }
-            let key = Crypto.Symm.Key.new(data: keyData)
-            return .init(
-                credential: self.credential,
-                tokenEncrypted: try required(throws: PrivilegeSystem.Errcase.tokenDTOFailed, "密钥加密失败", category: .external) {
-                    try Crypto.Symm.encrypt(key, key: key).get()
-                }
-            )
-        }
+    
+    public var maps: [CodingKeys: AnyCodable] {[
+        .credential: .init(self.credential),
+        .tokenEncrypted: .init("<Protected>")
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case credential
+        case tokenEncrypted = "token_encrypted"
     }
 }
 
-extension DTO.Token where T == DTO.Prepare {
-    init(for userId: UUID) throws(PrivilegeSystem.Errcase.ErrType) {
-        let tokenKey = Crypto.Symm.makeKey()
-        self = Self.init(
-            _credential: Crypto.randomDataGenerate(length: 16).base64EncodedString(),
-            _model: nil
-        )
-        
-        self.token = tokenKey.data.base64EncodedString()
+public struct PToken: DTO.Prepare {
+    public typealias QueriedModel = QToken
+    public let id: UUID?
+    public let credential: String
+    public var token: String {
+        guard let t = __token else {
+            fatalError("受保护属性，不允许日志打印或进行网络通讯")
+        }
+        return t
+    }
+    private let __token: String?
+    public let userId: UUID
+    public let valid: Bool
+    public let expireAfter: Int
+    
+    init(
+        id: UUID? = nil,
+        for userId: UUID,
+        credential: String = Crypto.randomDataGenerate(length: 16).base64EncodedString(),
+        token: String = Crypto.Symm.makeKey().data.base64EncodedString(),
+        valid: Bool = true,
+        expireAfter: Int = 7 * 24 * 60      // 7 days, minute as unit
+    ) {
+        self.id = id
+        self.credential = credential
+        self.__token = token
         self.userId = userId
-    }
-}
-
-extension DTO.Token where T == DTO.Queried {
-    var model: Token {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
+        self.valid = valid
+        self.expireAfter = expireAfter
     }
     
-    public static func make(from model: Token) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .tokenDTOFailed, category: .internal) {
-            var n = Self.init(
-                _credential: model.credential,
-                _model: model
-            )
-            n.$id = try model.requireID()
-            n.$token = model.token
-            n.$userId = model.$user.id
-            n.$valid = model.valid
-            n.$expireAfter = model.expireAfter
-            n.$createdAt = model.createdAt
-            return n
-        }
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .credential: .init(self.credential),
+        .userId: .init(self.userId),
+        .valid: .init(self.valid),
+        .expireAfter: .init(self.expireAfter)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case credential
+        case userId = "user_id"
+        case valid
+        case expireAfter = "expire_after"
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id)
+        self.credential = try container.decode(String.self, forKey: .credential)
+        self.userId = try container.decode(UUID.self, forKey: .userId)
+        self.valid = try container.decode(Bool.self, forKey: .valid)
+        self.expireAfter = try container.decode(Int.self, forKey: .expireAfter)
+        self.__token = nil  // 通过编解码后赋为空值，保护属性
+    }
+    
+    // 不编码 token 保护属性
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(self.id, forKey: .id)
+        try container.encode(self.credential, forKey: .credential)
+        try container.encode(self.userId, forKey: .userId)
+        try container.encode(self.valid, forKey: .valid)
+        try container.encode(self.expireAfter, forKey: .expireAfter)
     }
 }
 
-extension DTO.Token where T == DTO.Prepare {
-    func raw() -> Token {
-        let token = Token()
+public struct QToken: DTO.Queried {
+    public typealias PrepareModel = PToken
+    public let id: UUID
+    public let credential: String
+    public var token: String {
+        guard let t = __token else {
+            fatalError("受保护属性，不允许日志打印或进行网络通讯")
+        }
+        return t
+    }
+    public let userId: UUID
+    public let valid: Bool
+    public let expireAfter: Int
+    public let createdAt: Date
+    
+    private let __token: String?
+    
+    package let __m: __Token?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .credential: .init(self.credential),
+        .id: .init(self.id),
+        .userId: .init(self.userId),
+        .valid: .init(self.valid),
+        .expireAfter: .init(self.expireAfter),
+        .createdAt: .init(self.createdAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case credential
+        case id
+        case userId = "user_id"
+        case valid
+        case expireAfter = "expire_after"
+        case createdAt = "created_at"
+    }
+    
+    init(
+        id: UUID,
+        credential: String,
+        token: String,
+        userId: UUID,
+        valid: Bool,
+        expireAfter: Int,
+        createdAt: Date,
+        model: SQLModel?
+    ) {
+        self.credential = credential
+        self.id = id
+        self.__token = token
+        self.userId = userId
+        self.valid = valid
+        self.expireAfter = expireAfter
+        self.createdAt = createdAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.credential = try container.decode(String.self, forKey: .credential)
+        self.userId = try container.decode(UUID.self, forKey: .userId)
+        self.valid = try container.decode(Bool.self, forKey: .valid)
+        self.expireAfter = try container.decode(Int.self, forKey: .expireAfter)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.__token = nil  // 通过编解码后赋为空值，保护属性
+        self.__m = nil
+    }
+    
+    // 不编码 token 保护属性
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.credential, forKey: .credential)
+        try container.encode(self.userId, forKey: .userId)
+        try container.encode(self.valid, forKey: .valid)
+        try container.encode(self.expireAfter, forKey: .expireAfter)
+        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+    }
+}
+
+extension PToken: __Prepare {
+    func raw() -> SQLModel {
+        let token = SQLModel()
+        token.id = id
         token.$user.id = userId
         token.credential = credential
         token.token = self.token
         token.expireAfter = expireAfter
-        token.valid = true
+        token.valid = valid
         return token
     }
 }
 
-extension DTO.Token: Query.Queriable where T == DTO.Queried {
-    public typealias Model = Token
+extension QToken: __Queried {
+    package typealias Failure = PrivilegeSystem.Errcase
+    public static func make(from model: __Token) -> Res<Self, PrivilegeSystem.Errcase> {
+        .init(throws: .tokenDTOFailed, category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                credential: model.credential,
+                token: model.token,
+                userId: model.$user.id,
+                valid: model.valid,
+                expireAfter: model.expireAfter,
+                createdAt: model.createdAt,
+                model: model
+            )
+        }
+    }
+}
+
+extension QToken: Query.Queriable {
+    public typealias Model = __Token
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.credential: \.$credential,
@@ -140,136 +235,5 @@ extension DTO.Token: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$valid)
             .field(Model.self, \.$expireAfter)
             .field(Model.self, \.$createdAt)
-    }
-}
-
-extension DTO.Token: CustomStringConvertible, Loggerable {
-    public var description: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "credential": AnyCodable(credential),
-                "token": AnyCodable("[PROTECTED_KEY]"),
-                "token_encrypted": AnyCodable("[BINARY_DATA]"),
-                "expire_after": AnyCodable(self.expireAfter)
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "user_id": AnyCodable("\(self.userId)"),
-                "credential": AnyCodable(credential),
-                "token": AnyCodable("[PROTECTED_KEY]"),
-                "token_encrypted": AnyCodable("[BINARY_DATA]"),
-                "valid": AnyCodable(self.valid),
-                "expire_after": AnyCodable(self.expireAfter),
-                "created_at": AnyCodable("\(self.createdAt)")
-            ]
-        }
-
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "Token(\(id.shortString), cred:\(credential))" :
-            "Token(cred:\(credential))"
-    }
-}
-
-extension DTO.Token: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(credential)
-            hasher.combine(tokenEncrypted)
-        } else {
-            hasher.combine(credential)
-            hasher.combine(id)
-            hasher.combine(token)
-            hasher.combine(userId)
-            hasher.combine(valid)
-            hasher.combine(expireAfter)
-            hasher.combine(createdAt)
-        }
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.credential == rhs.credential &&
-            lhs.tokenEncrypted == rhs.tokenEncrypted
-        } else {
-            lhs.credential == rhs.credential &&
-            lhs.id == rhs.id &&
-            lhs.token == rhs.token &&
-            lhs.userId == rhs.userId &&
-            lhs.valid == rhs.valid &&
-            lhs.expireAfter == rhs.expireAfter &&
-            lhs.createdAt == rhs.createdAt
-        }
-    }
-}
-
-public extension DTO.Token where T == DTO.Prepare {
-    func like(_ rhs: QToken) -> Bool {
-        self.credential == rhs.credential
-    }
-}
-
-public extension DTO.Token where T == DTO.Queried {
-    func like(_ rhs: PToken) -> Bool {
-        self.credential == rhs.credential
-    }
-}
-
-public extension Collection where Element == PToken {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QToken {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-public extension Collection where Element == QToken {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PToken {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-extension DTO.Token: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case credential
-        case tokenEncrypted = "token_encrypted"
-        case token
-        case userId = "user_id"
-        case valid
-        case expireAfter = "expire_after"
-        case id
-        case createdAt = "created_at"
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(credential, forKey: .credential)
-        if T.self == DTO.Queried.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(token, forKey: .token)
-            try container.encode(userId, forKey: .userId)
-            try container.encode(valid, forKey: .valid)
-            try container.encode(expireAfter, forKey: .expireAfter)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-        }
-    }
-}
-
-extension DTO.Token: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.credential = try container.decode(String.self, forKey: .credential)
-        self.m = nil
-        self.expireAfter = 7 * 24 * 60
-        self.tokenEncrypted = try container.decode(Data.self, forKey: .tokenEncrypted)
     }
 }

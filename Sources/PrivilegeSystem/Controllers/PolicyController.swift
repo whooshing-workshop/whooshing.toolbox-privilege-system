@@ -40,8 +40,8 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
         public func create<T: PolicyType>(
             to model: T.Type,
-            @MTORelationBuilder<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>
-            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
+            @MTORelationBuilder<PPolicy<T>, T.Model.IDValue>
+            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<T>, T.Model.IDValue>]
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建策略 操作", metadata: ["type": .string(String(describing: model))])
@@ -58,12 +58,12 @@ extension PrivilegeSystem {
         /// - Parameters:
         ///   - model: 目标策略类型（如 `Role.self` 或 `Domain.self`）。
         ///   - content: `@MTORelationBuilder` 闭包。
-        /// - Returns: 按绑定的目标模型 ID 分组的策略列表 `EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase>`。
+        /// - Returns: 按绑定的目标模型 ID 分组的策略列表 `EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase>`。
         public func createWithReturning<T: PolicyType>(
             to model: T.Type,
-            @MTORelationBuilder<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>
-            _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
-        ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase> {
+            @MTORelationBuilder<PPolicy<T>, T.Model.IDValue>
+            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<T>, T.Model.IDValue>]
+        ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建策略（返回） 操作", metadata: ["type": .string(String(describing: model))])
             return createWithReturning(to: model, relations: content())
@@ -81,7 +81,7 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
         public func delete<T: PolicyType>(
             from model: T.Type = T.self,
-            policy: OTORelation<DTO.Policy<T, DTO.Queried>, T.Model.IDValue>
+            policy: OTORelation<QPolicy<T>, T.Model.IDValue>
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除策略 操作", metadata: ["type": .string(String(describing: model)), "policyId": .stringConvertible(policy.left.id)])
@@ -114,7 +114,7 @@ public extension PrivilegeSystem.PolicyController {
     /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
     func create<T: PolicyType>(
         to model: T.Type,
-        relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
+        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建策略（数组） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
@@ -132,8 +132,8 @@ public extension PrivilegeSystem.PolicyController {
     /// - Returns: 按实体 ID 分组返回所有被分配的查询状态策略。
     func createWithReturning<T: PolicyType>(
         to model: T.Type,
-        relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
-    ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase> {
+        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
+    ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建策略（数组返回） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
@@ -147,7 +147,7 @@ extension PrivilegeSystem.PolicyController {
     func __create<T: PolicyType>(
         on db: PGDatabase,
         to model: T.Type,
-        relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
+        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __createPolicy(
             on: db,
@@ -166,8 +166,8 @@ extension PrivilegeSystem.PolicyController {
     func __createWithReturning<T: PolicyType>(
         on db: PGDatabase,
         to model: T.Type,
-        relations: [MTORelation<DTO.Policy<T, DTO.Prepare>, T.Model.IDValue>]
-    ) -> EventLoopRes<[T.Model.IDValue: [DTO.Policy<T, DTO.Queried>]], PrivilegeSystem.Errcase> {
+        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
+    ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
         __createPolicy(
             on: db,
             relations: relations,
@@ -185,7 +185,7 @@ extension PrivilegeSystem.PolicyController {
                     $0.$parent.id
                 }.mapValues { v in
                     try v.map {
-                        try DTO.Policy<T, DTO.Queried>.make(from: $0).get()
+                        try QPolicy<T>.make(from: $0).get()
                     }
                 }
             }

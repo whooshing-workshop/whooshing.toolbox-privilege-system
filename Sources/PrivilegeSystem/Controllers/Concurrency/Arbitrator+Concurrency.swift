@@ -13,9 +13,9 @@ import ResourceMacros
 extension PrivilegeSystem.Arbitrator {
     public func judge(
         moduleId: UUID,
-        user: DTO.User<DTO.Queried>,
-        role: DTO.Role<DTO.Queried>,
-        resource: AnyResourceDTO,
+        user: QUser,
+        role: QRole,
+        resource: AnyResource,
         operation: AnyOperation,
         privilegeIds: [UUID]
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Result {

@@ -66,7 +66,7 @@ extension PrivilegeSystem {
         /// 的场景。资源的 JSON 内容会作为 `input.resource` 传给 OPA。
         ///
         /// ```swift
-        /// let anyResource = AnyResourceDTO(fileResource)
+        /// let anyResource = AnyResource(fileResource)
         /// let result = try await system.arbitrator.judge(
         ///     moduleId: module.moduleId,
         ///     user: user,
@@ -89,9 +89,9 @@ extension PrivilegeSystem {
         /// - Throws: 当角色不属于用户、数据库数据收集失败或 OPA 查询失败时返回错误。
         public func judge(
             moduleId: UUID,
-            user: DTO.User<DTO.Queried>,
-            role: DTO.Role<DTO.Queried>,
-            resource: AnyResourceDTO,
+            user: QUser,
+            role: QRole,
+            resource: AnyResource,
             operation: AnyOperation,
             privilegeIds: [UUID]
         ) -> EventLoopRes<Result, Errcase> {
@@ -118,15 +118,18 @@ extension PrivilegeSystem {
                 self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的 Role 并非对 User 可用", category: .external)
             }
             
+            let userModelGetter: EventLoopRes<User, Errcase> = user.model(from: self.db)
+                .errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
+            
             // 查询用户所在的群组，父群组的所有域权限
-            let groupDomainPolicies: EventLoopRes<[DomainData], Errcase> = user.model.$groups.query(on: self.db)
-                .with(\.$supers) { path in
-                    path.with(\.$ancestor)
-                }
-                .all()
-                .withError(Errcase.arbitrationDataCollectFailed, "取得用户所加入的所有群组失败", category: .internal)
-                .flatMapThrowing
-            { groups throws(Errcase.ErrType) in
+            let groupDomainPolicies: EventLoopRes<[DomainData], Errcase> = userModelGetter.flatMap { userModel in
+                userModel.$groups.query(on: self.db)
+                    .with(\.$supers) { path in
+                        path.with(\.$ancestor)
+                    }
+                    .all()
+                    .withError(Errcase.arbitrationDataCollectFailed, "取得用户所加入的所有群组失败", category: .internal)
+            }.flatMapThrowing { (groups: [UGroup]) throws(Errcase.ErrType) in
                 let gs = [UGroup]((
                     groups +
                     groups.flatMap { $0.supers.map { $0.ancestor } }
@@ -137,7 +140,7 @@ extension PrivilegeSystem {
                 }
                 
                 return (gs, ids)
-            }.flatMap { groups, groupIds in
+            }.flatMap { (groups: [UGroup], groupIds: [UUID]) in
                 guard !groupIds.isEmpty else {
                     return self.db.eventLoop.makeSucceededResult([])
                 }
@@ -170,10 +173,10 @@ extension PrivilegeSystem {
             }
             
             // 查询用户本身被赋予的域权限
-            let userDomainPolicies: EventLoopRes<[DomainData], Errcase> = user.model.$domains.get(on: self.db)
-                .withError(Errcase.arbitrationDataCollectFailed, "数据库加载用户域权限失败", category: .internal)
-                .flatMapThrowing
-            { domains throws(Errcase.ErrType) in
+            let userDomainPolicies: EventLoopRes<[DomainData], Errcase> = userModelGetter.flatMap { userModel in
+                userModel.$domains.get(on: self.db)
+                    .withError(Errcase.arbitrationDataCollectFailed, "数据库加载用户域权限失败", category: .internal)
+            }.flatMapThrowing { domains throws(Errcase.ErrType) in
                 try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
                     try domains.map { domain in
                         DomainData(
@@ -398,7 +401,7 @@ extension PrivilegeSystem.Arbitrator {
         let roleId: UUID
         let resource: [String: AnyCodable]
         let operation: String
-        let user: DTO.User<DTO.Queried>
+        let user: QUser
         
         var description: String {
             formatJson([
@@ -414,8 +417,8 @@ extension PrivilegeSystem.Arbitrator {
         let domainId: UUID
         let resource: [String: AnyCodable]
         let operation: String
-        let user: DTO.User<DTO.Queried>
-        let group: DTO.Group<DTO.Queried>?
+        let user: QUser
+        let group: QGroup?
         
         var description: String {
             formatJson([
@@ -432,7 +435,7 @@ extension PrivilegeSystem.Arbitrator {
         let privilegeId: UUID
         let resource: [String: AnyCodable]
         let operation: String
-        let user: DTO.User<DTO.Queried>
+        let user: QUser
         
         var description: String {
             formatJson([

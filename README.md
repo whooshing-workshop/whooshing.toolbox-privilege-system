@@ -105,7 +105,7 @@ let module = try await PrivilegeModule<ResourceList>(
 let user = try await system.account.register(
     for: .init(
         email: "readme_user@example.com",
-        hashedPasswd: try Crypto.hash("SecurePassword123").get()
+        hashedPassword: try Crypto.hash("SecurePassword123").get()
     )
 )
 ```
@@ -127,7 +127,7 @@ let docResource = JsonResource(
 let resourceDTO = try await module.resource.create(
     resources: [docResource]
 ).first!
-let anyResourceDTO = AnyResourceDTO(resourceDTO)
+let anyResourceDTO = AnyResource(resourceDTO)
 
 // 编写您的 Rego OPA 策略，以拦截不合规的操作
 let myPolicy = """
@@ -161,7 +161,7 @@ let role = try await system.role.create(
 let rolePolicy = """
 allow if { true }
 """
-let rolePolicyDTO = try DTO.Policy<Role, DTO.Prepare>(moduleId: module.moduleId, policy: rolePolicy)
+let rolePolicyDTO = try PPolicy<Role>(moduleId: module.moduleId, policy: rolePolicy)
 let _ = try await system.policy.create(to: Role.self) {
     [rolePolicyDTO] => role.id
 }

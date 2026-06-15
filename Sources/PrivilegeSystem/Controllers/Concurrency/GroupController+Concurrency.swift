@@ -11,8 +11,8 @@ extension PrivilegeSystem.GroupController {
     // MARK: CRUD
 
     public func create(
-        groups: [DTO.Group<DTO.Prepare>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.Group<DTO.Queried>] {
+        groups: [PGroup]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
         try await create(groups: groups).get()
     }
 
@@ -24,23 +24,23 @@ extension PrivilegeSystem.GroupController {
     }
 
     public func update(
-        with updater: DTO.Group<DTO.Prepare>.Updater
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.Group<DTO.Queried> {
+        with updater: PGroup.Updater
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QGroup {
         try await update(with: updater).get()
     }
 
     // MARK: Join / Kick (result-builder variants)
 
     public func join(
-        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        @MTMRelationBuilder<QUser, QGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(content).get()
     }
 
     public func kick(
-        @MTMRelationBuilder<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        @MTMRelationBuilder<QUser, QGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await kick(content).get()
     }
@@ -48,13 +48,13 @@ extension PrivilegeSystem.GroupController {
     // MARK: Join / Kick (array variants)
 
     public func join(
-        relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        relations: [MTMRelation<QUser, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(relations: relations).get()
     }
 
     public func kick(
-        relations: [MTMRelation<DTO.User<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        relations: [MTMRelation<QUser, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await kick(relations: relations).get()
     }
@@ -62,7 +62,7 @@ extension PrivilegeSystem.GroupController {
     // MARK: Move
 
     public func move(
-        _ relation: OTORelation<DTO.Group<DTO.Queried>, DTO.Group<DTO.Queried>?>
+        _ relation: OTORelation<QGroup, QGroup?>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await move(relation).get()
     }
@@ -70,9 +70,9 @@ extension PrivilegeSystem.GroupController {
     // MARK: Query
 
     public func query(
-        relations: [DTO.UserInGroupRelation<DTO.Prepare>],
+        relations: [PUserInGroupRelation],
         strict: Bool = true
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.UserInGroupRelation<DTO.Queried>] {
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QUserInGroupRelation] {
         try await query(relations: relations, strict: strict).get()
     }
 }

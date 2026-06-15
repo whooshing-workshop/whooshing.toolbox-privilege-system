@@ -11,24 +11,24 @@ extension PrivilegeSystem.RoleController {
     // MARK: Create (result-builder variants)
 
     public func create(
-        @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
-        _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
+        @MTORelationBuilder<PPolicy<Role>, PRole>
+        _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Role>, PRole>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await create(content).get()
     }
 
     public func createWithReturning(
-        @MTORelationBuilder<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>
-        _ content: @Sendable @escaping () -> [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UUID: [DTO.Policy<Role, DTO.Queried>]] {
+        @MTORelationBuilder<PPolicy<Role>, PRole>
+        _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Role>, PRole>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UUID: [QPolicy<Role>]] {
         try await createWithReturning(content).get()
     }
 
     // MARK: Create (array / scalar variants)
 
     public func create(
-        roles: [DTO.Role<DTO.Prepare>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.Role<DTO.Queried>] {
+        roles: [PRole]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QRole] {
         try await create(roles: roles).get()
     }
 
@@ -40,44 +40,44 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func update(
-        with updater: DTO.Role<DTO.Prepare>.Updater
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.Role<DTO.Queried> {
+        with updater: PRole.Updater
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QRole {
         try await update(with: updater).get()
     }
 
     // MARK: Create from relations
 
     public func create(
-        relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
+        relations: [MTORelation<PPolicy<Role>, PRole>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await create(relations: relations).get()
     }
 
     public func createWithReturning(
-        relations: [MTORelation<DTO.Policy<Role, DTO.Prepare>, DTO.Role<DTO.Prepare>>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UUID: [DTO.Policy<Role, DTO.Queried>]] {
+        relations: [MTORelation<PPolicy<Role>, PRole>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UUID: [QPolicy<Role>]] {
         try await createWithReturning(relations: relations).get()
     }
 
     // MARK: Appoint (result-builder variants)
 
     public func appoint(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
+        @MTMRelationBuilder<QRole, QUser>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
 
     public func appoint(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        @MTMRelationBuilder<QRole, QGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
 
     public func appoint(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
+        @MTMRelationBuilder<QRole, QUserInGroupRelation>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroupRelation>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
@@ -85,22 +85,22 @@ extension PrivilegeSystem.RoleController {
     // MARK: Dismiss (result-builder variants)
 
     public func dismiss(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
+        @MTMRelationBuilder<QRole, QUser>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
 
     public func dismiss(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        @MTMRelationBuilder<QRole, QGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
 
     public func dismiss(
-        @MTMRelationBuilder<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>
-        _ content: @Sendable @escaping () -> [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
+        @MTMRelationBuilder<QRole, QUserInGroupRelation>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroupRelation>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
@@ -108,25 +108,25 @@ extension PrivilegeSystem.RoleController {
     // MARK: Appoint (array variants)
 
     public func appoint(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
+        relations: [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
     public func appoint(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        relations: [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
     public func appoint(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
+        relations: [MTMRelation<QRole, QUserInGroupRelation>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
     public func appoint(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
+        relations: [MTMRelation<QRole, PUserInGroupRelation>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
@@ -134,25 +134,25 @@ extension PrivilegeSystem.RoleController {
     // MARK: Dismiss (array variants)
 
     public func dismiss(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.User<DTO.Queried>>]
+        relations: [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
     public func dismiss(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>]
+        relations: [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
     public func dismiss(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Queried>>]
+        relations: [MTMRelation<QRole, QUserInGroupRelation>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
     public func dismiss(
-        relations: [MTMRelation<DTO.Role<DTO.Queried>, DTO.UserInGroupRelation<DTO.Prepare>>]
+        relations: [MTMRelation<QRole, PUserInGroupRelation>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
@@ -160,63 +160,63 @@ extension PrivilegeSystem.RoleController {
     // MARK: Roles query
 
     public func roles(
-        for user: DTO.User<DTO.Queried>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.Role<DTO.Queried>] {
+        for user: QUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QRole] {
         try await roles(for: user).get()
     }
 
     public func userRoles(
-        for user: DTO.User<DTO.Queried>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.Role<DTO.Queried>] {
+        for user: QUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QRole] {
         try await userRoles(for: user).get()
     }
 
     public func groupRoles(
-        for user: DTO.User<DTO.Queried>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [MTORelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>] {
+        for user: QUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [MTORelation<QRole, QGroup>] {
         try await groupRoles(for: user).get()
     }
 
     public func userInGroupRoles(
-        for user: DTO.User<DTO.Queried>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [MTORelation<DTO.Role<DTO.Queried>, DTO.Group<DTO.Queried>>] {
+        for user: QUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [MTORelation<QRole, QGroup>] {
         try await userInGroupRoles(for: user).get()
     }
 
     // MARK: Is / Verify
 
     public func `is`(
-        role: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
+        role: QRole,
+        appointedTo user: QUser
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         try await self.is(role: role, appointedTo: user).get()
     }
 
     public func `is`(
-        userRole: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
+        userRole: QRole,
+        appointedTo user: QUser
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         try await self.is(userRole: userRole, appointedTo: user).get()
     }
 
     public func `is`(
-        groupRole: DTO.Role<DTO.Queried>,
-        appointedTo group: DTO.Group<DTO.Queried>
+        groupRole: QRole,
+        appointedTo group: QGroup
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         try await self.is(groupRole: groupRole, appointedTo: group).get()
     }
 
     public func verify(
-        groupRole: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.Group<DTO.Queried>] {
+        groupRole: QRole,
+        appointedTo user: QUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
         try await verify(groupRole: groupRole, appointedTo: user).get()
     }
 
     public func verify(
-        userInGroupRole: DTO.Role<DTO.Queried>,
-        appointedTo user: DTO.User<DTO.Queried>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [DTO.Group<DTO.Queried>] {
+        userInGroupRole: QRole,
+        appointedTo user: QUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
         try await verify(userInGroupRole: userInGroupRole, appointedTo: user).get()
     }
 }

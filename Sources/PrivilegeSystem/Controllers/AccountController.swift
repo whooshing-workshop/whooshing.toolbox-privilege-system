@@ -16,7 +16,7 @@ extension PrivilegeSystem {
     /// 它封装了底层数据库交互、双层盐化哈希密码验证、以及对称加密令牌机制，提供安全的无状态凭据验证。
     ///
     /// ### 账号注册
-    /// 通过传入含有电子邮箱和一次性哈希密码（如 SHA256 等客户端完成的一次哈希）的 `DTO.User<DTO.Prepare>`，
+    /// 通过传入含有电子邮箱和一次性哈希密码（如 SHA256 等客户端完成的一次哈希）的 `PUser`，
     /// 可进行账号注册。控制器会自动在数据库中生成专有随机盐值并执行第二次哈希，从而落库：
     ///
     /// ```swift
@@ -59,17 +59,17 @@ extension PrivilegeSystem {
         ///
         /// 注册接口会针对 `password` 字段（假设为已哈希的明文或直接明文）进行加盐（Salt）和双重哈希处理。
         ///
-        /// - Parameter user: 用于注册的 `DTO.User<DTO.Prepare>` 准备对象，须包含有效的邮箱与基础密码数据。
-        /// - Returns: 一个包裹在事件循环中的 `EventLoopRes` 结果，执行成功将返回注册完毕的 `DTO.User<DTO.Queried>`。
+        /// - Parameter user: 用于注册的 `PUser` 准备对象，须包含有效的邮箱与基础密码数据。
+        /// - Returns: 一个包裹在事件循环中的 `EventLoopRes` 结果，执行成功将返回注册完毕的 `QUser`。
         ///
         /// ```swift
-        /// let dto = try DTO.User<DTO.Prepare>(email: "a@a.com", password: "pwd")
+        /// let dto = try PUser(email: "a@a.com", password: "pwd")
         /// let userQuery = try await system.account.register(for: dto).get()
         /// print("成功注册！", userQuery.id)
         /// ```
         public func register(
-            for user: DTO.User<DTO.Prepare>
-        ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
+            for user: PUser
+        ) -> EventLoopRes<QUser, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 账号注册 操作", metadata: ["user": .summaryData(user)])
@@ -92,7 +92,7 @@ extension PrivilegeSystem {
                         }
                         return try required(throws: Errcase.userRegisterFailed, "用户 DTO 生成失败", category: .internal) {
                             try required(throws: Errcase.userRegisterFailed, category: .internal) {
-                                try DTO.User.make(from: user).get()
+                                try QUser.make(from: user).get()
                             }
                         }
                     }
@@ -109,16 +109,16 @@ extension PrivilegeSystem {
         /// 重新为其生成一个新的凭证与加密对称密钥（Token）。
         ///
         /// - Parameter userData: 具有登录必要数据（如密码与邮箱）的用户对象。
-        /// - Returns: 返回经过授权生成的鉴权 `DTO.Token<DTO.Queried>` 数据。
+        /// - Returns: 返回经过授权生成的鉴权 `QToken` 数据。
         ///
         /// ```swift
-        /// let loginDto = try DTO.User<DTO.Prepare>(email: "test@domain.com", password: "pwd")
+        /// let loginDto = try PUser(email: "test@domain.com", password: "pwd")
         /// let token = try await system.account.login(by: loginDto).get()
         /// print("登录完成，Token的加密体为: \(token.tokenEncrypted)")
         /// ```
         public func login(
-            by userData: DTO.User<DTO.Prepare>
-        ) -> EventLoopRes<DTO.Token<DTO.Queried>, Errcase> {
+            by userData: PUser
+        ) -> EventLoopRes<QToken, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 账号登录 操作", metadata: ["user": .summaryData(userData)])
@@ -130,14 +130,14 @@ extension PrivilegeSystem {
                     .first()
                     .withError(Errcase.userLoginFailed, "用户不存在", category: .external)
                     .flatMapThrowing
-                { (res) throws(Errcase.ErrType) -> (User, UUID, Token) in
+                { (res) throws(Errcase.ErrType) -> (User, UUID, __Token) in
                     guard let user = res else {
                         throw Errcase.userLoginFailed.d("用户不存在", category: .external)
                     }
                     
                     guard
                         try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internal, {
-                            try user.verify(password: userData.hashedPasswd)
+                            try user.verify(password: userData.hashedPassword)
                         })
                     else {
                         throw Errcase.userLoginFailed.d("用户密码不正确", category: .external)
@@ -147,14 +147,10 @@ extension PrivilegeSystem {
                         try user.requireID()
                     }
                     
-                    let token = try required(throws: Errcase.userLoginFailed, "创建 Token 时失败", category: .internal) {
-                        try DTO.Token<DTO.Prepare>(for: userId).raw()
-                    }
-                    
-                    return (user, userId, token)
+                    return (user, userId, PToken(for: userId).raw())
                 }.flatMap { (user, id, token) in
                     // 删除原有的 token (若有)
-                    Token.query(on: db).filter(\.$user.$id == id).delete()
+                    __Token.query(on: db).filter(\.$user.$id == id).delete()
                         .withError(Errcase.userLoginFailed, "删除用户 token 时失败，用户: \(user)")
                         .map { (user, id, token) }
                 }.flatMap { (user, id, token) in
@@ -177,18 +173,18 @@ extension PrivilegeSystem {
         ///
         /// 接收请求上下文中提供的 Token 令牌。如果令牌格式合法、在有效期内且在数据库内验证一致，将还原为一个对称密钥。
         ///
-        /// - Parameter token: 构建自外部的 `DTO.Token<DTO.Prepare>`。
+        /// - Parameter token: 构建自外部的 `PToken`。
         /// - Returns: 若鉴权成功，将返回可供解密使用的 `Crypto.Symm.Key` 对称密钥。
         ///
         /// ```swift
         /// // 假装请求中的 header 里拿到 token 字符串
         /// let reqTokenString = req.headers["Authorization"].first!
-        /// let tokenDto = DTO.Token<DTO.Prepare>(tokenString: reqTokenString)
+        /// let tokenDto = PToken(tokenString: reqTokenString)
         /// let key = try await system.account.authenticate(token: tokenDto).get()
         /// ```
         public func authenticate(
-            token: DTO.Token<DTO.Prepare>
-        ) -> EventLoopRes<Crypto.Symm.Key, Errcase> {
+            token: Token
+        ) -> EventLoopRes<SendableSymmKey, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 Token 鉴权 操作", metadata: ["token": .summaryData(token)])
@@ -200,7 +196,7 @@ extension PrivilegeSystem {
                         throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes", category: .external)
                     }
                 }.flatMap {
-                    Token.query(on: db)
+                    __Token.query(on: db)
                         .filter(\.$credential == token.credential)
                         .first()
                         .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败", category: .internal)
@@ -239,7 +235,7 @@ extension PrivilegeSystem {
                     guard keyData == authData else {
                         throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external)    // key 是否一致
                     }
-                    return key
+                    return SendableSymmKey(key: key)
                 }.map {
                     logger.info("Token 鉴权 操作执行成功")
                     return $0
@@ -254,24 +250,24 @@ extension PrivilegeSystem {
         ///
         /// - Parameters:
         ///   - userData: `DTO.User` 实例，提供用户的电子邮箱及**当前正确的哈希密码**。
-        ///   - hashedPasswd: Data 格式的新的哈希密码流。
-        /// - Returns: `DTO.User<DTO.Queried>` 用户新的查询对象。
+        ///   - hashedPassword: Data 格式的新的哈希密码流。
+        /// - Returns: `QUser` 用户新的查询对象。
         public func changePassword(
-            for userData: DTO.User<DTO.Prepare>,
-            to hashedPasswd: Data
-        ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
-            changePassword(for: userData, to: hashedPasswd.base64EncodedString())
+            for userData: PUser,
+            to hashedPassword: Data
+        ) -> EventLoopRes<QUser, Errcase> {
+            changePassword(for: userData, to: hashedPassword.base64EncodedString())
         }
         
         /// 为已知用户修改密码（以 String 格式提供新哈希）。
         ///
         /// 用户的现有凭据 `userData` 中必须包含正确的旧密码哈希。验证通过后，
-        /// 系统将为新密码 `hashedPasswd` 生成全新的随机盐值并覆盖记录。
+        /// 系统将为新密码 `hashedPassword` 生成全新的随机盐值并覆盖记录。
         ///
         /// - Parameters:
         ///   - userData: `DTO.User` 实例，提供用户的电子邮箱及**当前正确的哈希密码**。
-        ///   - hashedPasswd: Base64 或其他格式编码的新字符串哈希密码。
-        /// - Returns: `DTO.User<DTO.Queried>` 密码已更改的查询对象。
+        ///   - hashedPassword: Base64 或其他格式编码的新字符串哈希密码。
+        /// - Returns: `QUser` 密码已更改的查询对象。
         ///
         /// ```swift
         /// let newUserData = try await system.account.changePassword(
@@ -280,13 +276,13 @@ extension PrivilegeSystem {
         /// ).get()
         /// ```
         public func changePassword(
-            for userData: DTO.User<DTO.Prepare>,
-            to hashedPasswd: String
-        ) -> EventLoopRes<DTO.User<DTO.Queried>, Errcase> {
+            for userData: PUser,
+            to hashedPassword: String
+        ) -> EventLoopRes<QUser, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 修改密码 操作", metadata: ["user": .summaryData(userData)])
-            logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPasswd.count)])
+            logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
             
             return db.trans { db in
                 User.query(on: db)
@@ -301,14 +297,14 @@ extension PrivilegeSystem {
                     
                     guard (
                         try required(throws: Errcase.userPasswordChangeFailed, "用户密码认证失败", category: .internal) {
-                            try user.verify(password: userData.hashedPasswd)
+                            try user.verify(password: userData.hashedPassword)
                         } == true
                     ) else {
                         throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external)
                     }
                     
-                    (user.salt, user.hashedPasswd) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
-                        try DTO.User<DTO.Prepare>.doubleEncode(hashedPasswd: hashedPasswd).get()
+                    (user.salt, user.hashedPassword) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
+                        try PUser.doubleEncode(hashedPassword: hashedPassword).get()
                     }
                     
                     return user
@@ -325,7 +321,7 @@ extension PrivilegeSystem {
                     logger.info("修改密码 操作执行成功")
                     return $0
                 }
-            }.logIfFail(logger: logger, metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPasswd.count)])
+            }.logIfFail(logger: logger, metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
         }
     }
 }

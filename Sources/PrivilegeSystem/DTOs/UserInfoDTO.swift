@@ -11,88 +11,133 @@ import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
 
-public typealias PUserInfo = DTO.UserInfo<DTO.Prepare>
-public typealias QUserInfo = DTO.UserInfo<DTO.Queried>
-
-public extension DTO {
-    struct UserInfo<T: Status>: DTOModel, Sendable {
-        public let nickname: String
-        public let identifier: String
-        public let birthday: Date
-        public let other: String?
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var userId: UUID
-        @Passive public internal(set) var createdAt: Date
-        @Passive public internal(set) var updatedAt: Date
-        
-        package typealias AssociatedModel = UserModel.Info
-        private let m: AssociatedModel?
-        
-        init(
-            _nickname: String,
-            _identifier: String,
-            _birthday: Date,
-            _other: String?,
-            _model: AssociatedModel?
-        ) {
-            self.nickname = _nickname
-            self.identifier = _identifier
-            self.birthday = _birthday
-            self.other = _other
-            self.m = _model
-        }
-    }
-}
-
-public extension DTO.UserInfo where T == DTO.Prepare {
-    init(
+public struct PUserInfo: DTO.Prepare {
+    public typealias QueriedModel = QUserInfo
+    public let id: UUID?
+    public let nickname: String
+    public let identifier: String
+    public let birthday: Date
+    public let other: String?
+    
+    public init(
+        id: UUID? = nil,
         nickname: String,
         identifier: String,
         birthday: Date,
-        other: String? = nil,
+        other: String? = nil
     ) {
-        self = Self.init(
-            _nickname: nickname,
-            _identifier: identifier,
-            _birthday: birthday,
-            _other: other,
-            _model: nil
-        )
-    }
-}
-
-extension DTO.UserInfo where T == DTO.Queried {
-    var model: User.Info {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
+        self.id = id
+        self.nickname = nickname
+        self.identifier = identifier
+        self.birthday = birthday
+        self.other = other
     }
     
-    public static func make(
-        from model: User.Info
-    ) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .userInfoDTOFailed, category: .internal) {
-            var n = Self.init(
-                _nickname: model.nickname,
-                _identifier: model.identifier,
-                _birthday: model.birthday,
-                _other: model.other,
-                _model: model
-            )
-            n.$userId = model.$user.id
-            n.$id = try model.requireID()
-            n.$createdAt = model.createdAt
-            n.$updatedAt = model.updatedAt
-            return n
-        }
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .nickname: .init(self.nickname),
+        .identifier: .init(self.identifier),
+        .birthday: .init(self.birthday),
+        .other: .init(self.other)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case nickname
+        case identifier
+        case birthday
+        case other
     }
 }
 
-extension DTO.UserInfo where T == DTO.Prepare {
-    func raw(for userId: UUID) -> User.Info {
-        let info = User.Info()
+public struct QUserInfo: DTO.Queried {
+    public typealias PrepareModel = PUserInfo
+    public let id: UUID
+    public let userId: UUID
+    public let nickname: String
+    public let identifier: String
+    public let birthday: Date
+    public let other: String?
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package let __m: User.Info?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .userId: .init(self.userId),
+        .nickname: .init(self.nickname),
+        .identifier: .init(self.identifier),
+        .birthday: .init(self.birthday),
+        .other: .init(self.other),
+        .createdAt: .init(self.createdAt),
+        .updatedAt: .init(self.updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case userId
+        case nickname
+        case identifier
+        case birthday
+        case other
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(
+        id: UUID,
+        userId: UUID,
+        nickname: String,
+        identifier: String,
+        birthday: Date,
+        other: String?,
+        createdAt: Date,
+        updatedAt: Date,
+        model: SQLModel?
+    ) {
+        self.id = id
+        self.userId = userId
+        self.nickname = nickname
+        self.identifier = identifier
+        self.birthday = birthday
+        self.other = other
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.userId = try container.decode(UUID.self, forKey: .userId)
+        self.nickname = try container.decode(String.self, forKey: .nickname)
+        self.identifier = try container.decode(String.self, forKey: .identifier)
+        self.birthday = try container.decode(Date.self, forKey: .birthday)
+        self.other = try container.decodeIfPresent(String.self, forKey: .other)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.__m = nil
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.userId, forKey: .userId)
+        try container.encode(self.nickname, forKey: .nickname)
+        try container.encode(self.identifier, forKey: .identifier)
+        try container.encode(self.birthday, forKey: .birthday)
+        try container.encodeIfPresent(self.other, forKey: .other)
+        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension PUserInfo: __Prepare {
+    func raw(for userId: UUID) -> SQLModel {
+        let info = SQLModel()
+        info.id = id
         info.$user.id = userId
         info.nickname = nickname
         info.identifier = identifier
@@ -102,135 +147,26 @@ extension DTO.UserInfo where T == DTO.Prepare {
     }
 }
 
-public extension DTO.UserInfo where T == DTO.Prepare {
-    struct Updater: @unchecked Sendable {
-        public let userInfoId: UUID
-        package var id: UUID { userInfoId }
-        
-        package let updates: OrderedDictionary<
-            PartialKeyPath<DTO.UserInfo<DTO.Prepare>>,
-            (QueryBuilder<User.Info>, DTO.UserInfo<DTO.Queried>?) throws -> QueryBuilder<User.Info>
-        >
-        package let needsPeek: Bool
-        
-        public init(userInfoId: UUID) {
-            self.userInfoId = userInfoId
-            self.updates = [:]
-            self.needsPeek = false
-        }
-        
-        package init(
-            id: UUID,
-            updates: OrderedDictionary<
-                PartialKeyPath<DTO.UserInfo<DTO.Prepare>>,
-                (QueryBuilder<User.Info>, DTO.UserInfo<DTO.Queried>?) throws -> QueryBuilder<User.Info>
-            >,
-            needsPeek: Bool
-        ) {
-            self.userInfoId = id
-            self.updates = updates
-            self.needsPeek = needsPeek
+extension QUserInfo: __Queried {
+    package typealias Failure = PrivilegeSystem.Errcase
+    public static func make(from model: User.Info) -> Res<Self, PrivilegeSystem.Errcase> {
+        .init(throws: .userInfoDTOFailed, category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                userId: model.$user.id,
+                nickname: model.nickname,
+                identifier: model.identifier,
+                birthday: model.birthday,
+                other: model.other,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
+            )
         }
     }
 }
 
-extension DTO.UserInfo.Updater: DTOUpdater {}
-
-public extension DTO.UserInfo.Updater {
-    func update(identifier: @escaping @autoclosure () throws -> String) -> Self {
-        generate(key: \.identifier) { builder, _ in
-            builder.set(\.$identifier, to: try identifier())
-        }
-    }
-    
-    func update(nickname: @escaping @autoclosure () throws -> String) -> Self {
-        generate(key: \.nickname) { builder, _ in
-            builder.set(\.$nickname, to: try nickname())
-        }
-    }
-    
-    func update(birthday: @escaping @autoclosure () throws -> Date) -> Self {
-        generate(key: \.birthday) { builder, _ in
-            builder.set(\.$birthday, to: try birthday())
-        }
-    }
-    
-    func update(other: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.other) { builder, _ in
-            builder.set(\.$other, to: try other())
-        }
-    }
-}
-
-public extension DTO.UserInfo.Updater {
-    func update(identifier: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) -> Self {
-        generate(needsPeek: true, key: \.identifier) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$identifier, to: try identifier(q))
-        }
-    }
-    
-    func update(nickname: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String) -> Self {
-        generate(needsPeek: true, key: \.nickname) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$nickname, to: try nickname(q))
-        }
-    }
-    
-    func update(birthday: @escaping (DTO.UserInfo<DTO.Queried>) throws -> Date) -> Self {
-        generate(needsPeek: true, key: \.birthday) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$birthday, to: try birthday(q))
-        }
-    }
-    
-    func update(other: @escaping (DTO.UserInfo<DTO.Queried>) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.other) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$other, to: try other(q))
-        }
-    }
-}
-
-extension DTO.UserInfo: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case userId
-        case nickname
-        case identifier
-        case birthday
-        case other
-        case id
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(nickname, forKey: .nickname)
-        try container.encode(identifier, forKey: .identifier)
-        try container.encode(birthday, forKey: .birthday)
-        try container.encode(other, forKey: .other)
-        if T.self != DTO.Prepare.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(userId, forKey: .userId)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
-        }
-    }
-}
-
-extension DTO.UserInfo: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.nickname = try container.decode(String.self, forKey: .nickname)
-        self.identifier = try container.decode(String.self, forKey: .identifier)
-        self.birthday = try container.decode(Date.self, forKey: .birthday)
-        self.other = try container.decodeIfPresent(String.self, forKey: .other)
-        self.m = nil
-    }
-}
-
-extension DTO.UserInfo: Query.Queriable where T == DTO.Queried {
+extension QUserInfo: Query.Queriable {
     public typealias Model = User.Info
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -257,121 +193,94 @@ extension DTO.UserInfo: Query.Queriable where T == DTO.Queried {
     }
 }
 
-extension DTO.UserInfo: CustomStringConvertible, Loggerable {
-    public var description: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+// MARK: - Updater
+
+public extension PUserInfo {
+    struct Updater: @unchecked Sendable {
+        public let userInfoId: UUID
+        package var id: UUID { userInfoId }
         
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "nickname": AnyCodable(self.nickname),
-                "identifier": AnyCodable(self.identifier),
-                "birthday": AnyCodable("\(self.birthday)"),
-                "other": AnyCodable(self.other)
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "user_id": AnyCodable("\(self.userId)"),
-                "nickname": AnyCodable(self.nickname),
-                "identifier": AnyCodable(self.identifier),
-                "birthday": AnyCodable("\(self.birthday)"),
-                "other": AnyCodable(self.other),
-                "created_at": AnyCodable("\(self.createdAt)"),
-                "updated_at": AnyCodable("\(self.updatedAt)")
-            ]
+        package let updates: OrderedDictionary<
+            PartialKeyPath<PUserInfo>,
+            (QueryBuilder<User.Info>, QUserInfo?) throws -> QueryBuilder<User.Info>
+        >
+        package let needsPeek: Bool
+        
+        public init(userInfoId: UUID) {
+            self.userInfoId = userInfoId
+            self.updates = [:]
+            self.needsPeek = false
         }
-
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "UserInfo(\(id.shortString), \(nickname))" :
-            "UserInfo(\(nickname))"
+        
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<PUserInfo>,
+                (QueryBuilder<User.Info>, QUserInfo?) throws -> QueryBuilder<User.Info>
+            >,
+            needsPeek: Bool
+        ) {
+            self.userInfoId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
+        }
     }
 }
 
-extension DTO.UserInfo: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(nickname)
-            hasher.combine(identifier)
-            hasher.combine(birthday)
-            hasher.combine(other)
-        } else {
-            hasher.combine(nickname)
-            hasher.combine(identifier)
-            hasher.combine(birthday)
-            hasher.combine(other)
-            hasher.combine(id)
-            hasher.combine(userId)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
+extension PUserInfo.Updater: DTOUpdater {}
+
+public extension PUserInfo.Updater {
+    func update(identifier: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.identifier) { builder, _ in
+            builder.set(\.$identifier, to: try identifier())
         }
     }
     
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.nickname == rhs.nickname &&
-            lhs.identifier == rhs.identifier &&
-            lhs.birthday == rhs.birthday &&
-            lhs.other == rhs.other
-        } else {
-            lhs.nickname == rhs.nickname &&
-            lhs.identifier == rhs.identifier &&
-            lhs.birthday == rhs.birthday &&
-            lhs.other == rhs.other &&
-            lhs.id == rhs.id &&
-            lhs.userId == rhs.userId &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
+    func update(nickname: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.nickname) { builder, _ in
+            builder.set(\.$nickname, to: try nickname())
+        }
+    }
+    
+    func update(birthday: @escaping @autoclosure () throws -> Date) -> Self {
+        generate(key: \.birthday) { builder, _ in
+            builder.set(\.$birthday, to: try birthday())
+        }
+    }
+    
+    func update(other: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.other) { builder, _ in
+            builder.set(\.$other, to: try other())
         }
     }
 }
 
-public extension DTO.UserInfo where T == DTO.Prepare {
-    func like(_ rhs: QUserInfo) -> Bool {
-        self.nickname == rhs.nickname &&
-        self.identifier == rhs.identifier &&
-        self.birthday == rhs.birthday &&
-        self.other == rhs.other
+public extension PUserInfo.Updater {
+    func update(identifier: @escaping (QUserInfo) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.identifier) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$identifier, to: try identifier(q))
+        }
     }
-}
-
-public extension DTO.UserInfo where T == DTO.Queried {
-    func like(_ rhs: PUserInfo) -> Bool {
-        self.nickname == rhs.nickname &&
-        self.identifier == rhs.identifier &&
-        self.birthday == rhs.birthday &&
-        self.other == rhs.other
+    
+    func update(nickname: @escaping (QUserInfo) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.nickname) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$nickname, to: try nickname(q))
+        }
     }
-}
-
-public extension Collection where Element == PUserInfo {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QUserInfo {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+    
+    func update(birthday: @escaping (QUserInfo) throws -> Date) -> Self {
+        generate(needsPeek: true, key: \.birthday) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$birthday, to: try birthday(q))
+        }
     }
-}
-
-public extension Collection where Element == QUserInfo {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PUserInfo {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+    
+    func update(other: @escaping (QUserInfo) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.other) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$other, to: try other(q))
+        }
     }
-}
-
-
-extension DTO.UserInfo.Updater: Loggerable {
-    public var logDescription: String {
-        return formatJson([
-            "target_id": AnyCodable(id.shortString),
-            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
-        ])
-    }
-    public var description: String { logDescription }
-    public var summaryDescription: String { "UserInfoUpdater(\(id.shortString), updates: \(updates.keys.count))" }
 }

@@ -3,14 +3,14 @@ import Foundation
 import ErrorHandle
 import Collections
 import SQLKit
+import PgSQL
 import Query
 import DataConvertable
 import LoggingAdvanced
+import NIOAdvanced
 @preconcurrency import AnyCodable
 
-public struct AnyResourceDTO: DTOModel, Sendable {
-    package typealias T = DTO.Queried
-    
+public struct AnyResource: DTO.Model {
     public let id: UUID
     public let type: String
     public let name: String
@@ -18,52 +18,75 @@ public struct AnyResourceDTO: DTOModel, Sendable {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package typealias AssociatedModel = AnyResource
-    private let m: AssociatedModel?
+    package typealias SQLModel = __AnyResource
+    package let __m: SQLModel?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public init<T, G>(_ resource: PrivilegeModule<G>.ResourceDTO<T>) {
-        self = Self.init(
-            id: resource.id,
-            name: resource.data.name,
-            type: resource.data.rtype.rawValue,
-            data: resource.data.json,
-            createdAt: resource.createdAt,
-            updatedAt: resource.updatedAt,
-            model: .init(from: resource.model)
-        )
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .type: .init(self.type),
+        .name: .init(self.name),
+        .data: .init(self.data),
+        .createdAt: .init(self.createdAt),
+        .updatedAt: .init(self.updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case type
+        case name
+        case data
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
     
     init(
         id: UUID,
-        name: String,
         type: String,
+        name: String,
         data: [String: AnyCodable],
         createdAt: Date,
         updatedAt: Date,
-        model: AssociatedModel?
+        model: SQLModel?
     ) {
         self.id = id
-        self.name = name
         self.type = type
+        self.name = name
         self.data = data
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        self.m = model
+        self.__m = model
     }
     
-    package var model: AnyResource {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.type = try container.decode(String.self, forKey: .type)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.data = try container.decode([String: AnyCodable].self, forKey: .data)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.__m = nil
     }
     
-    public static func make(from model: AnyResource) -> Res<Self, Errcase> {
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.type, forKey: .type)
+        try container.encode(self.name, forKey: .name)
+        try container.encode(self.data, forKey: .data)
+        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+public extension AnyResource {
+    static func make(from model: __AnyResource) -> Res<Self, Errcase> {
         .init(throws: .resourceDTOFailed, category: .internal) {
             Self.init(
                 id: try model.requireID(),
-                name: model.name,
                 type: model.type,
+                name: model.name,
                 data: model.data,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
@@ -73,8 +96,27 @@ public struct AnyResourceDTO: DTOModel, Sendable {
     }
 }
 
-extension AnyResourceDTO: Query.Queriable {
-    public typealias Model = AnyResource
+package extension AnyResource {
+    func model(from db: PGDatabase) -> EventLoopRes<SQLModel, DTO.Errcase> {
+        guard let m = __m else {
+            return SQLModel.query(on: db)
+                .filter(Self.idProperty == id)
+                .first()
+                .withError(DTO.Errcase.modelQueryFailed, category: .internal)
+                .flatMap
+            { res in
+                guard let r = res else {
+                    return db.eventLoop.makeFailedResult(DTO.Errcase.modelNotExist.d(category: .external))
+                }
+                return db.eventLoop.makeSucceededResult(r)
+            }
+        }
+        return db.eventLoop.makeSucceededResult(m)
+    }
+}
+
+extension AnyResource: Query.Queriable {
+    public typealias Model = __AnyResource
     public typealias ErrorType = Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.id: \.$id,
@@ -89,18 +131,5 @@ extension AnyResourceDTO: Query.Queriable {
             .field(Model.self, \.$data)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
-    }
-}
-
-extension AnyResourceDTO: Codable {}
-
-// MARK: - Loggerable
-
-extension AnyResourceDTO: Loggerable {
-    public var logDescription: String {
-        "AnyResource(id:\(id))"
-    }
-    public var summaryDescription: String {
-        "AnyResource(\(id.shortString))"
     }
 }

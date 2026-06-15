@@ -1,18 +1,19 @@
 import PgSQL
 import Policy
 import Foundation
+import FluentKit
 
-package extension Pivots {
+public extension Pivots {
     struct UserGroup: PivotType {
-        package typealias PrimaryModel = User
-        package typealias SecondaryModel = UGroup
+        public typealias PrimaryModel = User
+        public typealias SecondaryModel = UGroup
         
-        package static let foreignPrimaryName = "user"
-        package static let foreignSecondaryName = "group"
+        public static let foreignPrimaryName = "user"
+        public static let foreignSecondaryName = "group"
     }
 }
 
-package class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchecked Sendable {
+public class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchecked Sendable {
     @Siblings(
         through: RoleUserInGroupPivot.self,
         from: \.$secondaryModel,
@@ -20,10 +21,10 @@ package class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchec
     )
     var roles: [Role]
     
-    @ID(key: .id)                               package var id: UUID?
+    @ID(key: .id)                               public var id: UUID?
     @Parent(fields.foreignPrimary)              var user: User
     @Parent(fields.foreignSecondary)            var group: UGroup
     @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
     
-    package typealias MIG = DefaultMIG<UserGroupPivot>
+    public typealias MIG = DefaultMIG<UserGroupPivot>
 }

@@ -9,104 +9,101 @@ import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
 
-public typealias PExtendedInfo = DTO.ExtendedInfo<DTO.Prepare>
-public typealias QExtendedInfo = DTO.ExtendedInfo<DTO.Queried>
+public struct PExtendedInfo: DTO.Model {
+    public typealias QueriedModel = QExtendedInfo
+    public let addresses: [PInfoSlice<Address>]
+    public let alternateEmails: [PInfoSlice<AlternateEmail>]
+    public let phones: [PInfoSlice<Phone>]
+    
+    public init(
+        addresses: [PInfoSlice<Address>],
+        alternateEmails: [PInfoSlice<AlternateEmail>],
+        phones: [PInfoSlice<Phone>]
+    ) {
+        self.addresses = addresses
+        self.alternateEmails = alternateEmails
+        self.phones = phones
+    }
+    
+    public var maps: [CodingKeys: AnyCodable] {[
+        .addresses: .init(self.addresses.map { $0.json }),
+        .alternateEmails: .init(self.alternateEmails.map { $0.json }),
+        .phones: .init(self.phones.map { $0.json })
+    ]}
+}
 
-public extension DTO {
-    struct ExtendedInfo<T: DTO.Status>: Sendable, Hashable {
-        public let addresses: [DTO.InfoSlice<DTO.Address, T>]
-        public let alternateEmails: [DTO.InfoSlice<DTO.AlternateEmail, T>]
-        public let phones: [DTO.InfoSlice<DTO.Phone, T>]
-        
-        init(
-            _addresses: [DTO.InfoSlice<DTO.Address, T>],
-            _alternateEmails: [DTO.InfoSlice<DTO.AlternateEmail, T>],
-            _phones: [DTO.InfoSlice<DTO.Phone, T>]
-        ) {
-            self.addresses = _addresses
-            self.alternateEmails = _alternateEmails
-            self.phones = _phones
+public struct QExtendedInfo: DTO.Model {
+    public typealias PrepareModel = PExtendedInfo
+    public let addresses: [QInfoSlice<Address>]
+    public let alternateEmails: [QInfoSlice<AlternateEmail>]
+    public let phones: [QInfoSlice<Phone>]
+    
+    init(
+        addresses: [QInfoSlice<Address>],
+        alternateEmails: [QInfoSlice<AlternateEmail>],
+        phones: [QInfoSlice<Phone>]
+    ) {
+        self.addresses = addresses
+        self.alternateEmails = alternateEmails
+        self.phones = phones
+    }
+    
+    public var maps: [CodingKeys: AnyCodable] {[
+        .addresses: .init(self.addresses.map { $0.json }),
+        .alternateEmails: .init(self.alternateEmails.map { $0.json }),
+        .phones: .init(self.phones.map { $0.json })
+    ]}
+}
+
+extension PExtendedInfo: Codable {
+    public enum CodingKeys: String, DTO.CodingKey {
+        case addresses
+        case alternateEmails = "alternate_emails"
+        case phones
+    }
+}
+
+extension QExtendedInfo: Codable {
+    public enum CodingKeys: String, DTO.CodingKey {
+        case addresses
+        case alternateEmails = "alternate_emails"
+        case phones
+    }
+}
+
+public extension PExtendedInfo {
+    func like(_ rhs: QueriedModel) -> Bool {
+        for (k, v) in maps {
+            guard
+                let key = QueriedModel.CodingKeys(stringValue: k.stringValue),
+                rhs.maps[key] == v
+            else { return false }
         }
+        return true
     }
 }
 
-public extension DTO.ExtendedInfo where T == DTO.Prepare {
-    init(
-        addresses: [DTO.InfoSlice<DTO.Address, T>] = [],
-        alternateEmails: [DTO.InfoSlice<DTO.AlternateEmail, T>] = [],
-        phones: [DTO.InfoSlice<DTO.Phone, T>] = []
-    ) {
-        self = Self.init(
-            _addresses: addresses,
-            _alternateEmails: alternateEmails,
-            _phones: phones
-        )
-    }
-}
-
-extension DTO.ExtendedInfo where T == DTO.Queried {
-    init(
-        addresses: [DTO.InfoSlice<DTO.Address, T>] = [],
-        alternateEmails: [DTO.InfoSlice<DTO.AlternateEmail, T>] = [],
-        phones: [DTO.InfoSlice<DTO.Phone, T>] = []
-    ) {
-        self = Self.init(
-            _addresses: addresses,
-            _alternateEmails: alternateEmails,
-            _phones: phones
-        )
-    }
-}
-
-extension DTO.ExtendedInfo: Encodable {}
-
-extension DTO.ExtendedInfo: Decodable where T == DTO.Prepare {}
-
-extension DTO.ExtendedInfo: CustomStringConvertible, Loggerable {
-    public var logDescription: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        let data: [String: AnyCodable] = [
-            "addresses": AnyCodable(self.addresses.map { $0.value }),
-            "alternate_emails": AnyCodable(self.alternateEmails.map { $0.value }),
-            "phones": AnyCodable(self.phones.map { $0.value })
-        ]
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var description: String { logDescription }
-    
-    public var summaryDescription: String {
-        "ExtendedInfo(addr:\(addresses.count), email:\(alternateEmails.count), phone:\(phones.count))"
-    }
-}
-
-public extension DTO.ExtendedInfo where T == DTO.Prepare {
-    func like(_ rhs: QExtendedInfo) -> Bool {
-        self.addresses.like(rhs.addresses) &&
-        self.alternateEmails.like(rhs.alternateEmails) &&
-        self.phones.like(rhs.phones)
-    }
-}
-
-public extension DTO.ExtendedInfo where T == DTO.Queried {
-    func like(_ rhs: PExtendedInfo) -> Bool {
-        self.addresses.like(rhs.addresses) &&
-        self.alternateEmails.like(rhs.alternateEmails) &&
-        self.phones.like(rhs.phones)
+public extension QExtendedInfo {
+    func like(_ rhs: PrepareModel) -> Bool {
+        // 以 PrepareModel 为基准来做比较，而非 Self
+        for (k, v) in rhs.maps {
+            guard
+                let key = CodingKeys(stringValue: k.stringValue),
+                maps[key] == v
+            else { return false }
+        }
+        return true
     }
 }
 
 public extension Collection where Element == PExtendedInfo {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QExtendedInfo {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == Element.QueriedModel {
         self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }
 
 public extension Collection where Element == QExtendedInfo {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PExtendedInfo {
+    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == Element.PrepareModel {
         self.elementsEqual(rhs, by: { $0.like($1) })
     }
 }

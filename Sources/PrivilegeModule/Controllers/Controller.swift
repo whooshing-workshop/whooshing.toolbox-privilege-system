@@ -23,21 +23,25 @@ package extension Controller {
         dtos: [T],
         label: String,
         errThrowing: E,
-        modelBuilder: @Sendable @escaping (T) -> M,
+        modelBuilder: @Sendable @escaping (T) -> Res<M, E>,
         dtoBuilder: @Sendable @escaping (M) -> Res<G, E>
     ) -> EventLoopRes<[G], E> {
-        let models = dtos.map { modelBuilder($0) }
-        
-        return models
-            .create(on: db)
-            .withError(errThrowing, "插入\(label)失败", category: .internal)
-            .flatMapThrowing
-        { () throws(E.ErrType) in
-            try required(throws: errThrowing, category: .internal) {
-                try models.map {
-                    try dtoBuilder($0).get()
+        do {
+            let models = try dtos.map { try modelBuilder($0).get() }
+            
+            return models
+                .create(on: db)
+                .withError(errThrowing, "插入\(label)失败", category: .internal)
+                .flatMapThrowing
+            { () throws(E.ErrType) in
+                try required(throws: errThrowing, category: .internal) {
+                    try models.map {
+                        try dtoBuilder($0).get()
+                    }
                 }
             }
+        } catch let error {
+            return db.eventLoop.makeFailedResult(error as! E)
         }
     }
     
@@ -165,25 +169,74 @@ package extension Controller {
         action: ManyToManyAction,
         label: String,
         errThrowing: E,
-        siblingBuilder: @Sendable @escaping (Left) -> SiblingsProperty<LM, RM, TM>,
-        modelsBuilder: @Sendable @escaping (PGDatabase, [Right]) -> EventLoopRes<[RM], E>,
+        mainModelBuilder: @Sendable @escaping (PGDatabase, Left) -> EventLoopRes<LM, DTO.Errcase>,
+        siblingBuilder: @Sendable @escaping (LM) -> SiblingsProperty<LM, RM, TM>,
+        modelsBuilder: @Sendable @escaping (PGDatabase, [Right]) -> [EventLoopRes<RM, DTO.Errcase>],
+    ) -> EventLoopRes<Void, E>
+        where LM: PGModel, RM: PGModel, E.ErrType == BscError<E>
+    {
+        db.trans { db in
+            relations.flatMap { relation in
+                relation.left.flatMap { l in
+                    modelsBuilder(db, relation.right).map { rsAction in
+                        rsAction
+                            .errCast(errThrowing, "取得从属模型时失败", category: .internal)
+                            .flatMap
+                        { rs in
+                            mainModelBuilder(db, l)
+                                .errCast(errThrowing, "取得主模型时失败", category: .internal)
+                                .flatMap
+                            { model in
+                                let builder = siblingBuilder(model)
+                                switch action {
+                                case .attach:
+                                    return builder
+                                        .attach(rs, on: db)
+                                        .withError(errThrowing, "将\(label)关系插入中间表时失败", category: .internal)
+                                case .detach:
+                                    return builder
+                                        .detach(rs, on: db)
+                                        .withError(errThrowing, "将\(label)关系中间表移除时失败", category: .internal)
+                                }
+                            }
+                        }
+                    }
+                }
+            }.flatten(on: db.eventLoop) // .flatten(on:) 会等待数组里所有的 Future 都变成成功状态，只要有一个失败，整体就会失败
+        }
+    }
+    
+    func __manyToMany<Left, Right, LM, RM, TM>(
+        on db: PGDatabase,
+        _ relations: [MTMRelation<Left, Right>],
+        action: ManyToManyAction,
+        label: String,
+        errThrowing: E,
+        mainModelBuilder: @Sendable @escaping (PGDatabase, Left) -> EventLoopRes<LM, DTO.Errcase>,
+        siblingBuilder: @Sendable @escaping (LM) -> SiblingsProperty<LM, RM, TM>,
+        modelsFlattenBuilder: @Sendable @escaping (PGDatabase, [Right]) -> EventLoopRes<[RM], E>,
     ) -> EventLoopRes<Void, E>
         where LM: PGModel, RM: PGModel, E.ErrType == BscError<E>
     {
         db.trans { db in
             relations.flatMap { relation in
                 relation.left.map { l in
-                    modelsBuilder(db, relation.right).flatMap { rs in
-                        let builder = siblingBuilder(l)
-                        switch action {
-                        case .attach:
-                            return builder
-                                .attach(rs, on: db)
-                                .withError(errThrowing, "将\(label)关系插入中间表时失败", category: .internal)
-                        case .detach:
-                            return builder
-                                .detach(rs, on: db)
-                                .withError(errThrowing, "将\(label)关系中间表移除时失败", category: .internal)
+                    modelsFlattenBuilder(db, relation.right).flatMap { rs in
+                        mainModelBuilder(db, l)
+                            .errCast(errThrowing, "取得主模型时失败", category: .internal)
+                            .flatMap
+                        { model in
+                            let builder = siblingBuilder(model)
+                            switch action {
+                            case .attach:
+                                return builder
+                                    .attach(rs, on: db)
+                                    .withError(errThrowing, "将\(label)关系插入中间表时失败", category: .internal)
+                            case .detach:
+                                return builder
+                                    .detach(rs, on: db)
+                                    .withError(errThrowing, "将\(label)关系中间表移除时失败", category: .internal)
+                            }
                         }
                     }
                 }

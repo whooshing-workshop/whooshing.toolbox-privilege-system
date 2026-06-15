@@ -4,7 +4,7 @@ import Foundation
 import Policy
 
 public extension PM {
-    final class Privilege: PGModel, @unchecked Sendable {
+    final class __Privilege: PGModel, @unchecked Sendable {
         
         public static var name: String { "privileges" }
         
@@ -34,7 +34,7 @@ public extension PM {
             through: PrivilegeAnyResourcePivot.self,
             from: \.$primaryModel,
             to: \.$secondaryModel
-        )                                               var resources: [AnyResource]
+        )                                               var resources: [__AnyResource]
         
         public init() { }
         
@@ -44,12 +44,12 @@ public extension PM {
             return self
         }
         
-        public typealias MIG = DefaultMIG<Privilege>
+        public typealias MIG = DefaultMIG<__Privilege>
     }
 }
 
-extension PM.Privilege: PolicyType {
-    public typealias Model = PrivilegeModule.Privilege
+extension PM.__Privilege: PolicyType {
+    public typealias Model = PrivilegeModule.__Privilege
     public static var namePrefix: String { "privilege" }
     public static var typeId: String { "privilege" }
 }

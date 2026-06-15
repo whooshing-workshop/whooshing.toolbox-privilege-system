@@ -40,9 +40,9 @@ struct HashableTests {
         let email = "test@example.com"
         let passwd = "password"
         
-        let p1 = PUser(email: email, hashedPasswd: passwd)
-        let p2 = PUser(email: email, hashedPasswd: passwd)
-        let p3 = PUser(email: "other@example.com", hashedPasswd: passwd)
+        let p1 = PUser(email: email, hashedPassword: passwd)
+        let p2 = PUser(email: email, hashedPassword: passwd)
+        let p3 = PUser(email: "other@example.com", hashedPassword: passwd)
         
         #expect(p1 == p2)
         #expect(p1 != p3)
@@ -213,7 +213,7 @@ struct HashableTests {
         let umodel = User()
         umodel.email = "test@example.com"
         umodel.id = UUID()
-        umodel.hashedPasswd = "XXX"
+        umodel.hashedPassword = "XXX"
         umodel.key = Data()
         umodel.salt = Data()
         umodel.createdAt = Date()
@@ -326,8 +326,8 @@ struct HashableTests {
         
         // PrivilegeDTO init requires internal initializers or public ones?
         // Let's use the internal one since we use @testable!
-        var p1 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>(_name: name, _description: nil, _policy: policy, _model: nil)
-        var p2 = PM<ResourceList>.PrivilegeDTO<DTO.Prepare>(_name: name, _description: nil, _policy: policy, _model: nil)
+        var p1 = PM<ResourceList>.PPrivilege(_name: name, _description: nil, _policy: policy, _model: nil)
+        var p2 = PM<ResourceList>.PPrivilege(_name: name, _description: nil, _policy: policy, _model: nil)
         
         p1.createdAt = date
         p1.updatedAt = date
@@ -336,7 +336,7 @@ struct HashableTests {
         
         #expect(p1 == p2)
         
-        let model = PM<ResourceList>.Privilege()
+        let model = PM<ResourceList>.__Privilege()
         model.name = name
         model.policy = policy
         model.description = nil
@@ -344,7 +344,7 @@ struct HashableTests {
         model.createdAt = Date()
         model.updatedAt = Date()
         
-        let q1 = try PM<ResourceList>.PrivilegeDTO<DTO.Queried>.make(from: model).get()
+        let q1 = try PM<ResourceList>.QPrivilege.make(from: model).get()
         
         #expect(p1.like(q1))
         #expect(q1.like(p1))

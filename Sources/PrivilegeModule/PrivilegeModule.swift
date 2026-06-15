@@ -204,7 +204,7 @@ public extension PrivilegeModule {
     /// 为某个模块 DTO 创建类型安全查询。
     ///
     /// ```swift
-    /// let resources = try await module.query(AnyResourceDTO.self)
+    /// let resources = try await module.query(AnyResource.self)
     ///     .page(with: 1, size: 20)
     /// ```
     ///

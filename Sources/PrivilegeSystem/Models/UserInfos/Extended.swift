@@ -10,7 +10,7 @@ public extension User.Info {
         public struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
             let userInfoId = PGField("user_info_id", .uuid)             .required.unique(composite: name + ".unique").foreign(User.Info.self, \.id, onDelete: .cascade)
-            let value = PGField(T.valueFieldName, .string)              .required.unique(composite: name + ".unique")
+            let value = PGField(T.valueFieldName, .data)                .required.unique(composite: name + ".unique")
             let order = PGField("order", .int16)                        .required.unique(composite: name + ".unique")
             let description = PGField("description", .string)
             let createdAt = PGField("created_at", .datetime)            .required
@@ -24,7 +24,7 @@ public extension User.Info {
         @ID(key: .id)                                   public var id: UUID?
         
         @Parent(fields.userInfoId)                      var userInfo: User.Info
-        @Field(fields.value)                            var value: String
+        @Field(fields.value)                            var value: Data
         @Field(fields.order)                            var order: Int16
         @Field(fields.description)                      var description: String?
         

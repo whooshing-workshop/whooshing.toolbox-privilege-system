@@ -2,8 +2,8 @@ import Policy
 
 extension PrivilegeModule {
     static var DataModels: [any TdeMIG.Type] {[
-        AnyResource.MIG.self,
-        Privilege.MIG.self,
+        __AnyResource.MIG.self,
+        __Privilege.MIG.self,
         PrivilegeAnyResourcePivot.MIG.self
     ]}
 }

@@ -5,7 +5,7 @@ import Fluent
 import ResourceMacros
 @preconcurrency import AnyCodable
 
-public final class AnyResource: PGModel, @unchecked Sendable  {
+public final class __AnyResource: PGModel, @unchecked Sendable  {
     public static var name: String { "resources" }
     
     public struct Fields: PGFields {
@@ -45,7 +45,7 @@ public final class AnyResource: PGModel, @unchecked Sendable  {
         self._$id.exists = resource._$id.exists
     }
     
-    public typealias MIG = DefaultMIG<AnyResource>
+    public typealias MIG = DefaultMIG<__AnyResource>
 }
 
 extension PM {
@@ -77,7 +77,7 @@ extension PM {
             through: PrivilegeResourcePivot.self,
             from: \.$secondaryModel,
             to: \.$primaryModel
-        )                                           var privileges: [Privilege]
+        )                                           var privileges: [__Privilege]
         
         @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
@@ -101,6 +101,6 @@ extension PM {
             return self
         }
         
-        public typealias MIG = DefaultMIG<AnyResource>
+        public typealias MIG = DefaultMIG<__AnyResource>
     }
 }

@@ -10,17 +10,9 @@ import ResourceMacros
 import AnyCodable
 
 public extension PM {
-    /// 准备写入数据库的资源权限 DTO。
-    typealias PPrivilegeDTO = PrivilegeDTO<DTO.Prepare>
-    /// 已从数据库查询出的资源权限 DTO。
-    typealias QPrivilegeDTO = PrivilegeDTO<DTO.Queried>
-    
-    /// 资源权限 DTO。
-    ///
-    /// 每个资源权限都包含一段 OPA policy。创建后可通过
-    /// `PrivilegeController.attach` 绑定到资源，并在 `Arbitrator.judge` 的
-    /// `privilegeIds` 参数中参与最终鉴权。
-    struct PrivilegeDTO<T: DTO.Status>: DTOModel, Sendable {
+    struct PPrivilege: DTO.Prepare {
+        public typealias QueriedModel = QPrivilege
+        public let id: UUID?
         /// 权限名称。
         public let name: String?
         /// 权限说明。
@@ -28,74 +20,121 @@ public extension PM {
         /// OPA 策略表达式。控制器会自动包装 package、import 和默认 allow。
         public let policy: String
         
-        @DTO.Passive public internal(set) var id: UUID
-        @DTO.Passive public internal(set) var createdAt: Date
-        @DTO.Passive public internal(set) var updatedAt: Date
-        
-        public typealias S = PM<ResourceList>
-        package typealias AssociatedModel = Privilege
-        private let m: AssociatedModel?
-        
-        init(
-            _name: String?,
-            _description: String?,
-            _policy: String,
-            _model: AssociatedModel?
+        /// 创建一个待保存的资源权限。
+        ///
+        /// ```swift
+        /// let privilege = PM<ResourceList>.PPrivilegeDTO(
+        ///     name: "ReadFile",
+        ///     description: "允许读取文件",
+        ///     policy: "allow if { input.operation == \"read\" }"
+        /// )
+        /// ```
+        public init(
+            id: UUID? = nil,
+            name: String? = nil,
+            description: String? = nil,
+            policy: String
         ) {
-            self.name = _name
-            self.description = _description
-            self.policy = _policy
-            self.m = _model
+            self.id = id
+            self.name = name
+            self.description = description
+            self.policy = policy
         }
-    }
-}
-
-public extension PM.PrivilegeDTO where T == DTO.Prepare {
-    /// 创建一个待保存的资源权限。
-    ///
-    /// ```swift
-    /// let privilege = PM<ResourceList>.PPrivilegeDTO(
-    ///     name: "ReadFile",
-    ///     description: "允许读取文件",
-    ///     policy: "allow if { input.operation == \"read\" }"
-    /// )
-    /// ```
-    init(
-        name: String? = nil,
-        description: String? = nil,
-        policy: String
-    ) {
-        self = Self.init(_name: name, _description: description, _policy: policy, _model: nil)
-    }
-}
-
-extension PM.PrivilegeDTO where T == DTO.Queried {
-    var model: PM<ResourceList>.Privilege {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
+        
+        public var maps: [CodingKeys : AnyCodable] {[
+            .id: .init(self.id),
+            .name: .init(self.name),
+            .description: .init(self.description),
+            .policy: .init(self.policy)
+        ]}
+        
+        public enum CodingKeys: String, DTO.CodingKey {
+            case id
+            case name
+            case description
+            case policy
         }
-        return m
     }
     
-    public static func make(from model: PM<ResourceList>.Privilege) -> Res<Self, S.Errcase> {
-        .init(throws: .privilegeDTOFailed, category: .internal) {
-            var n = Self.init(
-                _name: model.name,
-                _description: model.description,
-                _policy: model.policy,
-                _model: model
-            )
-            n.$id = try model.requireID()
-            n.$createdAt = model.createdAt
-            n.$updatedAt = model.updatedAt
-            return n
+    struct QPrivilege: DTO.Queried {
+        public typealias PrepareModel = PPrivilege
+        public let id: UUID
+        /// 权限名称。
+        public let name: String?
+        /// 权限说明。
+        public let description: String?
+        /// OPA 策略表达式。控制器会自动包装 package、import 和默认 allow。
+        public let policy: String
+        public let createdAt: Date
+        public let updatedAt: Date
+        
+        package let __m: __Privilege?
+        package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
+        
+        public var maps: [CodingKeys: AnyCodable] {[
+            .id: .init(self.id),
+            .name: .init(self.name),
+            .description: .init(self.description),
+            .policy: .init(self.policy),
+            .createdAt: .init(self.createdAt),
+            .updatedAt: .init(self.updatedAt)
+        ]}
+        
+        public enum CodingKeys: String, DTO.CodingKey {
+            case id
+            case name
+            case description
+            case policy
+            case createdAt = "created_at"
+            case updatedAt = "updated_at"
+        }
+        
+        init(
+            id: UUID,
+            name: String?,
+            description: String?,
+            policy: String,
+            createdAt: Date,
+            updatedAt: Date,
+            model: SQLModel?
+        ) {
+            self.id = id
+            self.name = name
+            self.description = description
+            self.policy = policy
+            self.createdAt = createdAt
+            self.updatedAt = updatedAt
+            self.__m = model
+        }
+        
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try container.decode(UUID.self, forKey: .id)
+            self.name = try container.decodeIfPresent(String.self, forKey: .name)
+            self.description = try container.decodeIfPresent(String.self, forKey: .description)
+            self.policy = try container.decode(String.self, forKey: .policy)
+            self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+            self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+            self.__m = nil
+        }
+        
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: PrivilegeModule<ResourceList>.QPrivilege.CodingKeys.self)
+            try container.encode(self.id, forKey: PrivilegeModule.QPrivilege.CodingKeys.id)
+            try container.encodeIfPresent(self.name, forKey: PrivilegeModule.QPrivilege.CodingKeys.name)
+            try container.encodeIfPresent(self.description, forKey: PrivilegeModule.QPrivilege.CodingKeys.description)
+            try container.encode(self.policy, forKey: PrivilegeModule.QPrivilege.CodingKeys.policy)
+            try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+            try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
         }
     }
 }
 
-extension PM.PrivilegeDTO where T == DTO.Prepare {
-    func raw() -> PM<ResourceList>.Privilege {
-        let privilege = PM<ResourceList>.Privilege()
+extension PM.PPrivilege: __Prepare {
+    public typealias S = PM<ResourceList>
+    func raw() -> S.__Privilege {
+        let privilege = PM<ResourceList>.__Privilege()
+        privilege.id = id
         privilege.name = name
         privilege.description = description
         privilege.policy = policy
@@ -103,21 +142,64 @@ extension PM.PrivilegeDTO where T == DTO.Prepare {
     }
 }
 
-public extension PM.PrivilegeDTO where T == DTO.Prepare {
+extension PM.QPrivilege: __Queried {
+    public typealias S = PM<ResourceList>
+    package typealias Failure = S.Errcase
+    public static func make(from model: S.__Privilege) -> Res<Self, S.Errcase> {
+        .init(throws: .privilegeDTOFailed, category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                name: model.name,
+                description: model.description,
+                policy: model.policy,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
+            )
+        }
+    }
+}
+
+extension PM.QPrivilege: Query.Queriable {
+    public typealias Model = S.__Privilege
+    public typealias ErrorType = S.Errcase
+    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.name: \.$name,
+        \.description: \.$description,
+        \.policy: \.$policy,
+        \.id: \.$id,
+        \.createdAt: \.$createdAt,
+        \.updatedAt: \.$updatedAt
+    ]}
+    
+    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
+        builder
+            .field(Model.self, \.$name)
+            .field(Model.self, \.$description)
+            .field(Model.self, \.$policy)
+            .field(Model.self, \.$id)
+            .field(Model.self, \.$createdAt)
+            .field(Model.self, \.$updatedAt)
+    }
+}
+
+// MARK: - Updater
+
+public extension PM.PPrivilege {
     /// 资源权限更新器。
     struct Updater: @unchecked Sendable {
         /// 要更新的资源权限 ID。
         public let privilegeId: UUID
         package var id: UUID { privilegeId }
         
-        package let policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)?
+        package let policyUpdate: ((S.QPrivilege?) throws -> String)?
         
         package let updates: OrderedDictionary<
-            PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
+            PartialKeyPath<S.PPrivilege>,
             (
-                QueryBuilder<S.Privilege>,
-                PM<ResourceList>.PrivilegeDTO<DTO.Queried>?
-            ) throws -> QueryBuilder<S.Privilege>
+                QueryBuilder<S.__Privilege>,
+                S.QPrivilege?
+            ) throws -> QueryBuilder<S.__Privilege>
         >
         package let needsPeek: Bool
         
@@ -134,10 +216,10 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         
         package init(
             id: UUID,
-            policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil,
+            policyUpdate: ((S.QPrivilege?) throws -> String)? = nil,
             updates: OrderedDictionary<
-                PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
-                (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>
+                PartialKeyPath<S.PPrivilege>,
+                (QueryBuilder<S.__Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__Privilege>
             >,
             needsPeek: Bool
         ) {
@@ -150,8 +232,8 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         package init(
             id: UUID,
             updates: OrderedDictionary<
-                PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
-                (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>
+                PartialKeyPath<S.PPrivilege>,
+                (QueryBuilder<S.__Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__Privilege>
             >,
             needsPeek: Bool
         ) {
@@ -163,9 +245,9 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
         
         package func generate(
             needsPeek: Bool = false,
-            key: PartialKeyPath<S.PrivilegeDTO<DTO.Prepare>>,
-            value: @escaping (QueryBuilder<S.Privilege>, PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> QueryBuilder<S.Privilege>,
-            policyUpdate: ((PM<ResourceList>.PrivilegeDTO<DTO.Queried>?) throws -> String)? = nil
+            key: PartialKeyPath<S.PPrivilege>,
+            value: @escaping (QueryBuilder<S.__Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__Privilege>,
+            policyUpdate: ((S.QPrivilege?) throws -> String)? = nil
         ) -> Self {
             var updates = self.updates
             updates[key] = value
@@ -179,9 +261,9 @@ public extension PM.PrivilegeDTO where T == DTO.Prepare {
     }
 }
 
-extension PM.PrivilegeDTO.Updater: DTOUpdater {}
+extension PM.PPrivilege.Updater: DTOUpdater {}
 
-public extension PM.PrivilegeDTO.Updater {
+public extension PM.PPrivilege.Updater {
     /// 更新权限名称。
     func update(name: @escaping @autoclosure () throws -> String?) -> Self {
         generate(key: \.name) { builder, _ in
@@ -208,9 +290,10 @@ public extension PM.PrivilegeDTO.Updater {
     }
 }
 
-public extension PM.PrivilegeDTO.Updater {
+public extension PM.PPrivilege.Updater {
+    typealias S = PM<ResourceList>
     /// 基于当前数据库值更新权限名称。
-    func update(name: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) -> Self {
+    func update(name: @escaping (S.QPrivilege) throws -> String?) -> Self {
         generate(needsPeek: true, key: \.name) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$name, to: try name(q))
@@ -218,7 +301,7 @@ public extension PM.PrivilegeDTO.Updater {
     }
     
     /// 基于当前数据库值更新权限说明。
-    func update(description: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String?) -> Self {
+    func update(description: @escaping (S.QPrivilege) throws -> String?) -> Self {
         generate(needsPeek: true, key: \.description) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
             return builder.set(\.$description, to: try description(q))
@@ -226,7 +309,7 @@ public extension PM.PrivilegeDTO.Updater {
     }
     
     /// 基于当前数据库值更新权限策略，并同步更新 OPA 中对应的策略内容。
-    func update(policy: @escaping (PM<ResourceList>.PrivilegeDTO<DTO.Queried>) throws -> String) -> Self {
+    func update(policy: @escaping (S.QPrivilege) throws -> String) -> Self {
         generate(
             needsPeek: true,
             key: \.policy,
@@ -240,162 +323,4 @@ public extension PM.PrivilegeDTO.Updater {
             }
         )
     }
-}
-
-extension PM.PrivilegeDTO: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case name
-        case description
-        case policy
-        case id
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(name, forKey: .name)
-        try container.encodeIfPresent(description, forKey: .description)
-        try container.encode(policy, forKey: .policy)
-        
-        if T.self != DTO.Prepare.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
-        }
-    }
-}
-
-extension PM.PrivilegeDTO: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.name = try container.decodeIfPresent(String.self, forKey: .name)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.policy = try container.decode(String.self, forKey: .policy)
-        self.m = nil
-    }
-}
-
-extension PM.PrivilegeDTO: Query.Queriable where T == DTO.Queried {
-    public typealias Model = S.Privilege
-    public typealias ErrorType = S.Errcase
-    public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
-        \.name: \.$name,
-        \.description: \.$description,
-        \.policy: \.$policy,
-        \.id: \.$id,
-        \.createdAt: \.$createdAt,
-        \.updatedAt: \.$updatedAt
-    ]}
-    
-    public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
-        builder
-            .field(Model.self, \.$name)
-            .field(Model.self, \.$description)
-            .field(Model.self, \.$policy)
-            .field(Model.self, \.$id)
-            .field(Model.self, \.$createdAt)
-            .field(Model.self, \.$updatedAt)
-    }
-}
-
-extension PM.PrivilegeDTO: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(name)
-            hasher.combine(description)
-            hasher.combine(policy)
-        } else {
-            hasher.combine(name)
-            hasher.combine(description)
-            hasher.combine(policy)
-            hasher.combine(id)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
-        }
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.name == rhs.name &&
-            lhs.description == rhs.description &&
-            lhs.policy == rhs.policy
-        } else {
-            lhs.name == rhs.name &&
-            lhs.description == rhs.description &&
-            lhs.policy == rhs.policy &&
-            lhs.id == rhs.id &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
-        }
-    }
-}
-
-public extension PM.PrivilegeDTO where T == DTO.Prepare {
-    func like(_ rhs: PM<ResourceList>.QPrivilegeDTO) -> Bool {
-        self.name == rhs.name &&
-        self.description == rhs.description &&
-        self.policy == rhs.policy
-    }
-}
-
-public extension PM.PrivilegeDTO where T == DTO.Queried {
-    func like(_ rhs: PM<ResourceList>.PPrivilegeDTO) -> Bool {
-        self.name == rhs.name &&
-        self.description == rhs.description &&
-        self.policy == rhs.policy
-    }
-}
-
-public extension Collection {
-    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.QPrivilegeDTO, Element == PM<T>.PPrivilegeDTO {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-public extension Collection {
-    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PM<T>.PPrivilegeDTO, Element == PM<T>.QPrivilegeDTO {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-// MARK: - Loggerable
-
-extension PM.PrivilegeDTO: Loggerable {
-    public var logDescription: String {
-        var parts: [String] = []
-        if T.self == DTO.Prepare.self {
-            if let name = name { parts.append("name:\(name)") }
-            if let description = description { parts.append("description:\(description)") }
-            parts.append("policy:\(policy)")
-        } else {
-            parts.append("id:\(id)")
-            if let name = name { parts.append("name:\(name)") }
-            if let description = description { parts.append("description:\(description)") }
-            parts.append("policy:\(policy)")
-            parts.append("createdAt:\(createdAt)")
-            parts.append("updatedAt:\(updatedAt)")
-        }
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        return "Privilege[\(statusLabel)](\(parts.joined(separator: ", ")))"
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            name == nil ? "Privilege(\(id.shortString))" : "Privilege(\(id.shortString), \(name!))" :
-            "Privilege(\(name ?? "unsaved"))"
-    }
-}
-
-
-extension PM.PrivilegeDTO.Updater: Loggerable {
-    public var logDescription: String {
-        return formatJson([
-            "target_id": AnyCodable(id.shortString),
-            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
-        ])
-    }
-    public var description: String { logDescription }
-    public var summaryDescription: String { "PrivilegeUpdater(\(id.shortString), updates: \(updates.keys.count))" }
 }

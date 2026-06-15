@@ -9,43 +9,103 @@ import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
 
-public typealias PPolicy<G: PolicyType> = DTO.Policy<G, DTO.Prepare>
-public typealias QPolicy<G: PolicyType> = DTO.Policy<G, DTO.Queried>
-
-public extension DTO {
-    struct Policy<G: PolicyType, T: Status>: Sendable {
-        public let moduleId: UUID
-        public let policy: String
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var createdAt: Date
-        @Passive public internal(set) var updatedAt: Date
-        
-        init(
-            _moduleId: UUID,
-            _policy: String
-        ) {
-            self.moduleId = _moduleId
-            self.policy = _policy
-        }
-    }
-}
-
-public extension DTO.Policy where T == DTO.Prepare {
-    init(
+public struct PPolicy<G: PolicyType>: DTO.Prepare {
+    public typealias QueriedModel = QPolicy<G>
+    public let id: UUID?
+    public let moduleId: UUID
+    public let policy: String
+    
+    public init(
+        id: UUID? = nil,
         moduleId: UUID,
         policy: String
     ) {
-        self = Self.init(_moduleId: moduleId, _policy: policy)
+        self.id = id
+        self.moduleId = moduleId
+        self.policy = policy
+    }
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .moduleId: .init(self.moduleId),
+        .policy: .init(self.policy)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case moduleId = "module_id"
+        case policy
     }
 }
 
-extension DTO.Policy where T == DTO.Prepare {
+public struct QPolicy<G: PolicyType>: DTO.Queried {
+    public typealias PrepareModel = PPolicy<G>
+    public let id: UUID
+    public let moduleId: UUID
+    public let policy: String
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package let __m: PolicyExp<G>?
+    package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .moduleId: .init(self.moduleId),
+        .policy: .init(self.policy),
+        .createdAt: .init(self.createdAt),
+        .updatedAt: .init(self.updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case moduleId = "module_id"
+        case policy
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(
+        id: UUID,
+        moduleId: UUID,
+        policy: String,
+        createdAt: Date,
+        updatedAt: Date,
+        model: SQLModel?
+    ) {
+        self.id = id
+        self.moduleId = moduleId
+        self.policy = policy
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.moduleId = try container.decode(UUID.self, forKey: .moduleId)
+        self.policy = try container.decode(String.self, forKey: .policy)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.__m = nil
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: QPolicy<G>.CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.moduleId, forKey: .moduleId)
+        try container.encode(self.policy, forKey: .policy)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
+    }
+}
+
+extension PPolicy: __Prepare {
     /// 需要先存 Policy 到数据库中
-    func raw(
-        parentId: G.Model.IDValue
-    ) -> PolicyExp<G> {
+    package func raw(parentId: G.Model.IDValue) -> SQLModel {
         let policy = PolicyExp<G>()
+        policy.id = id
         policy.$parent.id = parentId
         policy.moduleId = moduleId
         policy.policy = self.policy
@@ -53,21 +113,23 @@ extension DTO.Policy where T == DTO.Prepare {
     }
 }
 
-extension DTO.Policy where T == DTO.Queried {
+extension QPolicy: __Queried {
+    package typealias Failure = PrivilegeSystem.Errcase
     public static func make(from model: PolicyExp<G>) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .censorDTOFailed, category: .internal) {
-            var n = Self.init(
-                _moduleId: model.moduleId,
-                _policy: model.policy
+        .init(throws: .policyDTORawCreateFailed, category: .internal) {
+            Self.init(
+                id: try model.requireID(),
+                moduleId: model.moduleId,
+                policy: model.policy,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
             )
-            n.$id = try model.requireID()
-            
-            return n
         }
     }
 }
 
-extension DTO.Policy: Query.Queriable where T == DTO.Queried {
+extension QPolicy: Query.Queriable {
     public typealias Model = PolicyExp<G>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -85,122 +147,5 @@ extension DTO.Policy: Query.Queriable where T == DTO.Queried {
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
-    }
-}
-
-extension DTO.Policy: CustomStringConvertible, Loggerable {
-    public var description: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "module_id": AnyCodable("\(self.moduleId)"),
-                "policy": AnyCodable(self.policy)
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "module_id": AnyCodable("\(self.moduleId)"),
-                "policy": AnyCodable(self.policy),
-                "created_at": AnyCodable("\(self.createdAt)"),
-                "updated_at": AnyCodable("\(self.updatedAt)")
-            ]
-        }
-
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "Policy(\(id.shortString), module:\(moduleId.shortString))" :
-            "Policy(module:\(moduleId))"
-    }
-}
-
-extension DTO.Policy: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(moduleId)
-            hasher.combine(policy)
-        } else {
-            hasher.combine(moduleId)
-            hasher.combine(policy)
-            hasher.combine(id)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
-        }
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.moduleId == rhs.moduleId &&
-            lhs.policy == rhs.policy
-        } else {
-            lhs.moduleId == rhs.moduleId &&
-            lhs.policy == rhs.policy &&
-            lhs.id == rhs.id &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
-        }
-    }
-}
-
-public extension DTO.Policy where T == DTO.Prepare {
-    func like(_ rhs: QPolicy<G>) -> Bool {
-        self.moduleId == rhs.moduleId &&
-        self.policy == rhs.policy
-    }
-}
-
-public extension DTO.Policy where T == DTO.Queried {
-    func like(_ rhs: PPolicy<G>) -> Bool {
-        self.moduleId == rhs.moduleId &&
-        self.policy == rhs.policy
-    }
-}
-
-public extension Collection {
-    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == QPolicy<T>, Element == PPolicy<T> {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-public extension Collection {
-    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PPolicy<T>, Element == QPolicy<T> {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-extension DTO.Policy: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case moduleId = "module_id"
-        case policy
-        case id
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(moduleId, forKey: .moduleId)
-        try container.encode(policy, forKey: .policy)
-        if T.self != DTO.Prepare.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
-        }
-    }
-}
-
-extension DTO.Policy: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.moduleId = try container.decode(UUID.self, forKey: .moduleId)
-        self.policy = try container.decode(String.self, forKey: .policy)
     }
 }

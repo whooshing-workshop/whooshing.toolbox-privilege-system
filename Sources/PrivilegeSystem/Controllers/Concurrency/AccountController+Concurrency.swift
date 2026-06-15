@@ -9,34 +9,34 @@ import PrivilegeModule
 
 extension PrivilegeSystem.AccountController {
     public func register(
-        for user: DTO.User<DTO.Prepare>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.User<DTO.Queried> {
+        for user: PUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QUser {
         try await register(for: user).get()
     }
 
     public func login(
-        by userData: DTO.User<DTO.Prepare>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.Token<DTO.Queried> {
+        by userData: PUser
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QToken {
         try await login(by: userData).get()
     }
 
     public func authenticate(
-        token: DTO.Token<DTO.Prepare>
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> Crypto.Symm.Key {
+        token: Token
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> SendableSymmKey {
         try await authenticate(token: token).get()
     }
 
     public func changePassword(
-        for userData: DTO.User<DTO.Prepare>,
-        to hashedPasswd: Data
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.User<DTO.Queried> {
-        try await changePassword(for: userData, to: hashedPasswd).get()
+        for userData: PUser,
+        to hashedPassword: Data
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QUser {
+        try await changePassword(for: userData, to: hashedPassword).get()
     }
 
     public func changePassword(
-        for userData: DTO.User<DTO.Prepare>,
-        to hashedPasswd: String
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> DTO.User<DTO.Queried> {
-        try await changePassword(for: userData, to: hashedPasswd).get()
+        for userData: PUser,
+        to hashedPassword: String
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QUser {
+        try await changePassword(for: userData, to: hashedPassword).get()
     }
 }

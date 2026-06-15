@@ -10,235 +10,164 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
+import DataConvertable
 
-public typealias EIAddress = DTO.Address
-public typealias EIAlternateEmail = DTO.AlternateEmail
-public typealias EIPhone = DTO.Phone
+public typealias PAddressSlice = PInfoSlice<Address>
+public typealias QAddressSlice = QInfoSlice<Address>
 
-public typealias PAddressSlice = DTO.InfoSlice<DTO.Address, DTO.Prepare>
-public typealias QAddressSlice = DTO.InfoSlice<DTO.Address, DTO.Queried>
+public typealias PAlternateEmailSlice = PInfoSlice<AlternateEmail>
+public typealias QAlternateEmailSlice = QInfoSlice<AlternateEmail>
 
-public typealias PAlternateEmailSlice = DTO.InfoSlice<DTO.AlternateEmail, DTO.Prepare>
-public typealias QAlternateEmailSlice = DTO.InfoSlice<DTO.AlternateEmail, DTO.Queried>
+public typealias PPhoneSlice = PInfoSlice<Phone>
+public typealias QPhoneSlice = QInfoSlice<Phone>
 
-public typealias PPhoneSlice = DTO.InfoSlice<DTO.Phone, DTO.Prepare>
-public typealias QPhoneSlice = DTO.InfoSlice<DTO.Phone, DTO.Queried>
+public typealias PExtendedSlice<T: UserInfoModel> = PInfoSlice<T>
+public typealias QExtendedSlice<T: UserInfoModel> = QInfoSlice<T>
 
-public typealias PExtendedSlice<T: DTO.UserInfoModel> = DTO.InfoSlice<T, DTO.Prepare>
-public typealias QExtendedSlice<T: DTO.UserInfoModel> = DTO.InfoSlice<T, DTO.Queried>
-
-public extension DTO {
-    protocol UserInfoModel: Sendable {
-        associatedtype Value: Sendable & Codable & Hashable
-        associatedtype Model: UserInfoExtends.Model
-        static var description: String { get }
+public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
+    public typealias QueriedModel = QInfoSlice<G>
+    public let id: UUID?
+    public let value: G.Value
+    public let order: Int16
+    public let description: String?
+    
+    public init(
+        id: UUID? = nil,
+        value: G.Value,
+        order: Int16,
+        description: String? = nil
+    ) {
+        self.id = id
+        self.value = value
+        self.order = order
+        self.description = description
     }
     
-    struct InfoSlice<G: UserInfoModel, T: Status>: DTOModel, Sendable {
-        public let value: G.Value
-        public let order: Int16
-        public let description: String?
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var userInfoId: UUID
-        @Passive public internal(set) var createdAt: Date
-        @Passive public internal(set) var updatedAt: Date
-        
-        package typealias AssociatedModel = UserModel.Info.Extended<G.Model>
-        private let m: AssociatedModel?
-        
-        init(
-            _value: G.Value,
-            _order: Int16,
-            _description: String?,
-            _model: AssociatedModel?
-        ) {
-            self.value = _value
-            self.order = _order
-            self.description = _description
-            self.m = _model
-        }
-    }
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .value: .init(self.value),
+        .order: .init(self.order),
+        .description: .init(self.description)
+    ]}
     
-    struct Address: UserInfoModel {
-        public typealias Value = String
-        public typealias Model = UserInfoExtends.Address
-        public static let description = "地址"
-    }
-    
-    struct AlternateEmail: UserInfoModel {
-        public typealias Value = String
-        public typealias Model = UserInfoExtends.AlternateEmail
-        public static let description = "次要邮箱"
-    }
-    
-    struct Phone: UserInfoModel {
-        public typealias Value = String
-        public typealias Model = UserInfoExtends.Phone
-        public static let description = "次要手机号"
-    }
-}
-
-public extension DTO.InfoSlice where T == DTO.Prepare {
-    init(value: G.Value, order: Int16, description: String? = nil) {
-        self = Self.init(
-            _value: value,
-            _order: order,
-            _description: description,
-            _model: nil
-        )
-    }
-}
-
-extension DTO.InfoSlice where T == DTO.Queried, G.Value == String {
-    var model: User.Info.Extended<G.Model> {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
-    }
-    
-    public static func make(from model: User.Info.Extended<G.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .userInfoDTOFailed, category: .internal) {
-            var n = Self.init(
-                _value: model.value,     // 暂时使用强制解包，因为目前用户 Info Value 字段均为 String
-                _order: model.order,
-                _description: model.description,
-                _model: model
-            )
-            n.$id = try model.requireID()
-            n.$userInfoId = model.$userInfo.id
-            n.$createdAt = model.createdAt
-            n.$updatedAt = model.updatedAt
-            return n
-        }
-    }
-}
-
-extension DTO.InfoSlice where T == DTO.Prepare, G.Value == String {
-    func raw(for userInfoId: UUID) -> User.Info.Extended<G.Model> {
-        let info = User.Info.Extended<G.Model>()
-        info.$userInfo.id = userInfoId
-        info.value = value
-        info.order = order
-        info.description = description
-        return info
-    }
-}
-
-public extension DTO.InfoSlice where G.Value == String, T == DTO.Prepare {
-    struct Updater: @unchecked Sendable {
-        public let infoSliceId: UUID
-        package var id: UUID { infoSliceId }
-        
-        package let updates: OrderedDictionary<
-            PartialKeyPath<DTO.InfoSlice<G, DTO.Prepare>>,
-            (QueryBuilder<User.Info.Extended<G.Model>>, DTO.InfoSlice<G, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
-        >
-        package let needsPeek: Bool
-        
-        public init(infoSliceId: UUID) {
-            self.infoSliceId = infoSliceId
-            self.updates = [:]
-            self.needsPeek = false
-        }
-        
-        package init(
-            id: UUID,
-            updates: OrderedDictionary<
-                PartialKeyPath<DTO.InfoSlice<G, DTO.Prepare>>,
-                (QueryBuilder<User.Info.Extended<G.Model>>, DTO.InfoSlice<G, DTO.Queried>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
-            >,
-            needsPeek: Bool
-        ) {
-            self.infoSliceId = id
-            self.updates = updates
-            self.needsPeek = needsPeek
-        }
-    }
-}
-
-extension DTO.InfoSlice.Updater: DTOUpdater {}
-
-public extension DTO.InfoSlice.Updater {
-    func update(value: @escaping @autoclosure () throws -> G.Value) -> Self {
-        generate(key: \.value) { builder, _ in
-            builder.set(\.$value, to: try value())
-        }
-    }
-    
-    func update(order: @escaping @autoclosure () throws -> Int16) -> Self {
-        generate(key: \.order) { builder, _ in
-            builder.set(\.$order, to: try order())
-        }
-    }
-    
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
-        }
-    }
-}
-
-public extension DTO.InfoSlice.Updater {
-    func update(value: @escaping (DTO.InfoSlice<G, DTO.Queried>) throws -> G.Value) -> Self {
-        generate(needsPeek: true, key: \.value) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$value, to: try value(q))
-        }
-    }
-    
-    func update(order: @escaping (DTO.InfoSlice<G, DTO.Queried>) throws -> Int16) -> Self {
-        generate(needsPeek: true, key: \.order) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$order, to: try order(q))
-        }
-    }
-    
-    func update(description: @escaping (DTO.InfoSlice<G, DTO.Queried>) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
-        }
-    }
-}
-
-extension DTO.InfoSlice: Encodable {
-    enum CodingKeys: String, CodingKey {
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
         case value
         case order
         case description
+    }
+}
+
+public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
+    public typealias PrepareModel = PInfoSlice<G>
+    public let id: UUID
+    public let userInfoId: UUID
+    public let value: G.Value
+    public let order: Int16
+    public let description: String?
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package let __m: User.Info.Extended<G.Model>?
+    package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .userInfoId: .init(self.userInfoId),
+        .value: .init(self.value),
+        .order: .init(self.order),
+        .description: .init(self.description),
+        .createdAt: .init(self.createdAt),
+        .updatedAt: .init(self.updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
         case id
         case userInfoId = "user_info_id"
+        case value
+        case order
+        case description
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
     
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(value, forKey: .value)
-        try container.encode(order, forKey: .order)
-        try container.encode(description, forKey: .description)
-        if T.self != DTO.Prepare.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(userInfoId, forKey: .userInfoId)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
+    init(
+        id: UUID,
+        userInfoId: UUID,
+        value: G.Value,
+        order: Int16,
+        description: String?,
+        createdAt: Date,
+        updatedAt: Date,
+        model: User.Info.Extended<G.Model>
+    ) {
+        self.id = id
+        self.userInfoId = userInfoId
+        self.value = value
+        self.order = order
+        self.description = description
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.userInfoId = try container.decode(UUID.self, forKey: .userInfoId)
+        self.value = try container.decode(G.Value.self, forKey: .value)
+        self.order = try container.decode(Int16.self, forKey: .order)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.__m = nil
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: QInfoSlice<G>.CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.userInfoId, forKey: .userInfoId)
+        try container.encode(self.value, forKey: .value)
+        try container.encode(self.order, forKey: .order)
+        try container.encodeIfPresent(self.description, forKey: .description)
+        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension PInfoSlice: __Prepare {
+    func raw(for userInfoId: UUID) -> Res<SQLModel, PrivilegeSystem.Errcase> {
+        .init(throws: .infoSliceDTORawCreateFailed) {
+            let info = SQLModel()
+            info.id = id
+            info.$userInfo.id = userInfoId
+            info.value = try value.dataRes.get()
+            info.order = order
+            info.description = description
+            return info
         }
     }
 }
 
-extension DTO.InfoSlice: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        var container = try decoder.container(keyedBy: CodingKeys.self)
-        self.value = try container.decode(G.Value.self, forKey: .value)
-        self.order = try container.decode(Int16.self, forKey: .order)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.m = nil
+extension QInfoSlice: __Queried {
+    package typealias Failure = PrivilegeSystem.Errcase
+    public static func make(from model: User.Info.Extended<G.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
+        .init(throws: .userInfoDTOFailed, category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                userInfoId: model.$userInfo.id,
+                value: G.Value.make(data: model.value).get(),
+                order: model.order,
+                description: model.description,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
+            )
+        }
     }
 }
 
-extension DTO.InfoSlice: Query.Queriable where T == DTO.Queried, G.Value == String {
+extension QInfoSlice: Query.Queriable {
     public typealias Model = User.Info.Extended<G.Model>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -263,127 +192,107 @@ extension DTO.InfoSlice: Query.Queriable where T == DTO.Queried, G.Value == Stri
     }
 }
 
-extension DTO.InfoSlice: Loggerable {
-    public var logDescription: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "value": AnyCodable("[PROTECTED]"),
-                "order": AnyCodable(self.order),
-                "description": AnyCodable(self.description)
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "user_info_id": AnyCodable("\(self.userInfoId)"),
-                "value": AnyCodable("[PROTECTED]"),
-                "order": AnyCodable(self.order),
-                "description": AnyCodable(self.description),
-                "created_at": AnyCodable("\(self.createdAt)"),
-                "updated_at": AnyCodable("\(self.updatedAt)")
-            ]
-        }
+// MARK: - User Info Models
 
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "InfoSlice(\(id.shortString), \(G.description), order:\(order))" :
-            "InfoSlice(\(G.description), order:\(order))"
-    }
+public protocol UserInfoModel: Sendable {
+    associatedtype Value: Sendable & Codable & Hashable & ThrowableDataConvertable
+    associatedtype Model: UserInfoExtends.Model
+    static var description: String { get }
 }
 
-extension DTO.InfoSlice where T == DTO.Prepare {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
-        hasher.combine(order)
-        hasher.combine(description)
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.value == rhs.value &&
-        lhs.order == rhs.order &&
-        lhs.description == rhs.description
-    }
+public struct Address: UserInfoModel {
+    public typealias Value = String
+    public typealias Model = UserInfoExtends.Address
+    public static let description = "地址"
 }
 
-extension DTO.InfoSlice: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(value)
-            hasher.combine(order)
-            hasher.combine(description)
-        } else {
-            hasher.combine(value)
-            hasher.combine(order)
-            hasher.combine(description)
-            hasher.combine(id)
-            hasher.combine(userInfoId)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
+public struct AlternateEmail: UserInfoModel {
+    public typealias Value = String
+    public typealias Model = UserInfoExtends.AlternateEmail
+    public static let description = "次要邮箱"
+}
+
+public struct Phone: UserInfoModel {
+    public typealias Value = String
+    public typealias Model = UserInfoExtends.Phone
+    public static let description = "次要手机号"
+}
+
+// MARK: - Updater
+
+public extension PInfoSlice {
+    struct Updater: @unchecked Sendable {
+        public let infoSliceId: UUID
+        package var id: UUID { infoSliceId }
+
+        package let updates: OrderedDictionary<
+            PartialKeyPath<PInfoSlice<G>>,
+            (QueryBuilder<User.Info.Extended<G.Model>>, QInfoSlice<G>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
+        >
+        package let needsPeek: Bool
+
+        public init(infoSliceId: UUID) {
+            self.infoSliceId = infoSliceId
+            self.updates = [:]
+            self.needsPeek = false
         }
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.value == rhs.value &&
-            lhs.order == rhs.order &&
-            lhs.description == rhs.description
-        } else {
-            lhs.value == rhs.value &&
-            lhs.order == rhs.order &&
-            lhs.description == rhs.description &&
-            lhs.id == rhs.id &&
-            lhs.userInfoId == rhs.userInfoId &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
+
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<PInfoSlice<G>>,
+                (QueryBuilder<User.Info.Extended<G.Model>>, QInfoSlice<G>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
+            >,
+            needsPeek: Bool
+        ) {
+            self.infoSliceId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
 
-public extension DTO.InfoSlice where T == DTO.Prepare {
-    func like(_ rhs: QExtendedSlice<G>) -> Bool {
-        self.value == rhs.value &&
-        self.order == rhs.order &&
-        self.description == rhs.description
+extension PInfoSlice.Updater: DTOUpdater {}
+
+public extension PInfoSlice.Updater {
+    func update(value: @escaping @autoclosure () throws -> G.Value) -> Self {
+        generate(key: \.value) { builder, _ in
+            builder.set(\.$value, to: try value().dataRes.get())
+        }
+    }
+
+    func update(order: @escaping @autoclosure () throws -> Int16) -> Self {
+        generate(key: \.order) { builder, _ in
+            builder.set(\.$order, to: try order())
+        }
+    }
+
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
+            builder.set(\.$description, to: try description())
+        }
     }
 }
 
-public extension DTO.InfoSlice where T == DTO.Queried {
-    func like(_ rhs: PExtendedSlice<G>) -> Bool {
-        self.value == rhs.value &&
-        self.order == rhs.order &&
-        self.description == rhs.description
+public extension PInfoSlice.Updater {
+    func update(value: @escaping (QInfoSlice<G>) throws -> G.Value) -> Self {
+        generate(needsPeek: true, key: \.value) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$value, to: try value(q).dataRes.get())
+        }
     }
-}
 
-public extension Collection {
-    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == QExtendedSlice<T>, Element == PExtendedSlice<T> {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+    func update(order: @escaping (QInfoSlice<G>) throws -> Int16) -> Self {
+        generate(needsPeek: true, key: \.order) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$order, to: try order(q))
+        }
     }
-}
 
-public extension Collection {
-    func like<C, T>(_ rhs: C) -> Bool where C: Collection, C.Element == PExtendedSlice<T>, Element == QExtendedSlice<T> {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+    func update(description: @escaping (QInfoSlice<G>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$description, to: try description(q))
+        }
     }
-}
-
-
-extension DTO.InfoSlice.Updater: Loggerable {
-    public var logDescription: String {
-        return formatJson([
-            "target_id": AnyCodable(id.shortString),
-            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
-        ])
-    }
-    public var description: String { logDescription }
-    public var summaryDescription: String { "InfoSliceUpdater(\(id.shortString), updates: \(updates.keys.count))" }
 }

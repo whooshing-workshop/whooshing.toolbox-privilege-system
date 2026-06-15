@@ -1,6 +1,6 @@
 import Foundation
 
-package struct DateResponse: Codable, Sendable {
+package struct DateWrapper: Codable, Sendable {
     package let year: Int
     package let month: Int
     package let day: Int

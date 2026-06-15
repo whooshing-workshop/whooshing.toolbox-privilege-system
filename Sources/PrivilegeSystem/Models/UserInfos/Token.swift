@@ -7,7 +7,7 @@ import Fluent
 /// 数据库表 tokens 的映射类型
 /// 该 tokens 表记录用户口令和用户凭据的对照，用于用户认证查询
 
-public final class Token: PGModel, @unchecked Sendable {
+public final class __Token: PGModel, @unchecked Sendable {
     public static let name: String = "tokens"
     
     public struct Fields: PGFields {
@@ -36,11 +36,11 @@ public final class Token: PGModel, @unchecked Sendable {
     
     public init() {}
     
-    public typealias MIG = DefaultMIG<Token>
+    public typealias MIG = DefaultMIG<__Token>
 }
 
-extension Token: ModelCredentialsAuthenticatable {
-    public static let usernameKey: KeyPath<Token, Field<String>> = \Token.$credential
-    public static let passwordHashKey: KeyPath<Token, Field<String>> = \Token.$token
+extension __Token: ModelCredentialsAuthenticatable {
+    public static let usernameKey: KeyPath<__Token, Field<String>> = \__Token.$credential
+    public static let passwordHashKey: KeyPath<__Token, Field<String>> = \__Token.$token
     public func verify(password: String) throws -> Bool { password == self.token }
 }

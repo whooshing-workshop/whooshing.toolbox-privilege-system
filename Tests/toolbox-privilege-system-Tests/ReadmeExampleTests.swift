@@ -36,7 +36,7 @@ struct ReadmeExampleTests {
         let user = try await system.account.register(
             for: .init(
                 email: "readme_user@example.com",
-                hashedPasswd: try Crypto.hash("SecurePassword123").get()
+                hashedPassword: try Crypto.hash("SecurePassword123").get()
             )
         )
         
@@ -52,7 +52,7 @@ struct ReadmeExampleTests {
         let resourceDTO = try await module.resource.create(
             resources: [docResource]
         ).first!
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         // 创建一个简单的策略表达式。只要请求的操作是 "read"，就允许放行
         let myPolicy = """
@@ -80,7 +80,7 @@ struct ReadmeExampleTests {
         let rolePolicy = """
         allow if { true }
         """
-        let rolePolicyDTO = DTO.Policy<Role, DTO.Prepare>(moduleId: module.moduleId, policy: rolePolicy)
+        let rolePolicyDTO = PPolicy<Role>(moduleId: module.moduleId, policy: rolePolicy)
         let _ = try await system.policy.create(to: Role.self) {
             [rolePolicyDTO] => role.id
         }

@@ -70,7 +70,7 @@ struct AccountTesting {
         let user = try await s.account.register(
             for: .init(
                 email: email,
-                hashedPasswd: try Crypto.hash(password).get()
+                hashedPassword: try Crypto.hash(password).get()
             )
         )
         
@@ -79,7 +79,7 @@ struct AccountTesting {
         let token = try await s.account.login(
             by: .init(
                 email: email,
-                hashedPasswd: try Crypto.hash(password).get()
+                hashedPassword: try Crypto.hash(password).get()
             )
         )
         
@@ -88,7 +88,7 @@ struct AccountTesting {
         let newUser = try await s.account.changePassword(
             for: .init(
                 email: email,
-                hashedPasswd: try Crypto.hash(password).get()
+                hashedPassword: try Crypto.hash(password).get()
             ),
             to: try Crypto.hash(newPassword).get()
         )
@@ -99,7 +99,7 @@ struct AccountTesting {
             try await s.account.login(
                 by: .init(
                     email: email,
-                    hashedPasswd: try Crypto.hash(password).get()
+                    hashedPassword: try Crypto.hash(password).get()
                 )
             )
         }
@@ -107,7 +107,7 @@ struct AccountTesting {
         let token2 = try await s.account.login(
             by: .init(
                 email: email,
-                hashedPasswd: try Crypto.hash(newPassword).get()
+                hashedPassword: try Crypto.hash(newPassword).get()
             )
         )
         
@@ -117,7 +117,7 @@ struct AccountTesting {
             try await s.account.register(
                 for: .init(
                     email: email,
-                    hashedPasswd: try Crypto.hash(password).get()
+                    hashedPassword: try Crypto.hash(password).get()
                 )
             )
         }
@@ -127,9 +127,9 @@ struct AccountTesting {
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(DTO.User<DTO.Queried>.self).count() == Self.users.count);
+        #expect(try await s.query(QUser.self).count() == Self.users.count);
         
-        let res = try await s.query(DTO.User<DTO.Queried>.self)
+        let res = try await s.query(QUser.self)
             .group(.or) { g in
                 g
                     .filter(\.email == "user6@example.com")

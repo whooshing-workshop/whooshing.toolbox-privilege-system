@@ -82,7 +82,7 @@ struct AdvancePolicyTesting {
         let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_pass", description: "Advance SQL Pass", policy: passPolicyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
@@ -109,17 +109,17 @@ struct AdvancePolicyTesting {
         let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_fail", description: "Advance SQL Fail", policy: failPolicyText)]).first!
         let failJsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let failResourceDTO = try await m.resource.create(resources: [failJsonResource]).first!
-        let failAnyResourceDTO = AnyResourceDTO(failResourceDTO)
+        let failAnyResource = AnyResource(failResourceDTO)
 
         try await m.privilege.attach {
-            [failPrivilegeDTO] => [failAnyResourceDTO]
+            [failPrivilegeDTO] => [failAnyResource]
         }
         
         let failRes = try await s.arbitrator.judge(
             moduleId: m.moduleId,
             user: user0,
             role: role,
-            resource: failAnyResourceDTO,
+            resource: failAnyResource,
             operation: .init(op: JsonOperation.manage_all),
             privilegeIds: [failPrivilegeDTO.id]
         )
@@ -134,7 +134,7 @@ struct AdvancePolicyTesting {
         try await m.resource.delete(ids: [resourceDTO.id])
         
         try await m.privilege.detach {
-            [failPrivilegeDTO] => [failAnyResourceDTO]
+            [failPrivilegeDTO] => [failAnyResource]
         }
         try await m.privilege.delete(policy: failPrivilegeDTO)
         try await m.resource.delete(ids: [failResourceDTO.id])
@@ -181,7 +181,7 @@ struct AdvancePolicyTesting {
         let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_time", description: "Advance Time Module", policy: policyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResourceDTO(resourceDTO)
+        let anyResourceDTO = AnyResource(resourceDTO)
         
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]

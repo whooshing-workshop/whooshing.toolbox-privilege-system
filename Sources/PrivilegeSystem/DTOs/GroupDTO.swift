@@ -11,73 +11,114 @@ import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
 
-public typealias PGroup = DTO.Group<DTO.Prepare>
-public typealias QGroup = DTO.Group<DTO.Queried>
-
-public extension DTO {
-    struct Group<T: Status>: DTOModel, Sendable {
-        public let parentId: UUID?
-        public let name: String
-        public let description: String?
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var createdAt: Date
-        @Passive public internal(set) var updatedAt: Date
-        
-        package typealias AssociatedModel = UGroup
-        private let m: AssociatedModel?
-        
-        init(
-            _parentId: UUID?,
-            _name: String,
-            _description: String?,
-            _model: AssociatedModel?
-        ) {
-            self.parentId = _parentId
-            self.name = _name
-            self.description = _description
-            self.m = _model
-        }
-    }
-}
-
-public extension DTO.Group where T == DTO.Prepare {
-    init(
-        under parent: DTO.Group<DTO.Queried>?,
+public struct PGroup: DTO.Prepare {
+    public typealias QueriedModel = QGroup
+    public let id: UUID?
+    public let name: String
+    public let parentId: UUID?
+    public let description: String?
+    
+    public init(
+        id: UUID? = nil,
         name: String,
+        parentId: UUID? = nil,
         description: String? = nil
     ) {
-        self = Self.init(_parentId: parent?.id, _name: name, _description: description, _model: nil)
-    }
-}
-
-extension DTO.Group where T == DTO.Queried {
-    var model: UGroup {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
+        self.id = id
+        self.parentId = parentId
+        self.name = name
+        self.description = description
     }
     
-    public static func make(from model: UGroup) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .groupDTOFailed, category: .internal) {
-            var n = Self.init(
-                _parentId: model.$parent.id,
-                _name: model.name,
-                _description: model.description,
-                _model: model
-            )
-            n.$id = try model.requireID()
-            n.$createdAt = model.createdAt
-            n.$updatedAt = model.updatedAt
-            return n
-        }
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .name: .init(self.name),
+        .parentId: .init(self.parentId),
+        .description: .init(self.description)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case name
+        case parentId = "parent_id"
+        case description
     }
 }
 
-extension DTO.Group where T == DTO.Prepare {
-    func raw() -> UGroup {
-        let group = UGroup()
+public struct QGroup: DTO.Queried {
+    public typealias PrepareModel = PGroup
+    public let id: UUID
+    public let name: String
+    public let parentId: UUID?
+    public let description: String?
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package let __m: UGroup?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
+    
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .name: .init(self.name),
+        .parentId: .init(self.parentId),
+        .description: .init(self.description),
+        .createdAt: .init(self.createdAt),
+        .updatedAt: .init(self.updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case name
+        case parentId = "parent_id"
+        case description
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(
+        id: UUID,
+        name: String,
+        parentId: UUID?,
+        description: String?,
+        createdAt: Date,
+        updatedAt: Date,
+        model: SQLModel?
+    ) {
+        self.id = id
+        self.name = name
+        self.parentId = parentId
+        self.description = description
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.parentId = try container.decodeIfPresent(UUID.self, forKey: .parentId)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.createdAt = try container.decode(Date.self, forKey: .createdAt)
+        self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        self.__m = nil
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.name, forKey: .name)
+        try container.encodeIfPresent(self.parentId, forKey: .parentId)
+        try container.encodeIfPresent(self.description, forKey: .description)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
+    }
+}
+
+extension PGroup: __Prepare {
+    func raw() -> SQLModel {
+        let group = SQLModel()
+        group.id = id
         group.$parent.id = parentId
         group.name = name
         group.description = description
@@ -85,105 +126,24 @@ extension DTO.Group where T == DTO.Prepare {
     }
 }
 
-public extension DTO.Group where T == DTO.Prepare {
-    struct Updater: @unchecked Sendable {
-        public let groupId: UUID
-        package var id: UUID { groupId }
-        
-        package let updates: OrderedDictionary<
-            PartialKeyPath<DTO.Group<DTO.Prepare>>,
-            (QueryBuilder<UGroup>, DTO.Group<DTO.Queried>?) throws -> QueryBuilder<UGroup>
-        >
-        package let needsPeek: Bool
-        
-        public init(groupId: UUID) {
-            self.groupId = groupId
-            self.updates = [:]
-            self.needsPeek = false
-        }
-        
-        package init(
-            id: UUID,
-            updates: OrderedDictionary<
-                PartialKeyPath<DTO.Group<DTO.Prepare>>,
-                (QueryBuilder<UGroup>, DTO.Group<DTO.Queried>?) throws -> QueryBuilder<UGroup>
-            >,
-            needsPeek: Bool
-        ) {
-            self.groupId = id
-            self.updates = updates
-            self.needsPeek = needsPeek
+extension QGroup: __Queried {
+    package typealias Failure = PrivilegeSystem.Errcase
+    public static func make(from model: UGroup) -> Res<Self, PrivilegeSystem.Errcase> {
+        .init(throws: .groupDTOFailed, category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                name: model.name,
+                parentId: model.$parent.id,
+                description: model.description,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
+            )
         }
     }
 }
 
-extension DTO.Group.Updater: DTOUpdater {}
-
-public extension DTO.Group.Updater {
-    func update(name: @escaping @autoclosure () throws -> String) -> Self {
-        generate(key: \.name) { builder, _ in
-            builder.set(\.$name, to: try name())
-        }
-    }
-    
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
-        }
-    }
-}
-
-public extension DTO.Group.Updater {
-    func update(name: @escaping (DTO.Group<DTO.Queried>) throws -> String) -> Self {
-        generate(needsPeek: true, key: \.name) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$name, to: try name(q))
-        }
-    }
-    
-    func update(description: @escaping (DTO.Group<DTO.Queried>) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
-        }
-    }
-}
-
-extension DTO.Group: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case parentId = "parent_id"
-        case name
-        case description
-        case id
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(parentId, forKey: .parentId)
-        try container.encode(name, forKey: .name)
-        try container.encodeIfPresent(description, forKey: .description)
-        
-        if T.self != DTO.Prepare.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
-        }
-    }
-}
-
-extension DTO.Group: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.parentId = try container.decodeIfPresent(UUID.self, forKey: .parentId)
-        self.name = try container.decode(String.self, forKey: .name)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.m = nil
-    }
-}
-
-extension DTO.Group: Query.Queriable where T == DTO.Queried {
+extension QGroup: Query.Queriable {
     public typealias Model = UGroup
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -206,110 +166,68 @@ extension DTO.Group: Query.Queriable where T == DTO.Queried {
     }
 }
 
-extension DTO.Group: Loggerable {
-    public var logDescription: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
-        
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "parent_id": AnyCodable(self.parentId.map { "\($0)" }),
-                "name": AnyCodable(self.name),
-                "description": AnyCodable(self.description)
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "parent_id": AnyCodable(self.parentId.map { "\($0)" }),
-                "name": AnyCodable(self.name),
-                "description": AnyCodable(self.description),
-                "created_at": AnyCodable("\(self.createdAt)"),
-                "updated_at": AnyCodable("\(self.updatedAt)")
-            ]
+// MARK: - Updater
+
+public extension PGroup {
+    struct Updater: @unchecked Sendable {
+        public let groupId: UUID
+        package var id: UUID { groupId }
+
+        package let updates: OrderedDictionary<
+            PartialKeyPath<PGroup>,
+            (QueryBuilder<UGroup>, QGroup?) throws -> QueryBuilder<UGroup>
+        >
+        package let needsPeek: Bool
+
+        public init(groupId: UUID) {
+            self.groupId = groupId
+            self.updates = [:]
+            self.needsPeek = false
         }
 
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "Group(\(id.shortString), \(name))" :
-            "Group(\(name))"
-    }
-}
-
-extension DTO.Group: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(parentId)
-            hasher.combine(name)
-            hasher.combine(description)
-        } else {
-            hasher.combine(parentId)
-            hasher.combine(name)
-            hasher.combine(description)
-            hasher.combine(id)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
-        }
-    }
-    
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.parentId == rhs.parentId &&
-            lhs.name == rhs.name &&
-            lhs.description == rhs.description
-        } else {
-            lhs.parentId == rhs.parentId &&
-            lhs.name == rhs.name &&
-            lhs.description == rhs.description &&
-            lhs.id == rhs.id &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<PGroup>,
+                (QueryBuilder<UGroup>, QGroup?) throws -> QueryBuilder<UGroup>
+            >,
+            needsPeek: Bool
+        ) {
+            self.groupId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
         }
     }
 }
 
-public extension DTO.Group where T == DTO.Prepare {
-    func like(_ rhs: QGroup) -> Bool {
-        self.parentId == rhs.parentId &&
-        self.name == rhs.name &&
-        self.description == rhs.description
+extension PGroup.Updater: DTOUpdater {}
+
+public extension PGroup.Updater {
+    func update(name: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.name) { builder, _ in
+            builder.set(\.$name, to: try name())
+        }
+    }
+
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
+            builder.set(\.$description, to: try description())
+        }
     }
 }
 
-public extension DTO.Group where T == DTO.Queried {
-    func like(_ rhs: PGroup) -> Bool {
-        self.parentId == rhs.parentId &&
-        self.name == rhs.name &&
-        self.description == rhs.description
+public extension PGroup.Updater {
+    func update(name: @escaping (QGroup) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.name) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$name, to: try name(q))
+        }
     }
-}
 
-public extension Collection where Element == PGroup {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QGroup {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+    func update(description: @escaping (QGroup) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$description, to: try description(q))
+        }
     }
-}
-
-public extension Collection where Element == QGroup {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PGroup {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-
-extension DTO.Group.Updater: Loggerable {
-    public var logDescription: String {
-        return formatJson([
-            "target_id": AnyCodable(id.shortString),
-            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
-        ])
-    }
-    public var description: String { logDescription }
-    public var summaryDescription: String { "GroupUpdater(\(id.shortString), updates: \(updates.keys.count))" }
 }

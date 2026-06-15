@@ -60,7 +60,7 @@ public struct OTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Se
 /// 控制器 result builder 使用的多对多关系。
 ///
 /// ```swift
-/// [privilege] => [AnyResourceDTO(resource)]
+/// [privilege] => [AnyResource(resource)]
 /// ```
 public struct MTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
     /// 左侧对象集合。

@@ -36,11 +36,11 @@ extension PrivilegeSystem {
         /// - Parameters:
         ///   - infoId: 目标 `UserInfo` 的记录 UUID。
         ///   - extendedInfos: 准备落库的一批信息切片对象（处于 `DTO.Prepare` 状态）。
-        /// - Returns: `EventLoopRes<[DTO.InfoSlice<T, DTO.Queried>], Errcase>`
+        /// - Returns: `EventLoopRes<[QInfoSlice<T>], Errcase>`
         public func create<T>(
             for infoId: UUID,
-            extendedInfos: [DTO.InfoSlice<T, DTO.Prepare>]
-        ) -> EventLoopRes<[DTO.InfoSlice<T, DTO.Queried>], Errcase> where T.Value == String {
+            extendedInfos: [PInfoSlice<T>]
+        ) -> EventLoopRes<[QInfoSlice<T>], Errcase> where T.Value == String {
             let logger = getActionLogger()
             logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "extendedInfos": .summaryData(extendedInfos)])
             logger.debug("操作参数", metadata: ["extendedInfos": .data(extendedInfos)])
@@ -61,7 +61,7 @@ extension PrivilegeSystem {
         ///   - allSatisfy: 如果为 `true`，所有的 ID 都必须找到对应记录并删除，否则操作回滚并抛错。
         ///   - type: 显式指示你要删除哪个维度的扩展模型（如 `DTO.EmailInfo`）。
         /// - Returns: `EventLoopRes<Void, Errcase>`
-        public func delete<T: DTO.UserInfoModel>(
+        public func delete<T: UserInfoModel>(
             infoIds: [UUID],
             allSatisfy: Bool = true,
             type: T.Type = T.self
@@ -85,11 +85,11 @@ extension PrivilegeSystem {
         
         /// 更新特定信息切片的详细数据。
         ///
-        /// - Parameter updater: 特定切片的更新器对象 `DTO.InfoSlice<T, DTO.Prepare>.Updater`。
-        /// - Returns: 更新完毕的实体对象 `DTO.InfoSlice<T, DTO.Queried>`。
+        /// - Parameter updater: 特定切片的更新器对象 `PInfoSlice<T>.Updater`。
+        /// - Returns: 更新完毕的实体对象 `QInfoSlice<T>`。
         public func update<T>(
-            with updater: DTO.InfoSlice<T, DTO.Prepare>.Updater
-        ) -> EventLoopRes<DTO.InfoSlice<T, DTO.Queried>, Errcase> {
+            with updater: PInfoSlice<T>.Updater
+        ) -> EventLoopRes<QInfoSlice<T>, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新用户扩展信息 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新用户扩展信息 详细请求数据", metadata: ["data": .data(updater)])
@@ -99,7 +99,7 @@ extension PrivilegeSystem {
                 label: "用户扩展信息",
                 errThrowing: .userExtendedInfoUpdateFailed,
                 filterBuilder: { $0.filter(\.$id == updater.infoSliceId) },
-                dtoBuilder: { DTO.InfoSlice<T, DTO.Queried>.make(from: $0) }
+                dtoBuilder: { QInfoSlice<T>.make(from: $0) }
             )
             .map { 
                 logger.info("更新用户扩展信息 操作成功", metadata: ["data": .summaryData($0)])
@@ -112,8 +112,8 @@ extension PrivilegeSystem {
         /// 拉取指定用户的全量扩展切片数据集。
         ///
         /// - Parameter userId: 目标用户的主键 ID。
-        /// - Returns: 包含多个维度的附加信息的完整对象 `DTO.ExtendedInfo<DTO.Queried>`。
-        public func fetch(for userId: UUID) -> EventLoopRes<DTO.ExtendedInfo<DTO.Queried>, Errcase> {
+        /// - Returns: 包含多个维度的附加信息的完整对象 `QExtendedInfo`。
+        public func fetch(for userId: UUID) -> EventLoopRes<QExtendedInfo, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 查询用户扩展信息 操作", metadata: ["userId": .stringConvertible(userId)])
             return User.Info.query(on: db)
@@ -130,7 +130,7 @@ extension PrivilegeSystem {
                 }
                 
                 return try required(throws: Errcase.userExtendedInfoQueryFailed, "用户信息转 DTO 失败", category: .internal) {
-                    try DTO.ExtendedInfo<DTO.Queried>.init(
+                    try QExtendedInfo.init(
                         addresses: i.addresses.map { try .make(from: $0).get() },
                         alternateEmails: i.alternateEmails.map { try .make(from: $0).get() },
                         phones: i.phones.map { try .make(from: $0).get() }
@@ -151,15 +151,15 @@ extension PrivilegeSystem.InfoSliceController {
     func __create<T>(
         on db: PGDatabase,
         for infoId: UUID,
-        extendedInfos: [DTO.InfoSlice<T, DTO.Prepare>]
-    ) -> EventLoopRes<[DTO.InfoSlice<T, DTO.Queried>], PrivilegeSystem.Errcase> where T.Value == String {
+        extendedInfos: [PInfoSlice<T>]
+    ) -> EventLoopRes<[QInfoSlice<T>], PrivilegeSystem.Errcase> where T.Value == String {
         __create(
             on: db,
             dtos: extendedInfos,
             label: "用户扩展信息",
             errThrowing: .userExtendedInfoCreateFailed,
             modelBuilder: { $0.raw(for: infoId) },
-            dtoBuilder: { DTO.InfoSlice<T, DTO.Queried>.make(from: $0) }
+            dtoBuilder: { QInfoSlice<T>.make(from: $0) }
         )
     }
 }

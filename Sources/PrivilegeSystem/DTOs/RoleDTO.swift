@@ -10,173 +10,126 @@ import AnyCodable
 import DataConvertable
 import ResourceMacros
 
-package typealias RoleModel = Role
-
-public typealias PRole = DTO.Role<DTO.Prepare>
-public typealias QRole = DTO.Role<DTO.Queried>
-
-public extension DTO {
-    struct Role<T: Status>: DTOModel, Sendable {
-        public let name: String
-        public let description: String?
-        
-        @Passive public internal(set) var id: UUID
-        @Passive public internal(set) var createdAt: Date
-        @Passive public internal(set) var updatedAt: Date
-        
-        package typealias AssociatedModel = RoleModel
-        private let m: AssociatedModel?
-        
-        init(
-            _name: String,
-            _description: String?,
-            _model: AssociatedModel?
-        ) {
-            self.name = _name
-            self.description = _description
-            self.m = _model
-        }
-    }
-}
-
-public extension DTO.Role where T == DTO.Prepare {
-    init(
+public struct PRole: DTO.Prepare {
+    public typealias QueriedModel = QRole
+    public let id: UUID?
+    public let name: String
+    public let description: String?
+    
+    public init(
+        id: UUID? = nil,
         name: String,
         description: String? = nil
     ) {
-        self = Self.init(_name: name, _description: description, _model: nil)
-    }
-}
-
-extension DTO.Role where T == DTO.Queried {
-    var model: Role {
-        guard let m = m else {
-            fatalError("查询后的 DTO 模型应当有数据库表实例，这里未找到")
-        }
-        return m
+        self.id = id
+        self.name = name
+        self.description = description
     }
     
-    public static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
-        .init(throws: .roleDTOFailed, category: .internal) {
-            var n = Self.init(
-                _name: model.name,
-                _description: model.description,
-                _model: model
-            )
-            n.$id = try model.requireID()
-            n.$createdAt = model.createdAt
-            n.$updatedAt = model.updatedAt
-            return n
-        }
+    public var maps: [CodingKeys : AnyCodable] {[
+        .id: .init(self.id),
+        .name: .init(self.name),
+        .description: .init(self.description)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case name
+        case description
     }
 }
 
-extension DTO.Role where T == DTO.Prepare {
+public struct QRole: DTO.Queried {
+    public typealias PrepareModel = PRole
+    public let id: UUID
+    public let name: String
+    public let description: String?
+    public let createdAt: Date
+    public let updatedAt: Date
+    
+    package let __m: Role?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
+    
+    public var maps: [CodingKeys: AnyCodable] {[
+        .id: .init(self.id),
+        .name: .init(name),
+        .description: .init(description),
+        .createdAt: .init(self.createdAt),
+        .updatedAt: .init(self.updatedAt)
+    ]}
+    
+    public enum CodingKeys: String, DTO.CodingKey {
+        case id
+        case name
+        case description
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(
+        id: UUID,
+        name: String,
+        description: String?,
+        createdAt: Date,
+        updatedAt: Date,
+        model: SQLModel?
+    ) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.__m = model
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
+        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.__m = nil
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(description, forKey: .description)
+        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+    }
+}
+
+extension PRole: __Prepare {
     /// 需要先存 Policy 到数据库中
-    func raw() -> Role {
+    func raw() -> SQLModel {
         let role = Role()
+        role.id = id
         role.name = name
         role.description = description
         return role
     }
 }
 
-public extension DTO.Role where T == DTO.Prepare {
-    struct Updater: @unchecked Sendable {
-        public let roleId: UUID
-        package var id: UUID { roleId }
-        
-        package let updates: OrderedDictionary<
-            PartialKeyPath<DTO.Role<DTO.Prepare>>,
-            (QueryBuilder<Role>, DTO.Role<DTO.Queried>?) throws -> QueryBuilder<Role>
-        >
-        package let needsPeek: Bool
-        
-        public init(roleId: UUID) {
-            self.roleId = roleId
-            self.updates = [:]
-            self.needsPeek = false
-        }
-        
-        package init(
-            id: UUID,
-            updates: OrderedDictionary<
-                PartialKeyPath<DTO.Role<DTO.Prepare>>,
-                (QueryBuilder<Role>, DTO.Role<DTO.Queried>?) throws -> QueryBuilder<Role>
-            >,
-            needsPeek: Bool
-        ) {
-            self.roleId = id
-            self.updates = updates
-            self.needsPeek = needsPeek
+extension QRole: __Queried {
+    package typealias Failure = PrivilegeSystem.Errcase
+    public static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
+        .init(throws: .roleDTOFailed, category: .internal) {
+            try Self.init(
+                id: model.requireID(),
+                name: model.name,
+                description: model.description,
+                createdAt: model.createdAt,
+                updatedAt: model.updatedAt,
+                model: model
+            )
         }
     }
 }
 
-extension DTO.Role.Updater: DTOUpdater {}
-
-public extension DTO.Role.Updater {
-    func update(name: @escaping @autoclosure () throws -> String) -> Self {
-        generate(key: \.name) { builder, _ in
-            builder.set(\.$name, to: try name())
-        }
-    }
-    
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
-        }
-    }
-}
-
-public extension DTO.Role.Updater {
-    func update(name: @escaping (DTO.Role<DTO.Queried>) throws -> String) -> Self {
-        generate(needsPeek: true, key: \.name) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$name, to: try name(q))
-        }
-    }
-    
-    func update(description: @escaping (DTO.Role<DTO.Queried>) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
-            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
-        }
-    }
-}
-
-extension DTO.Role: Encodable {
-    enum CodingKeys: String, CodingKey {
-        case name
-        case description
-        case id
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(name, forKey: .name)
-        try container.encodeIfPresent(description, forKey: .description)
-        
-        if T.self != DTO.Prepare.self {
-            try container.encode(id, forKey: .id)
-            try container.encode(DateResponse(self.createdAt), forKey: .createdAt)
-            try container.encode(DateResponse(self.updatedAt), forKey: .updatedAt)
-        }
-    }
-}
-
-extension DTO.Role: Decodable where T == DTO.Prepare {
-    public init(from decoder: any Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.name = try container.decode(String.self, forKey: .name)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.m = nil
-    }
-}
-
-extension DTO.Role: Query.Queriable where T == DTO.Queried {
+extension QRole: Query.Queriable {
     public typealias Model = Role
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -197,102 +150,68 @@ extension DTO.Role: Query.Queriable where T == DTO.Queried {
     }
 }
 
-extension DTO.Role: Loggerable {
-    public var logDescription: String {
-        let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"
+// MARK: - Updater
+
+public extension PRole {
+    struct Updater: @unchecked Sendable {
+        public let roleId: UUID
+        package var id: UUID { roleId }
         
-        let data: [String: AnyCodable]
-        if T.self == DTO.Prepare.self {
-            data = [
-                "name": AnyCodable(self.name),
-                "description": AnyCodable(self.description)
-            ]
-        } else {
-            data = [
-                "id": AnyCodable("\(self.id)"),
-                "name": AnyCodable(self.name),
-                "description": AnyCodable(self.description),
-                "created_at": AnyCodable("\(self.createdAt)"),
-                "updated_at": AnyCodable("\(self.updatedAt)")
-            ]
+        package let updates: OrderedDictionary<
+            PartialKeyPath<PRole>,
+            (QueryBuilder<Role>, QRole?) throws -> QueryBuilder<Role>
+        >
+        package let needsPeek: Bool
+        
+        public init(roleId: UUID) {
+            self.roleId = roleId
+            self.updates = [:]
+            self.needsPeek = false
         }
-
-        return formatJson([
-            "status": AnyCodable(statusLabel),
-            "data": AnyCodable(data)
-        ])
-    }
-    
-    public var summaryDescription: String {
-        let isQueried = T.self == DTO.Queried.self
-        return isQueried ?
-            "Role(\(id.shortString), \(name))" :
-            "Role(\(name))"
+        
+        package init(
+            id: UUID,
+            updates: OrderedDictionary<
+                PartialKeyPath<PRole>,
+                (QueryBuilder<Role>, QRole?) throws -> QueryBuilder<Role>
+            >,
+            needsPeek: Bool
+        ) {
+            self.roleId = id
+            self.updates = updates
+            self.needsPeek = needsPeek
+        }
     }
 }
 
-extension DTO.Role: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        if T.self == DTO.Prepare.self {
-            hasher.combine(name)
-            hasher.combine(description)
-        } else {
-            hasher.combine(name)
-            hasher.combine(description)
-            hasher.combine(id)
-            hasher.combine(createdAt)
-            hasher.combine(updatedAt)
+extension PRole.Updater: DTOUpdater {}
+
+public extension PRole.Updater {
+    func update(name: @escaping @autoclosure () throws -> String) -> Self {
+        generate(key: \.name) { builder, _ in
+            builder.set(\.$name, to: try name())
         }
     }
     
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-        if T.self == DTO.Prepare.self {
-            lhs.name == rhs.name &&
-            lhs.description == rhs.description
-        } else {
-            lhs.name == rhs.name &&
-            lhs.description == rhs.description &&
-            lhs.id == rhs.id &&
-            lhs.createdAt == rhs.createdAt &&
-            lhs.updatedAt == rhs.updatedAt
+    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.description) { builder, _ in
+            builder.set(\.$description, to: try description())
         }
     }
 }
 
-public extension DTO.Role where T == DTO.Prepare {
-    func like(_ rhs: QRole) -> Bool {
-        self.name == rhs.name &&
-        self.description == rhs.description
+public extension PRole.Updater {
+    func update(name: @escaping (QRole) throws -> String) -> Self {
+        generate(needsPeek: true, key: \.name) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$name, to: try name(q))
+        }
     }
-}
-
-public extension DTO.Role where T == DTO.Queried {
-    func like(_ rhs: PRole) -> Bool {
-        self.name == rhs.name &&
-        self.description == rhs.description
+    
+    func update(description: @escaping (QRole) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.description) { builder, query in
+            guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
+            return builder.set(\.$description, to: try description(q))
+        }
     }
-}
-
-public extension Collection where Element == PRole {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == QRole {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-public extension Collection where Element == QRole {
-    func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == PRole {
-        self.elementsEqual(rhs, by: { $0.like($1) })
-    }
-}
-
-
-extension DTO.Role.Updater: Loggerable {
-    public var logDescription: String {
-        return formatJson([
-            "target_id": AnyCodable(id.shortString),
-            "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
-        ])
-    }
-    public var description: String { logDescription }
-    public var summaryDescription: String { "RoleUpdater(\(id.shortString), updates: \(updates.keys.count))" }
 }

@@ -44,8 +44,8 @@ extension PrivilegeSystem {
         /// - Parameter content: `OTOChainRelationBuilder` 构建链式关系的闭包。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
-            @OTOChainRelationBuilder<UUID, DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>
-            _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
+            @OTOChainRelationBuilder<UUID, PUserInfo, PExtendedInfo>
+            _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>]
         ) -> EventLoopRes<Void, Errcase> {
             create(relations: content())
         }
@@ -79,11 +79,11 @@ extension PrivilegeSystem {
         
         /// 更新用户信息主表字段。
         ///
-        /// - Parameter updater: `DTO.UserInfo<DTO.Prepare>.Updater` 对象。
-        /// - Returns: 更新完成的 `DTO.UserInfo<DTO.Queried>`。
+        /// - Parameter updater: `PUserInfo.Updater` 对象。
+        /// - Returns: 更新完成的 `QUserInfo`。
         public func update(
-            with updater: DTO.UserInfo<DTO.Prepare>.Updater
-        ) -> EventLoopRes<DTO.UserInfo<DTO.Queried>, Errcase> {
+            with updater: PUserInfo.Updater
+        ) -> EventLoopRes<QUserInfo, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新用户信息 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新用户信息 详细请求数据", metadata: ["data": .data(updater)])
@@ -93,7 +93,7 @@ extension PrivilegeSystem {
                 label: "用户信息",
                 errThrowing: .userInfoUpdateFailed,
                 filterBuilder: { $0.filter(\.$id == updater.userInfoId) },
-                dtoBuilder: { DTO.UserInfo<DTO.Queried>.make(from: $0) }
+                dtoBuilder: { QUserInfo.make(from: $0) }
             )
             .map { 
                 logger.info("更新用户信息 操作成功", metadata: ["data": .summaryData($0)])
@@ -107,7 +107,7 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.UserInfoController {
     func create(
-        relations: [OTORelation<UUID, OTORelation<DTO.UserInfo<DTO.Prepare>, DTO.ExtendedInfo<DTO.Prepare>>>]
+        relations: [OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建用户信息 操作", metadata: ["relations": .summaryData(relations)])

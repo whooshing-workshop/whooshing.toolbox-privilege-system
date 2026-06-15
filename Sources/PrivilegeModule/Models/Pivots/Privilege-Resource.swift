@@ -7,8 +7,8 @@ extension PrivilegeModule {
     typealias PrivilegeAnyResourcePivot = Pivot<PrivilegeAnyResource>
     
     struct PrivilegeAnyResource: PivotType {
-        typealias PrimaryModel = Privilege
-        typealias SecondaryModel = AnyResource
+        typealias PrimaryModel = __Privilege
+        typealias SecondaryModel = __AnyResource
         
         static var foreignPrimaryName: String { "privilege" }
         static var foreignSecondaryName: String { "resource" }
@@ -21,7 +21,7 @@ extension PrivilegeModule {
     typealias PrivilegeResourcePivot<T: Resource> = Pivot<PrivilegeResource<T>> where T.ResourceType == ResourceList
     
     struct PrivilegeResource<T: Resource>: PivotType where T.ResourceType == ResourceList {
-        typealias PrimaryModel = Privilege
+        typealias PrimaryModel = __Privilege
         typealias SecondaryModel = ResourceModel<T>
         
         static var foreignPrimaryName: String { "privilege" }
