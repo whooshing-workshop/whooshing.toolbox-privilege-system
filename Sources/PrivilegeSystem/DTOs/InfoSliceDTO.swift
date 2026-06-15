@@ -68,7 +68,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: User.Info.Extended<G.Model>?
+    package let __m: __SDBM.User.Info.Extended<G.Model>?
     package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
     
     public var maps: [CodingKeys : AnyCodable] {[
@@ -99,7 +99,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         description: String?,
         createdAt: Date,
         updatedAt: Date,
-        model: User.Info.Extended<G.Model>
+        model: SQLModel
     ) {
         self.id = id
         self.userInfoId = userInfoId
@@ -151,7 +151,7 @@ extension PInfoSlice: __Prepare {
 
 extension QInfoSlice: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: User.Info.Extended<G.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.User.Info.Extended<G.Model>) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -168,7 +168,7 @@ extension QInfoSlice: __Queried {
 }
 
 extension QInfoSlice: Query.Queriable {
-    public typealias Model = User.Info.Extended<G.Model>
+    public typealias Model = __SDBM.User.Info.Extended<G.Model>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.value: \.$value,
@@ -227,7 +227,7 @@ public extension PInfoSlice {
 
         package let updates: OrderedDictionary<
             PartialKeyPath<PInfoSlice<G>>,
-            (QueryBuilder<User.Info.Extended<G.Model>>, QInfoSlice<G>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
+            (QueryBuilder<__SDBM.User.Info.Extended<G.Model>>, QInfoSlice<G>?) throws -> QueryBuilder<__SDBM.User.Info.Extended<G.Model>>
         >
         package let needsPeek: Bool
 
@@ -241,7 +241,7 @@ public extension PInfoSlice {
             id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<PInfoSlice<G>>,
-                (QueryBuilder<User.Info.Extended<G.Model>>, QInfoSlice<G>?) throws -> QueryBuilder<User.Info.Extended<G.Model>>
+                (QueryBuilder<__SDBM.User.Info.Extended<G.Model>>, QInfoSlice<G>?) throws -> QueryBuilder<__SDBM.User.Info.Extended<G.Model>>
             >,
             needsPeek: Bool
         ) {

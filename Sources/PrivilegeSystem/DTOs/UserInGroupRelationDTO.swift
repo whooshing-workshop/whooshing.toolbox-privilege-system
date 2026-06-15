@@ -5,6 +5,7 @@ import PrivilegeModule
 import DataConvertable
 import LoggingAdvanced
 import AnyCodable
+import Policy
 import ResourceMacros
 
 public struct PUserInGroupRelation: DTO.Prepare {
@@ -43,8 +44,8 @@ public struct QUserInGroupRelation: DTO.Queried {
     public let group: QGroup
     public let createdAt: Date
     
-    package let __m: UserGroupPivot?
-    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \UserGroupPivot.$id
+    package let __m: __SDBM.UserGroupPivot?
+    package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \__SDBM.UserGroupPivot.$id
     
     public var maps: [CodingKeys: AnyCodable] {[
         .id: .init(self.id),
@@ -92,13 +93,11 @@ public struct QUserInGroupRelation: DTO.Queried {
     }
 }
 
-extension PUserInGroupRelation: __Prepare {
-    package typealias SQLModel = UserGroupPivot
-}
+extension PUserInGroupRelation: __Prepare {}
 
 extension QUserInGroupRelation: __Queried {
     public typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: UserGroupPivot) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.UserGroupPivot) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInGroupDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),

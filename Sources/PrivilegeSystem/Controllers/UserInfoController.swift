@@ -1,6 +1,7 @@
 import Fluent
 import Vapor
 import PgSQL
+import Policy
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
@@ -65,7 +66,7 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
             return __delete(
                 on: db,
-                User.Info.self,
+                __SDBM.User.Info.self,
                 ids: infoIds,
                 allSatisfy: allSatisfy,
                 label: "用户信息",

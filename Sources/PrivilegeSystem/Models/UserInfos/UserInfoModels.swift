@@ -1,10 +1,10 @@
 import Policy
 
 let UserInfosModels: [any TdeMIG.Type] = [
-    User.MIG.self,
-    User.Info.MIG.self,
-    __Token.MIG.self,
-    User.Info.Extended<User.Info.Phone>.MIG.self,
-    User.Info.Extended<User.Info.Address>.MIG.self,
-    User.Info.Extended<User.Info.AlternateEmail>.MIG.self
+    __SDBM.User.MIG.self,
+    __SDBM.User.Info.MIG.self,
+    __SDBM.Token.MIG.self,
+    __SDBM.User.Info.Extended<__SDBM.User.Info.Phone>.MIG.self,
+    __SDBM.User.Info.Extended<__SDBM.User.Info.Address>.MIG.self,
+    __SDBM.User.Info.Extended<__SDBM.User.Info.AlternateEmail>.MIG.self
 ]

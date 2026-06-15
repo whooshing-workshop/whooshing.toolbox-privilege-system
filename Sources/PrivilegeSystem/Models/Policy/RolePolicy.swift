@@ -1,9 +1,13 @@
 import Policy
 
-extension Role: PolicyType {
-    public typealias Model = Role
+public struct Role: PolicyType {
+    public typealias Model = __SDBM.Role
     public static var namePrefix: String { "role" }
     public static var typeId: String { "role" }
 }
 
-typealias RolePolicy = PolicyExp<Role>
+typealias RoleType = Role
+
+extension __SDBM {
+    typealias RolePolicy = PolicyExp<RoleType>
+}

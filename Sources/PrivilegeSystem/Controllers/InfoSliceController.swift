@@ -1,6 +1,7 @@
 import Fluent
 import Vapor
 import PgSQL
+import Policy
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
@@ -71,7 +72,7 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
             return __delete(
                 on: db,
-                User.Info.Extended<T.Model>.self,
+                __SDBM.User.Info.Extended<T.Model>.self,
                 ids: infoIds,
                 allSatisfy: allSatisfy,
                 label: "用户扩展信息",
@@ -116,7 +117,7 @@ extension PrivilegeSystem {
         public func fetch(for userId: UUID) -> EventLoopRes<QExtendedInfo, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 查询用户扩展信息 操作", metadata: ["userId": .stringConvertible(userId)])
-            return User.Info.query(on: db)
+            return __SDBM.User.Info.query(on: db)
                 .with(\.$addresses)
                 .with(\.$alternateEmails)
                 .with(\.$phones)

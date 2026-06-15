@@ -3,12 +3,12 @@ import Policy
 import Fluent
 import ResourceMacros
 
-extension PrivilegeModule {
+extension PrivilegeModule.__DBM {
     typealias PrivilegeAnyResourcePivot = Pivot<PrivilegeAnyResource>
     
     struct PrivilegeAnyResource: PivotType {
-        typealias PrimaryModel = __Privilege
-        typealias SecondaryModel = __AnyResource
+        typealias PrimaryModel = Privilege
+        typealias SecondaryModel = __SDBM.AnyResource
         
         static var foreignPrimaryName: String { "privilege" }
         static var foreignSecondaryName: String { "resource" }
@@ -17,11 +17,11 @@ extension PrivilegeModule {
     }
 }
 
-extension PrivilegeModule {
+extension PrivilegeModule.__DBM {
     typealias PrivilegeResourcePivot<T: Resource> = Pivot<PrivilegeResource<T>> where T.ResourceType == ResourceList
     
     struct PrivilegeResource<T: Resource>: PivotType where T.ResourceType == ResourceList {
-        typealias PrimaryModel = __Privilege
+        typealias PrimaryModel = Privilege
         typealias SecondaryModel = ResourceModel<T>
         
         static var foreignPrimaryName: String { "privilege" }

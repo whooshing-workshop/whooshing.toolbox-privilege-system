@@ -108,7 +108,7 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["domainIds": .data(domainIds)])
             return __delete(
                 on: db,
-                Domain.self,
+                __SDBM.Domain.self,
                 ids: domainIds,
                 allSatisfy: allSatisfy,
                 label: "域权限",

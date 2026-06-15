@@ -46,7 +46,7 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: PolicyExp<G>?
+    package let __m: __SDBM.PolicyExp<G>?
     package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
     
     public var maps: [CodingKeys : AnyCodable] {[
@@ -104,7 +104,7 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
 extension PPolicy: __Prepare {
     /// 需要先存 Policy 到数据库中
     package func raw(parentId: G.Model.IDValue) -> SQLModel {
-        let policy = PolicyExp<G>()
+        let policy = SQLModel()
         policy.id = id
         policy.$parent.id = parentId
         policy.moduleId = moduleId
@@ -115,7 +115,7 @@ extension PPolicy: __Prepare {
 
 extension QPolicy: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: PolicyExp<G>) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.PolicyExp<G>) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .policyDTORawCreateFailed, category: .internal) {
             Self.init(
                 id: try model.requireID(),
@@ -130,7 +130,7 @@ extension QPolicy: __Queried {
 }
 
 extension QPolicy: Query.Queriable {
-    public typealias Model = PolicyExp<G>
+    public typealias Model = __SDBM.PolicyExp<G>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.moduleId: \.$moduleId,

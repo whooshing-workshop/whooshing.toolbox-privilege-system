@@ -1,8 +1,8 @@
 import Policy
 
 let PolicyModels: [any TdeMIG.Type] = [
-    Domain.MIG.self,
-    Role.MIG.self,
-    DomainPolicy.MIG.self,
-    RolePolicy.MIG.self
+    __SDBM.Domain.MIG.self,
+    __SDBM.Role.MIG.self,
+    __SDBM.DomainPolicy.MIG.self,
+    __SDBM.RolePolicy.MIG.self
 ]

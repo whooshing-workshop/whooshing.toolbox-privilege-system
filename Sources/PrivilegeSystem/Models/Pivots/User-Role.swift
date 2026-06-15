@@ -2,12 +2,14 @@ import PgSQL
 import Policy
 import Fluent
 
-typealias UserRolePivot = Pivot<Pivots.UserRole>
+extension __SDBM {
+    typealias UserRolePivot = Pivot<Pivots.UserRole>
+}
 
-extension Pivots {
+extension __SDBM.Pivots {
     struct UserRole: PivotType {
-        typealias PrimaryModel = User
-        typealias SecondaryModel = Role
+        typealias PrimaryModel = __SDBM.User
+        typealias SecondaryModel = __SDBM.Role
         
         static let foreignPrimaryName = "user"
         static let foreignSecondaryName = "role"

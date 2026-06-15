@@ -61,7 +61,7 @@ public struct QUserInfo: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: User.Info?
+    package let __m: __SDBM.User.Info?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
     public var maps: [CodingKeys : AnyCodable] {[
@@ -149,7 +149,7 @@ extension PUserInfo: __Prepare {
 
 extension QUserInfo: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: User.Info) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.User.Info) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInfoDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -167,7 +167,7 @@ extension QUserInfo: __Queried {
 }
 
 extension QUserInfo: Query.Queriable {
-    public typealias Model = User.Info
+    public typealias Model = __SDBM.User.Info
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.nickname: \.$nickname,
@@ -202,7 +202,7 @@ public extension PUserInfo {
         
         package let updates: OrderedDictionary<
             PartialKeyPath<PUserInfo>,
-            (QueryBuilder<User.Info>, QUserInfo?) throws -> QueryBuilder<User.Info>
+            (QueryBuilder<__SDBM.User.Info>, QUserInfo?) throws -> QueryBuilder<__SDBM.User.Info>
         >
         package let needsPeek: Bool
         
@@ -216,7 +216,7 @@ public extension PUserInfo {
             id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<PUserInfo>,
-                (QueryBuilder<User.Info>, QUserInfo?) throws -> QueryBuilder<User.Info>
+                (QueryBuilder<__SDBM.User.Info>, QUserInfo?) throws -> QueryBuilder<__SDBM.User.Info>
             >,
             needsPeek: Bool
         ) {

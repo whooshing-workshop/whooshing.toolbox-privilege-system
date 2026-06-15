@@ -2,12 +2,14 @@ import PgSQL
 import Policy
 import Fluent
 
-typealias DomainGroupPivot = Pivot<Pivots.DomainGroup>
+extension __SDBM {
+    typealias DomainGroupPivot = Pivot<Pivots.DomainGroup>
+}
 
-extension Pivots {
+extension __SDBM.Pivots {
     struct DomainGroup: PivotType {
-        typealias PrimaryModel = Domain
-        typealias SecondaryModel = UGroup
+        typealias PrimaryModel = __SDBM.Domain
+        typealias SecondaryModel = __SDBM.Group
         
         static let foreignPrimaryName = "domain"
         static let foreignSecondaryName = "group"

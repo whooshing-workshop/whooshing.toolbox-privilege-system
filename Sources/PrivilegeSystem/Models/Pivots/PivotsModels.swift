@@ -1,10 +1,10 @@
 import Policy
 
 let PivotModels: [any TdeMIG.Type] = [
-    DomainGroupPivot.MIG.self,
-    RoleGroupPivot.MIG.self,
-    UserDomainPivot.MIG.self,
-    UserGroupPivot.MIG.self,
-    UserRolePivot.MIG.self,
-    RoleUserInGroupPivot.MIG.self
+    __SDBM.DomainGroupPivot.MIG.self,
+    __SDBM.RoleGroupPivot.MIG.self,
+    __SDBM.UserDomainPivot.MIG.self,
+    __SDBM.UserGroupPivot.MIG.self,
+    __SDBM.UserRolePivot.MIG.self,
+    __SDBM.RoleUserInGroupPivot.MIG.self
 ]

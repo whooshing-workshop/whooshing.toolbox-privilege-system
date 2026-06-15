@@ -19,7 +19,7 @@ public extension PM {
         public let updatedAt: Date
         
         public typealias S = PM<ResourceList>
-        package typealias SQLModel = ResourceModel<G>
+        package typealias SQLModel = __DBM.ResourceModel<G>
         package let __m: SQLModel?
         package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
         
@@ -73,7 +73,7 @@ extension PM.QResource: Codable {
 }
 
 public extension PM.QResource {
-    static func make(from model: S.ResourceModel<G>) -> Res<Self, S.Errcase> {
+    static func make(from model: S.__DBM.ResourceModel<G>) -> Res<Self, S.Errcase> {
         .init(throws: .resourceDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -106,7 +106,7 @@ package extension PM.QResource {
 }
 
 extension PM.QResource: Query.Queriable {
-    public typealias Model = S.ResourceModel<G>
+    public typealias Model = S.__DBM.ResourceModel<G>
     public typealias ErrorType = S.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.id: \.$id,
@@ -174,7 +174,7 @@ public extension PM.QResource.Updater {
     func update<V: Encodable>(path: KeyPath<G, V>, value: @escaping (S.QResource<G>) throws -> V) -> Self {
         generate(needsPeek: true, key: path) { builder, data in
             guard let d = data else { fatalError("应当提供 Data 结果，却没有提供") }
-            let field = PM<ResourceList>.ResourceModel<G>.Fields().data
+            let field = PM<ResourceList>.__DBM.ResourceModel<G>.Fields().data
             return builder.set(
                 [
                     field.key: .custom(

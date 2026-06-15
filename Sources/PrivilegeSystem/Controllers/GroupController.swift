@@ -90,7 +90,7 @@ extension PrivilegeSystem {
                         
                         return r.flatMap {
                             // 添加自身路径：插入一条 B -> B，depth = 0 的自循环路径。
-                            let cycle = UGroup.Path()
+                            let cycle = __SDBM.Group.Path()
                             cycle.$ancestor.id = group.id
                             cycle.$descendant.id = group.id
                             cycle.depth = 0
@@ -130,7 +130,7 @@ extension PrivilegeSystem {
             return db.trans { db in
                 self.__satisfyCheck(
                     on: db,
-                    UGroup.self,
+                    __SDBM.Group.self,
                     ids: groupIds,
                     allSatisfy: allSatisfy,
                     label: "用户群组",
@@ -141,7 +141,7 @@ extension PrivilegeSystem {
                     EventLoopRes<Set<UUID>, Errcase>.whenAllSucceed(
                         groupIds.map { id in
                             // 先去内接表中，揪出当前组及其所有下属子孙的 ID 集合
-                            UGroup.Path.query(on: db)
+                            __SDBM.Group.Path.query(on: db)
                                 .filter(\.$ancestor.$id == id)
                                 .all()
                                 .withError(Errcase.groupDeleteFailed, "获取子树节点失败", category: .internal)
@@ -156,14 +156,14 @@ extension PrivilegeSystem {
                         let targetIDs = ids.reduce(into: Set<UUID>()) { $0.formUnion($1) }
                         
                         // 批量抹去内接表中所有以这些组为“后代”的路径
-                        return UGroup.Path.query(on: db)
+                        return __SDBM.Group.Path.query(on: db)
                             .filter(\.$descendant.$id ~~ targetIDs)
                             .delete()
                             .withError(Errcase.groupDeleteFailed, "内接表级联删除路径失败", category: .internal)
                             .flatMap
                         {
                             // 最后在主表中把这些组真正物理切除（因为有外键，需要先删内接表再删主表）
-                            UGroup.query(on: db)
+                            __SDBM.Group.query(on: db)
                                 .filter(\.$id ~~ targetIDs)
                                 .delete()
                                 .withError(Errcase.groupDeleteFailed, "群组主表删除失败", category: .internal)
@@ -297,7 +297,7 @@ public extension PrivilegeSystem.GroupController {
         let logger = getActionLogger()
         logger.info("执行 群组移动 操作", metadata: ["groupId": .stringConvertible(relation.left.id), "targetParentId": .string(relation.right.map { $0.id.uuidString } ?? "nil")])
         return db.trans { tdb in
-            let oldDelete: EventLoopRes<[UGroup.Path], PrivilegeSystem.Errcase> = UGroup.Path.query(on: tdb)
+            let oldDelete: EventLoopRes<[__SDBM.Group.Path], PrivilegeSystem.Errcase> = __SDBM.Group.Path.query(on: tdb)
                 .filter(\.$ancestor.$id == relation.left.id)
                 .all()
                 .withError(PrivilegeSystem.Errcase.groupMoveFailed, "获取子树失败", category: .internal)
@@ -324,7 +324,7 @@ public extension PrivilegeSystem.GroupController {
                         .flatMap
                     {
                         // 只要后代在 B 圈子里，且祖先不在 B 圈子里（属于外部老祖先），通通干掉
-                        UGroup.Path.query(on: tdb)
+                        __SDBM.Group.Path.query(on: tdb)
                             .filter(\.$descendant.$id ~~ subTreeIDs)
                             .filter(\.$ancestor.$id !~ subTreeIDs)
                             .delete()
@@ -340,7 +340,7 @@ public extension PrivilegeSystem.GroupController {
                 }
                 
                 // 捞出“新父级 X 及其所有祖先”，跟“B 及其子孙”进行交叉组合
-                return UGroup.Path.query(on: tdb)
+                return __SDBM.Group.Path.query(on: tdb)
                     .filter(\.$descendant.$id == superId)
                     .all()
                     .withError(PrivilegeSystem.Errcase.groupMoveFailed, "获取新父级祖先链失败", category: .internal)
@@ -349,7 +349,7 @@ public extension PrivilegeSystem.GroupController {
                     // 批量并发构建新路径组合（笛卡尔积）
                     superTreePaths.flatMap { superPath in
                         subTreePaths.filter { $0.$ancestor.id == relation.left.id }.map { subPath in
-                            let newPath = UGroup.Path()
+                            let newPath = __SDBM.Group.Path()
                             newPath.$ancestor.id = superPath.$ancestor.id
                             newPath.$descendant.id = subPath.$descendant.id
                             // 新距离 = 祖先到X的距离 + 子孙到B的距离 + 1
@@ -396,8 +396,8 @@ extension PrivilegeSystem.GroupController {
         on db: PGDatabase,
         relations: [PUserInGroupRelation],
         strict: Bool
-    ) -> EventLoopRes<[UserGroupPivot], PrivilegeSystem.Errcase> {
-        UserGroupPivot.query(on: db)
+    ) -> EventLoopRes<[__SDBM.UserGroupPivot], PrivilegeSystem.Errcase> {
+        __SDBM.UserGroupPivot.query(on: db)
             .with(\.$user)
             .with(\.$group)
             .filter(\.$user.$id ~~ relations.map { $0.user.id })

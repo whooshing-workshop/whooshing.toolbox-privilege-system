@@ -51,7 +51,7 @@ public struct QUser: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: User?
+    package let __m: __SDBM.User?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
     public var maps: [CodingKeys : AnyCodable] {[
@@ -101,9 +101,9 @@ public struct QUser: DTO.Queried {
 }
 
 extension PUser: __Prepare {
-    func raw() -> Res<User, PrivilegeSystem.Errcase> {
+    func raw() -> Res<SQLModel, PrivilegeSystem.Errcase> {
         .init(throws: .userDTOFailed, category: .internal) {
-            let user = User()
+            let user = SQLModel()
             user.id = id
             user.email = email
             // 为用户创建一个用户加密密钥
@@ -129,7 +129,7 @@ extension PUser: __Prepare {
 
 extension QUser: __Queried {
     public typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: User) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.User) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userDTOFailed, "用户 ID 获取失败", category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -143,7 +143,7 @@ extension QUser: __Queried {
 }
 
 extension QUser: Query.Queriable {
-    public typealias Model = User
+    public typealias Model = __SDBM.User
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.email: \.$email,
@@ -163,9 +163,9 @@ extension QUser: Query.Queriable {
 
 // MARK: - ModelAuthenticatable
 
-extension User: ModelAuthenticatable {
-    public static let usernameKey: KeyPath<User, Field<String>> = \User.$email
-    public static let passwordHashKey: KeyPath<User, Field<String>> = \User.$hashedPassword
+extension __SDBM.User: ModelAuthenticatable {
+    public static let usernameKey: KeyPath<__SDBM.User, Field<String>> = \.$email
+    public static let passwordHashKey: KeyPath<__SDBM.User, Field<String>> = \.$hashedPassword
     
     public func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果

@@ -5,6 +5,7 @@ import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import OPA
+import Policy
 import PrivilegeModule
 import Collections
 import LoggingAdvanced
@@ -118,7 +119,7 @@ extension PrivilegeSystem {
                 self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的 Role 并非对 User 可用", category: .external)
             }
             
-            let userModelGetter: EventLoopRes<User, Errcase> = user.model(from: self.db)
+            let userModelGetter: EventLoopRes<__SDBM.User, Errcase> = user.model(from: self.db)
                 .errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
             
             // 查询用户所在的群组，父群组的所有域权限
@@ -129,8 +130,8 @@ extension PrivilegeSystem {
                     }
                     .all()
                     .withError(Errcase.arbitrationDataCollectFailed, "取得用户所加入的所有群组失败", category: .internal)
-            }.flatMapThrowing { (groups: [UGroup]) throws(Errcase.ErrType) in
-                let gs = [UGroup]((
+            }.flatMapThrowing { (groups: [__SDBM.Group]) throws(Errcase.ErrType) in
+                let gs = [__SDBM.Group]((
                     groups +
                     groups.flatMap { $0.supers.map { $0.ancestor } }
                 ).uniqued())
@@ -140,12 +141,12 @@ extension PrivilegeSystem {
                 }
                 
                 return (gs, ids)
-            }.flatMap { (groups: [UGroup], groupIds: [UUID]) in
+            }.flatMap { (groups: [__SDBM.Group], groupIds: [UUID]) in
                 guard !groupIds.isEmpty else {
                     return self.db.eventLoop.makeSucceededResult([])
                 }
                 
-                return DomainGroupPivot.query(on: self.db)
+                return __SDBM.DomainGroupPivot.query(on: self.db)
                     .filter(\.$secondaryModel.$id ~~ groupIds) // groups
                     .with(\.$primaryModel)  // domains
                     .all()
@@ -155,7 +156,7 @@ extension PrivilegeSystem {
                     try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
                         // 内存装配：此时每一行 pivot 都天然维护了 [Group -> Domain] 的纽带关系
                         try pivots.map { pivot in
-                            // 从最开始传入的 groups 内存集合里，凭借 pivot 的 groupId 瞬间定位到完整的 UGroup 实体
+                            // 从最开始传入的 groups 内存集合里，凭借 pivot 的 groupId 瞬间定位到完整的 __SDBM.Group 实体
                             guard let associatedGroup = groups.first(where: { $0.id == pivot.$secondaryModel.id }) else {
                                 throw Errcase.arbitrationDataCollectFailed.d("群组数据映射丢失", category: .internal)
                             }

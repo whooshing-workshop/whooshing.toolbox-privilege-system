@@ -50,7 +50,7 @@ public struct QDomain: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: Domain?
+    package let __m: __SDBM.Domain?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
     public var maps: [CodingKeys: AnyCodable] {[
@@ -117,7 +117,7 @@ extension PDomain: __Prepare {
 
 extension QDomain: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: Domain) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.Domain) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .domainDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -132,7 +132,7 @@ extension QDomain: __Queried {
 }
 
 extension QDomain: Query.Queriable {
-    public typealias Model = Domain
+    public typealias Model = __SDBM.Domain
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.name: \.$name,
@@ -161,7 +161,7 @@ public extension PDomain {
 
         package let updates: OrderedDictionary<
             PartialKeyPath<PDomain>,
-            (QueryBuilder<Domain>, QDomain?) throws -> QueryBuilder<Domain>
+            (QueryBuilder<__SDBM.Domain>, QDomain?) throws -> QueryBuilder<__SDBM.Domain>
         >
         package let needsPeek: Bool
 
@@ -175,7 +175,7 @@ public extension PDomain {
             id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<PDomain>,
-                (QueryBuilder<Domain>, QDomain?) throws -> QueryBuilder<Domain>
+                (QueryBuilder<__SDBM.Domain>, QDomain?) throws -> QueryBuilder<__SDBM.Domain>
             >,
             needsPeek: Bool
         ) {

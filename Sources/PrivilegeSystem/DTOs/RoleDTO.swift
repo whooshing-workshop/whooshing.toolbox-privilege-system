@@ -47,7 +47,7 @@ public struct QRole: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: Role?
+    package let __m: __SDBM.Role?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
     public var maps: [CodingKeys: AnyCodable] {[
@@ -105,7 +105,7 @@ public struct QRole: DTO.Queried {
 extension PRole: __Prepare {
     /// 需要先存 Policy 到数据库中
     func raw() -> SQLModel {
-        let role = Role()
+        let role = SQLModel()
         role.id = id
         role.name = name
         role.description = description
@@ -115,7 +115,7 @@ extension PRole: __Prepare {
 
 extension QRole: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: Role) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.Role) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .roleDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -130,7 +130,7 @@ extension QRole: __Queried {
 }
 
 extension QRole: Query.Queriable {
-    public typealias Model = Role
+    public typealias Model = __SDBM.Role
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.name: \.$name,
@@ -159,7 +159,7 @@ public extension PRole {
         
         package let updates: OrderedDictionary<
             PartialKeyPath<PRole>,
-            (QueryBuilder<Role>, QRole?) throws -> QueryBuilder<Role>
+            (QueryBuilder<__SDBM.Role>, QRole?) throws -> QueryBuilder<__SDBM.Role>
         >
         package let needsPeek: Bool
         
@@ -173,7 +173,7 @@ public extension PRole {
             id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<PRole>,
-                (QueryBuilder<Role>, QRole?) throws -> QueryBuilder<Role>
+                (QueryBuilder<__SDBM.Role>, QRole?) throws -> QueryBuilder<__SDBM.Role>
             >,
             needsPeek: Bool
         ) {

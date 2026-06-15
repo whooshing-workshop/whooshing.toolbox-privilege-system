@@ -1,9 +1,13 @@
 import Policy
 
-extension Domain: PolicyType {
-    public typealias Model = Domain
+public enum Domain: PolicyType {
+    public typealias Model = __SDBM.Domain
     public static var namePrefix: String { "domain" }
     public static var typeId: String { "domain" }
 }
 
-typealias DomainPolicy = PolicyExp<Domain>
+typealias DomainType = Domain
+
+extension __SDBM {
+    typealias DomainPolicy = PolicyExp<DomainType>
+}

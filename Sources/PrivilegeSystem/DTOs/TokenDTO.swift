@@ -5,6 +5,7 @@ import Cryptos
 import PrivilegeModule
 import DataConvertable
 import Query
+import Policy
 import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
@@ -117,7 +118,7 @@ public struct QToken: DTO.Queried {
     
     private let __token: String?
     
-    package let __m: __Token?
+    package let __m: __SDBM.Token?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
     public var maps: [CodingKeys : AnyCodable] {[
@@ -197,7 +198,7 @@ extension PToken: __Prepare {
 
 extension QToken: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: __Token) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.Token) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .tokenDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -214,7 +215,7 @@ extension QToken: __Queried {
 }
 
 extension QToken: Query.Queriable {
-    public typealias Model = __Token
+    public typealias Model = __SDBM.Token
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.credential: \.$credential,

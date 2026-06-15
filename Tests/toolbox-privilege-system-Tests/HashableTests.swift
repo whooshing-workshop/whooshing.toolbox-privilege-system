@@ -113,7 +113,7 @@ struct HashableTests {
         set.insert(p1)
         #expect(set.contains(p2))
         
-        let model = UGroup()
+        let model = __SDBM.Group()
         model.name = name
         model.description = desc
         model.id = UUID()
@@ -220,7 +220,7 @@ struct HashableTests {
         umodel.updatedAt = Date()
         let quser = try QUser.make(from: umodel).get()
         
-        let gmodel = UGroup()
+        let gmodel = __SDBM.Group()
         gmodel.name = "TestGroup"
         gmodel.id = UUID()
         gmodel.description = nil
@@ -336,7 +336,7 @@ struct HashableTests {
         
         #expect(p1 == p2)
         
-        let model = PM<ResourceList>.__Privilege()
+        let model = PM<ResourceList>.__DBM.Privilege()
         model.name = name
         model.policy = policy
         model.description = nil

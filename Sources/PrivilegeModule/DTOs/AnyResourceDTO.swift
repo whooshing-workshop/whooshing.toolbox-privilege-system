@@ -5,6 +5,7 @@ import Collections
 import SQLKit
 import PgSQL
 import Query
+import Policy
 import DataConvertable
 import LoggingAdvanced
 import NIOAdvanced
@@ -18,7 +19,7 @@ public struct AnyResource: DTO.Model {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package typealias SQLModel = __AnyResource
+    package typealias SQLModel = __SDBM.AnyResource
     package let __m: SQLModel?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
@@ -81,7 +82,7 @@ public struct AnyResource: DTO.Model {
 }
 
 public extension AnyResource {
-    static func make(from model: __AnyResource) -> Res<Self, Errcase> {
+    static func make(from model: __SDBM.AnyResource) -> Res<Self, Errcase> {
         .init(throws: .resourceDTOFailed, category: .internal) {
             Self.init(
                 id: try model.requireID(),
@@ -116,7 +117,7 @@ package extension AnyResource {
 }
 
 extension AnyResource: Query.Queriable {
-    public typealias Model = __AnyResource
+    public typealias Model = __SDBM.AnyResource
     public typealias ErrorType = Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.id: \.$id,

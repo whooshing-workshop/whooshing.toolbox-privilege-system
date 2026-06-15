@@ -61,7 +61,7 @@ public extension PrivilegeModule {
                 dtos: resources,
                 label: "资源",
                 errThrowing: .resourceCreateFailed,
-                modelBuilder: { .success(ResourceModel<T>(from: $0)) },
+                modelBuilder: { .success(__DBM.ResourceModel<T>(from: $0)) },
                 dtoBuilder: { QResource<T>.make(from: $0.fill()) }
             )
             .map { 
@@ -89,7 +89,7 @@ public extension PrivilegeModule {
             logger.debug("操作参数", metadata: ["ids": .data(ids)])
             return __delete(
                 on: db,
-                __AnyResource.self,
+                __SDBM.AnyResource.self,
                 ids: ids,
                 allSatisfy: allSatisfy,
                 label: "资源",

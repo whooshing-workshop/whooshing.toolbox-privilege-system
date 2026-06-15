@@ -3,8 +3,8 @@ import Fluent
 import Foundation
 import Policy
 
-public extension PM {
-    final class __Privilege: PGModel, @unchecked Sendable {
+public extension PM.__DBM {
+    final class Privilege: PGModel, @unchecked Sendable {
         
         public static var name: String { "privileges" }
         
@@ -34,7 +34,7 @@ public extension PM {
             through: PrivilegeAnyResourcePivot.self,
             from: \.$primaryModel,
             to: \.$secondaryModel
-        )                                               var resources: [__AnyResource]
+        )                                               var resources: [__SDBM.AnyResource]
         
         public init() { }
         
@@ -44,12 +44,12 @@ public extension PM {
             return self
         }
         
-        public typealias MIG = DefaultMIG<__Privilege>
+        public typealias MIG = DefaultMIG<Privilege>
     }
 }
 
-extension PM.__Privilege: PolicyType {
-    public typealias Model = PrivilegeModule.__Privilege
+extension PM.__DBM.Privilege: PolicyType {
+    public typealias Model = PrivilegeModule.__DBM.Privilege
     public static var namePrefix: String { "privilege" }
     public static var typeId: String { "privilege" }
 }

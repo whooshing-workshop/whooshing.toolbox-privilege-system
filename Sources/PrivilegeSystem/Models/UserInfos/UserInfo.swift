@@ -3,13 +3,13 @@ import Foundation
 import Policy
 import Fluent
 
-public extension User {
+public extension __SDBM.User {
     final class Info: PGModel, @unchecked Sendable {
         public static let name: String = "user_infos"
         
         public struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
-            let userId = PGField("user_id", .uuid)                      .required.unique.foreign(User.self, \.id, onDelete: .cascade)
+            let userId = PGField("user_id", .uuid)                      .required.unique.foreign(__SDBM.User.self, \.id, onDelete: .cascade)
             let idNumber = PGField("id_number", .string)                .required.unique
             let nickname = PGField("nickname", .string)                 .required
             let birthday = PGField("birthday", .date)                   .required
@@ -24,7 +24,7 @@ public extension User {
         
         @ID(key: .id)                                           public var id: UUID?
         
-        @Parent(fields.userId)                                  var user: User
+        @Parent(fields.userId)                                  var user: __SDBM.User
         @Field(fields.nickname)                                 var nickname: String
         @Field(fields.idNumber)                                 var identifier: String
         @Field(fields.birthday)                                 var birthday: Date

@@ -54,7 +54,7 @@ public struct QGroup: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    package let __m: UGroup?
+    package let __m: __SDBM.Group?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
     public var maps: [CodingKeys : AnyCodable] {[
@@ -128,7 +128,7 @@ extension PGroup: __Prepare {
 
 extension QGroup: __Queried {
     package typealias Failure = PrivilegeSystem.Errcase
-    public static func make(from model: UGroup) -> Res<Self, PrivilegeSystem.Errcase> {
+    public static func make(from model: __SDBM.Group) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .groupDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -144,7 +144,7 @@ extension QGroup: __Queried {
 }
 
 extension QGroup: Query.Queriable {
-    public typealias Model = UGroup
+    public typealias Model = __SDBM.Group
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.parentId: \.$parent.$id,
@@ -175,7 +175,7 @@ public extension PGroup {
 
         package let updates: OrderedDictionary<
             PartialKeyPath<PGroup>,
-            (QueryBuilder<UGroup>, QGroup?) throws -> QueryBuilder<UGroup>
+            (QueryBuilder<__SDBM.Group>, QGroup?) throws -> QueryBuilder<__SDBM.Group>
         >
         package let needsPeek: Bool
 
@@ -189,7 +189,7 @@ public extension PGroup {
             id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<PGroup>,
-                (QueryBuilder<UGroup>, QGroup?) throws -> QueryBuilder<UGroup>
+                (QueryBuilder<__SDBM.Group>, QGroup?) throws -> QueryBuilder<__SDBM.Group>
             >,
             needsPeek: Bool
         ) {

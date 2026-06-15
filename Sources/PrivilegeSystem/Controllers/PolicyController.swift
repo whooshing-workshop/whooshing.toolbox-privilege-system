@@ -92,7 +92,7 @@ extension PrivilegeSystem {
                 label: "权限策略",
                 errThrowing: .policyDeleteFailed,
                 filterBuilder: {
-                    PolicyExp<T>
+                    __SDBM.PolicyExp<T>
                         .query(on: $0)
                         .filter(\.$id == policy.left.id)
                 },

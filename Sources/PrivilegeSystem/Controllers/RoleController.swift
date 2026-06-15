@@ -112,7 +112,7 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["roleIds": .data(roleIds)])
             return __delete(
                 on: db,
-                Role.self,
+                __SDBM.Role.self,
                 ids: roleIds,
                 allSatisfy: allSatisfy,
                 label: "角色",
@@ -541,7 +541,7 @@ extension PrivilegeSystem.RoleController {
                 .all()
                 .withError(Errcase.groupRoleQueryFailed, "从数据库查询失败", category: .internal)
         }.flatMapThrowing { groupRoles throws(Errcase.ErrType) in
-            let gs = [UGroup]((
+            let gs = [__SDBM.Group]((
                 groupRoles +
                 groupRoles.flatMap { $0.supers.map { $0.ancestor } }
             ).uniqued())
@@ -557,7 +557,7 @@ extension PrivilegeSystem.RoleController {
                 return db.eventLoop.makeSucceededResult([])
             }
             
-            return RoleGroupPivot.query(on: db)
+            return __SDBM.RoleGroupPivot.query(on: db)
                 .filter(\.$secondaryModel.$id ~~ groupIds)
                 .with(\.$primaryModel)
                 .all()
@@ -595,8 +595,8 @@ extension PrivilegeSystem.RoleController {
         on db: PGDatabase,
         for user: QUser
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        // 1. 第一步：捞出该用户直接加入的所有群组关系，并预加载完整的 UGroup 实体
-        UserGroupPivot.query(on: db)
+        // 1. 第一步：捞出该用户直接加入的所有群组关系，并预加载完整的 __SDBM.Group 实体
+        __SDBM.UserGroupPivot.query(on: db)
             .filter(\.$user.$id == user.id)
             .with(\.$group)
             .all()
@@ -614,7 +614,7 @@ extension PrivilegeSystem.RoleController {
             }
             
             // 2. 第二步：一发 IN 聚合查询，直击二级中间表
-            return RoleUserInGroupPivot.query(on: db)
+            return __SDBM.RoleUserInGroupPivot.query(on: db)
                 .filter(\.$secondaryModel.$id ~~ pivotIds)
                 .with(\.$primaryModel)
                 .all()
@@ -624,8 +624,8 @@ extension PrivilegeSystem.RoleController {
                 try required(throws: Errcase.groupRoleQueryFailed, "转为 DTO 失败", category: .internal) {
                     
                     // 3. 第三步：为了做到 O(1) 的内存装配性能，先把第一步查到的物理实体织成一张“查找表”
-                    // Key 是 UserGroupPivot 的 ID，Value 是完整的 UGroup 实体
-                    var pivotToGroupLookup: [UUID: UGroup] = [:]
+                    // Key 是 UserGroupPivot 的 ID，Value 是完整的 __SDBM.Group 实体
+                    var pivotToGroupLookup: [UUID: __SDBM.Group] = [:]
                     for ugPivot in userGroupPivots {
                         if let ugPivotId = ugPivot.id {
                             pivotToGroupLookup[ugPivotId] = ugPivot.group
@@ -644,8 +644,8 @@ extension PrivilegeSystem.RoleController {
                     // 5. 第五步：组装出符合你多对一泛型要求的 MTORelation 数组
                     return try groupedByGroup.map { groupId, currentPivots in
                         
-                        // 5.1 从刚才建好的查找表里，把那个直接加入的完整的 UGroup 实体揪出来
-                        // 由于同一个 groupId 对应的 UGroup 是一样的，我们直接拿 currentPivots 第一个对应的组即可
+                        // 5.1 从刚才建好的查找表里，把那个直接加入的完整的 __SDBM.Group 实体揪出来
+                        // 由于同一个 groupId 对应的 __SDBM.Group 是一样的，我们直接拿 currentPivots 第一个对应的组即可
                         let samplePivotId = currentPivots[0].$secondaryModel.id
                         guard let associatedGroup = pivotToGroupLookup[samplePivotId] else {
                             throw Errcase.arbitrationDataCollectFailed.d("群组实体检索失败", category: .internal)
@@ -737,7 +737,7 @@ extension PrivilegeSystem.RoleController {
                 .all()
                 .withError(Errcase.groupRoleVerifyFailed, "取得用户所加入的所有群组失败", category: .internal)
         }.flatMap { groups in
-            let gs = [UGroup]((
+            let gs = [__SDBM.Group]((
                 groups +
                 groups.flatMap { $0.supers.map { $0.ancestor } }
             ).uniqued())
@@ -750,7 +750,7 @@ extension PrivilegeSystem.RoleController {
             
             let groupsLookup = Dictionary(uniqueKeysWithValues: gs.map { ($0.id, $0) })
             
-            return RoleGroupPivot.query(on: db)
+            return __SDBM.RoleGroupPivot.query(on: db)
                 .filter(\.$primaryModel.$id == groupRole.id)
                 .filter(\.$secondaryModel.$id ~~ groupIds)
                 .all()
@@ -762,7 +762,7 @@ extension PrivilegeSystem.RoleController {
                     try pivots.compactMap { pivot -> QGroup? in
                         let pivotGroupId = pivot.$secondaryModel.id
                         
-                        // 凭借外键 ID 从刚才的 lookup 字典中 O(1) 瞬间揪出原生态的、带树状血缘的 UGroup 实体
+                        // 凭借外键 ID 从刚才的 lookup 字典中 O(1) 瞬间揪出原生态的、带树状血缘的 __SDBM.Group 实体
                         guard let associatedGroup = groupsLookup[pivotGroupId] else { return nil }
                         
                         // 将其整装转换为你需要的 DTO.Group 并交付出去
@@ -779,12 +779,12 @@ extension PrivilegeSystem.RoleController {
         userInGroupRole: QRole,
         appointedTo user: QUser
     ) -> EventLoopRes<[QGroup], Errcase> {
-        RoleUserInGroupPivot.query(on: db)
+        __SDBM.RoleUserInGroupPivot.query(on: db)
             .filter(\.$primaryModel.$id == userInGroupRole.id)
-            .join(UserGroupPivot.self, on: \RoleUserInGroupPivot.$secondaryModel.$id == \UserGroupPivot.$id)
-            .filter(UserGroupPivot.self, \.$user.$id == user.id)
+            .join(__SDBM.UserGroupPivot.self, on: \__SDBM.RoleUserInGroupPivot.$secondaryModel.$id == \__SDBM.UserGroupPivot.$id)
+            .filter(__SDBM.UserGroupPivot.self, \.$user.$id == user.id)
             .with(\.$secondaryModel) { userInGroup in
-                // 通过 eager load，强行把内层中间表，以及中间表背后的 UGroup 实体全部批量捎带出来
+                // 通过 eager load，强行把内层中间表，以及中间表背后的 __SDBM.Group 实体全部批量捎带出来
                 userInGroup.with(\.$group)
             }
             .all()
@@ -792,11 +792,11 @@ extension PrivilegeSystem.RoleController {
             .flatMapThrowing
         { pivots throws(Errcase.ErrType) in
             try required(throws: Errcase.userInGroupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
-                // 穿透复合中间表，抓出最内层的 UGroup 并映射为 Group DTO
+                // 穿透复合中间表，抓出最内层的 __SDBM.Group 并映射为 Group DTO
                 try pivots.map { pivot -> QGroup in
                     // 1. 从二级表拿到内层表 UserGroupPivot
                     let userGroupRelation = pivot.secondaryModel
-                    // 2. 从内层表拿到我们刚刚用 .with(\.$group) 提前预加载好的 UGroup 物理实体
+                    // 2. 从内层表拿到我们刚刚用 .with(\.$group) 提前预加载好的 __SDBM.Group 物理实体
                     let rawGroup = userGroupRelation.group
                     // 3. 完美转化为安全、干净的 DTO.Group 容器交付出去
                     return try QGroup.make(from: rawGroup).get()

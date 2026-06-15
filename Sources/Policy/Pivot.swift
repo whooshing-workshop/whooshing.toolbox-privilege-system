@@ -97,4 +97,6 @@ open class CustomeIDPivot<T: PivotType>: @unchecked Sendable {
     public typealias MIG = DefaultMIG<Pivot<T>>
 }
 
-public enum Pivots {}
+public enum __SDBM {
+    public enum Pivots {}
+}

@@ -173,7 +173,7 @@ struct ResourceTests {
         
         do {
             // 测试查询
-            queriedFiles = try await PModule.ResourceModel<FileResource>.query(on: m.db)
+            queriedFiles = try await PModule.__DBM.ResourceModel<FileResource>.query(on: m.db)
                 .filter(\.$id ~~ [createdFiles[0].id, createdFiles[1].id])
                 .count()
         } catch {
@@ -413,7 +413,7 @@ struct ResourceTests {
         try await m.resource.delete(ids: [resourceDTO.id])
         
         // 验证删除
-        let count = try await PModule.ResourceModel<FileResource>.query(on: m.db)
+        let count = try await PModule.__DBM.ResourceModel<FileResource>.query(on: m.db)
             .filter(\.$id == resourceDTO.id)
             .count()
         

@@ -68,7 +68,7 @@ public extension PM {
         public let createdAt: Date
         public let updatedAt: Date
         
-        package let __m: __Privilege?
+        package let __m: __DBM.Privilege?
         package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
         
         public var maps: [CodingKeys: AnyCodable] {[
@@ -132,8 +132,8 @@ public extension PM {
 
 extension PM.PPrivilege: __Prepare {
     public typealias S = PM<ResourceList>
-    func raw() -> S.__Privilege {
-        let privilege = PM<ResourceList>.__Privilege()
+    func raw() -> S.__DBM.Privilege {
+        let privilege = PM<ResourceList>.__DBM.Privilege()
         privilege.id = id
         privilege.name = name
         privilege.description = description
@@ -145,7 +145,7 @@ extension PM.PPrivilege: __Prepare {
 extension PM.QPrivilege: __Queried {
     public typealias S = PM<ResourceList>
     package typealias Failure = S.Errcase
-    public static func make(from model: S.__Privilege) -> Res<Self, S.Errcase> {
+    public static func make(from model: S.__DBM.Privilege) -> Res<Self, S.Errcase> {
         .init(throws: .privilegeDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
@@ -161,7 +161,7 @@ extension PM.QPrivilege: __Queried {
 }
 
 extension PM.QPrivilege: Query.Queriable {
-    public typealias Model = S.__Privilege
+    public typealias Model = S.__DBM.Privilege
     public typealias ErrorType = S.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         \.name: \.$name,
@@ -197,9 +197,9 @@ public extension PM.PPrivilege {
         package let updates: OrderedDictionary<
             PartialKeyPath<S.PPrivilege>,
             (
-                QueryBuilder<S.__Privilege>,
+                QueryBuilder<S.__DBM.Privilege>,
                 S.QPrivilege?
-            ) throws -> QueryBuilder<S.__Privilege>
+            ) throws -> QueryBuilder<S.__DBM.Privilege>
         >
         package let needsPeek: Bool
         
@@ -219,7 +219,7 @@ public extension PM.PPrivilege {
             policyUpdate: ((S.QPrivilege?) throws -> String)? = nil,
             updates: OrderedDictionary<
                 PartialKeyPath<S.PPrivilege>,
-                (QueryBuilder<S.__Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__Privilege>
+                (QueryBuilder<S.__DBM.Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__DBM.Privilege>
             >,
             needsPeek: Bool
         ) {
@@ -233,7 +233,7 @@ public extension PM.PPrivilege {
             id: UUID,
             updates: OrderedDictionary<
                 PartialKeyPath<S.PPrivilege>,
-                (QueryBuilder<S.__Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__Privilege>
+                (QueryBuilder<S.__DBM.Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__DBM.Privilege>
             >,
             needsPeek: Bool
         ) {
@@ -246,7 +246,7 @@ public extension PM.PPrivilege {
         package func generate(
             needsPeek: Bool = false,
             key: PartialKeyPath<S.PPrivilege>,
-            value: @escaping (QueryBuilder<S.__Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__Privilege>,
+            value: @escaping (QueryBuilder<S.__DBM.Privilege>, S.QPrivilege?) throws -> QueryBuilder<S.__DBM.Privilege>,
             policyUpdate: ((S.QPrivilege?) throws -> String)? = nil
         ) -> Self {
             var updates = self.updates

@@ -3,6 +3,7 @@ import Cryptos
 import Fluent
 import PgSQL
 import Vapor
+import Policy
 import DataConvertable
 import ErrorHandle
 import NIOAdvanced
@@ -76,14 +77,14 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["user": .data(user)])
             
             return db.trans { db in
-                db.eventLoop.submitResult { () throws(Errcase.ErrType) -> User in
+                db.eventLoop.submitResult { () throws(Errcase.ErrType) -> __SDBM.User in
                     try user.raw().get()
                 }.flatMap { user in
                     user.save(on: db)
                         .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internal)
                         .map { user.id }
                 }.flatMap { id in
-                    User.find(id, on: db)
+                    __SDBM.User.find(id, on: db)
                         .withError(Errcase.userRegisterFailed, "重新加载用户失败", category: .internal)
                         .flatMapThrowing
                     { res throws(Errcase.ErrType) in
@@ -125,12 +126,12 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["user": .data(userData)])
             
             return db.trans { db in
-                User.query(on: db)
+                __SDBM.User.query(on: db)
                     .filter(\.$email == userData.email)
                     .first()
                     .withError(Errcase.userLoginFailed, "用户不存在", category: .external)
                     .flatMapThrowing
-                { (res) throws(Errcase.ErrType) -> (User, UUID, __Token) in
+                { (res) throws(Errcase.ErrType) -> (__SDBM.User, UUID, __SDBM.Token) in
                     guard let user = res else {
                         throw Errcase.userLoginFailed.d("用户不存在", category: .external)
                     }
@@ -150,7 +151,7 @@ extension PrivilegeSystem {
                     return (user, userId, PToken(for: userId).raw())
                 }.flatMap { (user, id, token) in
                     // 删除原有的 token (若有)
-                    __Token.query(on: db).filter(\.$user.$id == id).delete()
+                    __SDBM.Token.query(on: db).filter(\.$user.$id == id).delete()
                         .withError(Errcase.userLoginFailed, "删除用户 token 时失败，用户: \(user)")
                         .map { (user, id, token) }
                 }.flatMap { (user, id, token) in
@@ -196,7 +197,7 @@ extension PrivilegeSystem {
                         throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 60 bytes", category: .external)
                     }
                 }.flatMap {
-                    __Token.query(on: db)
+                    __SDBM.Token.query(on: db)
                         .filter(\.$credential == token.credential)
                         .first()
                         .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败", category: .internal)
@@ -285,7 +286,7 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
             
             return db.trans { db in
-                User.query(on: db)
+                __SDBM.User.query(on: db)
                     .filter(\.$email == userData.email)
                     .first()
                     .withError(Errcase.userPasswordChangeFailed, "用户不存在", category: .external)
@@ -308,7 +309,7 @@ extension PrivilegeSystem {
                     }
                     
                     return user
-                }.flatMap { (user: User) -> EventLoopRes<User, Errcase> in
+                }.flatMap { (user: __SDBM.User) -> EventLoopRes<__SDBM.User, Errcase> in
                     return user
                         .update(on: db)
                         .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)

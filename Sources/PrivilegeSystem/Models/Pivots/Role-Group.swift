@@ -2,12 +2,14 @@ import PgSQL
 import Policy
 import Fluent
 
-typealias RoleGroupPivot = Pivot<Pivots.RoleGroup>
+extension __SDBM {
+    typealias RoleGroupPivot = Pivot<Pivots.RoleGroup>
+}
 
-extension Pivots {
+extension __SDBM.Pivots {
     struct RoleGroup: PivotType {
-        typealias PrimaryModel = Role
-        typealias SecondaryModel = UGroup
+        typealias PrimaryModel = __SDBM.Role
+        typealias SecondaryModel = __SDBM.Group
         
         static let foreignPrimaryName = "role"
         static let foreignSecondaryName = "group"

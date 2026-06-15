@@ -5,50 +5,52 @@ import Fluent
 import ResourceMacros
 @preconcurrency import AnyCodable
 
-public final class __AnyResource: PGModel, @unchecked Sendable  {
-    public static var name: String { "resources" }
-    
-    public struct Fields: PGFields {
-        let id = PGField("id", .uuid)                               .primary
-        let name = PGField("name", .string)                         .required
-        let type = PGField("type", .string)                         .required
-        let data = PGField("data", .json)                           .required
-        let createdAt = PGField("created_at", .datetime)            .required
-        let updatedAt = PGField("updated_at", .datetime)            .required
+public extension __SDBM {
+    final class AnyResource: PGModel, @unchecked Sendable  {
+        public static var name: String { "resources" }
+        
+        public struct Fields: PGFields {
+            let id = PGField("id", .uuid)                               .primary
+            let name = PGField("name", .string)                         .required
+            let type = PGField("type", .string)                         .required
+            let data = PGField("data", .json)                           .required
+            let createdAt = PGField("created_at", .datetime)            .required
+            let updatedAt = PGField("updated_at", .datetime)            .required
+            
+            public init() {}
+        }
+        
+        let fields = Fields()
+        
+        @ID(key: .id)                               public var id: UUID?
+        
+        @Field(fields.name)                         var name: String
+        @Field(fields.type)                         var type: String
+        @Field(fields.data)                         var data: [String: AnyCodable]
+        
+        @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
+        @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
         
         public init() {}
-    }
-    
-    let fields = Fields()
-    
-    @ID(key: .id)                               public var id: UUID?
-    
-    @Field(fields.name)                         var name: String
-    @Field(fields.type)                         var type: String
-    @Field(fields.data)                         var data: [String: AnyCodable]
-    
-    @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
-    @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
-    
-    public init() {}
-    
-    init<T, G>(from resource: PrivilegeModule<G>.ResourceModel<T>) {
-        self.id = resource.id
-        self.name = resource.name
-        self.type = resource.type.rawValue
-        self.data = resource.data.json
-        self.createdAt = resource.createdAt
-        self.updatedAt = resource.updatedAt
         
-        self.$id.exists = resource.$id.exists
-        self._$idExists = resource._$idExists
-        self._$id.exists = resource._$id.exists
+        init<T, G>(from resource: PrivilegeModule<G>.__DBM.ResourceModel<T>) {
+            self.id = resource.id
+            self.name = resource.name
+            self.type = resource.type.rawValue
+            self.data = resource.data.json
+            self.createdAt = resource.createdAt
+            self.updatedAt = resource.updatedAt
+            
+            self.$id.exists = resource.$id.exists
+            self._$idExists = resource._$idExists
+            self._$id.exists = resource._$id.exists
+        }
+        
+        public typealias MIG = DefaultMIG<__SDBM.AnyResource>
     }
-    
-    public typealias MIG = DefaultMIG<__AnyResource>
 }
 
-extension PM {
+extension PM.__DBM {
     public final class ResourceModel<T: Resource>: PGModel, @unchecked Sendable where T.ResourceType == ResourceList  {
         public static var name: String { "resources" }
         
@@ -77,7 +79,7 @@ extension PM {
             through: PrivilegeResourcePivot.self,
             from: \.$secondaryModel,
             to: \.$primaryModel
-        )                                           var privileges: [__Privilege]
+        )                                           var privileges: [Privilege]
         
         @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)   var updatedAt: Date!
@@ -101,6 +103,6 @@ extension PM {
             return self
         }
         
-        public typealias MIG = DefaultMIG<__AnyResource>
+        public typealias MIG = DefaultMIG<__SDBM.AnyResource>
     }
 }

@@ -78,7 +78,7 @@ public extension PrivilegeModule {
             return __createPolicy(
                 on: db,
                 relations: mappedPrivileges,        // 资源策略创建无需绑定关系，传入策略列表
-                policyType: __Privilege.self,
+                policyType: __DBM.Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
                 policies: { [$0] },                 // 返回本地，即 Pr == P
@@ -120,7 +120,7 @@ public extension PrivilegeModule {
             return __createPolicy(
                 on: db,
                 relations: mappedPrivileges,
-                policyType: __Privilege.self,
+                policyType: __DBM.Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeCreateFailed,
                 policies: { [$0] },
@@ -160,11 +160,11 @@ public extension PrivilegeModule {
             return __deletePolicy(
                 on: db,
                 policy: policy,
-                policyType: __Privilege.self,
+                policyType: __DBM.Privilege.self,
                 label: "资源权限",
                 errThrowing: .privilegeDeleteFailed,
                 filterBuilder: {
-                    __Privilege
+                    __DBM.Privilege
                         .query(on: $0)
                         .filter(\.$id == policy.id)
                 },
@@ -226,7 +226,7 @@ public extension PrivilegeModule {
                     let path = policyPath(
                         moduleId: self.moduleId,
                         modelId: updater.privilegeId,
-                        type: __Privilege.self,
+                        type: __DBM.Privilege.self,
                         format: .route
                     )
                     
@@ -406,7 +406,7 @@ extension PrivilegeModule.PrivilegeController {
         on db: PGDatabase,
         attachedTo resource: AnyResource
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
-        S.PrivilegeAnyResourcePivot.query(on: db)
+        S.__DBM.PrivilegeAnyResourcePivot.query(on: db)
             .filter(\.$secondaryModel.$id == resource.id)
             .with(\.$primaryModel)
             .all()
@@ -445,7 +445,7 @@ extension PrivilegeModule.PrivilegeController {
         privilege: S.QPrivilege,
         attachedTo resource: AnyResource
     ) -> EventLoopRes<Bool, Errcase> {
-        S.PrivilegeAnyResourcePivot.query(on: db)
+        S.__DBM.PrivilegeAnyResourcePivot.query(on: db)
             .filter(\.$secondaryModel.$id == resource.id)
             .first()
             .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)
