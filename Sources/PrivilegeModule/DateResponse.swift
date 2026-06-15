@@ -1,6 +1,6 @@
 import Foundation
 
-package struct DateResponse: Encodable, Sendable {
+package struct DateResponse: Codable, Sendable {
     package let year: Int
     package let month: Int
     package let day: Int
@@ -42,5 +42,9 @@ package struct DateResponse: Encodable, Sendable {
         
         // Raw: 纳秒级别的 Unix 时间戳
         self.raw = Int64(date.timeIntervalSince1970 * 1_000_000_000)
+    }
+    
+    package var date: Date {
+        .init(timeIntervalSince1970: Double(raw) / 1_000_000_000)
     }
 }

@@ -228,6 +228,16 @@ extension DTO.InfoSlice: Encodable {
     }
 }
 
+extension DTO.InfoSlice: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.container(keyedBy: CodingKeys.self)
+        self.value = try container.decode(G.Value.self, forKey: .value)
+        self.order = try container.decode(Int16.self, forKey: .order)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.m = nil
+    }
+}
+
 extension DTO.InfoSlice: Query.Queriable where T == DTO.Queried, G.Value == String {
     public typealias Model = User.Info.Extended<G.Model>
     public typealias ErrorType = PrivilegeSystem.Errcase

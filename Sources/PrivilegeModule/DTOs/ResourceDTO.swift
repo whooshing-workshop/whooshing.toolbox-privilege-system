@@ -152,6 +152,14 @@ extension PM.ResourceDTO: Encodable {
     }
 }
 
+extension PM.ResourceDTO: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.data = try container.decode(G.self, forKey: .data)
+        self.m = nil
+    }
+}
+
 extension PM.ResourceDTO: Query.Queriable {
     public typealias Model = S.ResourceModel<G>
     public typealias ErrorType = S.Errcase

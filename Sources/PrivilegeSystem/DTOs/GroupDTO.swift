@@ -173,6 +173,16 @@ extension DTO.Group: Encodable {
     }
 }
 
+extension DTO.Group: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.parentId = try container.decodeIfPresent(UUID.self, forKey: .parentId)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.m = nil
+    }
+}
+
 extension DTO.Group: Query.Queriable where T == DTO.Queried {
     public typealias Model = UGroup
     public typealias ErrorType = PrivilegeSystem.Errcase

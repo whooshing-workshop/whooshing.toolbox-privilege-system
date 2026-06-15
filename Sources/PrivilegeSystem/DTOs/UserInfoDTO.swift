@@ -219,6 +219,17 @@ extension DTO.UserInfo: Encodable {
     }
 }
 
+extension DTO.UserInfo: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.nickname = try container.decode(String.self, forKey: .nickname)
+        self.identifier = try container.decode(String.self, forKey: .identifier)
+        self.birthday = try container.decode(Date.self, forKey: .birthday)
+        self.other = try container.decodeIfPresent(String.self, forKey: .other)
+        self.m = nil
+    }
+}
+
 extension DTO.UserInfo: Query.Queriable where T == DTO.Queried {
     public typealias Model = User.Info
     public typealias ErrorType = PrivilegeSystem.Errcase

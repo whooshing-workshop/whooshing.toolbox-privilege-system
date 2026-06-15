@@ -167,6 +167,15 @@ extension DTO.Domain: Encodable {
     }
 }
 
+extension DTO.Domain: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        var container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decode(String.self, forKey: .description)
+        self.m = nil
+    }
+}
+
 extension DTO.Domain: Query.Queriable where T == DTO.Queried {
     public typealias Model = Domain
     public typealias ErrorType = PrivilegeSystem.Errcase

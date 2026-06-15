@@ -60,6 +60,8 @@ extension DTO.ExtendedInfo where T == DTO.Queried {
 
 extension DTO.ExtendedInfo: Encodable {}
 
+extension DTO.ExtendedInfo: Decodable where T == DTO.Prepare {}
+
 extension DTO.ExtendedInfo: CustomStringConvertible, Loggerable {
     public var logDescription: String {
         let statusLabel = "\(T.self)".components(separatedBy: ".").last ?? "\(T.self)"

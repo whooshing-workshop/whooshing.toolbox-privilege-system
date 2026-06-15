@@ -173,3 +173,12 @@ extension DTO.UserInGroupRelation: Encodable {
         }
     }
 }
+
+extension DTO.UserInGroupRelation: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.user = try container.decode(DTO.User<DTO.Queried>.self, forKey: .user)
+        self.group = try container.decode(DTO.Group<DTO.Queried>.self, forKey: .group)
+        self.m = nil
+    }
+}

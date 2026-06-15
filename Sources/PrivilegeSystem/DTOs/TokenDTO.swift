@@ -263,3 +263,13 @@ extension DTO.Token: Encodable {
         }
     }
 }
+
+extension DTO.Token: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.credential = try container.decode(String.self, forKey: .credential)
+        self.m = nil
+        self.expireAfter = 7 * 24 * 60
+        self.tokenEncrypted = try container.decode(Data.self, forKey: .tokenEncrypted)
+    }
+}

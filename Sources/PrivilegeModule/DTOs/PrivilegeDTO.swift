@@ -266,6 +266,16 @@ extension PM.PrivilegeDTO: Encodable {
     }
 }
 
+extension PM.PrivilegeDTO: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try container.decodeIfPresent(String.self, forKey: .name)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.policy = try container.decode(String.self, forKey: .policy)
+        self.m = nil
+    }
+}
+
 extension PM.PrivilegeDTO: Query.Queriable where T == DTO.Queried {
     public typealias Model = S.Privilege
     public typealias ErrorType = S.Errcase

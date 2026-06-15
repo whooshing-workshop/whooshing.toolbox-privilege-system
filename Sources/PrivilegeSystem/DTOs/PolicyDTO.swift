@@ -196,3 +196,11 @@ extension DTO.Policy: Encodable {
         }
     }
 }
+
+extension DTO.Policy: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.moduleId = try container.decode(UUID.self, forKey: .moduleId)
+        self.policy = try container.decode(String.self, forKey: .policy)
+    }
+}

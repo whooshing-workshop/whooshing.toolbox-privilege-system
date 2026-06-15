@@ -167,6 +167,15 @@ extension DTO.Role: Encodable {
     }
 }
 
+extension DTO.Role: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.m = nil
+    }
+}
+
 extension DTO.Role: Query.Queriable where T == DTO.Queried {
     public typealias Model = Role
     public typealias ErrorType = PrivilegeSystem.Errcase

@@ -92,6 +92,8 @@ extension AnyResourceDTO: Query.Queriable {
     }
 }
 
+extension AnyResourceDTO: Codable {}
+
 // MARK: - Loggerable
 
 extension AnyResourceDTO: Loggerable {

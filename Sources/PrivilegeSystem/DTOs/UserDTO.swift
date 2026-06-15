@@ -135,6 +135,15 @@ extension DTO.User: Encodable {
     }
 }
 
+extension DTO.User: Decodable where T == DTO.Prepare {
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.email = try container.decode(String.self, forKey: .email)
+        self.m = nil
+        self.hashedPasswd = try container.decode(String.self, forKey: .hashedPasswd)
+    }
+}
+
 extension DTO.User: Query.Queriable where T == DTO.Queried {
     public typealias Model = User
     public typealias ErrorType = PrivilegeSystem.Errcase
