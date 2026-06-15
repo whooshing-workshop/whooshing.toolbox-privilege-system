@@ -174,7 +174,7 @@ extension DTO.User: Loggerable, CustomStringConvertible {
             ]
         }
 
-        return formatQuery([
+        return formatJson([
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])

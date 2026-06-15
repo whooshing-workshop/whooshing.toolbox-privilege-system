@@ -68,7 +68,7 @@ extension DTO.ExtendedInfo: CustomStringConvertible, Loggerable {
             "alternate_emails": AnyCodable(self.alternateEmails.map { $0.value }),
             "phones": AnyCodable(self.phones.map { $0.value })
         ]
-        return formatQuery([
+        return formatJson([
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])

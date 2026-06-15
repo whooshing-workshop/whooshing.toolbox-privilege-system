@@ -108,7 +108,7 @@ extension DTO.Policy: CustomStringConvertible, Loggerable {
             ]
         }
 
-        return formatQuery([
+        return formatJson([
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])

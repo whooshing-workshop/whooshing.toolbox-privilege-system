@@ -218,7 +218,7 @@ extension DTO.Group: Loggerable {
             ]
         }
 
-        return formatQuery([
+        return formatJson([
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
@@ -295,7 +295,7 @@ public extension Collection where Element == QGroup {
 
 extension DTO.Group.Updater: Loggerable {
     public var logDescription: String {
-        return formatQuery([
+        return formatJson([
             "target_id": AnyCodable(id.shortString),
             "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
         ])

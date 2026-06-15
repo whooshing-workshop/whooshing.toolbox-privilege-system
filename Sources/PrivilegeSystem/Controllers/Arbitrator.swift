@@ -385,7 +385,7 @@ extension PrivilegeSystem.Arbitrator {
         let privileges: [PrivilegeData]
         
         var description: String {
-            formatQuery([
+            formatJson([
                 "moduleId": AnyCodable(moduleId),
                 "domains": AnyCodable(domains),
                 "role": AnyCodable(role),
@@ -401,7 +401,7 @@ extension PrivilegeSystem.Arbitrator {
         let user: DTO.User<DTO.Queried>
         
         var description: String {
-            formatQuery([
+            formatJson([
                 "roleId": AnyCodable(roleId),
                 "resource": AnyCodable(resource),
                 "operation": AnyCodable(operation),
@@ -418,7 +418,7 @@ extension PrivilegeSystem.Arbitrator {
         let group: DTO.Group<DTO.Queried>?
         
         var description: String {
-            formatQuery([
+            formatJson([
                 "domainId": AnyCodable(domainId),
                 "resource": AnyCodable(resource),
                 "operation": AnyCodable(operation),
@@ -435,7 +435,7 @@ extension PrivilegeSystem.Arbitrator {
         let user: DTO.User<DTO.Queried>
         
         var description: String {
-            formatQuery([
+            formatJson([
                 "privilegeId": AnyCodable(privilegeId),
                 "resource": AnyCodable(resource),
                 "operation": AnyCodable(operation),

@@ -189,7 +189,7 @@ extension PM.ResourceDTO: Hashable {
 
 extension PM.ResourceDTO.Updater: Loggerable {
     public var logDescription: String {
-        return formatQuery([
+        return formatJson([
             "target_id": AnyCodable(id.shortString),
             "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
         ])
@@ -216,7 +216,7 @@ extension PM.ResourceDTO: Loggerable {
             ]
         }
 
-        return formatQuery([
+        return formatJson([
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(dataMap)
         ])

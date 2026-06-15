@@ -61,7 +61,7 @@ where Self.RawValue == String {}
 public extension Resource {
     /// 资源 JSON 的格式化字符串表示。
     var description: String {
-        formatQuery(self.json)
+        formatJson(self.json)
     }
     
     /// 实例层面对 `Self.type` 的便捷访问。

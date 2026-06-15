@@ -276,7 +276,7 @@ extension DTO.InfoSlice: Loggerable {
             ]
         }
 
-        return formatQuery([
+        return formatJson([
             "status": AnyCodable(statusLabel),
             "data": AnyCodable(data)
         ])
@@ -369,7 +369,7 @@ public extension Collection {
 
 extension DTO.InfoSlice.Updater: Loggerable {
     public var logDescription: String {
-        return formatQuery([
+        return formatJson([
             "target_id": AnyCodable(id.shortString),
             "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
         ])

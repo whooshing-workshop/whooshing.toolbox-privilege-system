@@ -183,9 +183,9 @@ struct TestingShared {
     @MainActor static var privilegeModule: PrivilegeModule<ResourceList>? = nil
     @MainActor static var testStage: TestStage = .hashable
     @MainActor static let loggingSystem: Void = {
-        var factory = LoggingFactory()
-        factory.add("Console")
-        factory.bootstrap()
+        LoggingFactory(strategies: [
+            .init(label: "Console", level: .trace)
+        ]).bootstrap()
     }()
     
     @MainActor

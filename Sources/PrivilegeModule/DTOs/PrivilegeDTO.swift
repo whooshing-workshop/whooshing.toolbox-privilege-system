@@ -381,7 +381,7 @@ extension PM.PrivilegeDTO: Loggerable {
 
 extension PM.PrivilegeDTO.Updater: Loggerable {
     public var logDescription: String {
-        return formatQuery([
+        return formatJson([
             "target_id": AnyCodable(id.shortString),
             "updated_fields": AnyCodable(updates.keys.map { String(describing: $0) })
         ])
