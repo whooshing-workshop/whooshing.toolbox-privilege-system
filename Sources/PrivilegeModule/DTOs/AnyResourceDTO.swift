@@ -23,13 +23,13 @@ public struct AnyResource: DTO.Model {
     package let __m: SQLModel?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .type: .init(self.type),
-        .name: .init(self.name),
-        .data: .init(self.data),
-        .createdAt: .init(self.createdAt),
-        .updatedAt: .init(self.updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .type: .init(obj: self.type),
+        .name: .init(obj: self.name),
+        .data: .init(obj: self.data),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -39,6 +39,26 @@ public struct AnyResource: DTO.Model {
         case data
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+    
+    public init<L, G>(resource: PM<L>.QResource<G>) {
+        guard let m = Self.init(resource) else {
+            fatalError("不允许将一个未从数据库中读取的模型强制转为 AnyResource")
+        }
+        self = m
+    }
+    
+    public init?<L, G>(_ resource: PM<L>.QResource<G>) {
+        guard let m = resource.__m else { return nil }
+        self = Self.init(
+            id: resource.id,
+            type: resource.data.rtype.rawValue,
+            name: resource.data.name,
+            data: resource.data.json,
+            createdAt: resource.createdAt,
+            updatedAt: resource.updatedAt,
+            model: .init(from: m)
+        )
     }
     
     init(

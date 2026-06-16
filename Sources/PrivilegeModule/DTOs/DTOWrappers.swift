@@ -37,7 +37,7 @@ public extension DTO {
     {
         associatedtype CodingKeys: CodingKey
         // 用于比较和打印，不用与编解码
-        var maps: [CodingKeys: AnyCodable] { get }
+        var maps: [CodingKeys: AnyHashable?] { get }
     }
     
     protocol Prepare: Model {
@@ -74,12 +74,12 @@ where
 }
 
 public extension DTO.Model {
-    var description: String { formatJson(json) }
+    var description: String { formatJson(json.mapValues { .init($0) }) }
     
-    var json: [String: AnyCodable] {
-        var j: [String: AnyCodable] = [:]
+    var json: [String: AnyHashable?] {
+        var j: [String: AnyHashable?] = [:]
         for (k, v) in maps {
-            j[k.rawValue] = .init(v)
+            j[k.rawValue] = v
         }
         return j
     }
@@ -96,27 +96,38 @@ public extension DTO.Model {
 }
 
 public extension DTO.Prepare {
-    func like(_ rhs: QueriedModel) -> Bool {
-        for (k, v) in maps {
-            guard
-                let key = QueriedModel.CodingKeys(stringValue: k.stringValue),
-                rhs.maps[key] == v
-            else { return false }
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        let lmaps = lhs.maps
+        let rmaps = rhs.maps
+        for (k, v) in lmaps {
+            if k.rawValue == "id" { continue }
+            guard v == rmaps[k] else { return false }
         }
-        return true
+        guard
+            let lid = lmaps[.init(rawValue: "id")!]!,
+            let rid = rmaps[.init(rawValue: "id")!]!
+        else { return true }
+        
+        return lid == rid
+    }
+    
+    func like(_ rhs: QueriedModel) -> Bool {
+        let ljson = self.json
+        let rjson = rhs.json
+        for (k, v) in ljson {
+            if k == "id" { continue }
+            guard rjson[k] == v else { return false }
+        }
+        guard let lid = ljson["id"]! else { return true }
+        
+        return lid == rjson["id"]!
     }
 }
 
-public extension DTO.Queried {
+public extension DTO.Queried where Self == PrepareModel.QueriedModel {
     func like(_ rhs: PrepareModel) -> Bool {
         // 以 PrepareModel 为基准来做比较，而非 Self
-        for (k, v) in rhs.maps {
-            guard
-                let key = CodingKeys(stringValue: k.stringValue),
-                maps[key] == v
-            else { return false }
-        }
-        return true
+        rhs.like(self)
     }
 }
 
@@ -126,9 +137,9 @@ public extension Collection where Element: DTO.Prepare {
     }
 }
 
-public extension Collection where Element: DTO.Queried {
+public extension Collection where Element: DTO.Queried, Element == Element.PrepareModel.QueriedModel {
     func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == Element.PrepareModel {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+        self.elementsEqual(rhs, by: { $1.like($0) })
     }
 }
 

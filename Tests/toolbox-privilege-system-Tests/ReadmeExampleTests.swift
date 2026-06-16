@@ -52,7 +52,7 @@ struct ReadmeExampleTests {
         let resourceDTO = try await module.resource.create(
             resources: [docResource]
         ).first!
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         // 创建一个简单的策略表达式。只要请求的操作是 "read"，就允许放行
         let myPolicy = """
@@ -63,7 +63,7 @@ struct ReadmeExampleTests {
         
         // 在系统内注册权限，并将其挂载至资源上
         let privilegeDTO = try await module.privilege.createWithReturning(
-            privileges: [PM.PrivilegeDTO(name: "doc_reader", description: "Read documents", policy: myPolicy)]
+            privileges: [PM.PPrivilege(name: "doc_reader", description: "Read documents", policy: myPolicy)]
         ).first!
         
         try await module.privilege.attach {
@@ -126,7 +126,7 @@ struct ReadmeExampleTests {
         try await module.resource.delete(ids: [resourceDTO.id])
         
         // Note: 删除用户操作尚未直接在 controller 提供，通过模型删除
-        try await User.query(on: system.db).filter(\.$id == user.id).delete()
+        try await __SDBM.User.query(on: system.db).filter(\.$id == user.id).delete()
     }
 
     @MainActor

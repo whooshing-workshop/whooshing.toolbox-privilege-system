@@ -29,10 +29,10 @@ public struct PDomain: DTO.Prepare {
         self.description = description
     }
     
-    public var maps: [CodingKeys: AnyCodable] {[
-        .id: .init(self.id),
-        .name: .init(self.name),
-        .description: .init(self.description)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .name: .init(obj: self.name),
+        .description: .init(obj: self.description)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -53,12 +53,12 @@ public struct QDomain: DTO.Queried {
     package let __m: __SDBM.Domain?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public var maps: [CodingKeys: AnyCodable] {[
-        .id: .init(self.id),
-        .name: .init(name),
-        .description: .init(description),
-        .createdAt: .init(self.createdAt),
-        .updatedAt: .init(self.updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .name: .init(obj: self.name),
+        .description: .init(obj: self.description),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {

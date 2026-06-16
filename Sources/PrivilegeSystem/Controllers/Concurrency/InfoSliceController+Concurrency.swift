@@ -10,7 +10,7 @@ extension PrivilegeSystem.InfoSliceController {
     public func create<T>(
         for infoId: UUID,
         extendedInfos: [PInfoSlice<T>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QInfoSlice<T>] where T.Value == String {
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QInfoSlice<T>] {
         try await create(for: infoId, extendedInfos: extendedInfos).get()
     }
 

@@ -29,7 +29,7 @@ struct AdvancePolicyTesting {
     // =========================================================================
 
     private func fetchUser(index: Int, s: PrivilegeSystem) async throws -> QUser {
-        let model = try await User.query(on: s.db)
+        let model = try await __SDBM.User.query(on: s.db)
             .filter(\.$id == AT.ids[index])
             .with(\.$groups)
             .first()
@@ -79,10 +79,10 @@ struct AdvancePolicyTesting {
         }
         """
         
-        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_pass", description: "Advance SQL Pass", policy: passPolicyText)]).first!
+        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_pass", description: "Advance SQL Pass", policy: passPolicyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
@@ -106,10 +106,10 @@ struct AdvancePolicyTesting {
         }
         """
         
-        let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_fail", description: "Advance SQL Fail", policy: failPolicyText)]).first!
+        let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_fail", description: "Advance SQL Fail", policy: failPolicyText)]).first!
         let failJsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let failResourceDTO = try await m.resource.create(resources: [failJsonResource]).first!
-        let failAnyResource = AnyResource(failResourceDTO)
+        let failAnyResource = try #require(AnyResource(failResourceDTO))
 
         try await m.privilege.attach {
             [failPrivilegeDTO] => [failAnyResource]
@@ -178,10 +178,10 @@ struct AdvancePolicyTesting {
         }
         """
         
-        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PrivilegeDTO(name: "advance_time", description: "Advance Time Module", policy: policyText)]).first!
+        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_time", description: "Advance Time Module", policy: policyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]

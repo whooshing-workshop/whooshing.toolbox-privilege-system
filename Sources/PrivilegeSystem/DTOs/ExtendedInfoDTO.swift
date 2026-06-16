@@ -16,19 +16,19 @@ public struct PExtendedInfo: DTO.Model {
     public let phones: [PInfoSlice<Phone>]
     
     public init(
-        addresses: [PInfoSlice<Address>],
-        alternateEmails: [PInfoSlice<AlternateEmail>],
-        phones: [PInfoSlice<Phone>]
+        addresses: [PInfoSlice<Address>] = [],
+        alternateEmails: [PInfoSlice<AlternateEmail>] = [],
+        phones: [PInfoSlice<Phone>] = []
     ) {
         self.addresses = addresses
         self.alternateEmails = alternateEmails
         self.phones = phones
     }
     
-    public var maps: [CodingKeys: AnyCodable] {[
-        .addresses: .init(self.addresses.map { $0.json }),
-        .alternateEmails: .init(self.alternateEmails.map { $0.json }),
-        .phones: .init(self.phones.map { $0.json })
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .addresses: self.addresses.map { $0.json },
+        .alternateEmails: self.alternateEmails.map { $0.json },
+        .phones: self.phones.map { $0.json }
     ]}
 }
 
@@ -39,16 +39,16 @@ public struct QExtendedInfo: DTO.Model {
     public let phones: [QInfoSlice<Phone>]
     
     init(
-        addresses: [QInfoSlice<Address>],
-        alternateEmails: [QInfoSlice<AlternateEmail>],
-        phones: [QInfoSlice<Phone>]
+        addresses: [QInfoSlice<Address>] = [],
+        alternateEmails: [QInfoSlice<AlternateEmail>] = [],
+        phones: [QInfoSlice<Phone>] = []
     ) {
         self.addresses = addresses
         self.alternateEmails = alternateEmails
         self.phones = phones
     }
     
-    public var maps: [CodingKeys: AnyCodable] {[
+    public var maps: [CodingKeys: AnyHashable?] {[
         .addresses: .init(self.addresses.map { $0.json }),
         .alternateEmails: .init(self.alternateEmails.map { $0.json }),
         .phones: .init(self.phones.map { $0.json })
@@ -73,26 +73,17 @@ extension QExtendedInfo: Codable {
 
 public extension PExtendedInfo {
     func like(_ rhs: QueriedModel) -> Bool {
-        for (k, v) in maps {
-            guard
-                let key = QueriedModel.CodingKeys(stringValue: k.stringValue),
-                rhs.maps[key] == v
-            else { return false }
-        }
-        return true
+        addresses.like(rhs.addresses) &&
+        alternateEmails.like(rhs.alternateEmails) &&
+        phones.like(rhs.phones)
     }
 }
 
 public extension QExtendedInfo {
     func like(_ rhs: PrepareModel) -> Bool {
-        // 以 PrepareModel 为基准来做比较，而非 Self
-        for (k, v) in rhs.maps {
-            guard
-                let key = CodingKeys(stringValue: k.stringValue),
-                maps[key] == v
-            else { return false }
-        }
-        return true
+        rhs.addresses.like(self.addresses) &&
+        rhs.alternateEmails.like(self.alternateEmails) &&
+        rhs.phones.like(self.phones)
     }
 }
 
@@ -104,6 +95,6 @@ public extension Collection where Element == PExtendedInfo {
 
 public extension Collection where Element == QExtendedInfo {
     func like<C>(_ rhs: C) -> Bool where C: Collection, C.Element == Element.PrepareModel {
-        self.elementsEqual(rhs, by: { $0.like($1) })
+        self.elementsEqual(rhs, by: { $1.like($0) })
     }
 }

@@ -24,10 +24,10 @@ public struct PUserInGroupRelation: DTO.Prepare {
         self.group = group
     }
     
-    public var maps: [CodingKeys: AnyCodable] {[
-        .id: .init(self.id),
-        .user: .init(user.json),
-        .group: .init(group.json)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .user: .init(obj: user.json),
+        .group: .init(obj: group.json)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -47,11 +47,11 @@ public struct QUserInGroupRelation: DTO.Queried {
     package let __m: __SDBM.UserGroupPivot?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \__SDBM.UserGroupPivot.$id
     
-    public var maps: [CodingKeys: AnyCodable] {[
-        .id: .init(self.id),
-        .user: .init(self.user.json),
-        .group: .init(self.group.json),
-        .createdAt: .init(self.createdAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .user: .init(obj: self.user.json),
+        .group: .init(obj: self.group.json),
+        .createdAt: .init(obj: self.createdAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {

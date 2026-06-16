@@ -27,13 +27,13 @@ public typealias QExtendedSlice<T: UserInfoModel> = QInfoSlice<T>
 public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
     public typealias QueriedModel = QInfoSlice<G>
     public let id: UUID?
-    public let value: G.Value
+    public let value: G.Model.Value
     public let order: Int16
     public let description: String?
     
     public init(
         id: UUID? = nil,
-        value: G.Value,
+        value: G.Model.Value,
         order: Int16,
         description: String? = nil
     ) {
@@ -43,11 +43,11 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
         self.description = description
     }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .value: .init(self.value),
-        .order: .init(self.order),
-        .description: .init(self.description)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: self.id,
+        .value: self.value,
+        .order: self.order,
+        .description: self.description
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -62,7 +62,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     public typealias PrepareModel = PInfoSlice<G>
     public let id: UUID
     public let userInfoId: UUID
-    public let value: G.Value
+    public let value: G.Model.Value
     public let order: Int16
     public let description: String?
     public let createdAt: Date
@@ -71,14 +71,14 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     package let __m: __SDBM.User.Info.Extended<G.Model>?
     package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .userInfoId: .init(self.userInfoId),
-        .value: .init(self.value),
-        .order: .init(self.order),
-        .description: .init(self.description),
-        .createdAt: .init(self.createdAt),
-        .updatedAt: .init(self.updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .userInfoId: .init(obj: self.userInfoId),
+        .value: .init(obj: self.value),
+        .order: .init(obj: self.order),
+        .description: .init(obj: self.description),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -94,7 +94,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     init(
         id: UUID,
         userInfoId: UUID,
-        value: G.Value,
+        value: G.Model.Value,
         order: Int16,
         description: String?,
         createdAt: Date,
@@ -115,7 +115,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(UUID.self, forKey: .id)
         self.userInfoId = try container.decode(UUID.self, forKey: .userInfoId)
-        self.value = try container.decode(G.Value.self, forKey: .value)
+        self.value = try container.decode(G.Model.Value.self, forKey: .value)
         self.order = try container.decode(Int16.self, forKey: .order)
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
         self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
@@ -136,16 +136,14 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
 }
 
 extension PInfoSlice: __Prepare {
-    func raw(for userInfoId: UUID) -> Res<SQLModel, PrivilegeSystem.Errcase> {
-        .init(throws: .infoSliceDTORawCreateFailed) {
-            let info = SQLModel()
-            info.id = id
-            info.$userInfo.id = userInfoId
-            info.value = try value.dataRes.get()
-            info.order = order
-            info.description = description
-            return info
-        }
+    func raw(for userInfoId: UUID) -> SQLModel {
+        let info = SQLModel()
+        info.id = id
+        info.$userInfo.id = userInfoId
+        info.value = value
+        info.order = order
+        info.description = description
+        return info
     }
 }
 
@@ -156,7 +154,7 @@ extension QInfoSlice: __Queried {
             try Self.init(
                 id: model.requireID(),
                 userInfoId: model.$userInfo.id,
-                value: G.Value.make(data: model.value).get(),
+                value: model.value,
                 order: model.order,
                 description: model.description,
                 createdAt: model.createdAt,
@@ -195,25 +193,21 @@ extension QInfoSlice: Query.Queriable {
 // MARK: - User Info Models
 
 public protocol UserInfoModel: Sendable {
-    associatedtype Value: Sendable & Codable & Hashable & ThrowableDataConvertable
     associatedtype Model: UserInfoExtends.Model
     static var description: String { get }
 }
 
 public struct Address: UserInfoModel {
-    public typealias Value = String
     public typealias Model = UserInfoExtends.Address
     public static let description = "地址"
 }
 
 public struct AlternateEmail: UserInfoModel {
-    public typealias Value = String
     public typealias Model = UserInfoExtends.AlternateEmail
     public static let description = "次要邮箱"
 }
 
 public struct Phone: UserInfoModel {
-    public typealias Value = String
     public typealias Model = UserInfoExtends.Phone
     public static let description = "次要手机号"
 }
@@ -255,9 +249,9 @@ public extension PInfoSlice {
 extension PInfoSlice.Updater: DTOUpdater {}
 
 public extension PInfoSlice.Updater {
-    func update(value: @escaping @autoclosure () throws -> G.Value) -> Self {
+    func update(value: @escaping @autoclosure () throws -> G.Model.Value) -> Self {
         generate(key: \.value) { builder, _ in
-            builder.set(\.$value, to: try value().dataRes.get())
+            builder.set(\.$value, to: try value())
         }
     }
 
@@ -275,10 +269,10 @@ public extension PInfoSlice.Updater {
 }
 
 public extension PInfoSlice.Updater {
-    func update(value: @escaping (QInfoSlice<G>) throws -> G.Value) -> Self {
+    func update(value: @escaping (QInfoSlice<G>) throws -> G.Model.Value) -> Self {
         generate(needsPeek: true, key: \.value) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$value, to: try value(q).dataRes.get())
+            return builder.set(\.$value, to: try value(q))
         }
     }
 

@@ -33,12 +33,12 @@ public struct PUserInfo: DTO.Prepare {
         self.other = other
     }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .nickname: .init(self.nickname),
-        .identifier: .init(self.identifier),
-        .birthday: .init(self.birthday),
-        .other: .init(self.other)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .nickname: .init(obj: self.nickname),
+        .identifier: .init(obj: self.identifier),
+        .birthday: .init(obj: self.birthday),
+        .other: .init(obj: self.other)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -64,15 +64,15 @@ public struct QUserInfo: DTO.Queried {
     package let __m: __SDBM.User.Info?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .userId: .init(self.userId),
-        .nickname: .init(self.nickname),
-        .identifier: .init(self.identifier),
-        .birthday: .init(self.birthday),
-        .other: .init(self.other),
-        .createdAt: .init(self.createdAt),
-        .updatedAt: .init(self.updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .userId: .init(obj: self.userId),
+        .nickname: .init(obj: self.nickname),
+        .identifier: .init(obj: self.identifier),
+        .birthday: .init(obj: self.birthday),
+        .other: .init(obj: self.other),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {

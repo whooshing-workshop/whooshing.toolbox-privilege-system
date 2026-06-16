@@ -32,9 +32,9 @@ public struct PUser: DTO.Prepare {
     }
     
     // 不记录 hashed_password 属性
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .email: .init(self.email)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .email: .init(obj: self.email)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -54,11 +54,11 @@ public struct QUser: DTO.Queried {
     package let __m: __SDBM.User?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(id),
-        .email: .init(email),
-        .createdAt: .init(createdAt),
-        .updatedAt: .init(updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .email: .init(obj: self.email),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {

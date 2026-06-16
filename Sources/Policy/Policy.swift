@@ -97,3 +97,10 @@ package func assemblePolicy(
     \(policy)
     """
 }
+
+package extension AnyHashable {
+    init?<T: Hashable>(obj: T?) {
+        guard let o = obj else { return nil }
+        self = Self.init(o)
+    }
+}

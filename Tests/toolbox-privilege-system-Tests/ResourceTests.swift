@@ -12,7 +12,7 @@ enum FileOperation: String, OperationList {
     case execute
 }
 
-typealias QFileResource = PModule.ResourceDTO<FileResource>
+typealias QFileResource = PModule.QResource<FileResource>
 
 struct FileResource: Resource, Hashable {
     typealias ResourceType = ResourceList
@@ -90,7 +90,7 @@ enum DirectoryOperation: String, OperationList {
     case deleteChild
 }
 
-typealias QDirectoryResource = PModule.ResourceDTO<DirectoryResource>
+typealias QDirectoryResource = PModule.QResource<DirectoryResource>
 
 @Resource
 struct DirectoryResource: Hashable {
@@ -107,7 +107,7 @@ enum AliasOperation: String, OperationList {
     case resolve
 }
 
-typealias QAliasResource = PModule.ResourceDTO<AliasResource>
+typealias QAliasResource = PModule.QResource<AliasResource>
 
 @Resource
 struct AliasResource: Hashable {
@@ -222,15 +222,17 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         // 测试 Attach
         try await m.privilege.attach {
             [privilegeDTO] => [anyResourceDTO]
         }
 
+        let privilegeModel = try await privilegeDTO.model(from: m.db).get()
+        
         // 验证 Attach
-        let siblings = try await privilegeDTO.model.$resources.get(on: m.db)
+        let siblings = try await privilegeModel.$resources.get(on: m.db)
         #expect(siblings.contains(where: { $0.id == anyResourceDTO.id }))
         
         // 测试 Detach
@@ -238,7 +240,7 @@ struct ResourceTests {
             [privilegeDTO] => [anyResourceDTO]
         }
         
-        let siblingsAfter = try await privilegeDTO.model.$resources.get(reload: true, on: m.db)
+        let siblingsAfter = try await privilegeModel.$resources.get(reload: true, on: m.db)
         
         #expect(!siblingsAfter.contains(where: { $0.id == anyResourceDTO.id }))
     }
@@ -259,7 +261,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         // 先 Attach
         try await m.privilege.attach {
@@ -324,7 +326,7 @@ struct ResourceTests {
         
         let updated1 = try await m.privilege.update(with: updater1)
         #expect(updated1.name == "Updated Name")
-        #expect(updated1.description == "Updated Description")
+        #expect(updated1.description! == "Updated Description")
         #expect(updated1.policy == "allow if { true }") // policy 不变
         print("HELLO")
         // 2. 测试更新 policy (常量形式)

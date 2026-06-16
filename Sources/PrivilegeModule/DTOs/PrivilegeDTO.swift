@@ -41,11 +41,11 @@ public extension PM {
             self.policy = policy
         }
         
-        public var maps: [CodingKeys : AnyCodable] {[
-            .id: .init(self.id),
-            .name: .init(self.name),
-            .description: .init(self.description),
-            .policy: .init(self.policy)
+        public var maps: [CodingKeys: AnyHashable?] {[
+            .id: .init(obj: self.id),
+            .name: .init(obj: self.name),
+            .description: .init(obj: self.description),
+            .policy: .init(obj: self.policy)
         ]}
         
         public enum CodingKeys: String, DTO.CodingKey {
@@ -71,13 +71,13 @@ public extension PM {
         package let __m: __DBM.Privilege?
         package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
         
-        public var maps: [CodingKeys: AnyCodable] {[
-            .id: .init(self.id),
-            .name: .init(self.name),
-            .description: .init(self.description),
-            .policy: .init(self.policy),
-            .createdAt: .init(self.createdAt),
-            .updatedAt: .init(self.updatedAt)
+        public var maps: [CodingKeys: AnyHashable?] {[
+            .id: .init(obj: self.id),
+            .name: .init(obj: self.name),
+            .description: .init(obj: self.description),
+            .policy: .init(obj: self.policy),
+            .createdAt: .init(obj: self.createdAt),
+            .updatedAt: .init(obj: self.updatedAt)
         ]}
         
         public enum CodingKeys: String, DTO.CodingKey {

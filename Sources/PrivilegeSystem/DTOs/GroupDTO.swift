@@ -20,6 +20,15 @@ public struct PGroup: DTO.Prepare {
     
     public init(
         id: UUID? = nil,
+        under parent: QGroup? = nil,
+        name: String,
+        description: String? = nil
+    ) {
+        self = Self.init(id: id, name: name, parentId: parent?.id, description: description)
+    }
+    
+    public init(
+        id: UUID? = nil,
         name: String,
         parentId: UUID? = nil,
         description: String? = nil
@@ -30,11 +39,11 @@ public struct PGroup: DTO.Prepare {
         self.description = description
     }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .name: .init(self.name),
-        .parentId: .init(self.parentId),
-        .description: .init(self.description)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .name: .init(obj: self.name),
+        .parentId: .init(obj: self.parentId),
+        .description: .init(obj: self.description)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -57,13 +66,13 @@ public struct QGroup: DTO.Queried {
     package let __m: __SDBM.Group?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .name: .init(self.name),
-        .parentId: .init(self.parentId),
-        .description: .init(self.description),
-        .createdAt: .init(self.createdAt),
-        .updatedAt: .init(self.updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .name: .init(obj: self.name),
+        .parentId: .init(obj: self.parentId),
+        .description: .init(obj: self.description),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {

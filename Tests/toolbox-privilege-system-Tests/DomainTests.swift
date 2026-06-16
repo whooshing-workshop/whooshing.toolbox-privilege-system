@@ -131,7 +131,7 @@ struct DomainTesting {
         let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
         for domain in domains {
-            let policies = try await PolicyExp<Domain>.query(on: s.db)
+            let policies = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
                 .filter(\.$parent.$id == domain.id)
                 .all()
             
@@ -144,7 +144,7 @@ struct DomainTesting {
         let (s, m) = try await TestingShared.getSystem()
         let targetId = Self.ids[13] // PartnerNetwork
 
-        let existing = try await PolicyExp<Domain>.query(on: s.db)
+        let existing = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
             .filter(\.$parent.$id == targetId).all()
         for p in existing {
             let qp = try QPolicy<Domain>.make(from: p).get()
@@ -175,7 +175,7 @@ struct DomainTesting {
         let (s, m) = try await TestingShared.getSystem()
         let targetId = Self.ids[12] // LegacySystem
 
-        let before = try await PolicyExp<Domain>.query(on: s.db)
+        let before = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
             .filter(\.$parent.$id == targetId).all()
         guard let first = before.first else {
             Issue.record("DT.ids[12](LegacySystem) 应有策略")
@@ -185,13 +185,13 @@ struct DomainTesting {
         let qp = try QPolicy<Domain>.make(from: first).get()
         try await s.policy.delete(from: Domain.self, policy: qp => targetId)
 
-        let after = try await PolicyExp<Domain>.query(on: s.db)
+        let after = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
             .filter(\.$parent.$id == targetId).count()
         #expect(after == before.count - 1, "删除后应少 1 条")
 
         let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
         try await s.policy.create(to: Domain.self) { [def] => targetId }
-        let restored = try await PolicyExp<Domain>.query(on: s.db)
+        let restored = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
             .filter(\.$parent.$id == targetId).count()
         #expect(restored == before.count, "恢复后数量应与原来一致")
     }
@@ -219,21 +219,21 @@ struct DomainTesting {
         
         // 1. Domain <-> User
         try await s.domain.assign { [domain] => [user] }
-        let count1 = try await UserDomainPivot.query(on: s.db)
+        let count1 = try await __SDBM.UserDomainPivot.query(on: s.db)
             .count()
         #expect(count1 == 1)
         try await s.domain.unassign { [domain] => [user] }
-        let count2 = try await UserDomainPivot.query(on: s.db)
+        let count2 = try await __SDBM.UserDomainPivot.query(on: s.db)
             .count()
         #expect(count2 == 0)
 
         // 2. Domain <-> Group
         try await s.domain.assign { [domain] => [group] }
-        let count3 = try await DomainGroupPivot.query(on: s.db)
+        let count3 = try await __SDBM.DomainGroupPivot.query(on: s.db)
             .count()
         #expect(count3 == 1)
         try await s.domain.unassign { [domain] => [group] }
-        let count4 = try await DomainGroupPivot.query(on: s.db)
+        let count4 = try await __SDBM.DomainGroupPivot.query(on: s.db)
             .count()
         #expect(count4 == 0)
     }
@@ -269,7 +269,7 @@ struct DomainTesting {
     func cleanup_AllDomainsHavePolicies() async throws {
         let (s, _) = try await TestingShared.getSystem()
         for (i, domainId) in Self.ids.enumerated() {
-            let count = try await PolicyExp<Domain>.query(on: s.db)
+            let count = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
                 .filter(\.$parent.$id == domainId).count()
             if count < 1 {
                 Issue.record("DT.ids[\(i)] 域应至少有 1 条策略，当前 \(count) 条")

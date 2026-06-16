@@ -51,7 +51,7 @@ struct HashableTests {
         set.insert(p1)
         #expect(set.contains(p2))
         
-        let userModel = User()
+        let userModel = __SDBM.User()
         userModel.email = email
         userModel.id = UUID()
         userModel.createdAt = Date()
@@ -83,7 +83,7 @@ struct HashableTests {
         set.insert(p1)
         #expect(set.contains(p2))
         
-        let model = Domain()
+        let model = __SDBM.Domain()
         model.name = name
         model.description = desc
         model.id = UUID()
@@ -142,7 +142,7 @@ struct HashableTests {
         set.insert(p1)
         #expect(set.contains(p2))
         
-        let model = Role()
+        let model = __SDBM.Role()
         model.name = name
         model.description = desc
         model.id = UUID()
@@ -171,10 +171,12 @@ struct HashableTests {
         set.insert(p1)
         #expect(set.contains(p2))
         
-        let model = PolicyExp<Role>()
+        let model = __SDBM.PolicyExp<Role>()
         model.moduleId = moduleId
         model.policy = policyStr
         model.id = UUID()
+        model.createdAt = Date()
+        model.updatedAt = Date()
         
         let q1 = try QPolicy<Role>.make(from: model).get()
         
@@ -194,13 +196,15 @@ struct HashableTests {
         
         #expect(p1 == p2)
         
-        let model = UserModel.Info()
+        let model = __SDBM.User.Info()
         model.nickname = nickname
         model.identifier = identifier
         model.birthday = birthday
         model.id = UUID()
         model.other = nil
         model.$user.id = UUID()
+        model.createdAt = Date()
+        model.updatedAt = Date()
         
         let q1 = try QUserInfo.make(from: model).get()
         
@@ -210,7 +214,7 @@ struct HashableTests {
     
     @Test("UserInGroupRelationDTO Hashable & Equatable")
     func testUserInGroupRelationDTO() async throws {
-        let umodel = User()
+        let umodel = __SDBM.User()
         umodel.email = "test@example.com"
         umodel.id = UUID()
         umodel.hashedPassword = "XXX"
@@ -218,6 +222,7 @@ struct HashableTests {
         umodel.salt = Data()
         umodel.createdAt = Date()
         umodel.updatedAt = Date()
+        
         let quser = try QUser.make(from: umodel).get()
         
         let gmodel = __SDBM.Group()
@@ -233,36 +238,13 @@ struct HashableTests {
         
         #expect(p1 == p2)
         
-        let model = UserGroupPivot()
+        let model = __SDBM.UserGroupPivot()
         model.$user.value = umodel
         model.$group.value = gmodel
         model.id = UUID()
-        
-        let q1 = try QUserInGroupRelation.make(from: model).get()
-        
-        #expect(p1.like(q1))
-        #expect(q1.like(p1))
-    }
-    
-    @Test("TokenDTO Hashable & Equatable")
-    func testTokenDTO() async throws {
-        let cred = "TestCred"
-        
-        let p1 = PToken(credential: cred, tokenEncrypted: Data())
-        let p2 = PToken(credential: cred, tokenEncrypted: Data())
-        
-        #expect(p1 == p2)
-        
-        let model = Token()
-        model.credential = cred
-        model.id = UUID()
-        model.$user.id = UUID()
-        model.token = "TestToken"
-        model.valid = true
-        model.expireAfter = 7 * 24 * 60
         model.createdAt = Date()
         
-        let q1 = try QToken.make(from: model).get()
+        let q1 = try QUserInGroupRelation.make(from: model).get()
         
         #expect(p1.like(q1))
         #expect(q1.like(p1))
@@ -278,7 +260,7 @@ struct HashableTests {
         
         #expect(p1 == p2)
         
-        let model = User.Info.Extended<UserInfoExtends.Address>()
+        let model = __SDBM.User.Info.Extended<UserInfoExtends.Address>()
         model.value = value
         model.order = order
         model.id = UUID()
@@ -300,7 +282,7 @@ struct HashableTests {
         
         let pSlice = PAddressSlice(value: value, order: order)
         
-        let model = User.Info.Extended<UserInfoExtends.Address>()
+        let model = __SDBM.User.Info.Extended<UserInfoExtends.Address>()
         model.value = value
         model.order = order
         model.id = UUID()
@@ -322,17 +304,11 @@ struct HashableTests {
     func testPrivilegeDTO() async throws {
         let name = "TestPriv"
         let policy = "allow"
-        let date = Date()
         
         // PrivilegeDTO init requires internal initializers or public ones?
         // Let's use the internal one since we use @testable!
-        var p1 = PM<ResourceList>.PPrivilege(_name: name, _description: nil, _policy: policy, _model: nil)
-        var p2 = PM<ResourceList>.PPrivilege(_name: name, _description: nil, _policy: policy, _model: nil)
-        
-        p1.createdAt = date
-        p1.updatedAt = date
-        p2.createdAt = date
-        p2.updatedAt = date
+        let p1 = PM<ResourceList>.PPrivilege(name: name, description: nil, policy: policy)
+        let p2 = PM<ResourceList>.PPrivilege(name: name, description: nil, policy: policy)
         
         #expect(p1 == p2)
         

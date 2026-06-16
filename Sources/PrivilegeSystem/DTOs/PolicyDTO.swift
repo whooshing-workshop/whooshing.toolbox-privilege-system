@@ -25,10 +25,10 @@ public struct PPolicy<G: PolicyType>: DTO.Prepare {
         self.policy = policy
     }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .moduleId: .init(self.moduleId),
-        .policy: .init(self.policy)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .moduleId: .init(obj: self.moduleId),
+        .policy: .init(obj: self.policy)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -49,12 +49,12 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
     package let __m: __SDBM.PolicyExp<G>?
     package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .moduleId: .init(self.moduleId),
-        .policy: .init(self.policy),
-        .createdAt: .init(self.createdAt),
-        .updatedAt: .init(self.updatedAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .moduleId: .init(obj: self.moduleId),
+        .policy: .init(obj: self.policy),
+        .createdAt: .init(obj: self.createdAt),
+        .updatedAt: .init(obj: self.updatedAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {

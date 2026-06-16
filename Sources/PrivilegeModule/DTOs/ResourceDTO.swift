@@ -23,11 +23,11 @@ public extension PM {
         package let __m: SQLModel?
         package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
         
-        public var maps: [CodingKeys: AnyCodable] {[
-            .id: .init(self.id),
-            .data: .init(self.data),
-            .createdAt: .init(self.createdAt),
-            .updatedAt: .init(self.updatedAt),
+        public var maps: [CodingKeys: AnyHashable?] {[
+            .id: .init(obj: self.id),
+            .data: .init(obj: self.data),
+            .createdAt: .init(obj: self.createdAt),
+            .updatedAt: .init(obj: self.updatedAt)
         ]}
         
         init(

@@ -412,7 +412,7 @@ struct UserinfoTesting {
         #expect(try await s.query(QAddressSlice.self).count() == sliceBefore + 1)
         
         let sliceId = try #require(newSlices.first?.id)
-        try await s.infoSlice.delete(infoIds: [sliceId], type: DTO.Address.self)
+        try await s.infoSlice.delete(infoIds: [sliceId], type: Address.self)
         
         let sliceAfter = try await s.query(QAddressSlice.self).count()
         #expect(sliceAfter == sliceBefore, "切片删除后数量应恢复")
@@ -423,7 +423,7 @@ struct UserinfoTesting {
         #expect(found == nil, "被删除的切片不应被查询到")
         
         // allSatisfy = false 不抛异常
-        try await s.infoSlice.delete(infoIds: [UUID()], allSatisfy: false, type: DTO.Address.self)
+        try await s.infoSlice.delete(infoIds: [UUID()], allSatisfy: false, type: Address.self)
     }
     
     @MainActor

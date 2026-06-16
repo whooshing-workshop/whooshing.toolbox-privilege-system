@@ -22,9 +22,8 @@ public struct Token: DTO.Model {
         self.tokenEncrypted = tokenEncrypted
     }
     
-    public var maps: [CodingKeys: AnyCodable] {[
-        .credential: .init(self.credential),
-        .tokenEncrypted: .init("<Protected>")
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .credential: .init(obj: self.credential)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -64,12 +63,12 @@ public struct PToken: DTO.Prepare {
         self.expireAfter = expireAfter
     }
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .id: .init(self.id),
-        .credential: .init(self.credential),
-        .userId: .init(self.userId),
-        .valid: .init(self.valid),
-        .expireAfter: .init(self.expireAfter)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .id: .init(obj: self.id),
+        .credential: .init(obj: self.credential),
+        .userId: .init(obj: self.userId),
+        .valid: .init(obj: self.valid),
+        .expireAfter: .init(obj: self.expireAfter)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -121,13 +120,13 @@ public struct QToken: DTO.Queried {
     package let __m: __SDBM.Token?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
-    public var maps: [CodingKeys : AnyCodable] {[
-        .credential: .init(self.credential),
-        .id: .init(self.id),
-        .userId: .init(self.userId),
-        .valid: .init(self.valid),
-        .expireAfter: .init(self.expireAfter),
-        .createdAt: .init(self.createdAt)
+    public var maps: [CodingKeys: AnyHashable?] {[
+        .credential: .init(obj: self.credential),
+        .id: .init(obj: self.id),
+        .userId: .init(obj: self.userId),
+        .valid: .init(obj: self.valid),
+        .expireAfter: .init(obj: self.expireAfter),
+        .createdAt: .init(obj: self.createdAt)
     ]}
     
     public enum CodingKeys: String, DTO.CodingKey {
@@ -193,6 +192,23 @@ extension PToken: __Prepare {
         token.expireAfter = expireAfter
         token.valid = valid
         return token
+    }
+}
+
+public extension QToken {
+    func toPrepare() -> Res<Token, PrivilegeSystem.Errcase> {
+        .init { () throws(PrivilegeSystem.Errcase.ErrType) in
+            let keyData = try required(throws: PrivilegeSystem.Errcase.tokenDTOFailed, "密钥字节解析失败", category: .external) {
+                try Base64String(self.token).dataRes.get()
+            }
+            let key = Crypto.Symm.Key.new(data: keyData)
+            return .init(
+                credential: self.credential,
+                tokenEncrypted: try required(throws: PrivilegeSystem.Errcase.tokenDTOFailed, "密钥加密失败", category: .external) {
+                    try Crypto.Symm.encrypt(key, key: key).get()
+                }
+            )
+        }
     }
 }
 

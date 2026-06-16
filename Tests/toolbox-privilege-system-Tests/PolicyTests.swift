@@ -101,7 +101,7 @@ struct PolicyTesting {
     /// 通过 AT.ids[index] 精确查询用户，并 eager-load groups 关系。
     /// judge() 内部直接访问 user.model.groups（内存缓存），必须预加载。
     private func fetchUser(index: Int, s: PrivilegeSystem) async throws -> QUser {
-        let model = try await User.query(on: s.db)
+        let model = try await __SDBM.User.query(on: s.db)
             .filter(\.$id == AT.ids[index])
             .with(\.$groups)
             .first()
@@ -154,7 +154,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.anything), privilegeIds: []
         )
 
@@ -195,7 +195,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -237,7 +237,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.manage_all), privilegeIds: []
         )
         #expect(res.result, "SuperAdminRole + manage_all + domain0(global=true) → ALLOW")
@@ -270,7 +270,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.edit), privilegeIds: []
         )
         #expect(!res.result, "SuperAdminRole 不允许 edit → DENY")
@@ -310,7 +310,7 @@ struct PolicyTesting {
             let resourceDTO = try await m.resource.create(resources: [resource]).first!
             let res = try await s.arbitrator.judge(
                 moduleId: m.moduleId, user: user, role: role,
-                resource: .init(resourceDTO),
+                resource: try #require(AnyResource(resourceDTO)),
                 operation: .init(op: JsonOperation(rawValue: op)!), privilegeIds: []
             )
             #expect(res.result, "EditorRole + \(op) + region=asia → ALLOW")
@@ -324,7 +324,7 @@ struct PolicyTesting {
         
         let denied = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.manage_all), privilegeIds: []
         )
         #expect(!denied.result, "EditorRole 不允许 manage_all → DENY")
@@ -361,7 +361,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(allow.result, "ModeratorRole + moderate + region=na → ALLOW")
@@ -374,7 +374,7 @@ struct PolicyTesting {
         
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.edit), privilegeIds: []
         )
         #expect(!deny.result, "ModeratorRole 不允许 edit → DENY")
@@ -410,7 +410,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -454,7 +454,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -489,7 +489,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -526,7 +526,7 @@ struct PolicyTesting {
         // operation=view → SuperAdminRole 不允许 → role 失败；domain0(global=true) 通过
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -562,7 +562,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -605,7 +605,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allow.result, "region=asia → AsiaPacific 域通过 → ALLOW")
@@ -618,7 +618,7 @@ struct PolicyTesting {
         
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!deny.result, "region=na → AsiaPacific 域失败 → DENY")
@@ -654,7 +654,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(allow.result, "region=na → NorthAmerica 域通过 → ALLOW")
@@ -667,7 +667,7 @@ struct PolicyTesting {
         
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(!deny.result, "region=asia → NorthAmerica 域失败 → DENY")
@@ -713,7 +713,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -754,7 +754,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -797,7 +797,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -842,7 +842,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -907,7 +907,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -962,7 +962,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allow.result, "ObserverRole + domain0 全满足 → ALLOW")
@@ -975,7 +975,7 @@ struct PolicyTesting {
         
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!deny.result, "global=false → domain0 失败 → DENY")
@@ -1009,7 +1009,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.edit), privilegeIds: []
         )
 
@@ -1054,7 +1054,7 @@ struct PolicyTesting {
         // 替换前：allow if { true } → 任何操作都通过（配合 region=na 满足域策略）
         let before = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.anything), privilegeIds: []
         )
         #expect(before.result, "替换前默认策略允许任何操作")
@@ -1063,7 +1063,7 @@ struct PolicyTesting {
         #expect(before.reports.elements[1].key.type == .domain)
         
         // 删除旧策略
-        let old = try await PolicyExp<Role>.query(on: s.db)
+        let old = try await __SDBM.PolicyExp<Role>.query(on: s.db)
             .filter(\.$parent.$id == targetId).all()
         for p in old {
             let qp = try QPolicy<Role>.make(from: p).get()
@@ -1080,20 +1080,20 @@ struct PolicyTesting {
         // 验证新策略
         let deployRes = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.deploy), privilegeIds: []
         )
         #expect(deployRes.result, "替换后：deploy → ALLOW")
         
         let denyRes = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.anything), privilegeIds: []
         )
         #expect(!denyRes.result, "替换后：anything → DENY")
 
         // 清理并恢复
-        let newPolicies = try await PolicyExp<Role>.query(on: s.db)
+        let newPolicies = try await __SDBM.PolicyExp<Role>.query(on: s.db)
             .filter(\.$parent.$id == targetId).all()
         for p in newPolicies {
             let qp = try QPolicy<Role>.make(from: p).get()
@@ -1136,7 +1136,7 @@ struct PolicyTesting {
         // ✓ 亚太地区 + edit
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.edit), privilegeIds: []
         )
         #expect(allow.result, "EditorRole + region=asia → ALLOW")
@@ -1150,7 +1150,7 @@ struct PolicyTesting {
         // ✗ 欧洲地区 + publish（region 不匹配 domain1）
         let denyRegion = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.publish), privilegeIds: []
         )
         #expect(!denyRegion.result, "region=eu → AsiaPacific 域失败 → DENY")
@@ -1166,7 +1166,7 @@ struct PolicyTesting {
         // ✗ 正确地区但无权操作
         let denyOp = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO3),
+            resource: try #require(AnyResource(resourceDTO3)),
             operation: .init(op: JsonOperation.manage_all), privilegeIds: []
         )
         #expect(!denyOp.result, "EditorRole 不允许 manage_all → DENY")
@@ -1203,7 +1203,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(allow.result, "ModeratorRole + region=na → ALLOW")
@@ -1216,7 +1216,7 @@ struct PolicyTesting {
         
         let denyAsia = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(!denyAsia.result, "region=asia → NorthAmerica 域失败 → DENY")
@@ -1228,7 +1228,7 @@ struct PolicyTesting {
 
         let denyEdit = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.edit), privilegeIds: []
         )
         #expect(!denyEdit.result, "ModeratorRole 不允许 edit → DENY")
@@ -1287,7 +1287,7 @@ struct PolicyTesting {
             
             let res = try await s.arbitrator.judge(
                 moduleId: m.moduleId, user: user, role: role,
-                resource: .init(resourceDTO),
+                resource: try #require(AnyResource(resourceDTO)),
                 operation: .init(op: c.op), privilegeIds: []
             )
             if res.result != c.expected {
@@ -1325,7 +1325,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.anything), privilegeIds: []
         )
         #expect(res.result, "空 privilegeIds 不影响纯角色鉴权")
@@ -1367,7 +1367,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.read), privilegeIds: [privilege.id]
         )
         #expect(allow.result, "role/domain/privilege 均通过 → ALLOW")
@@ -1384,7 +1384,7 @@ struct PolicyTesting {
 
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.write), privilegeIds: [privilege.id]
         )
         #expect(!deny.result, "privilege 不允许 write → 整体 DENY")
@@ -1452,7 +1452,7 @@ struct PolicyTesting {
 
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.read), privilegeIds: [readPrivilege.id, filePrivilege.id]
         )
         #expect(allow.result, "两个 privilege 均通过 → ALLOW")
@@ -1461,7 +1461,7 @@ struct PolicyTesting {
 
         let denyOperation = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.write), privilegeIds: [readPrivilege.id, filePrivilege.id]
         )
         #expect(!denyOperation.result, "read privilege 失败 → 整体 DENY")
@@ -1473,7 +1473,7 @@ struct PolicyTesting {
         
         let denyResource = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.read), privilegeIds: [readPrivilege.id, filePrivilege.id]
         )
         #expect(!denyResource.result, "file privilege 失败 → 整体 DENY")
@@ -1511,7 +1511,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -1551,7 +1551,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.anything), privilegeIds: []
         )
 
@@ -1587,7 +1587,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -1626,7 +1626,7 @@ struct PolicyTesting {
             
             _ = try await s.arbitrator.judge(
                 moduleId: m.moduleId, user: user, role: role,
-                resource: .init(resourceDTO),
+                resource: try #require(AnyResource(resourceDTO)),
                 operation: .init(op: JsonOperation.manage_all), privilegeIds: []
             )
             Issue.record("不可用 role 不应进入仲裁策略查询")
@@ -1668,7 +1668,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -1728,7 +1728,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allow.result, "子群组用户 + 满足父群组 domain0(global=true) → ALLOW")
@@ -1772,7 +1772,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
 
@@ -1813,7 +1813,7 @@ struct PolicyTesting {
         
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.any), privilegeIds: []
         )
         #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY")
@@ -1856,7 +1856,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!res.result, "SuperAdminRole 不允许 view → DENY，即使 domain 全通过")
@@ -1904,7 +1904,7 @@ struct PolicyTesting {
         // 尝试只满足 domain1
         let denyWithAsia = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!denyWithAsia.result, "region=asia → domain1 通过但 domain2(na) 失败 → DENY")
@@ -1922,7 +1922,7 @@ struct PolicyTesting {
         // 尝试只满足 domain2
         let denyWithNa = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!denyWithNa.result, "region=na → domain2 通过但 domain1(asia) 失败 → DENY")
@@ -1940,7 +1940,7 @@ struct PolicyTesting {
         // 两者均不满足
         let denyEmpty = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO3),
+            resource: try #require(AnyResource(resourceDTO3)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!denyEmpty.result, "无 region → 两个父群组域策略均失败 → DENY")
@@ -1982,7 +1982,7 @@ struct PolicyTesting {
         
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allow.result, "region=na → 继承的 domain2 通过 → ALLOW")
@@ -1995,7 +1995,7 @@ struct PolicyTesting {
         
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!deny.result, "region=asia → 继承的 domain2(na) 失败 → DENY")
@@ -2039,7 +2039,7 @@ struct PolicyTesting {
         // global=true → 全通过
         let allPass = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allPass.result, "domain4(直接) + domain0(继承, global=true) + RT[10](allow all) → ALLOW")
@@ -2058,7 +2058,7 @@ struct PolicyTesting {
         // global=false → domain0(继承) 失败 → DENY
         let inheritFail = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!inheritFail.result, "domain0(继承) 失败 → 整体 DENY")
@@ -2099,7 +2099,7 @@ struct PolicyTesting {
         
         let res = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(res.result, "用户直接域 + 群组域均满足 global=true → ALLOW")
@@ -2119,7 +2119,7 @@ struct PolicyTesting {
         // global=false → domain0 均失败 → DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!deny.result, "global=false → 用户直接域 + 群组域 domain0 均失败 → DENY")
@@ -2175,7 +2175,7 @@ struct PolicyTesting {
         // domain 满足 + role 满足 → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allow.result, "ObserverRole(view) + domain0(global=true) → ALLOW")
@@ -2190,7 +2190,7 @@ struct PolicyTesting {
         // domain 失败 → DENY（组内角色不能越过域策略）
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!deny.result, "global=false → domain0 失败 → DENY 即使有组内角色")
@@ -2233,7 +2233,7 @@ struct PolicyTesting {
         // SalesManager 策略 allow if {true}，global=true 满足 domain0 → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.any_operation), privilegeIds: []
         )
         #expect(allow.result, "SalesManager(allow all) + domain0(global=true) + domain4(allow all) → ALLOW")
@@ -2249,7 +2249,7 @@ struct PolicyTesting {
         // global=false → 父群组 domain0 失败 → DENY
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.any_operation), privilegeIds: []
         )
         #expect(!deny.result, "global=false → 继承的 domain0 失败 → DENY 即使是组内角色")
@@ -2295,7 +2295,7 @@ struct PolicyTesting {
         // ModeratorRole: moderate，group10 继承 domain2 (region=na)
         let allowAfterAppoint = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(allowAfterAppoint.result, "appoint 后：ModeratorRole + domain2(region=na) → ALLOW")
@@ -2306,7 +2306,7 @@ struct PolicyTesting {
         // region=asia → domain2 失败 → DENY
         let denyDomain = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: role,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.moderate), privilegeIds: []
         )
         #expect(!denyDomain.result, "region=asia → domain2(na) 失败 → DENY")
@@ -2358,7 +2358,7 @@ struct PolicyTesting {
         // 两者互斥 → 始终 DENY
         let alwaysDeny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: hrLeadRole,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.hr_task), privilegeIds: []
         )
         #expect(!alwaysDeny.result,
@@ -2386,7 +2386,7 @@ struct PolicyTesting {
         // RT[0] + view → role 策略不通过 → DENY（组内 RT[3] 不干扰）
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: superAdminRole,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(!deny.result, "RT[0] 不允许 view → DENY，组内 RT[3] 不影响此次 judge")
@@ -2394,7 +2394,7 @@ struct PolicyTesting {
         // RT[0] + manage_all + domain0(global=true) → ALLOW
         let allow = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: superAdminRole,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.manage_all), privilegeIds: []
         )
         #expect(allow.result, "RT[0] + manage_all + domain0(global=true) → ALLOW")
@@ -2403,7 +2403,7 @@ struct PolicyTesting {
         let observerRole = try await fetchRole(index: 3, s: s)
         let allowObserver = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: user, role: observerRole,
-            resource: .init(resourceDTO),
+            resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.view), privilegeIds: []
         )
         #expect(allowObserver.result, "RT[3](Observer) + view + global=true → ALLOW")
@@ -2435,7 +2435,7 @@ struct PolicyTesting {
         
         let jsonResource = JsonResource(name: "public_doc.txt", content: ["isPrivate": AnyCodable(false), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         // Privilege 策略：要求 input.resource.isPrivate == false 且 operation == edit
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -2510,7 +2510,7 @@ struct PolicyTesting {
         // 这是一个私有文件
         let jsonResource = JsonResource(name: "secret_keys.env", content: ["isPrivate": AnyCodable(true), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         // Privilege 策略：要求 input.resource.isPrivate == false
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -2584,7 +2584,7 @@ struct PolicyTesting {
         
         let jsonResource = JsonResource(name: "user_home", content: ["ownerId": AnyCodable(user.id.uuidString), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = AnyResource(resourceDTO)
+        let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         // Privilege 策略：仅要求操作者是属主 (无特定 operation 要求，只要通过 role)
         let privileges = try await m.privilege.createWithReturning(privileges: [
@@ -2621,7 +2621,7 @@ struct PolicyTesting {
         let resourceDTO2 = try await m.resource.create(resources: [jsonResourceOther]).first!
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: otherUser, role: otherRole,
-            resource: .init(resourceDTO2),
+            resource: try #require(AnyResource(resourceDTO2)),
             operation: .init(op: JsonOperation.manage_all), privilegeIds: [privilegeDTO.id]
         )
         

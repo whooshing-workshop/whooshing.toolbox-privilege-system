@@ -32,7 +32,7 @@ extension PrivilegeSystem {
         
         /// 为特定用户信息添加一条或多条切片记录。
         ///
-        /// 泛型 `T` 决定了这是添加哪种类型的信息（例如邮件、手机等）。在内部存储中，它们全部作为字符串存入数据库字段，所以限制 `T.Value == String`。
+        /// 泛型 `T` 决定了这是添加哪种类型的信息（例如邮件、手机等）
         ///
         /// - Parameters:
         ///   - infoId: 目标 `UserInfo` 的记录 UUID。
@@ -41,7 +41,7 @@ extension PrivilegeSystem {
         public func create<T>(
             for infoId: UUID,
             extendedInfos: [PInfoSlice<T>]
-        ) -> EventLoopRes<[QInfoSlice<T>], Errcase> where T.Value == String {
+        ) -> EventLoopRes<[QInfoSlice<T>], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "extendedInfos": .summaryData(extendedInfos)])
             logger.debug("操作参数", metadata: ["extendedInfos": .data(extendedInfos)])
@@ -153,13 +153,13 @@ extension PrivilegeSystem.InfoSliceController {
         on db: PGDatabase,
         for infoId: UUID,
         extendedInfos: [PInfoSlice<T>]
-    ) -> EventLoopRes<[QInfoSlice<T>], PrivilegeSystem.Errcase> where T.Value == String {
+    ) -> EventLoopRes<[QInfoSlice<T>], PrivilegeSystem.Errcase> {
         __create(
             on: db,
             dtos: extendedInfos,
             label: "用户扩展信息",
             errThrowing: .userExtendedInfoCreateFailed,
-            modelBuilder: { $0.raw(for: infoId) },
+            modelBuilder: { .success($0.raw(for: infoId)) },
             dtoBuilder: { QInfoSlice<T>.make(from: $0) }
         )
     }

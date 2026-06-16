@@ -2,6 +2,7 @@ import PgSQL
 import Fluent
 import Foundation
 import Policy
+import DataConvertable
 
 public extension __SDBM.User.Info {
     final class Extended<T: __SDBM.User.Info.Model>: PGModel, @unchecked Sendable {
@@ -10,7 +11,7 @@ public extension __SDBM.User.Info {
         public struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
             let userInfoId = PGField("user_info_id", .uuid)             .required.unique(composite: name + ".unique").foreign(__SDBM.User.Info.self, \.id, onDelete: .cascade)
-            let value = PGField(T.valueFieldName, .data)                .required.unique(composite: name + ".unique")
+            let value = PGField(T.valueFieldName, T.pgFieldType)        .required.unique(composite: name + ".unique")
             let order = PGField("order", .int16)                        .required.unique(composite: name + ".unique")
             let description = PGField("description", .string)
             let createdAt = PGField("created_at", .datetime)            .required
@@ -24,7 +25,7 @@ public extension __SDBM.User.Info {
         @ID(key: .id)                                   public var id: UUID?
         
         @Parent(fields.userInfoId)                      var userInfo: __SDBM.User.Info
-        @Field(fields.value)                            var value: Data
+        @Field(fields.value)                            var value: T.Value
         @Field(fields.order)                            var order: Int16
         @Field(fields.description)                      var description: String?
         
@@ -46,22 +47,30 @@ public extension __SDBM.User.Info {
 
 public enum UserInfoExtends {
     public protocol Model {
+        associatedtype Value: Sendable & Codable & Hashable
         static var tableExtendedName: String { get }
         static var valueFieldName: String { get }
+        static var pgFieldType: DatabaseSchema.DataType { get }
     }
     
     public struct Address: Model {
+        public typealias Value = String
         public static let tableExtendedName = "addresses"
         public static let valueFieldName = "address"
+        public static let pgFieldType: DatabaseSchema.DataType = .string
     }
     
     public struct AlternateEmail: Model {
+        public typealias Value = String
         public static let tableExtendedName = "alternate_emails"
         public static let valueFieldName = "alternate_email"
+        public static let pgFieldType: DatabaseSchema.DataType = .string
     }
     
     public struct Phone: Model {
+        public typealias Value = String
         public static let tableExtendedName = "phones"
         public static let valueFieldName = "phone"
+        public static let pgFieldType: DatabaseSchema.DataType = .string
     }
 }

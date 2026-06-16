@@ -1,10 +1,11 @@
 import Testing
-@testable import PrivilegeSystem
-@testable import PrivilegeModule
 import Foundation
 import Query
 import Fluent
 import ErrorHandle
+import Policy
+@testable import PrivilegeSystem
+@testable import PrivilegeModule
 
 typealias GT = GroupTesting
 
@@ -43,12 +44,12 @@ struct GroupTesting {
         (
             .init(groupId: Self.ids[1]).update(description: "核心运营群组"),
             "修改群组1的描述",
-            { $0.description == "核心运营群组" }
+            { $0.description! == "核心运营群组" }
         ),
         (
             .init(groupId: Self.ids[2]).update(name: "NinjaDevelopers").update(description: "神出鬼没的开发者"),
             "修改群组2的名字与描述",
-            { $0.name == "NinjaDevelopers" && $0.description == "神出鬼没的开发者" }
+            { $0.name == "NinjaDevelopers" && $0.description! == "神出鬼没的开发者" }
         )
     ]}
     
@@ -109,7 +110,7 @@ struct GroupTesting {
         
         // join
         try await s.group.join { [user] => [group] }
-        let count1 = try await UserGroupPivot.query(on: s.db).count()
+        let count1 = try await __SDBM.UserGroupPivot.query(on: s.db).count()
         #expect(count1 == 1)
         
         // query(relations:) 验证
@@ -120,7 +121,7 @@ struct GroupTesting {
         
         // kick 后验证清理
         try await s.group.kick { [user] => [group] }
-        let count2 = try await UserGroupPivot.query(on: s.db).count()
+        let count2 = try await __SDBM.UserGroupPivot.query(on: s.db).count()
         #expect(count2 == 0)
     }
     
