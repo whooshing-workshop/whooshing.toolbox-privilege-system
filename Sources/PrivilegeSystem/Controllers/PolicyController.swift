@@ -7,6 +7,7 @@ import NIOAdvanced
 import OPA
 import PrivilegeModule
 import Logging
+import OrderedCollections
 
 extension PrivilegeSystem {
     public final class PolicyController: SystemOPAController {
@@ -41,7 +42,7 @@ extension PrivilegeSystem {
         public func create<T: PolicyType>(
             to model: T.Type,
             @MTORelationBuilder<PPolicy<T>, T.Model.IDValue>
-            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<T>, T.Model.IDValue>]
+            _ content: @Sendable @escaping () -> OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建策略 操作", metadata: ["type": .string(String(describing: model))])
@@ -62,7 +63,7 @@ extension PrivilegeSystem {
         public func createWithReturning<T: PolicyType>(
             to model: T.Type,
             @MTORelationBuilder<PPolicy<T>, T.Model.IDValue>
-            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<T>, T.Model.IDValue>]
+            _ content: @Sendable @escaping () -> OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
         ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建策略（返回） 操作", metadata: ["type": .string(String(describing: model))])
@@ -114,7 +115,7 @@ public extension PrivilegeSystem.PolicyController {
     /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
     func create<T: PolicyType>(
         to model: T.Type,
-        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
+        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建策略（数组） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
@@ -132,7 +133,7 @@ public extension PrivilegeSystem.PolicyController {
     /// - Returns: 按实体 ID 分组返回所有被分配的查询状态策略。
     func createWithReturning<T: PolicyType>(
         to model: T.Type,
-        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
+        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
     ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建策略（数组返回） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
@@ -147,7 +148,7 @@ extension PrivilegeSystem.PolicyController {
     func __create<T: PolicyType>(
         on db: PGDatabase,
         to model: T.Type,
-        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
+        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         __createPolicy(
             on: db,
@@ -166,7 +167,7 @@ extension PrivilegeSystem.PolicyController {
     func __createWithReturning<T: PolicyType>(
         on db: PGDatabase,
         to model: T.Type,
-        relations: [MTORelation<PPolicy<T>, T.Model.IDValue>]
+        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
     ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
         __createPolicy(
             on: db,

@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
 import Logging
+import OrderedCollections
 
 extension PrivilegeSystem {
     /// 用户信息控制器，负责管理用户的基本和扩展信息（UserInfo）。
@@ -46,7 +47,7 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
             @OTOChainRelationBuilder<UUID, PUserInfo, PExtendedInfo>
-            _ content: @Sendable @escaping () -> [OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>]
+            _ content: @Sendable @escaping () ->OrderedSet<OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>>
         ) -> EventLoopRes<Void, Errcase> {
             create(relations: content())
         }
@@ -57,7 +58,7 @@ extension PrivilegeSystem {
         ///   - infoIds: 要删除的信息记录 UUID 列表。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            infoIds: [UUID],
+            infoIds: OrderedSet<UUID>,
             allSatisfy: Bool = true
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
@@ -106,7 +107,7 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.UserInfoController {
     func create(
-        relations: [OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>]
+        relations:OrderedSet<OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建用户信息 操作", metadata: ["relations": .summaryData(relations)])

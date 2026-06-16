@@ -4,6 +4,7 @@ import Foundation
 import Query
 import Policy
 import Fluent
+import OrderedCollections
 @preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
@@ -67,7 +68,7 @@ struct ReadmeExampleTests {
         ).first!
         
         try await module.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         // --- 4. 创建角色并指派 ---
@@ -82,12 +83,12 @@ struct ReadmeExampleTests {
         """
         let rolePolicyDTO = PPolicy<Role>(moduleId: module.moduleId, policy: rolePolicy)
         let _ = try await system.policy.create(to: Role.self) {
-            [rolePolicyDTO] => role.id
+            OrderedSet([rolePolicyDTO]) => role.id
         }
         
         // 最后，将该角色分配给用户
         try await system.role.appoint {
-            [role] => [user]
+            OrderedSet([role]) => OrderedSet([user])
         }
         
         // --- 5. 执行权限仲裁 ---
@@ -115,12 +116,12 @@ struct ReadmeExampleTests {
         
         // --- 清理测试环境 ---
         try await system.role.dismiss {
-            [role] => [user]
+            OrderedSet([role]) => OrderedSet([user])
         }
         try await system.role.delete(roleIds: [role.id])
         
         try await module.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await module.privilege.delete(policy: privilegeDTO)
         try await module.resource.delete(ids: [resourceDTO.id])

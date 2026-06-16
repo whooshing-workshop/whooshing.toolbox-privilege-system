@@ -8,6 +8,7 @@ import NIOAdvanced
 import OPA
 import ResourceMacros
 import Logging
+import OrderedCollections
 
 public extension PrivilegeModule {
     /// 资源权限控制器，负责对当前模块下的资源操作许可（Privilege）进行定义、维护、以及向 OPA 下发策略规则。
@@ -56,12 +57,12 @@ public extension PrivilegeModule {
         /// - Parameter privileges: 一组预备状态的资源权限 DTO 集合。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
-            privileges: [PPrivilege]
+            privileges: OrderedSet<PPrivilege>
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源权限 操作", metadata: ["privileges": .summaryData(privileges)])
             logger.debug("操作参数", metadata: ["privileges": .data(privileges)])
-            let mappedPrivileges = privileges.map { p in
+            let mappedPrivileges = privileges.mapToSet { p in
                 guard p.id == nil else { return p }
                 return PPrivilege(
                     id: UUID(),
@@ -102,12 +103,12 @@ public extension PrivilegeModule {
         /// - Parameter privileges: 一组预备状态的资源权限 DTO 集合。
         /// - Returns: 已成功保存到数据库中并下发给 OPA 的权限 DTO 列表。
         public func createWithReturning(
-            privileges: [PPrivilege]
+            privileges: OrderedSet<PPrivilege>
         ) -> EventLoopRes<[QPrivilege], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源权限（返回） 操作", metadata: ["privileges": .summaryData(privileges)])
             logger.debug("操作参数", metadata: ["privileges": .data(privileges)])
-            let mappedPrivileges = privileges.map { p in
+            let mappedPrivileges = privileges.mapToSet { p in
                 guard p.id == nil else { return p }
                 return PPrivilege(
                     id: UUID(),
@@ -260,7 +261,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
         @MTMRelationBuilder<UUID, UUID>
-        privilegeToResource content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        privilegeToResource content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, S.Errcase> {
         attach(privilegeToResource: content())
     }
@@ -274,7 +275,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
-        _ content: @Sendable @escaping () -> [MTMRelation<S.QPrivilege, AnyResource>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) -> EventLoopRes<Void, S.Errcase> {
         attach(relations: content())
     }
@@ -290,7 +291,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func detach(
         @MTMRelationBuilder<UUID, UUID>
-        privilegeFromResource content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        privilegeFromResource content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, S.Errcase>  {
         detach(privilegeFromResource: content())
     }
@@ -304,7 +305,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func detach(
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
-        _ content: @Sendable @escaping () -> [MTMRelation<S.QPrivilege, AnyResource>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) -> EventLoopRes<Void, S.Errcase>  {
         detach(relations: content())
     }
@@ -316,7 +317,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
     /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
-        privilegeToResource relations: [MTMRelation<UUID, UUID>]
+        privilegeToResource relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 资源权限附加资源 操作", metadata: ["relations": .summaryData(relations)])
@@ -337,7 +338,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
     /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
-        relations: [MTMRelation<S.QPrivilege, AnyResource>]
+        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 资源权限附加资源 操作", metadata: ["relations": .summaryData(relations)])
@@ -358,7 +359,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
     /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
     func detach(
-        privilegeFromResource relations: [MTMRelation<UUID, UUID>]
+        privilegeFromResource relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
         logger.info("执行 资源权限解除资源 操作", metadata: ["relations": .summaryData(relations)])
@@ -379,7 +380,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
     /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
     func detach(
-        relations: [MTMRelation<S.QPrivilege, AnyResource>]
+        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
         logger.info("执行 资源权限解除资源 操作", metadata: ["relations": .summaryData(relations)])

@@ -6,6 +6,7 @@ import OPA
 import Foundation
 import PrivilegeModule
 import ResourceMacros
+import OrderedCollections
 @preconcurrency import AnyCodable
 
 // MARK: - Arbitrator Concurrency (Arbitrator.swift)
@@ -17,7 +18,7 @@ extension PrivilegeSystem.Arbitrator {
         role: QRole,
         resource: AnyResource,
         operation: AnyOperation,
-        privilegeIds: [UUID]
+        privilegeIds: OrderedSet<UUID>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Result {
         try await judge(
             moduleId: moduleId,

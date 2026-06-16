@@ -4,6 +4,7 @@ import Query
 import Policy
 import Fluent
 @preconcurrency import AnyCodable
+import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -85,7 +86,7 @@ struct AdvancePolicyTesting {
         let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         let passRes = try await s.arbitrator.judge(
@@ -112,7 +113,7 @@ struct AdvancePolicyTesting {
         let failAnyResource = try #require(AnyResource(failResourceDTO))
 
         try await m.privilege.attach {
-            [failPrivilegeDTO] => [failAnyResource]
+            OrderedSet([failPrivilegeDTO]) => OrderedSet([failAnyResource])
         }
         
         let failRes = try await s.arbitrator.judge(
@@ -128,13 +129,13 @@ struct AdvancePolicyTesting {
         
         // 清理
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await m.privilege.delete(policy: privilegeDTO)
         try await m.resource.delete(ids: [resourceDTO.id])
         
         try await m.privilege.detach {
-            [failPrivilegeDTO] => [failAnyResource]
+            OrderedSet([failPrivilegeDTO]) => OrderedSet([failAnyResource])
         }
         try await m.privilege.delete(policy: failPrivilegeDTO)
         try await m.resource.delete(ids: [failResourceDTO.id])
@@ -184,7 +185,7 @@ struct AdvancePolicyTesting {
         let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         let judgeRes = try await s.arbitrator.judge(
@@ -200,7 +201,7 @@ struct AdvancePolicyTesting {
         
         // 清理
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await m.privilege.delete(policy: privilegeDTO)
         try await m.resource.delete(ids: [resourceDTO.id])

@@ -1,10 +1,11 @@
 import Testing
-@testable import PrivilegeSystem
-@testable import PrivilegeModule
 import Foundation
 import Query
 import Policy
 import Fluent
+import OrderedCollections
+@testable import PrivilegeSystem
+@testable import PrivilegeModule
 
 typealias RT = RoleTesting
 
@@ -18,9 +19,9 @@ struct RoleTesting {
         }
     }
     
-    nonisolated(unsafe) static var ids: [UUID] = []
+    nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
-    static let roles: [PRole] = [
+    static let roles: OrderedSet<PRole> = [
         .init(name: "SuperAdminRole", description: "拥有全局控制面板访问权限"),
         .init(name: "EditorRole", description: "可以编辑及发布内容"),
         .init(name: "ModeratorRole", description: "可以审阅社区发言并封禁违规用户"),
@@ -125,7 +126,7 @@ struct RoleTesting {
                 policy: policyString
             )
             _ = try await s.policy.create(to: Role.self) {
-                [policy] => role.id
+                OrderedSet([policy]) => role.id
             }
         }
     }
@@ -162,7 +163,7 @@ struct RoleTesting {
             policy: "allow if { input.operation == \"devops\" }"
         )
         let returned = try await s.policy.createWithReturning(to: Role.self) {
-            [newPolicy] => targetId
+            OrderedSet([newPolicy]) => targetId
         }
 
         let policies = try #require(returned[targetId], "返回字典中应有 targetId 对应的条目")
@@ -174,7 +175,7 @@ struct RoleTesting {
             try await s.policy.delete(from: Role.self, policy: qp => targetId)
         }
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }
+        try await s.policy.create(to: Role.self) { OrderedSet([def]) => targetId }
     }
 
     @Test("Role 策略删除：从 DB 移除，计数减少 1，并可恢复")
@@ -197,7 +198,7 @@ struct RoleTesting {
         #expect(after == before.count - 1, "删除后应少 1 条")
 
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }
+        try await s.policy.create(to: Role.self) { OrderedSet([def]) => targetId }
         let restored = try await __SDBM.PolicyExp<Role>.query(on: s.db)
             .filter(\.$parent.$id == targetId).count()
         #expect(restored == before.count, "恢复后数量应与原来一致")
@@ -225,40 +226,40 @@ struct RoleTesting {
         let role = roles[1]
         
         // 1. Role <-> User
-        try await s.role.appoint { [role] => [user] }
+        try await s.role.appoint { OrderedSet([role]) => OrderedSet([user]) }
         let c1 = try await __SDBM.UserRolePivot.query(on: s.db)
             .count()
         #expect(c1 == 1)
-        try await s.role.dismiss { [role] => [user] }
+        try await s.role.dismiss { OrderedSet([role]) => OrderedSet([user]) }
         let c2 = try await __SDBM.UserRolePivot.query(on: s.db)
             .count()
         #expect(c2 == 0)
 
         // 2. Role <-> Group
-        try await s.role.appoint { [role] => [group] }
+        try await s.role.appoint { OrderedSet([role]) => OrderedSet([group]) }
         let c3 = try await __SDBM.RoleGroupPivot.query(on: s.db)
             .count()
         #expect(c3 == 1)
-        try await s.role.dismiss { [role] => [group] }
+        try await s.role.dismiss { OrderedSet([role]) => OrderedSet([group]) }
         let c4 = try await __SDBM.RoleGroupPivot.query(on: s.db)
             .count()
         #expect(c4 == 0)
 
         // 3. Role <-> UserInGroup
         // 先建立 User <-> Group 关系才能指派组内用户的角色
-        try await s.group.join { [user] => [group] }
+        try await s.group.join { OrderedSet([user]) => OrderedSet([group]) }
         let uig = try await s.group.query(relations: [user =| group])
-        try await s.role.appoint { [role] => uig }
+        try await s.role.appoint { OrderedSet([role]) => OrderedSet(uig) }
         let c5 = try await __SDBM.RoleUserInGroupPivot.query(on: s.db)
             .count()
         #expect(c5 == 1)
-        try await s.role.dismiss { [role] => uig }
+        try await s.role.dismiss { OrderedSet([role]) => OrderedSet(uig) }
         let c6 = try await __SDBM.RoleUserInGroupPivot.query(on: s.db)
             .count()
         #expect(c6 == 0)
         
         // 扫尾清理 User <-> Group
-        try await s.group.kick { [user] => [group] }
+        try await s.group.kick { OrderedSet([user]) => OrderedSet([group]) }
     }
     
     @Test("角色删除测试")

@@ -19,7 +19,7 @@ struct UserinfoTesting {
         }
     }
     
-    nonisolated(unsafe) static var ids: OrderedDictionary<UUID, (addrs: [UUID], emails: [UUID], phones: [UUID])> = [:]
+    nonisolated(unsafe) static var ids: OrderedDictionary<UUID, (addrs: OrderedSet<UUID>, emails: OrderedSet<UUID>, phones: OrderedSet<UUID>)> = [:]
     
     static var infos: [(UUID, PUserInfo, PExtendedInfo)] {[
         (
@@ -221,9 +221,9 @@ struct UserinfoTesting {
                     
             )
             
-            var addresses: [UUID] = []
-            var emails: [UUID] = []
-            var phones: [UUID] = []
+            var addresses: OrderedSet<UUID> = []
+            var emails: OrderedSet<UUID> = []
+            var phones: OrderedSet<UUID> = []
             
             for address in userInfo.2.addresses {
                 let addr = try #require(
@@ -357,12 +357,12 @@ struct UserinfoTesting {
         let countBefore = try await s.query(QUserInfo.self).count()
         
         try await s.userInfo.create {
-            [
+            OrderedSet([
                 userId => (
                     PUserInfo(nickname: "TempUser", identifier: "temp_id_delete_test", birthday: .init(timeIntervalSince1970: 0))
                     => PExtendedInfo(addresses: [], alternateEmails: [], phones: [])
                 )
-            ]
+            ])
         }
         
         let countMid = try await s.query(QUserInfo.self).count()

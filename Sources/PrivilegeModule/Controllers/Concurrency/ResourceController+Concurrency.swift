@@ -4,6 +4,7 @@ import ErrorHandle
 import NIOAdvanced
 import Foundation
 import ResourceMacros
+import OrderedCollections
 
 // MARK: - ResourceController Concurrency (ResourceController.swift)
 
@@ -11,13 +12,13 @@ public extension PrivilegeModule.ResourceController {
     typealias S = PM<ResourceList>
 
     func create<T: Resource>(
-        resources: [T]
+        resources: OrderedSet<T>
     ) async throws(PrivilegeModule.Errcase.ErrType) -> [S.QResource<T>] {
         try await create(resources: resources).get()
     }
 
     func delete(
-        ids: [UUID]
+        ids: OrderedSet<UUID>
     ) async throws(PrivilegeModule.Errcase.ErrType) {
         try await delete(ids: ids).get()
     }

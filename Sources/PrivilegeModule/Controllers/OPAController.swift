@@ -6,6 +6,7 @@ import ErrorHandle
 import Policy
 import OPA
 import NIOConcurrencyHelpers
+import OrderedCollections
 
 package protocol OPAController: Controller {
     var opa: OPA { get }
@@ -19,11 +20,11 @@ package extension OPAController {
     // PT: 策略类型，包括 Domain, Role, Privilege
     func __createPolicy<Pr: Sendable, P: Sendable, M: PGModel, PT: PolicyType>(
         on db: PGDatabase,
-        relations: [Pr],                    // 待创建策略，同时每个策略绑定一个所属模型
+        relations: OrderedSet<Pr>,          // 待创建策略，同时每个策略绑定一个所属模型
         policyType: PT.Type,                // 策略的类型，包括 Domain, Role, Privilege
         label: String,
         errThrowing: E,
-        policies: (Pr) -> [P],              // 从一条关系中列出所有相关的 Policies
+        policies: (Pr) ->OrderedSet<P>,              // 从一条关系中列出所有相关的 Policies
         moduleId: @Sendable (P) -> UUID,    // 给出一个 Policy，返回其服务模块的 ID 号
         policyKey: KeyPath<P, String>,      // 指出 Policy 的 OPA 代码属性
         modelId:(Pr, P) -> UUID,            // 要求返回策略所绑定的所属模型的 ID 号

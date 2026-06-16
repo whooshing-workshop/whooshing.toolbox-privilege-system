@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
 import Logging
+import OrderedCollections
 
 extension PrivilegeSystem {
     /// 群组控制器，提供对于群组结构的完整生命周期管理。
@@ -48,7 +49,7 @@ extension PrivilegeSystem {
         /// ).get().first!
         /// ```
         public func create(
-            groups: [PGroup]
+            groups: OrderedSet<PGroup>
         ) -> EventLoopRes<[QGroup], Errcase> {
             // 创建组，需要修改 groups 表，也需要修改 group_paths 内接表
             // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
@@ -117,7 +118,7 @@ extension PrivilegeSystem {
         ///   - allSatisfy: 是否必须满足全部找到并删除。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            groupIds: [UUID]
+            groupIds: OrderedSet<UUID>
         ) -> EventLoopRes<Void, Errcase> {
             // 删除组，必须先清理 group_paths 表中的内接链接
             // 再从 groups 主表中批量删除表
@@ -213,7 +214,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
         @MTMRelationBuilder<UUID, UUID>
-        userToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        userToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         join(userToGroup: content())
     }
@@ -224,7 +225,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
         @MTMRelationBuilder<QUser, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QUser, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         join(relations: content())
     }
@@ -237,7 +238,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
         @MTMRelationBuilder<UUID, UUID>
-        userFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        userFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         kick(userFromGroup: content())
     }
@@ -248,7 +249,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
         @MTMRelationBuilder<QUser, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QUser, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         kick(relations: content())
     }
@@ -262,7 +263,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
-        userToGroup relations: [MTMRelation<UUID, UUID>]
+        userToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户加入群组 操作", metadata: ["relations": .summaryData(relations)])
@@ -286,7 +287,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
-        relations: [MTMRelation<QUser, QGroup>]
+        relations: OrderedSet<MTMRelation<QUser, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户加入群组 操作", metadata: ["relations": .summaryData(relations)])
@@ -310,7 +311,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
-        userFromGroup relations: [MTMRelation<UUID, UUID>]
+        userFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户移出群组 操作", metadata: ["relations": .summaryData(relations)])
@@ -334,7 +335,7 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
-        relations: [MTMRelation<QUser, QGroup>]
+        relations: OrderedSet<MTMRelation<QUser, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户移出群组 操作", metadata: ["relations": .summaryData(relations)])
@@ -444,7 +445,7 @@ public extension PrivilegeSystem.GroupController {
     ///   - strict: 如果为 `true`，查出的记录条数不匹配预期的 `relations` 长度则抛出失败。
     /// - Returns: `EventLoopRes<[QUserInGroup], Errcase>`
     func query(
-        relations: [PUserInGroup],
+        relations: OrderedSet<PUserInGroup>,
         strict: Bool = true
     ) -> EventLoopRes<[QUserInGroup], PrivilegeSystem.Errcase> {
         __query(on: db, relations: relations, strict: strict)
@@ -462,7 +463,7 @@ public extension PrivilegeSystem.GroupController {
 extension PrivilegeSystem.GroupController {
     func __query(
         on db: PGDatabase,
-        relations: [PUserInGroup],
+        relations: OrderedSet<PUserInGroup>,
         strict: Bool
     ) -> EventLoopRes<[__SDBM.UserGroupPivot], PrivilegeSystem.Errcase> {
         __SDBM.UserGroupPivot.query(on: db)

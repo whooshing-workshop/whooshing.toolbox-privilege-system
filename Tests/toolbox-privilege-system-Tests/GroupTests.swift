@@ -4,6 +4,7 @@ import Query
 import Fluent
 import ErrorHandle
 import Policy
+import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -19,9 +20,9 @@ struct GroupTesting {
         }
     }
     
-    nonisolated(unsafe) static var ids: [UUID] = []
+    nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
-    static let groups: [PGroup] = [
+    static let groups: OrderedSet<PGroup> = [
         .init(under: nil, name: "AdministratorGroup", description: "全系统管理员的集合群组，拥有最高系统访问权限"),
         .init(under: nil, name: "OperatorGroup", description: "运营管理群组"),
         .init(under: nil, name: "DeveloperHub", description: "后端服务器与前端客户端的研发群体"),
@@ -109,7 +110,7 @@ struct GroupTesting {
         let group = groups[0]
         
         // join
-        try await s.group.join { [user] => [group] }
+        try await s.group.join { OrderedSet([user]) => OrderedSet([group]) }
         let count1 = try await __SDBM.UserGroupPivot.query(on: s.db).count()
         #expect(count1 == 1)
         
@@ -120,7 +121,7 @@ struct GroupTesting {
         #expect(relations[0].group.id == group.id)
         
         // kick 后验证清理
-        try await s.group.kick { [user] => [group] }
+        try await s.group.kick { OrderedSet([user]) => OrderedSet([group]) }
         let count2 = try await __SDBM.UserGroupPivot.query(on: s.db).count()
         #expect(count2 == 0)
     }

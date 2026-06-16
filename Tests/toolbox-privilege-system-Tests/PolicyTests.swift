@@ -3,6 +3,7 @@ import Foundation
 import Query
 import Policy
 import Fluent
+import OrderedCollections
 @preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
@@ -1075,7 +1076,7 @@ struct PolicyTesting {
             moduleId: m.moduleId,
             policy: "allow if { input.operation == \"deploy\" }"
         )
-        try await s.policy.create(to: Role.self) { [restricted] => targetId }
+        try await s.policy.create(to: Role.self) { OrderedSet([restricted]) => targetId }
 
         // 验证新策略
         let deployRes = try await s.arbitrator.judge(
@@ -1100,7 +1101,7 @@ struct PolicyTesting {
             try await s.policy.delete(from: Role.self, policy: qp => targetId)
         }
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Role.self) { [def] => targetId }
+        try await s.policy.create(to: Role.self) { OrderedSet([def]) => targetId }
     }
 
 
@@ -2285,7 +2286,7 @@ struct PolicyTesting {
 
         // ─── 第二步：appoint ModeratorRole → AT.ids[8] in GT.ids[10] ───────
         try await s.role.appoint {
-            [role] => [rel]
+            OrderedSet([role]) => OrderedSet([rel])
         }
 
         let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
@@ -2313,7 +2314,7 @@ struct PolicyTesting {
 
         // ─── 第四步：dismiss，撤销 ModeratorRole ────────────────────────────
         try await s.role.dismiss {
-            [role] => [rel]
+            OrderedSet([role]) => OrderedSet([rel])
         }
 
         // dismiss 后 ModeratorRole 不再是 user8 的可用身份；不要再用它调用 judge。
@@ -2344,7 +2345,7 @@ struct PolicyTesting {
 
         // 动态指派 role6 → user7 in group9
         try await s.role.appoint {
-            [role6] => [relInGroup9]
+            OrderedSet([role6]) => OrderedSet([relInGroup9])
         }
 
         let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
@@ -2366,7 +2367,7 @@ struct PolicyTesting {
 
         // 清理：dismiss role6 from user7 in group9
         try await s.role.dismiss {
-            [role6] => [relInGroup9]
+            OrderedSet([role6]) => OrderedSet([relInGroup9])
         }
     }
 
@@ -2447,7 +2448,7 @@ struct PolicyTesting {
         let privilegeDTO = privileges[0]
         
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         let allow = try await s.arbitrator.judge(
@@ -2474,7 +2475,7 @@ struct PolicyTesting {
         
         // 清理
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await m.privilege.delete(policy: privilegeDTO)
         try await m.resource.delete(ids: [resourceDTO.id])
@@ -2522,7 +2523,7 @@ struct PolicyTesting {
         let privilegeDTO = privileges[0]
         
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         // 尝试 edit (符合 role 策略，但被 privilege 策略拒绝)
@@ -2536,7 +2537,7 @@ struct PolicyTesting {
         
         // 清理
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await m.privilege.delete(policy: privilegeDTO)
         try await m.resource.delete(ids: [resourceDTO.id])
@@ -2596,7 +2597,7 @@ struct PolicyTesting {
         let privilegeDTO = privileges[0]
         
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         let allow = try await s.arbitrator.judge(
@@ -2629,7 +2630,7 @@ struct PolicyTesting {
         
         // 清理
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await m.privilege.delete(policy: privilegeDTO)
         try await m.resource.delete(ids: [resourceDTO.id])

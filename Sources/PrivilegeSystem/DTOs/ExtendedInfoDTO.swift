@@ -8,19 +8,20 @@ import Query
 import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
+import OrderedCollections
 
 public struct PExtendedInfo: DTO.Model {
     public typealias QueriedModel = QExtendedInfo
-    public let addresses: [PInfoSlice<Address>]
-    public let alternateEmails: [PInfoSlice<AlternateEmail>]
-    public let phones: [PInfoSlice<Phone>]
+    public let addresses: OrderedSet<PInfoSlice<Address>>
+    public let alternateEmails: OrderedSet<PInfoSlice<AlternateEmail>>
+    public let phones: OrderedSet<PInfoSlice<Phone>>
     
     public static let logName: String = "PExtendedInfo"
     
     public init(
-        addresses: [PInfoSlice<Address>] = [],
-        alternateEmails: [PInfoSlice<AlternateEmail>] = [],
-        phones: [PInfoSlice<Phone>] = []
+        addresses: OrderedSet<PInfoSlice<Address>> = [],
+        alternateEmails: OrderedSet<PInfoSlice<AlternateEmail>> = [],
+        phones: OrderedSet<PInfoSlice<Phone>> = []
     ) {
         self.addresses = addresses
         self.alternateEmails = alternateEmails
@@ -38,16 +39,16 @@ public struct PExtendedInfo: DTO.Model {
 
 public struct QExtendedInfo: DTO.Model {
     public typealias PrepareModel = PExtendedInfo
-    public let addresses: [QInfoSlice<Address>]
-    public let alternateEmails: [QInfoSlice<AlternateEmail>]
-    public let phones: [QInfoSlice<Phone>]
+    public let addresses: OrderedSet<QInfoSlice<Address>>
+    public let alternateEmails: OrderedSet<QInfoSlice<AlternateEmail>>
+    public let phones: OrderedSet<QInfoSlice<Phone>>
     
     public static let logName: String = "QExtendedInfo"
     
     init(
-        addresses: [QInfoSlice<Address>] = [],
-        alternateEmails: [QInfoSlice<AlternateEmail>] = [],
-        phones: [QInfoSlice<Phone>] = []
+        addresses: OrderedSet<QInfoSlice<Address>> = [],
+        alternateEmails: OrderedSet<QInfoSlice<AlternateEmail>> = [],
+        phones: OrderedSet<QInfoSlice<Phone>> = []
     ) {
         self.addresses = addresses
         self.alternateEmails = alternateEmails

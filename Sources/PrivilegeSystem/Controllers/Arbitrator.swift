@@ -11,6 +11,7 @@ import Collections
 import LoggingAdvanced
 import ResourceMacros
 import Logging
+import OrderedCollections
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
@@ -94,7 +95,7 @@ extension PrivilegeSystem {
             role: QRole,
             resource: AnyResource,
             operation: AnyOperation,
-            privilegeIds: [UUID]
+            privilegeIds: OrderedSet<UUID>
         ) -> EventLoopRes<Result, Errcase> {
             let logger = getActionLogger()
             
@@ -200,14 +201,14 @@ extension PrivilegeSystem {
                     self.__judge(
                         input: ArbitrateData(
                             moduleId: moduleId,
-                            domains: domainDatas.flatMap { $0 },
+                            domains: .init(domainDatas.flatMap { $0 }),
                             role: .init(
                                 roleId: role.id,
                                 resource: resource.data,
                                 operation: operation.rawValue,
                                 user: user
                             ),
-                            privileges: privilegeIds.map {
+                            privileges: privilegeIds.mapToSet {
                                 .init(
                                     privilegeId: $0,
                                     resource: resource.data,
@@ -382,11 +383,11 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct ArbitrateData: Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct ArbitrateData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
         let moduleId: UUID
-        let domains: [DomainData]
+        let domains: OrderedSet<DomainData>
         let role: RoleData
-        let privileges: [PrivilegeData]
+        let privileges: OrderedSet<PrivilegeData>
         
         var description: String {
             formatJson([
@@ -398,7 +399,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct RoleData: Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct RoleData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
         let roleId: UUID
         let resource: [String: AnyCodable]
         let operation: String
@@ -414,7 +415,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct DomainData: Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct DomainData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
         let domainId: UUID
         let resource: [String: AnyCodable]
         let operation: String
@@ -432,7 +433,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct PrivilegeData: Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct PrivilegeData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
         let privilegeId: UUID
         let resource: [String: AnyCodable]
         let operation: String

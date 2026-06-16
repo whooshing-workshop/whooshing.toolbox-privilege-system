@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import ResourceMacros
 import Logging
+import OrderedCollections
 
 public extension PrivilegeModule {
     /// 资源控制器，管理当前权限模块辖下所有资源的生命周期（增删改）。
@@ -48,10 +49,10 @@ public extension PrivilegeModule {
         ///     name: "Secret_Doc",
         ///     content: ["isPrivate": AnyCodable(true)]
         /// )
-        /// let resourceDTO = try await module.resource.create(resources: [docResource]).first!
+        /// let resourceDTO = try await module.resource.create(resources: OrderedSet<docResource>).first!
         /// ```
         public func create<T: Resource>(
-            resources: [T]
+            resources: OrderedSet<T>
         ) -> EventLoopRes<[QResource<T>], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源 操作", metadata: ["resources": .summaryData(resources)])
@@ -80,7 +81,7 @@ public extension PrivilegeModule {
         ///   - ids: 资源的 UUID 列表。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            ids: [UUID]
+            ids: OrderedSet<UUID>
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除资源 操作", metadata: ["ids": .summaryData(ids)])

@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
 import Logging
+import OrderedCollections
 
 extension PrivilegeSystem {
     /// 用户附加切片信息控制器，提供对 `ExtendedInfo` 中的具体切片数据进行单独维护的能力。
@@ -40,7 +41,7 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<[QInfoSlice<T>], Errcase>`
         public func create<T>(
             for infoId: UUID,
-            extendedInfos: [PInfoSlice<T>]
+            extendedInfos: OrderedSet<PInfoSlice<T>>
         ) -> EventLoopRes<[QInfoSlice<T>], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "extendedInfos": .summaryData(extendedInfos)])
@@ -62,7 +63,7 @@ extension PrivilegeSystem {
         ///   - type: 显式指示你要删除哪个维度的扩展模型（如 `DTO.EmailInfo`）。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete<T: UserInfoModel>(
-            infoIds: [UUID],
+            infoIds: OrderedSet<UUID>,
             type: T.Type = T.self
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
@@ -129,9 +130,9 @@ extension PrivilegeSystem {
                 
                 return try required(throws: Errcase.userExtendedInfoQueryFailed, "用户信息转 DTO 失败", category: .internal) {
                     try QExtendedInfo.init(
-                        addresses: i.addresses.map { try .make(from: $0).get() },
-                        alternateEmails: i.alternateEmails.map { try .make(from: $0).get() },
-                        phones: i.phones.map { try .make(from: $0).get() }
+                        addresses: .init(i.addresses.map { try .make(from: $0).get() }),
+                        alternateEmails: .init(i.alternateEmails.map { try .make(from: $0).get() }),
+                        phones: .init(i.phones.map { try .make(from: $0).get() })
                     )
                 }
             }
@@ -149,7 +150,7 @@ extension PrivilegeSystem.InfoSliceController {
     func __create<T>(
         on db: PGDatabase,
         for infoId: UUID,
-        extendedInfos: [PInfoSlice<T>]
+        extendedInfos: OrderedSet<PInfoSlice<T>>
     ) -> EventLoopRes<[QInfoSlice<T>], PrivilegeSystem.Errcase> {
         __create(
             on: db,

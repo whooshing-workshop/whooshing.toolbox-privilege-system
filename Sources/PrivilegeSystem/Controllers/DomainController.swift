@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
 import Logging
+import OrderedCollections
 
 extension PrivilegeSystem {
     /// 域权限控制器，提供域的创建、更新、删除及关系指派接口。
@@ -52,7 +53,7 @@ extension PrivilegeSystem {
         /// ```
         public func create(
             @MTORelationBuilder<PPolicy<Domain>, PDomain>
-            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Domain>, PDomain>]
+            _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
         ) -> EventLoopRes<Void, Errcase> {
             self.create(relations: content())
         }
@@ -63,7 +64,7 @@ extension PrivilegeSystem {
         /// - Returns: 一个字典，Key为域的 ID，Value 为该域关联的策略查询对象 `QPolicy<Domain>`。
         public func createWithReturning(
             @MTORelationBuilder<PPolicy<Domain>, PDomain>
-            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Domain>, PDomain>]
+            _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
         ) -> EventLoopRes<[UUID: [QPolicy<Domain>]], Errcase> {
             self.createWithReturning(relations: content())
         }
@@ -79,7 +80,7 @@ extension PrivilegeSystem {
         /// ).get()
         /// ```
         public func create(
-            domains: [PDomain]
+            domains: OrderedSet<PDomain>
         ) -> EventLoopRes<[QDomain], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建域权限 操作", metadata: ["domains": .summaryData(domains)])
@@ -99,7 +100,7 @@ extension PrivilegeSystem {
         ///   - domainIds: 欲删除域的 UUID 数组。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            domainIds: [UUID]
+            domainIds: OrderedSet<UUID>
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除域权限 操作", metadata: ["domainIds": .summaryData(domainIds)])
@@ -147,18 +148,18 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.DomainController {
     func create(
-        relations: [MTORelation<PPolicy<Domain>, PDomain>]
+        relations: OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建域权限（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
         return db.trans { db in
-            self.__create(on: db, domains: relations.map { $0.right }).flatMap { domains in
+            self.__create(on: db, domains: relations.mapToSet { $0.right }).flatMap { domains in
                 self.policyController.__create(
                     on: db,
                     to: Domain.self,
-                    relations: relations.enumerated().map { .init(left: $0.element.left, right: domains[$0.offset].id) }
+                    relations: relations.enumeratedSet().mapToSet { .init(left: $0.element.left, right: domains[$0.offset].id) }
                 )
             }
         }.map { logger.info("创建域权限（含策略） 操作成功") }
@@ -166,18 +167,18 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func createWithReturning(
-        relations: [MTORelation<PPolicy<Domain>, PDomain>]
+        relations: OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
     ) -> EventLoopRes<[UUID: [QPolicy<Domain>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建域权限（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
         return db.trans { db in
-            self.__create(on: db, domains: relations.map { $0.right }).flatMap { domains in
+            self.__create(on: db, domains: relations.mapToSet { $0.right }).flatMap { domains in
                 self.policyController.__createWithReturning(
                     on: db,
                     to: Domain.self,
-                    relations: relations.enumerated().map { .init(left: $0.element.left, right: domains[$0.offset].id) }
+                    relations: relations.enumeratedSet().mapToSet { .init(left: $0.element.left, right: domains[$0.offset].id) }
                 )
             }
         }.map {
@@ -203,7 +204,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
         @MTMRelationBuilder<UUID, UUID>
-        domainToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        domainToUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         assign(domainToUser: content())
     }
@@ -220,7 +221,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
         @MTMRelationBuilder<QDomain, QUser>
-        _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QUser>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         assign(relations: content())
     }
@@ -231,7 +232,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
         @MTMRelationBuilder<UUID, UUID>
-        domainToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        domainToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         assign(domainToGroup: content())
     }
@@ -242,7 +243,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
         @MTMRelationBuilder<QDomain, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         assign(relations: content())
     }
@@ -255,7 +256,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
         @MTMRelationBuilder<UUID, UUID>
-        domainFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        domainFromUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         unassign(domainFromUser: content())
     }
@@ -266,7 +267,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
         @MTMRelationBuilder<QDomain, QUser>
-        _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QUser>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         unassign(relations: content())
     }
@@ -277,7 +278,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
         @MTMRelationBuilder<UUID, UUID>
-        domainFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        domainFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         unassign(domainFromGroup: content())
     }
@@ -288,7 +289,7 @@ public extension PrivilegeSystem.DomainController {
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
         @MTMRelationBuilder<QDomain, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         unassign(relations: content())
     }
@@ -298,7 +299,7 @@ public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限指派
     
     func assign(
-        domainToUser relations: [MTMRelation<UUID, UUID>]
+        domainToUser relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -318,7 +319,7 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func assign(
-        relations: [MTMRelation<QDomain, QUser>]
+        relations: OrderedSet<MTMRelation<QDomain, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -336,7 +337,7 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func assign(
-        domainToGroup relations: [MTMRelation<UUID, UUID>]
+        domainToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -356,7 +357,7 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func assign(
-        relations: [MTMRelation<QDomain, QGroup>]
+        relations: OrderedSet<MTMRelation<QDomain, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -376,7 +377,7 @@ public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限撤销
     
     func unassign(
-        domainFromUser relations: [MTMRelation<UUID, UUID>]
+        domainFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -396,7 +397,7 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func unassign(
-        relations: [MTMRelation<QDomain, QUser>]
+        relations: OrderedSet<MTMRelation<QDomain, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -414,7 +415,7 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func unassign(
-        domainFromGroup relations: [MTMRelation<UUID, UUID>]
+        domainFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -434,7 +435,7 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func unassign(
-        relations: [MTMRelation<QDomain, QGroup>]
+        relations: OrderedSet<MTMRelation<QDomain, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -455,7 +456,7 @@ public extension PrivilegeSystem.DomainController {
 extension PrivilegeSystem.DomainController {
     func __create(
         on db: PGDatabase,
-        domains: [PDomain]
+        domains: OrderedSet<PDomain>
     ) -> EventLoopRes<[QDomain], PrivilegeSystem.Errcase> {
         __create(
             on: db,

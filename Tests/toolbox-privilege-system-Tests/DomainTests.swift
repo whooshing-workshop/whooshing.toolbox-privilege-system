@@ -1,10 +1,11 @@
 import Testing
-@testable import PrivilegeSystem
-@testable import PrivilegeModule
 import Foundation
 import Query
 import Policy
 import Fluent
+import OrderedCollections
+@testable import PrivilegeSystem
+@testable import PrivilegeModule
 
 typealias DT = DomainTesting
 
@@ -18,9 +19,9 @@ struct DomainTesting {
         }
     }
     
-    nonisolated(unsafe) static var ids: [UUID] = []
+    nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
-    static let domains: [PDomain] = [
+    static let domains: OrderedSet<PDomain> = [
         .init(name: "GlobalScope", description: "全系统顶级域，可以影响所有资源"),
         .init(name: "AsiaPacific", description: "亚太地区业务域"),
         .init(name: "NorthAmerica", description: "北美地区业务域"),
@@ -119,7 +120,7 @@ struct DomainTesting {
                 policy: policyString
             )
             _ = try await s.policy.create(to: Domain.self) {
-                [policy] => domain.id
+                OrderedSet([policy]) => domain.id
             }
         }
     }
@@ -156,7 +157,7 @@ struct DomainTesting {
             policy: "allow if { input.resource.partner == true }"
         )
         let returned = try await s.policy.createWithReturning(to: Domain.self) {
-            [newPolicy] => targetId
+            OrderedSet([newPolicy]) => targetId
         }
 
         let policies = try #require(returned[targetId])
@@ -167,7 +168,7 @@ struct DomainTesting {
             try await s.policy.delete(from: Domain.self, policy: qp => targetId)
         }
         let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Domain.self) { [def] => targetId }
+        try await s.policy.create(to: Domain.self) { OrderedSet([def]) => targetId }
     }
 
     @Test("Domain 策略删除：从 DB 移除，计数减少 1，并可恢复")
@@ -190,7 +191,7 @@ struct DomainTesting {
         #expect(after == before.count - 1, "删除后应少 1 条")
 
         let def = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { true }")
-        try await s.policy.create(to: Domain.self) { [def] => targetId }
+        try await s.policy.create(to: Domain.self) { OrderedSet([def]) => targetId }
         let restored = try await __SDBM.PolicyExp<Domain>.query(on: s.db)
             .filter(\.$parent.$id == targetId).count()
         #expect(restored == before.count, "恢复后数量应与原来一致")
@@ -218,21 +219,21 @@ struct DomainTesting {
         let domain = domains[2]
         
         // 1. Domain <-> User
-        try await s.domain.assign { [domain] => [user] }
+        try await s.domain.assign { OrderedSet([domain]) => OrderedSet([user]) }
         let count1 = try await __SDBM.UserDomainPivot.query(on: s.db)
             .count()
         #expect(count1 == 1)
-        try await s.domain.unassign { [domain] => [user] }
+        try await s.domain.unassign { OrderedSet([domain]) => OrderedSet([user]) }
         let count2 = try await __SDBM.UserDomainPivot.query(on: s.db)
             .count()
         #expect(count2 == 0)
 
         // 2. Domain <-> Group
-        try await s.domain.assign { [domain] => [group] }
+        try await s.domain.assign { OrderedSet([domain]) => OrderedSet([group]) }
         let count3 = try await __SDBM.DomainGroupPivot.query(on: s.db)
             .count()
         #expect(count3 == 1)
-        try await s.domain.unassign { [domain] => [group] }
+        try await s.domain.unassign { OrderedSet([domain]) => OrderedSet([group]) }
         let count4 = try await __SDBM.DomainGroupPivot.query(on: s.db)
             .count()
         #expect(count4 == 0)

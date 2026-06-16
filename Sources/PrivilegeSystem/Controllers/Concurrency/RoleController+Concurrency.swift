@@ -4,6 +4,7 @@ import PgSQL
 import Foundation
 import NIOAdvanced
 import PrivilegeModule
+import OrderedCollections
 
 // MARK: - RoleController Concurrency (RoleController.swift)
 
@@ -12,14 +13,14 @@ extension PrivilegeSystem.RoleController {
 
     public func create(
         @MTORelationBuilder<PPolicy<Role>, PRole>
-        _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Role>, PRole>]
+        _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Role>, PRole>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await create(content).get()
     }
 
     public func createWithReturning(
         @MTORelationBuilder<PPolicy<Role>, PRole>
-        _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Role>, PRole>]
+        _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Role>, PRole>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UUID: [QPolicy<Role>]] {
         try await createWithReturning(content).get()
     }
@@ -27,13 +28,13 @@ extension PrivilegeSystem.RoleController {
     // MARK: Create (array / scalar variants)
 
     public func create(
-        roles: [PRole]
+        roles: OrderedSet<PRole>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QRole] {
         try await create(roles: roles).get()
     }
 
     public func delete(
-        roleIds: [UUID]
+        roleIds: OrderedSet<UUID>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await delete(roleIds: roleIds).get()
     }
@@ -47,13 +48,13 @@ extension PrivilegeSystem.RoleController {
     // MARK: Create from relations
 
     public func create(
-        relations: [MTORelation<PPolicy<Role>, PRole>]
+        relations: OrderedSet<MTORelation<PPolicy<Role>, PRole>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await create(relations: relations).get()
     }
 
     public func createWithReturning(
-        relations: [MTORelation<PPolicy<Role>, PRole>]
+        relations: OrderedSet<MTORelation<PPolicy<Role>, PRole>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UUID: [QPolicy<Role>]] {
         try await createWithReturning(relations: relations).get()
     }
@@ -62,42 +63,42 @@ extension PrivilegeSystem.RoleController {
 
     public func appoint(
         @MTMRelationBuilder<UUID, UUID>
-        roleToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleToUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(roleToUser: content).get()
     }
     
     public func appoint(
         @MTMRelationBuilder<QRole, QUser>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUser>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
 
     public func appoint(
         @MTMRelationBuilder<UUID, UUID>
-        roleToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(roleToGroup: content).get()
     }
     
     public func appoint(
         @MTMRelationBuilder<QRole, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
 
     public func appoint(
         @MTMRelationBuilder<UUID, UUID>
-        roleToUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleToUserInGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(roleToUserInGroup: content).get()
     }
     
     public func appoint(
         @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
@@ -106,42 +107,42 @@ extension PrivilegeSystem.RoleController {
 
     public func dismiss(
         @MTMRelationBuilder<UUID, UUID>
-        roleFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleFromUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(roleFromUser: content).get()
     }
     
     public func dismiss(
         @MTMRelationBuilder<QRole, QUser>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUser>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
 
     public func dismiss(
         @MTMRelationBuilder<UUID, UUID>
-        roleFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(roleFromGroup: content).get()
     }
     
     public func dismiss(
         @MTMRelationBuilder<QRole, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
 
     public func dismiss(
         @MTMRelationBuilder<UUID, UUID>
-        roleFromUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleFromUserInGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(roleFromUserInGroup: content).get()
     }
     
     public func dismiss(
         @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
@@ -149,37 +150,37 @@ extension PrivilegeSystem.RoleController {
     // MARK: Appoint (array variants)
 
     public func appoint(
-        roleToUser relations: [MTMRelation<UUID, UUID>]
+        roleToUser relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(roleToUser: relations).get()
     }
     
     public func appoint(
-        relations: [MTMRelation<QRole, QUser>]
+        relations: OrderedSet<MTMRelation<QRole, QUser>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
     public func appoint(
-        roleToGroup relations: [MTMRelation<UUID, UUID>]
+        roleToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(roleToGroup: relations).get()
     }
     
     public func appoint(
-        relations: [MTMRelation<QRole, QGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
     public func appoint(
-        roleToUserInGroup relations: [MTMRelation<UUID, UUID>]
+        roleToUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(roleToUserInGroup: relations).get()
     }
     
     public func appoint(
-        relations: [MTMRelation<QRole, QUserInGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
@@ -187,37 +188,37 @@ extension PrivilegeSystem.RoleController {
     // MARK: Dismiss (array variants)
 
     public func dismiss(
-        roleFromUser relations: [MTMRelation<UUID, UUID>]
+        roleFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(roleFromUser: relations).get()
     }
     
     public func dismiss(
-        relations: [MTMRelation<QRole, QUser>]
+        relations: OrderedSet<MTMRelation<QRole, QUser>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
     public func dismiss(
-        roleFromGroup relations: [MTMRelation<UUID, UUID>]
+        roleFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(roleFromGroup: relations).get()
     }
     
     public func dismiss(
-        relations: [MTMRelation<QRole, QGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
     public func dismiss(
-        roleFromUserInGroup relations: [MTMRelation<UUID, UUID>]
+        roleFromUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(roleFromUserInGroup: relations).get()
     }
     
     public func dismiss(
-        relations: [MTMRelation<QRole, QUserInGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }

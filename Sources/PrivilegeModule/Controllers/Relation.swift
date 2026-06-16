@@ -1,5 +1,6 @@
 import Logging
 import LoggingAdvanced
+import OrderedCollections
 
 /// 控制器 result builder 使用的一对一关系。
 ///
@@ -8,7 +9,7 @@ import LoggingAdvanced
 /// ```swift
 /// let relation = role => user
 /// ```
-public struct OTORelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+public struct OTORelation<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
     /// 左侧对象。
     public let left: Left
     /// 右侧对象。
@@ -26,14 +27,14 @@ public struct OTORelation<Left, Right>: Sendable where Left: Sendable, Right: Se
 /// ```swift
 /// [policy] => role.id
 /// ```
-public struct MTORelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+public struct MTORelation<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
     /// 左侧对象集合。
-    public let left: [Left]
+    public let left: OrderedSet<Left>
     /// 右侧对象。
     public let right: Right
     
     /// 创建多对一关系。
-    public init(left: [Left], right: Right) {
+    public init(left: OrderedSet<Left>, right: Right) {
         self.left = left
         self.right = right
     }
@@ -44,14 +45,14 @@ public struct MTORelation<Left, Right>: Sendable where Left: Sendable, Right: Se
 /// ```swift
 /// role => [userA, userB]
 /// ```
-public struct OTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+public struct OTMRelation<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
     /// 左侧对象。
     public let left: Left
     /// 右侧对象集合。
-    public let right: [Right]
+    public let right: OrderedSet<Right>
     
     /// 创建一对多关系。
-    public init(left: Left, right: [Right]) {
+    public init(left: Left, right: OrderedSet<Right>) {
         self.left = left
         self.right = right
     }
@@ -62,23 +63,18 @@ public struct OTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Se
 /// ```swift
 /// [privilege] => [AnyResource(resource)]
 /// ```
-public struct MTMRelation<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
+public struct MTMRelation<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
     /// 左侧对象集合。
-    public let left: [Left]
+    public let left: OrderedSet<Left>
     /// 右侧对象集合。
-    public let right: [Right]
+    public let right: OrderedSet<Right>
     
     /// 创建多对多关系。
-    public init(left: [Left], right: [Right]) {
+    public init(left: OrderedSet<Left>, right: OrderedSet<Right>) {
         self.left = left
         self.right = right
     }
 }
-
-extension OTORelation: Hashable, Equatable where Left: Hashable, Right: Hashable {}
-extension MTORelation: Hashable, Equatable where Left: Hashable, Right: Hashable {}
-extension OTMRelation: Hashable, Equatable where Left: Hashable, Right: Hashable {}
-extension MTMRelation: Hashable, Equatable where Left: Hashable, Right: Hashable {}
 
 // MARK: - Operators
 
@@ -95,79 +91,79 @@ public func => <L, R>(left: L, right: R) -> OTORelation<L, R> {
 }
 
 /// 构建多对一关系。
-public func => <L, R>(left: [L], right: R) -> MTORelation<L, R> {
+public func => <L, R>(left: OrderedSet<L>, right: R) -> MTORelation<L, R> {
     .init(left: left, right: right)
 }
 
 /// 构建一对多关系。
-public func => <L, R>(left: L, right: [R]) -> OTMRelation<L, R> {
+public func => <L, R>(left: L, right: OrderedSet<R>) -> OTMRelation<L, R> {
     .init(left: left, right: right)
 }
 
 /// 构建多对多关系。
-public func => <L, R>(left: [L], right: [R]) -> MTMRelation<L, R> {
+public func => <L, R>(left: OrderedSet<L>, right: OrderedSet<R>) -> MTMRelation<L, R> {
     .init(left: left, right: right)
 }
 
 // MARK: - Result Builders
 
 @resultBuilder
-public struct OTOChainRelationBuilder<Left, Right, More>: Sendable where Left: Sendable, Right: Sendable, More: Sendable {
-    public static func buildBlock(_ components: [(Left, Right, More)]) -> [OTORelation<Left, OTORelation<Right, More>>] {
-        components.map { $0 => $1 => $2 }
+public struct OTOChainRelationBuilder<Left, Right, More>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable, More: Hashable & Sendable {
+    public static func buildBlock(_ components: [(Left, Right, More)]) -> OrderedSet<OTORelation<Left, OTORelation<Right, More>>> {
+        .init(components.map { $0 => $1 => $2 })
     }
     
-    public static func buildBlock(_ components: [OTORelation<Left, OTORelation<Right, More>>]) -> [OTORelation<Left, OTORelation<Right, More>>] {
+    public static func buildBlock(_ components: OrderedSet<OTORelation<Left, OTORelation<Right, More>>>) -> OrderedSet<OTORelation<Left, OTORelation<Right, More>>> {
         components
     }
     
-    public static func buildBlock(_ components: OTORelation<Left, OTORelation<Right, More>>...) -> [OTORelation<Left, OTORelation<Right, More>>] {
-        components
+    public static func buildBlock(_ components: OTORelation<Left, OTORelation<Right, More>>...) -> OrderedSet<OTORelation<Left, OTORelation<Right, More>>> {
+        .init(components)
     }
 }
 
 @resultBuilder
-public struct MTORelationBuilder<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
-    public static func buildBlock(_ components: [([Left], Right)]) -> [MTORelation<Left, Right>] {
-        components.map { $0 => $1 }
+public struct MTORelationBuilder<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
+    public static func buildBlock(_ components: [(OrderedSet<Left>, Right)]) -> OrderedSet<MTORelation<Left, Right>> {
+        .init(components.map { $0 => $1 })
     }
     
-    public static func buildBlock(_ components: [MTORelation<Left, Right>]) -> [MTORelation<Left, Right>] {
+    public static func buildBlock(_ components: OrderedSet<MTORelation<Left, Right>>) -> OrderedSet<MTORelation<Left, Right>> {
         components
     }
     
-    public static func buildBlock(_ components: MTORelation<Left, Right>...) -> [MTORelation<Left, Right>] {
-        components
+    public static func buildBlock(_ components: MTORelation<Left, Right>...) -> OrderedSet<MTORelation<Left, Right>> {
+        .init(components)
     }
 }
 
 @resultBuilder
-public struct OTMRelationBuilder<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
-    public static func buildBlock(_ components: [(Left, [Right])]) -> [OTMRelation<Left, Right>] {
-        components.map { $0 => $1 }
+public struct OTMRelationBuilder<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
+    public static func buildBlock(_ components: [(Left, OrderedSet<Right>)]) -> OrderedSet<OTMRelation<Left, Right>> {
+        .init(components.map { $0 => $1 })
     }
     
-    public static func buildBlock(_ components: [OTMRelation<Left, Right>]) -> [OTMRelation<Left, Right>] {
+    public static func buildBlock(_ components: OrderedSet<OTMRelation<Left, Right>>) -> OrderedSet<OTMRelation<Left, Right>> {
         components
     }
     
-    public static func buildBlock(_ components: OTMRelation<Left, Right>...) -> [OTMRelation<Left, Right>] {
-        components
+    public static func buildBlock(_ components: OTMRelation<Left, Right>...) -> OrderedSet<OTMRelation<Left, Right>> {
+        .init(components)
     }
 }
 
 @resultBuilder
-public struct MTMRelationBuilder<Left, Right>: Sendable where Left: Sendable, Right: Sendable {
-    public static func buildBlock(_ components: [([Left], [Right])]) -> [MTMRelation<Left, Right>] {
-        components.map { $0 => $1 }
+public struct MTMRelationBuilder<Left, Right>: Hashable, Equatable, Sendable where Left: Hashable & Sendable, Right: Hashable & Sendable {
+    public static func buildBlock(_ components: [(OrderedSet<Left>, OrderedSet<Right>)]) -> OrderedSet<MTMRelation<Left, Right>> {
+        .init(components.map { $0 => $1 })
     }
     
-    public static func buildBlock(_ components: [MTMRelation<Left, Right>]) -> [MTMRelation<Left, Right>] {
+    public static func buildBlock(_ components: OrderedSet<MTMRelation<Left, Right>>) -> OrderedSet<MTMRelation<Left, Right>> {
         components
     }
     
-    public static func buildBlock(_ components: MTMRelation<Left, Right>...) -> [MTMRelation<Left, Right>] {
-        components
+    public static func buildBlock(_ components: MTMRelation<Left, Right>...) -> OrderedSet<MTMRelation<Left, Right>> {
+        .init(components)
     }
 }
 
@@ -188,7 +184,7 @@ extension OTORelation: Loggerable where Left: Loggerable, Right: Loggerable {
     }
 }
 
-// MTO: [Left] → Right
+// MTO: OrderedSet<Left> → Right
 extension MTORelation: Loggerable where Left: Loggerable, Right: Loggerable {
     public var logDescription: String {
         let lefts = left.map { $0.logDescription }.joined(separator: ", ")
@@ -200,7 +196,7 @@ extension MTORelation: Loggerable where Left: Loggerable, Right: Loggerable {
     }
 }
 
-// OTM: Left → [Right]
+// OTM: Left → OrderedSet<Right>
 extension OTMRelation: Loggerable where Left: Loggerable, Right: Loggerable {
     public var logDescription: String {
         let rights = right.map { $0.logDescription }.joined(separator: ", ")
@@ -212,7 +208,7 @@ extension OTMRelation: Loggerable where Left: Loggerable, Right: Loggerable {
     }
 }
 
-// MTM: [Left] → [Right]
+// MTM: OrderedSet<Left> → OrderedSet<Right>
 extension MTMRelation: Loggerable where Left: Loggerable, Right: Loggerable {
     public var logDescription: String {
         let lefts = left.map { $0.logDescription }.joined(separator: ", ")

@@ -125,7 +125,7 @@ let docResource = JsonResource(
 
 // 资源落库
 let resourceDTO = try await module.resource.create(
-    resources: [docResource]
+    resources: OrderedSet<docResource>
 ).first!
 let anyResourceDTO = AnyResource(resourceDTO)!
 

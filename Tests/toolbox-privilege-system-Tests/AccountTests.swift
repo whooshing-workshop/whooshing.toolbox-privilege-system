@@ -5,6 +5,7 @@ import NIOCore
 import AsyncAlgorithms
 import Foundation
 import Query
+import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -58,7 +59,7 @@ struct AccountTesting {
         (15, "oldpass16")
     ]
     
-    nonisolated(unsafe) static var ids: [UUID] = []
+    nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
     @Test("User 创建测试", arguments: oldPasswords)
     func create(i: Int, password: String) async throws {

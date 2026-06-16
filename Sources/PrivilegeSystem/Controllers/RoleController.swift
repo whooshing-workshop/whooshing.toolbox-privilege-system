@@ -6,6 +6,7 @@ import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
 import Logging
+import OrderedCollections
 
 extension PrivilegeSystem {
     /// 角色控制器，提供对于角色（Role）的创建、更新、删除以及指派和查询功能。
@@ -56,7 +57,7 @@ extension PrivilegeSystem {
         /// ```
         public func create(
             @MTORelationBuilder<PPolicy<Role>, PRole>
-            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Role>, PRole>]
+            _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Role>, PRole>>
         ) -> EventLoopRes<Void, Errcase> {
             create(relations: content())
         }
@@ -67,7 +68,7 @@ extension PrivilegeSystem {
         /// - Returns: 一个字典，Key为角色的 ID，Value 为该角色关联的策略查询对象 `QPolicy<Role>`。
         public func createWithReturning(
             @MTORelationBuilder<PPolicy<Role>, PRole>
-            _ content: @Sendable @escaping () -> [MTORelation<PPolicy<Role>, PRole>]
+            _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Role>, PRole>>
         ) -> EventLoopRes<[UUID: [QPolicy<Role>]], Errcase> {
             createWithReturning(relations: content())
         }
@@ -83,7 +84,7 @@ extension PrivilegeSystem {
         /// ).get()
         /// ```
         public func create(
-            roles: [PRole]
+            roles:OrderedSet<PRole>
         ) -> EventLoopRes<[QRole], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建角色 操作", metadata: ["roles": .summaryData(roles)])
@@ -103,7 +104,7 @@ extension PrivilegeSystem {
         ///   - roleIds: 欲删除角色的 UUID 数组。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            roleIds: [UUID]
+            roleIds: OrderedSet<UUID>
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除角色 操作", metadata: ["roleIds": .summaryData(roleIds)])
@@ -151,18 +152,18 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.RoleController {
     func create(
-        relations: [MTORelation<PPolicy<Role>, PRole>]
+        relations:OrderedSet<MTORelation<PPolicy<Role>, PRole>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建角色（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
         return db.trans { db in
-            self.__create(on: db, roles: relations.map { $0.right }).flatMap { roles in
+            self.__create(on: db, roles: relations.mapToSet { $0.right }).flatMap { roles in
                 self.policyController.__create(
                     on: db,
                     to: Role.self,
-                    relations: relations.enumerated().map { .init(left: $0.element.left, right: roles[$0.offset].id) }
+                    relations: relations.enumeratedSet().mapToSet { .init(left: $0.element.left, right: roles[$0.offset].id) }
                 )
             }
         }.map { logger.info("创建角色（含策略） 操作成功") }
@@ -170,18 +171,18 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func createWithReturning(
-        relations: [MTORelation<PPolicy<Role>, PRole>]
+        relations:OrderedSet<MTORelation<PPolicy<Role>, PRole>>
     ) -> EventLoopRes<[UUID: [QPolicy<Role>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建角色（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
         return db.trans { db in
-            self.__create(on: db, roles: relations.map { $0.right }).flatMap { roles in
+            self.__create(on: db, roles: relations.mapToSet { $0.right }).flatMap { roles in
                 self.policyController.__createWithReturning(
                     on: db,
                     to: Role.self,
-                    relations: relations.enumerated().map { .init(left: $0.element.left, right: roles[$0.offset].id) }
+                    relations: relations.enumeratedSet().mapToSet { .init(left: $0.element.left, right: roles[$0.offset].id) }
                 )
             }
         }.map {
@@ -197,42 +198,42 @@ public extension PrivilegeSystem.RoleController {
     
     func appoint(
         @MTMRelationBuilder<UUID, UUID>
-        roleToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleToUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(roleToUser: content())
     }
     
     func appoint(
         @MTMRelationBuilder<QRole, QUser>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(relations: content())
     }
     
     func appoint(
         @MTMRelationBuilder<UUID, UUID>
-        roleToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(roleToGroup: content())
     }
     
     func appoint(
         @MTMRelationBuilder<QRole, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(relations: content())
     }
     
     func appoint(
         @MTMRelationBuilder<UUID, UUID>
-        roleToUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleToUserInGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(roleToUserInGroup: content())
     }
     
     func appoint(
         @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(relations: content())
     }
@@ -241,42 +242,42 @@ public extension PrivilegeSystem.RoleController {
     
     func dismiss(
         @MTMRelationBuilder<UUID, UUID>
-        roleFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleFromUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(roleFromUser: content())
     }
     
     func dismiss(
         @MTMRelationBuilder<QRole, QUser>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
     }
     
     func dismiss(
         @MTMRelationBuilder<UUID, UUID>
-        roleFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(roleFromGroup: content())
     }
     
     func dismiss(
         @MTMRelationBuilder<QRole, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
     }
     
     func dismiss(
         @MTMRelationBuilder<UUID, UUID>
-        roleFromUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        roleFromUserInGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(roleFromUserInGroup: content())
     }
     
     func dismiss(
         @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
     }
@@ -285,7 +286,7 @@ public extension PrivilegeSystem.RoleController {
 extension PrivilegeSystem.RoleController {
     // MARK: - 角色任命
     func appoint(
-        roleToUser relations: [MTMRelation<UUID, UUID>],
+        roleToUser relations: OrderedSet<MTMRelation<UUID, UUID>>,
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -305,7 +306,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: [MTMRelation<QRole, QUser>]
+        relations: OrderedSet<MTMRelation<QRole, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -323,7 +324,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        roleToGroup relations: [MTMRelation<UUID, UUID>]
+        roleToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -343,7 +344,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: [MTMRelation<QRole, QGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -361,7 +362,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        roleToUserInGroup relations: [MTMRelation<UUID, UUID>]
+        roleToUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -381,7 +382,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: [MTMRelation<QRole, QUserInGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -400,7 +401,7 @@ extension PrivilegeSystem.RoleController {
     
     // MARK: - 角色撤职
     func dismiss(
-        roleFromUser relations: [MTMRelation<UUID, UUID>]
+        roleFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -420,7 +421,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: [MTMRelation<QRole, QUser>]
+        relations: OrderedSet<MTMRelation<QRole, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -438,7 +439,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        roleFromGroup relations: [MTMRelation<UUID, UUID>]
+        roleFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -458,7 +459,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: [MTMRelation<QRole, QGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户组 操作", metadata: ["relations": .summaryData(relations)])
@@ -476,7 +477,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        roleFromUserInGroup relations: [MTMRelation<UUID, UUID>]
+        roleFromUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -496,7 +497,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: [MTMRelation<QRole, QUserInGroup>]
+        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -643,11 +644,11 @@ extension PrivilegeSystem.RoleController {
             
             // 安全提取所有唯一的群组 UUID 集合
             let ids = try required(throws: Errcase.arbitrateFailed, "取得群组 ID 失败", category: .internal) {
-                try gs.compactMap { try $0.requireID() }
+                try gs.map { try $0.requireID() }
             }
             
             return (gs, ids)
-        }.flatMap { groups, groupIds in
+        }.flatMap { (groups: [__SDBM.Group], groupIds: [UUID]) in
             guard !groupIds.isEmpty else {
                 return db.eventLoop.makeSucceededResult([])
             }
@@ -676,7 +677,7 @@ extension PrivilegeSystem.RoleController {
                         }.uniqued())
                         
                         return MTORelation(
-                            left: roleDTOs,
+                            left: .init(roleDTOs),
                             right: groupDTO
                         )
                     }
@@ -700,10 +701,10 @@ extension PrivilegeSystem.RoleController {
         { userGroupPivots throws(Errcase.ErrType) in
             // 安全提取所有“用户-群组”关系表的主键 ID (UUID)
             try required(throws: Errcase.userInGroupRoleQueryFailed, "用户群组 pivot 的 id 获取失败", category: .internal) {
-                let pivotIds = try userGroupPivots.compactMap { try $0.requireID() }
+                let pivotIds = try userGroupPivots.map { try $0.requireID() }
                 return (userGroupPivots, pivotIds)
             }
-        }.flatMap { userGroupPivots, pivotIds in
+        }.flatMap { (userGroupPivots: [__SDBM.UserGroupPivot], pivotIds: [UUID]) in
             guard !pivotIds.isEmpty else {
                 return db.eventLoop.makeSucceededResult([])
             }
@@ -755,7 +756,7 @@ extension PrivilegeSystem.RoleController {
                         
                         // 5.3 完美打包塞入多对一容器
                         return MTORelation(
-                            left: roleDTOs, // 该用户在这个组内被指派的多个专属角色
+                            left: .init(roleDTOs), // 该用户在这个组内被指派的多个专属角色
                             right: groupDTO // 指派来源的直接群组（一端）
                         )
                     }
@@ -904,7 +905,7 @@ extension PrivilegeSystem.RoleController {
 extension PrivilegeSystem.RoleController {
     public func __create(
         on db: PGDatabase,
-        roles: [PRole]
+        roles: OrderedSet<PRole>
     ) -> EventLoopRes<[QRole], PrivilegeSystem.Errcase> {
         __create(
             on: db,

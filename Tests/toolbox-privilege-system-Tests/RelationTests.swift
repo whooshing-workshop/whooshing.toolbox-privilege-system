@@ -8,6 +8,7 @@ import Query
 import Collections
 import Fluent
 import Policy
+import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -54,7 +55,7 @@ struct RelationsTesting {
             
             if !mappedGroups.isEmpty {
                 try await s.group.join {
-                    [user] => mappedGroups
+                    OrderedSet([user]) => OrderedSet(mappedGroups)
                 }
             }
         }
@@ -110,7 +111,7 @@ struct RelationsTesting {
             
             if !mappedGroups.isEmpty {
                 try await s.domain.assign {
-                    [domain] => mappedGroups
+                    OrderedSet([domain]) => OrderedSet(mappedGroups)
                 }
             }
         }
@@ -133,7 +134,7 @@ struct RelationsTesting {
             
             if !mappedUsers.isEmpty {
                 try await s.domain.assign {
-                    [domain] => mappedUsers
+                    OrderedSet([domain]) => OrderedSet(mappedUsers)
                 }
             }
         }
@@ -161,7 +162,7 @@ struct RelationsTesting {
             
             if !mappedUsers.isEmpty {
                 try await s.role.appoint {
-                    [role] => mappedUsers
+                    OrderedSet([role]) => OrderedSet(mappedUsers)
                 }
             }
         }
@@ -173,7 +174,7 @@ struct RelationsTesting {
             
             if !mappedGroups.isEmpty {
                 try await s.role.appoint {
-                    [role] => mappedGroups
+                    OrderedSet([role]) => OrderedSet(mappedGroups)
                 }
             }
         }
@@ -206,7 +207,7 @@ struct RelationsTesting {
                 
                 if let rel = relReq.first(where: { $0.user.id == user.id && $0.group.id == group.id }) {
                     try await s.role.appoint {
-                        [role] => [rel]
+                        OrderedSet([role]) => OrderedSet([rel])
                     }
                 }
             }

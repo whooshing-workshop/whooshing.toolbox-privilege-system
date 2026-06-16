@@ -3,19 +3,20 @@ import PgSQL
 import Foundation
 import NIOAdvanced
 import PrivilegeModule
+import OrderedCollections
 
 // MARK: - InfoSliceController Concurrency (InfoSliceController.swift)
 
 extension PrivilegeSystem.InfoSliceController {
     public func create<T>(
         for infoId: UUID,
-        extendedInfos: [PInfoSlice<T>]
+        extendedInfos: OrderedSet<PInfoSlice<T>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QInfoSlice<T>] {
         try await create(for: infoId, extendedInfos: extendedInfos).get()
     }
 
     public func delete<T: UserInfoModel>(
-        infoIds: [UUID],
+        infoIds: OrderedSet<UUID>,
         type: T.Type = T.self
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await delete(infoIds: infoIds, type: type).get()

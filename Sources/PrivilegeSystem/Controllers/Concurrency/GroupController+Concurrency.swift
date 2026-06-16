@@ -4,6 +4,7 @@ import PgSQL
 import Foundation
 import NIOAdvanced
 import PrivilegeModule
+import OrderedCollections
 
 // MARK: - GroupController Concurrency (GroupController.swift)
 
@@ -11,13 +12,13 @@ extension PrivilegeSystem.GroupController {
     // MARK: CRUD
 
     public func create(
-        groups: [PGroup]
+        groups: OrderedSet<PGroup>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
         try await create(groups: groups).get()
     }
 
     public func delete(
-        groupIds: [UUID]
+        groupIds: OrderedSet<UUID>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await delete(groupIds: groupIds).get()
     }
@@ -32,28 +33,28 @@ extension PrivilegeSystem.GroupController {
 
     public func join(
         @MTMRelationBuilder<UUID, UUID>
-        userToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        userToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(userToGroup: content).get()
     }
     
     public func join(
         @MTMRelationBuilder<QUser, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QUser, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(content).get()
     }
 
     public func kick(
         @MTMRelationBuilder<UUID, UUID>
-        userFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+        userFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await kick(userFromGroup: content).get()
     }
 
     public func kick(
         @MTMRelationBuilder<QUser, QGroup>
-        _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QUser, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await kick(content).get()
     }
@@ -61,25 +62,25 @@ extension PrivilegeSystem.GroupController {
     // MARK: Join / Kick (array variants)
 
     public func join(
-        userToGroup relations: [MTMRelation<UUID, UUID>]
+        userToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(userToGroup: relations).get()
     }
     
     public func join(
-        relations: [MTMRelation<QUser, QGroup>]
+        relations: OrderedSet<MTMRelation<QUser, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(relations: relations).get()
     }
 
     public func kick(
-        userFromGroup relations: [MTMRelation<UUID, UUID>]
+        userFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await kick(userFromGroup: relations).get()
     }
 
     public func kick(
-        relations: [MTMRelation<QUser, QGroup>]
+        relations: OrderedSet<MTMRelation<QUser, QGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await kick(relations: relations).get()
     }
@@ -95,7 +96,7 @@ extension PrivilegeSystem.GroupController {
     // MARK: Query
 
     public func query(
-        relations: [PUserInGroup],
+        relations: OrderedSet<PUserInGroup>,
         strict: Bool = true
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QUserInGroup] {
         try await query(relations: relations, strict: strict).get()

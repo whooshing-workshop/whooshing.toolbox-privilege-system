@@ -5,6 +5,7 @@ import PgSQL
 import Vapor
 import ErrorHandle
 import Logging
+import OrderedCollections
 
 package protocol Controller: AnyObject, Sendable where E.ErrType == BscError<E> {
     associatedtype E: ErrList
@@ -20,7 +21,7 @@ package extension Controller {
     
     func __create<T, G, M: PGModel>(
         on db: PGDatabase,
-        dtos: [T],
+        dtos: OrderedSet<T>,
         label: String,
         errThrowing: E,
         modelBuilder: @Sendable @escaping (T) -> Res<M, E>,
@@ -49,11 +50,11 @@ package extension Controller {
     // 若均存在，则返回空数组
     func __check<Model: __Model>(
         on db: PGDatabase,
-        ids: [UUID],
+        ids: OrderedSet<UUID>,
         for: Model.Type,
         label: String,
         errThrowing: E
-    ) -> EventLoopRes<[UUID], E> {
+    ) -> EventLoopRes<OrderedSet<UUID>, E> {
         let ids = Set(ids)
         return Model.SQLModel.query(on: db)
             .field(Model.idProperty)
@@ -73,7 +74,7 @@ package extension Controller {
             if resIds.count == ids.count {
                 return db.eventLoop.makeSucceededResult([])
             }
-            let diffs = [UUID](ids.subtracting(resIds))
+            let diffs = OrderedSet<UUID>(ids.subtracting(resIds))
             return db.eventLoop.makeSucceededResult(diffs)
         }
     }
@@ -81,7 +82,7 @@ package extension Controller {
     func __delete<T: __Model>(
         on db: PGDatabase,
         _ model: T.Type = T.self,
-        ids: [UUID],
+        ids: OrderedSet<UUID>,
         allSatisfy: Bool = true,
         label: String,
         errThrowing: E,
@@ -183,7 +184,7 @@ package extension Controller {
     
     func __manyToMany<Left, Right, PivotT>(
         on db: PGDatabase,
-        _ relations: [MTMRelation<Left, Right>],
+        _ relations: OrderedSet<MTMRelation<Left, Right>>,
         action: ManyToManyAction,
         label: String,
         errThrowing: E,
@@ -193,13 +194,13 @@ package extension Controller {
               PivotT.PrimaryModel == Left.SQLModel,
               PivotT.SecondaryModel == Right.SQLModel
     {
-        var idRelations: [MTMRelation<UUID, UUID>] = []
-        var lCheckList: [UUID] = []
-        var rCheckList: [UUID] = []
+        var idRelations: OrderedSet<MTMRelation<UUID, UUID>> = []
+        var lCheckList: OrderedSet<UUID> = []
+        var rCheckList: OrderedSet<UUID> = []
         
         for relation in relations {
-            var lIds: [UUID] = []
-            var rIds: [UUID] = []
+            var lIds: OrderedSet<UUID> = []
+            var rIds: OrderedSet<UUID> = []
             
             for l in relation.left {
                 lIds.append(l.id)
@@ -229,7 +230,7 @@ package extension Controller {
     
     func __manyToManyReversed<Left, Right, PivotT>(
         on db: PGDatabase,
-        _ relations: [MTMRelation<Left, Right>],
+        _ relations: OrderedSet<MTMRelation<Left, Right>>,
         action: ManyToManyAction,
         label: String,
         errThrowing: E,
@@ -239,13 +240,13 @@ package extension Controller {
               PivotT.SecondaryModel == Left.SQLModel,
               PivotT.PrimaryModel == Right.SQLModel
     {
-        var idRelations: [MTMRelation<UUID, UUID>] = []
-        var lCheckList: [UUID] = []
-        var rCheckList: [UUID] = []
+        var idRelations: OrderedSet<MTMRelation<UUID, UUID>> = []
+        var lCheckList: OrderedSet<UUID> = []
+        var rCheckList: OrderedSet<UUID> = []
         
         for relation in relations {
-            var lIds: [UUID] = []
-            var rIds: [UUID] = []
+            var lIds: OrderedSet<UUID> = []
+            var rIds: OrderedSet<UUID> = []
             
             for l in relation.left {
                 lIds.append(l.id)
@@ -275,7 +276,7 @@ package extension Controller {
     
     func __manyToMany<Left, Right, PivotT>(
         on db: PGDatabase,
-        _ relations: [MTMRelation<UUID, UUID>],
+        _ relations: OrderedSet<MTMRelation<UUID, UUID>>,
         type: (Left.Type, Right.Type),
         action: ManyToManyAction,
         label: String,
@@ -302,7 +303,7 @@ package extension Controller {
     
     func __manyToManyReversed<Left, Right, PivotT>(
         on db: PGDatabase,
-        _ relations: [MTMRelation<UUID, UUID>],
+        _ relations: OrderedSet<MTMRelation<UUID, UUID>>,
         type: (Left.Type, Right.Type),
         action: ManyToManyAction,
         label: String,
@@ -329,7 +330,7 @@ package extension Controller {
     
     private func __manyToManyBase<Left, Right, PivotT>(
         on db: PGDatabase,
-        _ relations: [MTMRelation<UUID, UUID>],
+        _ relations: OrderedSet<MTMRelation<UUID, UUID>>,
         type: (Left.Type, Right.Type),
         action: ManyToManyAction,
         label: String,
@@ -345,13 +346,13 @@ package extension Controller {
         db.trans { db in
             var check: EventLoopRes<Void, E> = db.eventLoop.makeSucceededVoidResult()
             
-            let lList: [UUID]
-            let rList: [UUID]
+            let lList: OrderedSet<UUID>
+            let rList: OrderedSet<UUID>
             
             switch checkList {
             case .all:
-                lList = reversed ? relations.flatMap { $0.right } : relations.flatMap { $0.left }
-                rList = reversed ? relations.flatMap { $0.left } : relations.flatMap { $0.right }
+                lList = reversed ? .init(relations.flatMap { $0.right }) : .init(relations.flatMap { $0.left })
+                rList = reversed ? .init(relations.flatMap { $0.left }) : .init(relations.flatMap { $0.right })
             case .list(let left, let right):
                 lList = reversed ? right : left
                 rList = reversed ? left : right
@@ -441,10 +442,10 @@ package enum ManyToManyAction {
 
 package enum ManytoManyCheckList {
     case all
-    case list(left: [UUID], right: [UUID])
+    case list(left: OrderedSet<UUID>, right: OrderedSet<UUID>)
 }
 
-package func SortingSQL(uuids: [UUID]) -> String {
+package func SortingSQL(uuids: OrderedSet<UUID>) -> String {
     let sqlArrayContent = uuids
         .map { "'\($0.uuidString)'" }
         .joined(separator: ", ")

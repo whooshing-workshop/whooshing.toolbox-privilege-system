@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import Fluent
 import ResourceMacros
+import OrderedCollections
 @preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
@@ -141,18 +142,18 @@ struct ResourceTests {
         
         let alias1 = AliasResource(name: "shortcut_to_report", targetId: UUID())
         
-        let fileDtos = [
+        let fileDtos: OrderedSet<FileResource> = [
             file1,
             file2,
             file3
         ]
         
-        let dirDtos = [
+        let dirDtos: OrderedSet<DirectoryResource> = [
             dir1,
             dir2
         ]
         
-        let aliasDtos = [
+        let aliasDtos: OrderedSet<AliasResource> = [
             alias1
         ]
         
@@ -226,7 +227,7 @@ struct ResourceTests {
         
         // 测试 Attach
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
 
         let privilegeModel = try await privilegeDTO.model(from: m.db).get()
@@ -237,7 +238,7 @@ struct ResourceTests {
         
         // 测试 Detach
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         let siblingsAfter = try await privilegeModel.$resources.get(reload: true, on: m.db)
@@ -265,7 +266,7 @@ struct ResourceTests {
         
         // 先 Attach
         try await m.privilege.attach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
         // 1. 测试 privilege(attachedTo:) -> T: Resource
@@ -298,7 +299,7 @@ struct ResourceTests {
         
         // 清理
         try await m.privilege.detach {
-            [privilegeDTO] => [anyResourceDTO]
+            OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         try await m.privilege.delete(policy: privilegeDTO)
         try await m.privilege.delete(policy: otherPrivilegeDTO)

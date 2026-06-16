@@ -8,20 +8,21 @@ import Query
 import Collections
 import Fluent
 import Policy
+import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
 @Suite("批量模型关系 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct MultiRelationsTesting {
     
-//    @Test("开始测试")
-//    func start() async throws {
-//        while await TestingShared.testStage != .multiRelations {
-//            try await Task.sleep(nanoseconds: 250_000_000)
-//        }
-//    }
+    @Test("开始测试")
+    func start() async throws {
+        while await TestingShared.testStage != .multiRelations {
+            try await Task.sleep(nanoseconds: 250_000_000)
+        }
+    }
     
-    static let roles: [PRole] = [
+    static let roles: OrderedSet<PRole> = [
         .init(id: UUID(), name: "MRT-ROLE1", description: "批量测试角色 1"),
         .init(id: UUID(), name: "MRT-ROLE2", description: "批量测试角色 2"),
         .init(id: UUID(), name: "MRT-ROLE3", description: "批量测试角色 3"),
@@ -33,7 +34,7 @@ struct MultiRelationsTesting {
         .init(id: UUID(), name: "MRT-ROLE9", description: "批量测试角色 9")
     ]
     
-    static let groups: [PGroup] = [
+    static let groups: OrderedSet<PGroup> = [
         .init(id: UUID(), name: "MRT-GROUP1", description: "批量测试群组 1"),
         .init(id: UUID(), name: "MRT-GROUP2", description: "批量测试群组 2"),
         .init(id: UUID(), name: "MRT-GROUP3", description: "批量测试群组 3"),
@@ -65,8 +66,8 @@ struct MultiRelationsTesting {
     func normalRelations() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let roleIds = [Self.roles[0].id!, Self.roles[1].id!, Self.roles[2].id!]
-        let groupIds = [Self.groups[0].id!, Self.groups[1].id!, Self.groups[2].id!]
+        let roleIds: OrderedSet<UUID> = [Self.roles[0].id!, Self.roles[1].id!, Self.roles[2].id!]
+        let groupIds: OrderedSet<UUID> = [Self.groups[0].id!, Self.groups[1].id!, Self.groups[2].id!]
         
         try await s.role.appoint(roleToGroup: {
             roleIds => groupIds
@@ -91,18 +92,12 @@ struct MultiRelationsTesting {
         #expect(count == 0)
     }
     
-    // 正常多对多创建
-    // 使用重复的 id 进行创建
-    // 使用不存在的 id 进行创建
-    // 使用未存储的 UUID 创建
-    // 删除不存在的关系
-    
     @Test("使用重复的 id 进行创建")
     func duplicatedIdRelations() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let roleIds = [Self.roles[0].id!, Self.roles[0].id!, Self.roles[0].id!]
-        let groupIds = [Self.groups[0].id!, Self.groups[0].id!, Self.groups[0].id!]
+        let roleIds: OrderedSet<UUID> = [Self.roles[0].id!, Self.roles[0].id!, Self.roles[0].id!]
+        let groupIds: OrderedSet<UUID> = [Self.groups[0].id!, Self.groups[0].id!, Self.groups[0].id!]
         
         try await s.role.appoint(roleToGroup: {
             roleIds => groupIds
@@ -127,16 +122,192 @@ struct MultiRelationsTesting {
         #expect(count == 0)
     }
     
+    @Test("使用不存在的 id 进行创建")
+    func invalidIdRelations() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let roleIds: OrderedSet<UUID> = [Self.roles[0].id!, Self.roles[1].id!, UUID()]
+        let groupIds: OrderedSet<UUID> = [Self.groups[0].id!, Self.groups[1].id!, Self.groups[2].id!]
+        
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.appoint(roleToGroup: {
+                roleIds => groupIds
+            })
+        }
+        
+        var count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        #expect(count == 0)
+        
+        let rs: OrderedSet<UUID> = .init(roleIds.dropLast())
+        let gs: OrderedSet<UUID> = groupIds.appending(contentsOf: [UUID()])
+        
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.appoint(roleToGroup: {
+                rs => gs
+            })
+        }
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ rs)
+            .filter(\.groupId ~~ gs)
+            .count()
+        
+        #expect(count == 0)
+        
+        let gs2: OrderedSet<UUID> = OrderedSet<UUID>(gs.dropLast()).appending(contentsOf: [Self.groups[3].id!, Self.groups[4].id!])
+        
+        try await s.role.appoint(roleToGroup: {
+            rs => gs2 // 0, 1 => 0, 1, 2, 3, 4
+        })
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ rs)
+            .filter(\.groupId ~~ gs2)
+            .count()
+        
+        #expect(count == 2 * 5)
+    }
+    
+    @Test("删除不存在的关系")
+    func invalidRelationDelete() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let roleIds: OrderedSet<UUID> = [Self.roles[0].id!, Self.roles[1].id!]
+        let groupIds: OrderedSet<UUID> = [Self.groups[0].id!, Self.groups[1].id!, Self.groups[2].id!, Self.groups[3].id!, Self.groups[4].id!]
+        
+        try await s.role.dismiss(roleFromGroup: {
+            OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[0].id!])
+        })
+        
+        var count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        // -- 01 02 03 04
+        // 10 11 12 13 14
+        #expect(count == 2 * 5 - 1)
+        
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.dismiss(roleFromGroup: {
+                roleIds => groupIds
+            })
+        }
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        #expect(count == 2 * 5 - 1)
+        
+        // 00 01 02 03 04
+        // 10 11 12 13 14
+        try await s.role.appoint(roleToGroup: {
+            OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[0].id!])
+        })
+        
+        // 0 => 0 1 2
+        // -- -- -- 03 04
+        // 10 11 12 13 14
+        try await s.role.dismiss(roleFromGroup: {
+            OrderedSet(roleIds.dropLast()) => OrderedSet(groupIds.dropLast(2))
+        })
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        // 1 => 3, 4
+        // -- -- -- 03 04
+        // 10 11 12 13 14
+        #expect(count == 2 * 5 - 1 * 3)
+        
+        // -- -- -- 03 04
+        // 10 11 -- -- 14
+        try await s.role.dismiss(roleFromGroup: {
+            OrderedSet([Self.roles[1].id!]) => OrderedSet([Self.groups[2].id!, Self.groups[3].id!])
+        })
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        // -- -- -- 03 04
+        // 10 11 -- -- 14
+        #expect(count == 2 * 5 - 1 * 3 - 1 * 2)
+        
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.dismiss(roleFromGroup: {
+                OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[3].id!, Self.groups[4].id!])
+                OrderedSet([Self.roles[1].id!]) => OrderedSet([Self.groups[0].id!, Self.groups[1].id!, Self.groups[2].id!])
+                OrderedSet([Self.roles[2].id!]) => OrderedSet([Self.groups[1].id!])
+            })
+        }
+        
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.dismiss(roleFromGroup: {
+                OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[3].id!])
+                OrderedSet([Self.roles[0].id!, Self.roles[1].id!]) => OrderedSet([Self.groups[3].id!])
+            })
+        }
+        
+        // -- -- -- 03 04   // -- -- -- -- 04
+        // 10 11 -- -- 14   // 10 11 -- -- 14
+        try await s.role.dismiss(roleFromGroup: {
+            OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[3].id!])
+            OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[3].id!])
+        })
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        #expect(count == 2 * 5 - 1 * 3 - 1 * 2 - 1)
+        
+        // -- -- -- -- 04   // -- -- -- -- --
+        // 10 11 -- -- 14   // -- -- -- -- 14
+        try await s.role.dismiss(roleFromGroup: {
+            OrderedSet([Self.roles[0].id!]) => OrderedSet<UUID>([])
+            OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[4].id!])
+            OrderedSet<UUID>([]) => OrderedSet([Self.groups[4].id!])
+            OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[4].id!])
+            OrderedSet([Self.roles[1].id!]) => OrderedSet([Self.groups[0].id!])
+            OrderedSet([Self.roles[1].id!]) => OrderedSet([Self.groups[0].id!, Self.groups[1].id!])
+        })
+        
+        count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        #expect(count == 1)
+    }
+    
     @Test("销毁 Roles 与 Groups")
     func deletes() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let roleIds = Self.roles.map { $0.id! }
-        let groupIds = Self.groups.map { $0.id! }
+        let roleIds = Self.roles.mapToSet { $0.id! }
+        let groupIds = Self.groups.mapToSet { $0.id! }
         try await s.role.delete(roleIds: roleIds)
         try await s.group.delete(groupIds: groupIds)
         
-        #expect(try await s.query(QRole.self).filter(\.id ~~ roleIds).first() == nil)
-        #expect(try await s.query(QGroup.self).filter(\.id ~~ groupIds).first() == nil)
+        #expect(try await s.query(QRole.self).filter(\.id ~~ roleIds).count() == 0)
+        #expect(try await s.query(QGroup.self).filter(\.id ~~ groupIds).count() == 0)
+        
+        let count = try await s.query(RoleTGroup.self)
+            .filter(\.roleId ~~ roleIds)
+            .filter(\.groupId ~~ groupIds)
+            .count()
+        
+        #expect(count == 0)
     }
     
     @MainActor
