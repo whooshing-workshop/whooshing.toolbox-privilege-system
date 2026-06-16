@@ -180,7 +180,7 @@ struct GroupTesting {
         let pathsBefore = try await __SDBM.Group.Path.query(on: s.db).count()
 
         // move: child => parent（可选类型）
-        try await s.group.move(child => Optional(parent))
+        try await s.group.move(child.id => parent.id)
 
         // group_paths 应新增 1 条路径（parent.ancestor → child.descendant，depth=1）
         let pathsAfter = try await __SDBM.Group.Path.query(on: s.db).count()
@@ -202,7 +202,7 @@ struct GroupTesting {
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[7] }))  // MarketingTeam
 
-        try await s.group.move(child => Optional(parent))
+        try await s.group.move(child.id => parent.id)
 
         let direct = try await __SDBM.Group.Path.query(on: s.db)
             .filter(\.$ancestor.$id == GT.ids[0])
@@ -219,7 +219,7 @@ struct GroupTesting {
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[1] }))  // OperatorGroup
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[8] }))  // HumanResources
 
-        try await s.group.move(child => Optional(parent))
+        try await s.group.move(child.id => parent.id)
 
         let direct = try await __SDBM.Group.Path.query(on: s.db)
             .filter(\.$ancestor.$id == GT.ids[1])
@@ -271,7 +271,7 @@ struct GroupTesting {
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
 
-        try await s.group.move(child => Optional(parent))
+        try await s.group.move(child.id => parent.id)
 
         // group_paths 应出现：
         //   0 → 9 depth=2（AdministratorGroup 到 QualityAssurance）
@@ -391,7 +391,7 @@ struct GroupTesting {
         // 尝试把 AdministratorGroup 移入其子 SalesTeam → 应报错
         var didThrow = false
         do {
-            try await s.group.move(parent => Optional(child))
+            try await s.group.move(parent.id => child.id)
         } catch {
             // 任何错误都意味着 move 被正确拦截
             didThrow = true
@@ -413,7 +413,7 @@ struct GroupTesting {
 
         var didThrow = false
         do {
-            try await s.group.move(group => Optional(group))
+            try await s.group.move(group.id => group.id)
         } catch {
             didThrow = true
         }
@@ -441,8 +441,8 @@ struct GroupTesting {
         let tempChild2 = try #require(allGroups.first(where: { $0.name == "TempChild2" }))
 
         // 建立层级：tempChild1, tempChild2 → tempParent
-        try await s.group.move(tempChild1 => Optional(tempParent))
-        try await s.group.move(tempChild2 => Optional(tempParent))
+        try await s.group.move(tempChild1.id => tempParent.id)
+        try await s.group.move(tempChild2.id => tempParent.id)
 
         // 此时 group_paths 中应有：
         //   TempParent→TempParent (0), TempParent→TempChild1 (1), TempParent→TempChild2 (1)

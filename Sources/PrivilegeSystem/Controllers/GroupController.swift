@@ -361,10 +361,75 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relation: `OTORelation` 描述从源群组到目标群组（可以为 nil）的一对一关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func move(
+        _ relation: OTORelation<UUID, UUID?>
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 群组移动 操作", metadata: ["relation": .summaryData(relation)])
+        logger.info("群组移动操作详情", metadata: ["relation": .data(relation)])
+        
+        let ids = relation.right == nil ? [relation.left] : [relation.left, relation.right!]
+        
+        return db.trans { db in
+            __SDBM.Group.query(on: db)
+                .filter(\.$id ~~ ids)
+                .all()
+                .withError(PrivilegeSystem.Errcase.groupMoveFailed, "从数据库中检索 Group 失败", category: .internal)
+                .flatMapThrowing
+            { models throws(PrivilegeSystem.Errcase.ErrType) in
+                guard models.count == ids.count else {
+                    throw PrivilegeSystem.Errcase.groupMoveFailed.d("提供的 Group UUID 有不存在项", category: .external).metadata(["model_ids_in_db": .data(models.map { $0.id })])
+                }
+                let left = try readGroup(id: relation.left, from: models)
+                let right = models.count == 2 ? try readGroup(id: relation.right!, from: models) : nil
+                return (left, right)
+            }.flatMapResult { left, right in
+                QGroup.make(from: left).flatMap { l in
+                    guard let r = right else { return .success((l, nil)) }
+                    return QGroup.make(from: r).map { r in (l, r) }
+                }
+            }.flatMap { left, right in
+                self.__move(db: db, .init(left: left, right: right))
+            }
+        }.map { logger.info("群组移动 操作成功") }
+        .logIfFail(logger: logger)
+        
+        @Sendable
+        func readGroup(id: UUID, from arr: [__SDBM.Group]) throws(PrivilegeSystem.Errcase.ErrType) -> __SDBM.Group {
+            let left = try required(throws: PrivilegeSystem.Errcase.groupMoveFailed, "Group ID 读取失败", category: .internal) {
+                try arr.first { try $0.requireID() == id }
+            }
+            guard let l = left else {
+                throw PrivilegeSystem.Errcase.groupMoveFailed.d("数据库读取到的 ID 不匹配", category: .internal).metadata(["not_found": .stringConvertible(id)])
+            }
+            return l
+        }
+    }
+    
+    /// 移动整个群组（含子群组）到新的父群组节点下。
+    ///
+    /// 底层将自动完成闭包表记录的重建及死锁检查。
+    ///
+    /// - Parameter relation: `OTORelation` 描述从源群组到目标群组（可以为 nil）的一对一关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func move(
         _ relation: OTORelation<QGroup, QGroup?>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 群组移动 操作", metadata: ["groupId": .stringConvertible(relation.left.id), "targetParentId": .string(relation.right.map { $0.id.uuidString } ?? "nil")])
+        logger.info("执行 群组移动 操作", metadata: ["relation": .summaryData(relation)])
+        logger.info("群组移动操作详情", metadata: ["relation": .data(relation)])
+        
+        return __move(db: db, relation)
+            .map { logger.info("群组移动 操作成功") }
+            .logIfFail(logger: logger)
+    }
+}
+
+extension PrivilegeSystem.GroupController {
+    func __move(
+        db: PGDatabase,
+        _ relation: OTORelation<QGroup, QGroup?>
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        
         return db.trans { tdb in
             let oldDelete: EventLoopRes<[__SDBM.Group.Path], PrivilegeSystem.Errcase> = __SDBM.Group.Path.query(on: tdb)
                 .filter(\.$ancestor.$id == relation.left.id)
@@ -382,7 +447,7 @@ public extension PrivilegeSystem.GroupController {
                 }
 
                 return relation.left.model(from: tdb)
-                    .errCast(PrivilegeSystem.Errcase.groupMoveFailed, "获取主表失败")
+                    .errCast(PrivilegeSystem.Errcase.groupMoveFailed, "获取主表失败", category: .internal)
                     .flatMap
                 { leftModel in
                     // 更新主表 groups
@@ -430,8 +495,6 @@ public extension PrivilegeSystem.GroupController {
                 }
             }
         }
-        .map { logger.info("群组移动 操作成功") }
-        .logIfFail(logger: logger)
     }
 }
 

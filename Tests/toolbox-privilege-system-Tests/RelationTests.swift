@@ -81,7 +81,7 @@ struct RelationsTesting {
             for childIdx in childIndices {
                 let child = groups[childIdx]
                 // move: child => Optional(parent) 建立父子关系
-                try await s.group.move(child => Optional(parent))
+                try await s.group.move(child.id => parent.id)
             }
         }
 

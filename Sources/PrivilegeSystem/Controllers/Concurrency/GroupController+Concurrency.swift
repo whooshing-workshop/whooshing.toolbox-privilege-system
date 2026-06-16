@@ -88,6 +88,12 @@ extension PrivilegeSystem.GroupController {
     // MARK: Move
 
     public func move(
+        _ relation: OTORelation<UUID, UUID?>
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await move(relation).get()
+    }
+    
+    public func move(
         _ relation: OTORelation<QGroup, QGroup?>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await move(relation).get()
