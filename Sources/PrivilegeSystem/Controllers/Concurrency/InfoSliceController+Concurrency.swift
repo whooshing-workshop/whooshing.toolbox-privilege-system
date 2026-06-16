@@ -16,10 +16,9 @@ extension PrivilegeSystem.InfoSliceController {
 
     public func delete<T: UserInfoModel>(
         infoIds: [UUID],
-        allSatisfy: Bool = true,
         type: T.Type = T.self
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await delete(infoIds: infoIds, allSatisfy: allSatisfy, type: type).get()
+        try await delete(infoIds: infoIds, type: type).get()
     }
 
     public func update<T>(

@@ -22,7 +22,7 @@ public struct PGroup: DTO.Prepare {
     
     public init(
         id: UUID? = nil,
-        under parent: QGroup? = nil,
+        under parent: QGroup?,
         name: String,
         description: String? = nil
     ) {

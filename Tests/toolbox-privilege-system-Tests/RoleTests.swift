@@ -284,9 +284,11 @@ struct RoleTesting {
             .first()
         #expect(found == nil, "被删除的角色不应被查询到")
         
-        // 忳照 allSatisfy = false 不抛异常
+        // 删除不存在的关系，应当报错
         let nonExistentId = UUID()
-        try await s.role.delete(roleIds: [nonExistentId], allSatisfy: false)
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.delete(roleIds: [nonExistentId])
+        }
     }
 
     @Test("清理验证：所有角色均至少有 1 条策略")
@@ -304,6 +306,6 @@ struct RoleTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .domain
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

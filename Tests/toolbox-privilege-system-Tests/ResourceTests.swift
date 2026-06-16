@@ -425,6 +425,6 @@ struct ResourceTests {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .userInfo
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

@@ -59,12 +59,10 @@ extension PrivilegeSystem {
         /// 通过提供泛型类型和 ID，可删除该类型的具体切片条目。
         /// - Parameters:
         ///   - infoIds: 要删除切片条目的 UUID。
-        ///   - allSatisfy: 如果为 `true`，所有的 ID 都必须找到对应记录并删除，否则操作回滚并抛错。
         ///   - type: 显式指示你要删除哪个维度的扩展模型（如 `DTO.EmailInfo`）。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete<T: UserInfoModel>(
             infoIds: [UUID],
-            allSatisfy: Bool = true,
             type: T.Type = T.self
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
@@ -72,9 +70,8 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
             return __delete(
                 on: db,
-                __SDBM.User.Info.Extended<T.Model>.self,
+                QInfoSlice<T>.self,
                 ids: infoIds,
-                allSatisfy: allSatisfy,
                 label: "用户扩展信息",
                 errThrowing: .userExtendedInfoDeleteFailed,
                 fieldBuilder: { $0.field(\.$id) },

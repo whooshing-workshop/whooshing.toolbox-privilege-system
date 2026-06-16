@@ -78,20 +78,17 @@ public extension PrivilegeModule {
         ///
         /// - Parameters:
         ///   - ids: 资源的 UUID 列表。
-        ///   - allSatisfy: 是否必须要求所有提供的 ID 均成功删除。若为 `true`，只要其中有一个 ID 不存在，操作就会被回滚并抛出异常。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            ids: [UUID],
-            allSatisfy: Bool = true
+            ids: [UUID]
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除资源 操作", metadata: ["ids": .summaryData(ids)])
             logger.debug("操作参数", metadata: ["ids": .data(ids)])
             return __delete(
                 on: db,
-                __SDBM.AnyResource.self,
+                AnyResource.self,
                 ids: ids,
-                allSatisfy: allSatisfy,
                 label: "资源",
                 errThrowing: .resourceDeleteFailed,
                 fieldBuilder: { $0.field(\.$id) },

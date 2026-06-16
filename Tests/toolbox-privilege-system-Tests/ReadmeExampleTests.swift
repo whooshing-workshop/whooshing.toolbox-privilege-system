@@ -132,6 +132,6 @@ struct ReadmeExampleTests {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .end
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

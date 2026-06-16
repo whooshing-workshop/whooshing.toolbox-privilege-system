@@ -161,6 +161,6 @@ struct AccountTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .group
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

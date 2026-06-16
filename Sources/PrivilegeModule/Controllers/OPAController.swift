@@ -155,12 +155,22 @@ package extension OPAController {
         // 删除失败意味着其仍在 OPA 中
         return db.trans { db in
             filterBuilder(db)
-                .delete()
-                .withError(errThrowing, "从\(policyType)数据库中删除\(label)失败", category: .internal)
+                .count()
+                .withError(errThrowing, "从 \(policyType) 数据库中查询要删除的数据 \(label) 失败", category: .internal)
                 .flatMap
-            {
+            { count in
+                guard count > 0 else {
+                    return db.eventLoop.makeFailedResult(errThrowing, "\(policyType) 数据库中不存在要删除的数据", category: .external)
+                }
+                
+                return db.eventLoop.makeSucceededVoidResult()
+            }.flatMap {
+                filterBuilder(db)
+                    .delete()
+                    .withError(errThrowing, "从 \(policyType) 数据库中删除 \(label) 失败", category: .internal)
+            }.flatMap {
                 self.opa.policy.delete(of: path)
-                    .errCast(errThrowing, "从 OPA 删除\(policyType)类型的\(label)失败", category: .internal)
+                    .errCast(errThrowing, "从 OPA 删除 \(policyType) 类型的 \(label) 失败", category: .internal)
                     .map { _ in }
             }
         }

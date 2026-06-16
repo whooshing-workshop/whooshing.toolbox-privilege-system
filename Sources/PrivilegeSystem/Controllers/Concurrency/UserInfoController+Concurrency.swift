@@ -15,10 +15,9 @@ extension PrivilegeSystem.UserInfoController {
     }
 
     public func delete(
-        infoIds: [UUID],
-        allSatisfy: Bool = true
+        infoIds: [UUID]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await delete(infoIds: infoIds, allSatisfy: allSatisfy).get()
+        try await delete(infoIds: infoIds).get()
     }
 
     public func update(

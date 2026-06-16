@@ -32,9 +32,8 @@ extension PrivilegeSystem.DomainController {
 
     public func delete(
         domainIds: [UUID],
-        allSatisfy: Bool = true
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await delete(domainIds: domainIds, allSatisfy: allSatisfy).get()
+        try await delete(domainIds: domainIds).get()
     }
 
     public func update(

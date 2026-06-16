@@ -101,20 +101,17 @@ extension PrivilegeSystem {
         ///
         /// - Parameters:
         ///   - roleIds: 欲删除角色的 UUID 数组。
-        ///   - allSatisfy: 是否必须满足全部删除（若传入的 ID 存在未删除的部分则报错回滚）。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            roleIds: [UUID],
-            allSatisfy: Bool = true
+            roleIds: [UUID]
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除角色 操作", metadata: ["roleIds": .summaryData(roleIds)])
             logger.debug("操作参数", metadata: ["roleIds": .data(roleIds)])
             return __delete(
                 on: db,
-                __SDBM.Role.self,
+                QRole.self,
                 ids: roleIds,
-                allSatisfy: allSatisfy,
                 label: "角色",
                 errThrowing: .roleDeleteFailed,
                 fieldBuilder: { $0.field(\.$id) },
@@ -609,14 +606,14 @@ extension PrivilegeSystem.RoleController {
         for user: QUser
     ) -> EventLoopRes<[QRole], Errcase> {
         user.model(from: db)
-            .errCast(Errcase.userRoleFetchFailed, "取得 User 主模型失败", category: .internal)
+            .errCast(Errcase.userRoleQueryFailed, "取得 User 主模型失败", category: .internal)
             .flatMap
         { userModel in
             userModel.$roles.get(on: db)
-                .withError(Errcase.userRoleFetchFailed, "从数据库查询失败", category: .internal)
+                .withError(Errcase.userRoleQueryFailed, "从数据库查询失败", category: .internal)
                 .flatMapThrowing
             { userRoles throws(Errcase.ErrType) in
-                try required(throws: Errcase.userRoleFetchFailed, "转为 DTO 失败", category: .internal) {
+                try required(throws: Errcase.userRoleQueryFailed, "转为 DTO 失败", category: .internal) {
                     try userRoles.map { try QRole.make(from: $0).get() }
                 }
             }
@@ -670,7 +667,7 @@ extension PrivilegeSystem.RoleController {
                     // 遍历聚合后的字典，组装成多对一结构的 MTORelation 数组
                     return try groupedPivots.map { groupId, currentGroupPivots in
                         guard let associatedGroup = groups.first(where: { $0.id == groupId }) else {
-                            throw Errcase.arbitrationDataCollectFailed.d("群组数据映射丢失", category: .internal)
+                            throw Errcase.groupRoleQueryFailed.d("群组数据映射丢失", category: .internal)
                         }
                         
                         let groupDTO = try QGroup.make(from: associatedGroup).get()
@@ -719,7 +716,7 @@ extension PrivilegeSystem.RoleController {
                 .withError(Errcase.userInGroupRoleQueryFailed, "从数据库取得 pivot 失败", category: .internal)
                 .flatMapThrowing
             { pivots throws(Errcase.ErrType) in
-                try required(throws: Errcase.groupRoleQueryFailed, "转为 DTO 失败", category: .internal) {
+                try required(throws: Errcase.userInGroupRoleQueryFailed, "转为 DTO 失败", category: .internal) {
                     
                     // 3. 第三步：为了做到 O(1) 的内存装配性能，先把第一步查到的物理实体织成一张“查找表”
                     // Key 是 UserGroupPivot 的 ID，Value 是完整的 __SDBM.Group 实体
@@ -734,7 +731,7 @@ extension PrivilegeSystem.RoleController {
                     let groupedByGroup = try Dictionary(grouping: pivots, by: { pivot -> UUID in
                         // 凭借当前记录的 user_in_group_id，从刚才的查找表里瞬间拿到 group.id
                         guard let g = pivotToGroupLookup[pivot.$secondaryModel.id], let gId = g.id else {
-                            throw Errcase.arbitrationDataCollectFailed.d("组内角色纽带关系映射丢失", category: .internal)
+                            throw Errcase.userInGroupRoleQueryFailed.d("组内角色纽带关系映射丢失", category: .internal)
                         }
                         return gId
                     })
@@ -746,7 +743,7 @@ extension PrivilegeSystem.RoleController {
                         // 由于同一个 groupId 对应的 __SDBM.Group 是一样的，我们直接拿 currentPivots 第一个对应的组即可
                         let samplePivotId = currentPivots[0].$secondaryModel.id
                         guard let associatedGroup = pivotToGroupLookup[samplePivotId] else {
-                            throw Errcase.arbitrationDataCollectFailed.d("群组实体检索失败", category: .internal)
+                            throw Errcase.userInGroupRoleQueryFailed.d("群组实体检索失败", category: .internal)
                         }
                         
                         let groupDTO = try QGroup.make(from: associatedGroup).get()

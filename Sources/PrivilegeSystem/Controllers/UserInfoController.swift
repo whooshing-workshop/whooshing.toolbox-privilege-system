@@ -55,7 +55,6 @@ extension PrivilegeSystem {
         ///
         /// - Parameters:
         ///   - infoIds: 要删除的信息记录 UUID 列表。
-        ///   - allSatisfy: 是否必须所有指定的 ID 都存在且删除成功。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
             infoIds: [UUID],
@@ -66,9 +65,8 @@ extension PrivilegeSystem {
             logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
             return __delete(
                 on: db,
-                __SDBM.User.Info.self,
+                QUserInfo.self,
                 ids: infoIds,
-                allSatisfy: allSatisfy,
                 label: "用户信息",
                 errThrowing: .userInfoDeleteFailed,
                 fieldBuilder: { $0.field(\.$id) },

@@ -18,7 +18,7 @@ typealias PModule = PrivilegeModule<ResourceList>
 
 struct TestingShared {
 
-    enum TestStage {
+    enum TestStage: Int {
         case hashable
         case account
         case group
@@ -27,6 +27,7 @@ struct TestingShared {
         case resource
         case userInfo
         case relations
+        case multiRelations
         case query
         case policy
         case advancePolicy

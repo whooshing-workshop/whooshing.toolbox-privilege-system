@@ -422,13 +422,15 @@ struct UserinfoTesting {
             .first()
         #expect(found == nil, "被删除的切片不应被查询到")
         
-        // allSatisfy = false 不抛异常
-        try await s.infoSlice.delete(infoIds: [UUID()], allSatisfy: false, type: Address.self)
+        // 删除不存在的内容，应当报错
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.infoSlice.delete(infoIds: [UUID()], type: Address.self)
+        }
     }
     
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .relations
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

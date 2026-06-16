@@ -33,10 +33,9 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func delete(
-        roleIds: [UUID],
-        allSatisfy: Bool = true
+        roleIds: [UUID]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await delete(roleIds: roleIds, allSatisfy: allSatisfy).get()
+        try await delete(roleIds: roleIds).get()
     }
 
     public func update(

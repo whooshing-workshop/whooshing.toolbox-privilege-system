@@ -17,10 +17,9 @@ public extension PrivilegeModule.ResourceController {
     }
 
     func delete(
-        ids: [UUID],
-        allSatisfy: Bool = true
+        ids: [UUID]
     ) async throws(PrivilegeModule.Errcase.ErrType) {
-        try await delete(ids: ids, allSatisfy: allSatisfy).get()
+        try await delete(ids: ids).get()
     }
 
     func update<T: Resource>(

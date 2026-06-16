@@ -362,6 +362,6 @@ struct RelationsTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .query
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

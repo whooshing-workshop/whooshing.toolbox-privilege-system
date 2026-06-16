@@ -117,8 +117,7 @@ extension PrivilegeSystem {
         ///   - allSatisfy: 是否必须满足全部找到并删除。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            groupIds: [UUID],
-            allSatisfy: Bool = true
+            groupIds: [UUID]
         ) -> EventLoopRes<Void, Errcase> {
             // 删除组，必须先清理 group_paths 表中的内接链接
             // 再从 groups 主表中批量删除表
@@ -128,16 +127,19 @@ extension PrivilegeSystem {
             logger.info("执行 删除用户组 操作", metadata: ["groupIds": .summaryData(groupIds)])
             logger.debug("操作参数", metadata: ["groupIds": .data(groupIds)])
             return db.trans { db in
-                self.__satisfyCheck(
+                self.__check(
                     on: db,
-                    __SDBM.Group.self,
                     ids: groupIds,
-                    allSatisfy: allSatisfy,
+                    for: QGroup.self,
                     label: "用户群组",
-                    errThrowing: .groupDeleteFailed,
-                    fieldBuilder: { $0.field(\.$id) },
-                    filterBuilder: { $0.filter(\.$id ~~ groupIds) }
-                ).flatMap {
+                    errThrowing: .groupDeleteFailed
+                ).flatMap { diffs in
+                    guard diffs.count == 0 else {
+                        return db.eventLoop.makeFailedResult(Errcase.groupDeleteFailed, "记录删除失败，预期记录未在数据库中找到", metadata: ["invalid": .data(diffs)])
+                    }
+                    
+                    return db.eventLoop.makeSucceededVoidResult()
+                }.flatMap {
                     EventLoopRes<Set<UUID>, Errcase>.whenAllSucceed(
                         groupIds.map { id in
                             // 先去内接表中，揪出当前组及其所有下属子孙的 ID 集合
@@ -152,22 +154,22 @@ extension PrivilegeSystem {
                             }
                         },
                         on: db.eventLoop
-                    ).flatMap { ids in
-                        let targetIDs = ids.reduce(into: Set<UUID>()) { $0.formUnion($1) }
-                        
-                        // 批量抹去内接表中所有以这些组为“后代”的路径
-                        return __SDBM.Group.Path.query(on: db)
-                            .filter(\.$descendant.$id ~~ targetIDs)
+                    )
+                }.flatMap { ids in
+                    let targetIDs = ids.reduce(into: Set<UUID>()) { $0.formUnion($1) }
+                    
+                    // 批量抹去内接表中所有以这些组为“后代”的路径
+                    return __SDBM.Group.Path.query(on: db)
+                        .filter(\.$descendant.$id ~~ targetIDs)
+                        .delete()
+                        .withError(Errcase.groupDeleteFailed, "内接表级联删除路径失败", category: .internal)
+                        .flatMap
+                    {
+                        // 最后在主表中把这些组真正物理切除（因为有外键，需要先删内接表再删主表）
+                        __SDBM.Group.query(on: db)
+                            .filter(\.$id ~~ targetIDs)
                             .delete()
-                            .withError(Errcase.groupDeleteFailed, "内接表级联删除路径失败", category: .internal)
-                            .flatMap
-                        {
-                            // 最后在主表中把这些组真正物理切除（因为有外键，需要先删内接表再删主表）
-                            __SDBM.Group.query(on: db)
-                                .filter(\.$id ~~ targetIDs)
-                                .delete()
-                                .withError(Errcase.groupDeleteFailed, "群组主表删除失败", category: .internal)
-                        }
+                            .withError(Errcase.groupDeleteFailed, "群组主表删除失败", category: .internal)
                     }
                 }
             }.logIfFail(logger: logger)

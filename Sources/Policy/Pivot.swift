@@ -2,7 +2,7 @@ import PgSQL
 import Fluent
 import Foundation
 
-public protocol PivotType: Hashable, Sendable {
+public protocol PivotType: Hashable, Sendable where PrimaryModel.IDValue == UUID, SecondaryModel.IDValue == UUID {
     associatedtype PrimaryModel: PGModel
     associatedtype SecondaryModel: PGModel
     

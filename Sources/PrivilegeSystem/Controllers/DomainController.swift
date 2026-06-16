@@ -97,20 +97,17 @@ extension PrivilegeSystem {
         ///
         /// - Parameters:
         ///   - domainIds: 欲删除域的 UUID 数组。
-        ///   - allSatisfy: 是否必须满足全部删除（若传入的 ID 存在未删除的部分则报错回滚）。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            domainIds: [UUID],
-            allSatisfy: Bool = true
+            domainIds: [UUID]
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除域权限 操作", metadata: ["domainIds": .summaryData(domainIds)])
             logger.debug("操作参数", metadata: ["domainIds": .data(domainIds)])
             return __delete(
                 on: db,
-                __SDBM.Domain.self,
+                QDomain.self,
                 ids: domainIds,
-                allSatisfy: allSatisfy,
                 label: "域权限",
                 errThrowing: .domainDeleteFailed,
                 fieldBuilder: { $0.field(\.$id) },

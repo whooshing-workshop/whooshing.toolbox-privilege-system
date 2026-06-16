@@ -17,10 +17,9 @@ extension PrivilegeSystem.GroupController {
     }
 
     public func delete(
-        groupIds: [UUID],
-        allSatisfy: Bool = true
+        groupIds: [UUID]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await delete(groupIds: groupIds, allSatisfy: allSatisfy).get()
+        try await delete(groupIds: groupIds).get()
     }
 
     public func update(

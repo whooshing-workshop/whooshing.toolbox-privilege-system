@@ -260,9 +260,11 @@ struct DomainTesting {
             .first()
         #expect(found == nil, "被删除的域不应被查询到")
         
-        // allSatisfy = false 应不抛异常
+        // 删除不存在内容，应当报错
         let nonExistentId = UUID()
-        try await s.domain.delete(domainIds: [nonExistentId], allSatisfy: false)
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.domain.delete(domainIds: [nonExistentId])
+        }
     }
 
     @Test("清理验证：所有域均至少有 1 条策略")
@@ -280,6 +282,6 @@ struct DomainTesting {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .resource
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

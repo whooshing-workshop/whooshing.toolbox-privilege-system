@@ -329,6 +329,6 @@ struct HashableTests {
     @MainActor
     @Test("测试结束")
     func end() async throws {
-        TestingShared.testStage = .account
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

@@ -2,18 +2,18 @@ import PgSQL
 import Policy
 import Fluent
 
-extension __SDBM {
+public extension __SDBM {
     typealias UserRolePivot = Pivot<Pivots.UserRole>
 }
 
-extension __SDBM.Pivots {
+public extension __SDBM.Pivots {
     struct UserRole: PivotType {
-        typealias PrimaryModel = __SDBM.User
-        typealias SecondaryModel = __SDBM.Role
+        public typealias PrimaryModel = __SDBM.User
+        public typealias SecondaryModel = __SDBM.Role
         
-        static let foreignPrimaryName = "user"
-        static let foreignSecondaryName = "role"
+        public static let foreignPrimaryName = "user"
+        public static let foreignSecondaryName = "role"
         
-        static let foreignSecondaryType = DatabaseSchema.DataType.uuid
+        public static let foreignSecondaryType = DatabaseSchema.DataType.uuid
     }
 }

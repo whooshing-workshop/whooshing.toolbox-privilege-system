@@ -45,62 +45,78 @@ package extension Controller {
         }
     }
     
-    func __satisfyCheck<T: PGModel>(
+    // 提供 ids 进行数据库检查，如果有 id 不存在，则会返回不存在的 id
+    // 若均存在，则返回空数组
+    func __check<Model: __Model>(
         on db: PGDatabase,
-        _ model: T.Type = T.self,
-        ids: [T.IDValue],
-        allSatisfy: Bool = true,
+        ids: [UUID],
+        for: Model.Type,
         label: String,
-        errThrowing: E,
-        fieldBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>,
-        filterBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>
-    ) -> EventLoopRes<Void, E> {
-        let r: EventLoopRes<Void, E>
-        
-        if allSatisfy {
-            r = filterBuilder(fieldBuilder(T.query(on: db)))
-                .all()
-                .withError(errThrowing, "查询\(label) ID 时出错", category: .internal)
-                .flatMapThrowing
-            { info throws(E.ErrType) in
-                guard info.count == ids.count else {
-                    throw errThrowing.d("所提供的\(label) ID 中有不存在项", category: .external)
-                }
+        errThrowing: E
+    ) -> EventLoopRes<[UUID], E> {
+        let ids = Set(ids)
+        return Model.SQLModel.query(on: db)
+            .field(Model.idProperty)
+            .filter(Model.idProperty ~~ ids)
+            .all()
+            .withError(errThrowing, "\(label) 按 id 检查记录失败", category: .internal)
+            .flatMapThrowing
+        { models throws(E.ErrType) in
+            try required(throws: errThrowing, "\(label) 从查询结果取得模型 Id 失败", category: .internal) {
+                try Set(
+                    models.map { model in
+                        try model.requireID()
+                    }
+                )
             }
-        } else {
-            r = db.eventLoop.makeSucceededVoidResult()
+        }.flatMap { resIds in
+            if resIds.count == ids.count {
+                return db.eventLoop.makeSucceededResult([])
+            }
+            let diffs = [UUID](ids.subtracting(resIds))
+            return db.eventLoop.makeSucceededResult(diffs)
         }
-        
-        return r
     }
     
-    func __delete<T: PGModel>(
+    func __delete<T: __Model>(
         on db: PGDatabase,
         _ model: T.Type = T.self,
-        ids: [T.IDValue],
+        ids: [UUID],
         allSatisfy: Bool = true,
         label: String,
         errThrowing: E,
-        fieldBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>,
-        filterBuilder: @Sendable @escaping (QueryBuilder<T>) -> QueryBuilder<T>
+        fieldBuilder: @Sendable @escaping (QueryBuilder<T.SQLModel>) -> QueryBuilder<T.SQLModel>,
+        filterBuilder: @Sendable @escaping (QueryBuilder<T.SQLModel>) -> QueryBuilder<T.SQLModel>
     ) -> EventLoopRes<Void, E> {
         guard !ids.isEmpty else {
             return db.eventLoop.makeSucceededVoidResult()
         }
         
         return db.trans { db in
-            self.__satisfyCheck(
-                on: db,
-                ids: ids,
-                allSatisfy: allSatisfy,
-                label: label,
-                errThrowing: errThrowing,
-                fieldBuilder: fieldBuilder,
-                filterBuilder: filterBuilder
-            ).flatMap {
-                filterBuilder(T.query(on: db))
+            let r: EventLoopRes<Void, E>
+            
+            if allSatisfy {
+                r = self.__check(
+                    on: db,
+                    ids: ids,
+                    for: model,
+                    label: label,
+                    errThrowing: errThrowing
+                ).flatMap { diffs in
+                    guard diffs.count == 0 else {
+                        return db.eventLoop.makeFailedResult(errThrowing, "\(label) 记录删除失败，预期记录未在数据库中找到", metadata: ["invalid": .data(diffs)])
+                    }
+                    
+                    return db.eventLoop.makeSucceededVoidResult()
+                }
+            } else {
+                r = db.eventLoop.makeSucceededVoidResult()
+            }
+            
+            return r.flatMap {
+                filterBuilder(T.SQLModel.query(on: db))
                     .delete()
-                    .withError(errThrowing, category: .internal)
+                    .withError(errThrowing, "根据 \(label) id 从数据库删除记录失败", category: .internal)
             }
         }
     }
@@ -160,39 +176,6 @@ package extension Controller {
                     try dtoBuilder(d).get()
                 }
             }
-        }
-    }
-    
-    // 提供 ids 进行数据库检查，如果有 id 不存在，则会返回不存在的 id
-    // 若均存在，则返回空数组
-    func __check<Model: __Model>(
-        on db: PGDatabase,
-        ids: [UUID],
-        for: Model.Type,
-        label: String,
-        errThrowing: E
-    ) -> EventLoopRes<[UUID], E> {
-        let ids = Set(ids)
-        return Model.SQLModel.query(on: db)
-            .field(Model.idProperty)
-            .filter(Model.idProperty ~~ ids)
-            .all()
-            .withError(errThrowing, "\(label) 按 id 检查记录失败", category: .internal)
-            .flatMapThrowing
-        { models throws(E.ErrType) in
-            try required(throws: errThrowing, "\(label) 从查询结果取得模型 Id 失败", category: .internal) {
-                try Set(
-                    models.map { model in
-                        try model.requireID()
-                    }
-                )
-            }
-        }.flatMap { resIds in
-            if resIds.count == ids.count {
-                return db.eventLoop.makeSucceededResult([])
-            }
-            let diffs = [UUID](ids.subtracting(resIds))
-            return db.eventLoop.makeSucceededResult(diffs)
         }
     }
     
