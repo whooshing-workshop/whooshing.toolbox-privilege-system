@@ -53,6 +53,16 @@ public extension DTO {
     }
 }
 
+package protocol __Model: DTO.Model
+where
+    SQLModel.IDValue == UUID
+{
+    associatedtype SQLModel: PGModel
+    var id: UUID { get }
+    var __m: SQLModel? { get }
+    static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { get }
+}
+
 package protocol __Prepare: DTO.Prepare
 where
     SQLModel.IDValue == UUID,
@@ -62,16 +72,12 @@ where
     associatedtype SQLModel: PGModel
 }
 
-package protocol __Queried: DTO.Queried
+package protocol __Queried: __Model, DTO.Queried
 where
-    SQLModel.IDValue == UUID,
     PrepareModel: __Prepare,
     PrepareModel.SQLModel == SQLModel
 {
     associatedtype Failure: ErrList
-    associatedtype SQLModel: PGModel
-    var __m: SQLModel? { get }
-    static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { get }
     static func make(from model: SQLModel) -> Res<Self, Failure>
 }
 

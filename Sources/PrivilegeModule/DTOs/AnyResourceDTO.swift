@@ -105,6 +105,8 @@ public struct AnyResource: DTO.Model {
     }
 }
 
+extension AnyResource: __Model {}
+
 public extension AnyResource {
     static func make(from model: __SDBM.AnyResource) -> Res<Self, Errcase> {
         .init(throws: .resourceDTOFailed, category: .internal) {

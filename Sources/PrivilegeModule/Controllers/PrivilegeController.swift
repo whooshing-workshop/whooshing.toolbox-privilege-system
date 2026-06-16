@@ -259,6 +259,20 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter content: `@MTMRelationBuilder` 提供用于建立关系的 DSL 闭包。
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
+        @MTMRelationBuilder<UUID, UUID>
+        privilegeToResource content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, S.Errcase> {
+        attach(privilegeToResource: content())
+    }
+    
+    /// 将多个权限绑定至多个资源（使用链式构造器模式）。
+    ///
+    /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
+    /// 只有在成功执行绑定后，基于对应资源的请求鉴权才会经过这些权限策略的验证。
+    ///
+    /// - Parameter content: `@MTMRelationBuilder` 提供用于建立关系的 DSL 闭包。
+    /// - Returns: `EventLoopRes<Void, S.Errcase>`
+    func attach(
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
         _ content: @Sendable @escaping () -> [MTMRelation<S.QPrivilege, AnyResource>]
     ) -> EventLoopRes<Void, S.Errcase> {
@@ -266,6 +280,20 @@ public extension PrivilegeModule.PrivilegeController {
     }
     
     // MARK: - 资源权限解除
+    
+    /// 将多个权限从多个资源上解绑（使用链式构造器模式）。
+    ///
+    /// 解除权限动作会使特定资源不再受到指定的策略脚本约束。
+    /// 解除绑定时，权限对象必须通过数据库拉取，但被操作的资源可直接实例化 `AnyResource` 包装体并赋 UUID。
+    ///
+    /// - Parameter content: `@MTMRelationBuilder` 提供用于解绑关系的 DSL 闭包。
+    /// - Returns: `EventLoopRes<Void, S.Errcase>`
+    func detach(
+        @MTMRelationBuilder<UUID, UUID>
+        privilegeFromResource content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, S.Errcase>  {
+        detach(privilegeFromResource: content())
+    }
     
     /// 将多个权限从多个资源上解绑（使用链式构造器模式）。
     ///
@@ -288,6 +316,27 @@ public extension PrivilegeModule.PrivilegeController {
     /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
     /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
+        privilegeToResource relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, S.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 资源权限附加资源 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("资源权限附加资源关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (S.QPrivilege.self, AnyResource.self),
+            action: .attach,
+            label: "资源权限与资源",
+            errThrowing: .privilegeAttachResourceFailed,
+            pivotType: PM.__DBM.PrivilegeAnyResource.self,
+            checkList: .all
+        )
+        .map { _ in logger.info("资源权限附加资源 操作成功") }
+    }
+    
+    /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
+    /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
+    func attach(
         relations: [MTMRelation<S.QPrivilege, AnyResource>]
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
@@ -299,14 +348,33 @@ public extension PrivilegeModule.PrivilegeController {
             action: .attach,
             label: "资源权限与资源",
             errThrowing: .privilegeAttachResourceFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$resources },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: PM.__DBM.PrivilegeAnyResource.self
         )
         .map { _ in logger.info("资源权限附加资源 操作成功") }
     }
     
     // MARK: - 资源权限解除
+    
+    /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
+    /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
+    func detach(
+        privilegeFromResource relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, S.Errcase>  {
+        let logger = getActionLogger()
+        logger.info("执行 资源权限解除资源 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("资源权限解除资源关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (S.QPrivilege.self, AnyResource.self),
+            action: .detach,
+            label: "资源权限与资源",
+            errThrowing: .privilegeDetachResourceFailed,
+            pivotType: PM.__DBM.PrivilegeAnyResource.self,
+            checkList: .all
+        )
+        .map { _ in logger.info("资源权限解除资源 操作成功") }
+    }
     
     /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
     /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
@@ -322,9 +390,7 @@ public extension PrivilegeModule.PrivilegeController {
             action: .detach,
             label: "资源权限与资源",
             errThrowing: .privilegeDetachResourceFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$resources },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: PM.__DBM.PrivilegeAnyResource.self
         )
         .map { _ in logger.info("资源权限解除资源 操作成功") }
     }

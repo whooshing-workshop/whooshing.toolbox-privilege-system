@@ -5,6 +5,7 @@ import ErrorHandle
 import NIOAdvanced
 import OPA
 import ResourceMacros
+import Foundation
 
 // MARK: - PrivilegeController Concurrency (PrivilegeController.swift)
 
@@ -38,10 +39,24 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: Attach / Detach (result-builder overloads)
 
     func attach(
+        @MTMRelationBuilder<UUID, UUID>
+        privilegeToResource content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(S.Errcase.ErrType) {
+        try await attach(privilegeToResource: content).get()
+    }
+    
+    func attach(
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
         _ content: @Sendable @escaping () -> [MTMRelation<S.QPrivilege, AnyResource>]
     ) async throws(S.Errcase.ErrType) {
         try await attach(content).get()
+    }
+    
+    func detach(
+        @MTMRelationBuilder<UUID, UUID>
+        privilegeFromResource content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(S.Errcase.ErrType) {
+        try await detach(privilegeFromResource: content).get()
     }
 
     func detach(
@@ -54,11 +69,23 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: Attach / Detach (array overloads)
 
     func attach(
+        privilegeToResource relations: [MTMRelation<UUID, UUID>]
+    ) async throws(S.Errcase.ErrType) {
+        try await attach(privilegeToResource: relations).get()
+    }
+    
+    func attach(
         relations: [MTMRelation<S.QPrivilege, AnyResource>]
     ) async throws(S.Errcase.ErrType) {
         try await attach(relations: relations).get()
     }
 
+    func detach(
+        privilegeFromResource relations: [MTMRelation<UUID, UUID>]
+    ) async throws(S.Errcase.ErrType) {
+        try await detach(privilegeFromResource: relations).get()
+    }
+    
     func detach(
         relations: [MTMRelation<S.QPrivilege, AnyResource>]
     ) async throws(S.Errcase.ErrType) {

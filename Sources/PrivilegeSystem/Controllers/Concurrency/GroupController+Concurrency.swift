@@ -32,10 +32,24 @@ extension PrivilegeSystem.GroupController {
     // MARK: Join / Kick (result-builder variants)
 
     public func join(
+        @MTMRelationBuilder<UUID, UUID>
+        userToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await join(userToGroup: content).get()
+    }
+    
+    public func join(
         @MTMRelationBuilder<QUser, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(content).get()
+    }
+
+    public func kick(
+        @MTMRelationBuilder<UUID, UUID>
+        userFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await kick(userFromGroup: content).get()
     }
 
     public func kick(
@@ -48,9 +62,21 @@ extension PrivilegeSystem.GroupController {
     // MARK: Join / Kick (array variants)
 
     public func join(
+        userToGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await join(userToGroup: relations).get()
+    }
+    
+    public func join(
         relations: [MTMRelation<QUser, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await join(relations: relations).get()
+    }
+
+    public func kick(
+        userFromGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await kick(userFromGroup: relations).get()
     }
 
     public func kick(

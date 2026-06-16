@@ -62,6 +62,13 @@ extension PrivilegeSystem.RoleController {
     // MARK: Appoint (result-builder variants)
 
     public func appoint(
+        @MTMRelationBuilder<UUID, UUID>
+        roleToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await appoint(roleToUser: content).get()
+    }
+    
+    public func appoint(
         @MTMRelationBuilder<QRole, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
@@ -69,12 +76,26 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func appoint(
+        @MTMRelationBuilder<UUID, UUID>
+        roleToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await appoint(roleToGroup: content).get()
+    }
+    
+    public func appoint(
         @MTMRelationBuilder<QRole, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
 
+    public func appoint(
+        @MTMRelationBuilder<UUID, UUID>
+        roleToUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await appoint(roleToUserInGroup: content).get()
+    }
+    
     public func appoint(
         @MTMRelationBuilder<QRole, QUserInGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
@@ -85,6 +106,13 @@ extension PrivilegeSystem.RoleController {
     // MARK: Dismiss (result-builder variants)
 
     public func dismiss(
+        @MTMRelationBuilder<UUID, UUID>
+        roleFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await dismiss(roleFromUser: content).get()
+    }
+    
+    public func dismiss(
         @MTMRelationBuilder<QRole, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
@@ -92,12 +120,26 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func dismiss(
+        @MTMRelationBuilder<UUID, UUID>
+        roleFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await dismiss(roleFromGroup: content).get()
+    }
+    
+    public func dismiss(
         @MTMRelationBuilder<QRole, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
 
+    public func dismiss(
+        @MTMRelationBuilder<UUID, UUID>
+        roleFromUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await dismiss(roleFromUserInGroup: content).get()
+    }
+    
     public func dismiss(
         @MTMRelationBuilder<QRole, QUserInGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
@@ -108,11 +150,23 @@ extension PrivilegeSystem.RoleController {
     // MARK: Appoint (array variants)
 
     public func appoint(
+        roleToUser relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await appoint(roleToUser: relations).get()
+    }
+    
+    public func appoint(
         relations: [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
+    public func appoint(
+        roleToGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await appoint(roleToGroup: relations).get()
+    }
+    
     public func appoint(
         relations: [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
@@ -120,13 +174,13 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func appoint(
-        relations: [MTMRelation<QRole, QUserInGroup>]
+        roleToUserInGroup relations: [MTMRelation<UUID, UUID>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await appoint(relations: relations).get()
+        try await appoint(roleToUserInGroup: relations).get()
     }
-
+    
     public func appoint(
-        relations: [MTMRelation<QRole, PUserInGroup>]
+        relations: [MTMRelation<QRole, QUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
@@ -134,11 +188,23 @@ extension PrivilegeSystem.RoleController {
     // MARK: Dismiss (array variants)
 
     public func dismiss(
+        roleFromUser relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await dismiss(roleFromUser: relations).get()
+    }
+    
+    public func dismiss(
         relations: [MTMRelation<QRole, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
+    public func dismiss(
+        roleFromGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await dismiss(roleFromGroup: relations).get()
+    }
+    
     public func dismiss(
         relations: [MTMRelation<QRole, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
@@ -146,17 +212,17 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func dismiss(
+        roleFromUserInGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await dismiss(roleFromUserInGroup: relations).get()
+    }
+    
+    public func dismiss(
         relations: [MTMRelation<QRole, QUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
-
-    public func dismiss(
-        relations: [MTMRelation<QRole, PUserInGroup>]
-    ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await dismiss(relations: relations).get()
-    }
-
+    
     // MARK: Roles query
 
     public func roles(

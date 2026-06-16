@@ -205,10 +205,38 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        assign(domainToUser: content())
+    }
+    
+    /// 将一个或多个域指派给一个或多个用户。
+    ///
+    /// 此操作支持闭包式的多对多 DSL 构建方式：
+    /// ```swift
+    /// try await system.domain.assign {
+    ///     [domainA, domainB] => [user1, user2]
+    /// }.get()
+    /// ```
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func assign(
         @MTMRelationBuilder<QDomain, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         assign(relations: content())
+    }
+    
+    /// 将一个或多个域指派给一个或多个群组。
+    ///
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func assign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        assign(domainToGroup: content())
     }
     
     /// 将一个或多个域指派给一个或多个群组。
@@ -229,10 +257,32 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        unassign(domainFromUser: content())
+    }
+    
+    /// 撤销特定用户对某些域的指派关系。
+    ///
+    /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func unassign(
         @MTMRelationBuilder<QDomain, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         unassign(relations: content())
+    }
+    
+    /// 撤销特定群组对某些域的指派关系。
+    ///
+    /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func unassign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        unassign(domainFromGroup: content())
     }
     
     /// 撤销特定群组对某些域的指派关系。
@@ -251,22 +301,60 @@ public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限指派
     
     func assign(
+        domainToUser relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限指派用户关系详情", metadata: ["detail": .data(relations)])
+        return __manyToManyReversed(
+            on: db,
+            relations,
+            type: (QDomain.self, QUser.self),
+            action: .attach,
+            label: "域权限与用户",
+            errThrowing: .domainAssignUserFailed,
+            pivotType: __SDBM.Pivots.UserDomain.self,
+            checkList: .all
+        )
+        .map { logger.info("域权限指派用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func assign(
         relations: [MTMRelation<QDomain, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限指派用户关系详情", metadata: ["detail": .data(relations)])
-        return __manyToMany(
+        return __manyToManyReversed(
             on: db,
             relations,
             action: .attach,
             label: "域权限与用户",
             errThrowing: .domainAssignUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$users },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.UserDomain.self
         )
         .map { logger.info("域权限指派用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func assign(
+        domainToGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 域权限指派用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限指派用户组关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QDomain.self, QGroup.self),
+            action: .attach,
+            label: "域权限与用户组",
+            errThrowing: .domainAssignGroupFailed,
+            pivotType: __SDBM.Pivots.DomainGroup.self,
+            checkList: .all
+        )
+        .map { logger.info("域权限指派用户组 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -282,9 +370,7 @@ public extension PrivilegeSystem.DomainController {
             action: .attach,
             label: "域权限与用户组",
             errThrowing: .domainAssignGroupFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$groups },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.DomainGroup.self
         )
         .map { logger.info("域权限指派用户组 操作成功") }
         .logIfFail(logger: logger)
@@ -293,22 +379,60 @@ public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限撤销
     
     func unassign(
+        domainFromUser relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限撤销用户关系详情", metadata: ["detail": .data(relations)])
+        return __manyToManyReversed(
+            on: db,
+            relations,
+            type: (QDomain.self, QUser.self),
+            action: .detach,
+            label: "域权限与用户",
+            errThrowing: .domainUnassignUserFailed,
+            pivotType: __SDBM.Pivots.UserDomain.self,
+            checkList: .all
+        )
+        .map { logger.info("域权限撤销用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func unassign(
         relations: [MTMRelation<QDomain, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限撤销用户关系详情", metadata: ["detail": .data(relations)])
-        return __manyToMany(
+        return __manyToManyReversed(
             on: db,
             relations,
             action: .detach,
             label: "域权限与用户",
             errThrowing: .domainUnassignUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$users },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.UserDomain.self
         )
         .map { logger.info("域权限撤销用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func unassign(
+        domainFromGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("域权限撤销用户组关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QDomain.self, QGroup.self),
+            action: .detach,
+            label: "域权限与用户组",
+            errThrowing: .domainUnassignGroupFailed,
+            pivotType: __SDBM.Pivots.DomainGroup.self,
+            checkList: .all
+        )
+        .map { logger.info("域权限撤销用户组 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -324,9 +448,7 @@ public extension PrivilegeSystem.DomainController {
             action: .detach,
             label: "域权限与用户组",
             errThrowing: .domainUnassignGroupFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$groups },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.DomainGroup.self
         )
         .map { logger.info("域权限撤销用户组 操作成功") }
         .logIfFail(logger: logger)

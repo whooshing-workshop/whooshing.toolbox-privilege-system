@@ -163,84 +163,290 @@ package extension Controller {
         }
     }
     
-    func __manyToMany<Left, Right, LM, RM, TM>(
+    // 提供 ids 进行数据库检查，如果有 id 不存在，则会返回不存在的 id
+    // 若均存在，则返回空数组
+    func __check<Model: __Model>(
         on db: PGDatabase,
-        _ relations: [MTMRelation<Left, Right>],
-        action: ManyToManyAction,
+        ids: [UUID],
+        for: Model.Type,
         label: String,
-        errThrowing: E,
-        mainModelBuilder: @Sendable @escaping (PGDatabase, Left) -> EventLoopRes<LM, DTO.Errcase>,
-        siblingBuilder: @Sendable @escaping (LM) -> SiblingsProperty<LM, RM, TM>,
-        modelsBuilder: @Sendable @escaping (PGDatabase, [Right]) -> [EventLoopRes<RM, DTO.Errcase>],
-    ) -> EventLoopRes<Void, E>
-        where LM: PGModel, RM: PGModel, E.ErrType == BscError<E>
-    {
-        db.trans { db in
-            relations.flatMap { relation in
-                relation.left.flatMap { l in
-                    modelsBuilder(db, relation.right).map { rsAction in
-                        rsAction
-                            .errCast(errThrowing, "取得从属模型时失败", category: .internal)
-                            .flatMap
-                        { rs in
-                            mainModelBuilder(db, l)
-                                .errCast(errThrowing, "取得主模型时失败", category: .internal)
-                                .flatMap
-                            { model in
-                                let builder = siblingBuilder(model)
-                                switch action {
-                                case .attach:
-                                    return builder
-                                        .attach(rs, on: db)
-                                        .withError(errThrowing, "将\(label)关系插入中间表时失败", category: .internal)
-                                case .detach:
-                                    return builder
-                                        .detach(rs, on: db)
-                                        .withError(errThrowing, "将\(label)关系中间表移除时失败", category: .internal)
-                                }
-                            }
-                        }
+        errThrowing: E
+    ) -> EventLoopRes<[UUID], E> {
+        let ids = Set(ids)
+        return Model.SQLModel.query(on: db)
+            .field(Model.idProperty)
+            .filter(Model.idProperty ~~ ids)
+            .all()
+            .withError(errThrowing, "\(label) 按 id 检查记录失败", category: .internal)
+            .flatMapThrowing
+        { models throws(E.ErrType) in
+            try required(throws: errThrowing, "\(label) 从查询结果取得模型 Id 失败", category: .internal) {
+                try Set(
+                    models.map { model in
+                        try model.requireID()
                     }
-                }
-            }.flatten(on: db.eventLoop) // .flatten(on:) 会等待数组里所有的 Future 都变成成功状态，只要有一个失败，整体就会失败
+                )
+            }
+        }.flatMap { resIds in
+            if resIds.count == ids.count {
+                return db.eventLoop.makeSucceededResult([])
+            }
+            let diffs = [UUID](ids.subtracting(resIds))
+            return db.eventLoop.makeSucceededResult(diffs)
         }
     }
     
-    func __manyToMany<Left, Right, LM, RM, TM>(
+    // MARK: - Many to Many
+    
+    func __manyToMany<Left, Right, PivotT>(
         on db: PGDatabase,
         _ relations: [MTMRelation<Left, Right>],
         action: ManyToManyAction,
         label: String,
         errThrowing: E,
-        mainModelBuilder: @Sendable @escaping (PGDatabase, Left) -> EventLoopRes<LM, DTO.Errcase>,
-        siblingBuilder: @Sendable @escaping (LM) -> SiblingsProperty<LM, RM, TM>,
-        modelsFlattenBuilder: @Sendable @escaping (PGDatabase, [Right]) -> EventLoopRes<[RM], E>,
+        pivotType: PivotT.Type
     ) -> EventLoopRes<Void, E>
-        where LM: PGModel, RM: PGModel, E.ErrType == BscError<E>
+        where Left: __Model, Right: __Model, PivotT: PivotType,
+              PivotT.PrimaryModel == Left.SQLModel,
+              PivotT.SecondaryModel == Right.SQLModel
+    {
+        var idRelations: [MTMRelation<UUID, UUID>] = []
+        var lCheckList: [UUID] = []
+        var rCheckList: [UUID] = []
+        
+        for relation in relations {
+            var lIds: [UUID] = []
+            var rIds: [UUID] = []
+            
+            for l in relation.left {
+                lIds.append(l.id)
+                if l.__m == nil { lCheckList.append(l.id) }
+            }
+            
+            for r in relation.right {
+                rIds.append(r.id)
+                if r.__m == nil { rCheckList.append(r.id) }
+            }
+            
+            idRelations.append(.init(left: lIds, right: rIds))
+        }
+        
+        return __manyToManyBase(
+            on: db,
+            idRelations,
+            type: (Left.self, Right.self),
+            action: action,
+            label: label,
+            errThrowing: errThrowing,
+            pivotType: pivotType,
+            checkList: .list(left: lCheckList, right: rCheckList),
+            reversed: false
+        )
+    }
+    
+    func __manyToManyReversed<Left, Right, PivotT>(
+        on db: PGDatabase,
+        _ relations: [MTMRelation<Left, Right>],
+        action: ManyToManyAction,
+        label: String,
+        errThrowing: E,
+        pivotType: PivotT.Type
+    ) -> EventLoopRes<Void, E>
+        where Left: __Model, Right: __Model, PivotT: PivotType,
+              PivotT.SecondaryModel == Left.SQLModel,
+              PivotT.PrimaryModel == Right.SQLModel
+    {
+        var idRelations: [MTMRelation<UUID, UUID>] = []
+        var lCheckList: [UUID] = []
+        var rCheckList: [UUID] = []
+        
+        for relation in relations {
+            var lIds: [UUID] = []
+            var rIds: [UUID] = []
+            
+            for l in relation.left {
+                lIds.append(l.id)
+                if l.__m == nil { lCheckList.append(l.id) }
+            }
+            
+            for r in relation.right {
+                rIds.append(r.id)
+                if r.__m == nil { rCheckList.append(r.id) }
+            }
+            
+            idRelations.append(.init(left: lIds, right: rIds))
+        }
+        
+        return __manyToManyBase(
+            on: db,
+            idRelations,
+            type: (Right.self, Left.self),
+            action: action,
+            label: label,
+            errThrowing: errThrowing,
+            pivotType: pivotType,
+            checkList: .list(left: lCheckList, right: rCheckList),
+            reversed: true
+        )
+    }
+    
+    func __manyToMany<Left, Right, PivotT>(
+        on db: PGDatabase,
+        _ relations: [MTMRelation<UUID, UUID>],
+        type: (Left.Type, Right.Type),
+        action: ManyToManyAction,
+        label: String,
+        errThrowing: E,
+        pivotType: PivotT.Type,
+        checkList: ManytoManyCheckList
+    ) -> EventLoopRes<Void, E>
+        where Left: __Model, Right: __Model, PivotT: PivotType,
+              PivotT.PrimaryModel == Left.SQLModel,
+              PivotT.SecondaryModel == Right.SQLModel
+    {
+        __manyToManyBase(
+            on: db,
+            relations,
+            type: type,
+            action: action,
+            label: label,
+            errThrowing: errThrowing,
+            pivotType: pivotType,
+            checkList: checkList,
+            reversed: false
+        )
+    }
+    
+    func __manyToManyReversed<Left, Right, PivotT>(
+        on db: PGDatabase,
+        _ relations: [MTMRelation<UUID, UUID>],
+        type: (Left.Type, Right.Type),
+        action: ManyToManyAction,
+        label: String,
+        errThrowing: E,
+        pivotType: PivotT.Type,
+        checkList: ManytoManyCheckList // right, left 顺序，与 relations 顺序相同
+    ) -> EventLoopRes<Void, E>
+        where Left: __Model, Right: __Model, PivotT: PivotType,
+              PivotT.SecondaryModel == Left.SQLModel,
+              PivotT.PrimaryModel == Right.SQLModel
+    {
+        __manyToManyBase(
+            on: db,
+            relations,
+            type: (Right.self, Left.self),
+            action: action,
+            label: label,
+            errThrowing: errThrowing,
+            pivotType: pivotType,
+            checkList: checkList,
+            reversed: true
+        )
+    }
+    
+    private func __manyToManyBase<Left, Right, PivotT>(
+        on db: PGDatabase,
+        _ relations: [MTMRelation<UUID, UUID>],
+        type: (Left.Type, Right.Type),
+        action: ManyToManyAction,
+        label: String,
+        errThrowing: E,
+        pivotType: PivotT.Type,
+        checkList: ManytoManyCheckList,
+        reversed: Bool  // 只对 relations 和 checkList 生效反序，其他参数不生效
+    ) -> EventLoopRes<Void, E>
+        where Left: __Model, Right: __Model, PivotT: PivotType,
+              PivotT.PrimaryModel == Left.SQLModel,
+              PivotT.SecondaryModel == Right.SQLModel
     {
         db.trans { db in
-            relations.flatMap { relation in
-                relation.left.map { l in
-                    modelsFlattenBuilder(db, relation.right).flatMap { rs in
-                        mainModelBuilder(db, l)
-                            .errCast(errThrowing, "取得主模型时失败", category: .internal)
-                            .flatMap
-                        { model in
-                            let builder = siblingBuilder(model)
-                            switch action {
-                            case .attach:
-                                return builder
-                                    .attach(rs, on: db)
-                                    .withError(errThrowing, "将\(label)关系插入中间表时失败", category: .internal)
-                            case .detach:
-                                return builder
-                                    .detach(rs, on: db)
-                                    .withError(errThrowing, "将\(label)关系中间表移除时失败", category: .internal)
-                            }
+            var check: EventLoopRes<Void, E> = db.eventLoop.makeSucceededVoidResult()
+            
+            let lList: [UUID]
+            let rList: [UUID]
+            
+            switch checkList {
+            case .all:
+                lList = reversed ? relations.flatMap { $0.right } : relations.flatMap { $0.left }
+                rList = reversed ? relations.flatMap { $0.left } : relations.flatMap { $0.right }
+            case .list(let left, let right):
+                lList = reversed ? right : left
+                rList = reversed ? left : right
+            }
+            
+            if lList.count > 0 {
+                check = check.flatMap {
+                    self.__check(
+                        on: db,
+                        ids: lList,
+                        for: Left.self,
+                        label: label,
+                        errThrowing: errThrowing
+                    ).flatMap { diffs in
+                        guard diffs.count == 0 else {
+                            return db.eventLoop.makeFailedResult(errThrowing, "\(label) 所提供的 \(Left.logName) ID 列表中有无效项，未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external)
                         }
+                        return db.eventLoop.makeSucceededVoidResult()
                     }
                 }
-            }.flatten(on: db.eventLoop) // .flatten(on:) 会等待数组里所有的 Future 都变成成功状态，只要有一个失败，整体就会失败
+            }
+            
+            if rList.count > 0 {
+                check = check.flatMap {
+                    self.__check(
+                        on: db,
+                        ids: rList,
+                        for: Right.self,
+                        label: label,
+                        errThrowing: errThrowing
+                    ).flatMap { diffs in
+                        guard diffs.count == 0 else {
+                            return db.eventLoop.makeFailedResult(errThrowing, "\(label) 所提供的 \(Right.logName) ID 列表中有无效项，未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external)
+                        }
+                        return db.eventLoop.makeSucceededVoidResult()
+                    }
+                }
+            }
+            
+            return check.flatMap {
+                relations.flatMap { relation in
+                    switch action {
+                    case .attach:
+                        relation.left.flatMap { l in
+                            relation.right.map { r in
+                                let pivot = Pivot<PivotT>()
+                                pivot.$primaryModel.id = reversed ? r : l
+                                pivot.$secondaryModel.id = reversed ? l : r
+                                return pivot.create(on: db)
+                                    .withError(errThrowing, "将 \(label) 关系插入中间表时失败", category: .internal)
+                            }
+                        }
+                    case .detach:
+                        [
+                            Pivot<PivotT>.query(on: db)
+                                .filter(\.$primaryModel.$id ~~ (reversed ? relation.right : relation.left))
+                                .filter(\.$secondaryModel.$id ~~ (reversed ? relation.left : relation.right))
+                                .count()
+                                .withError(errThrowing, "查询 \(label) 关系中间表时失败", category: .internal)
+                                .flatMap
+                            { count in
+                                let expect = relation.right.count * relation.left.count
+                                guard count == expect else {
+                                    return db.eventLoop.makeFailedResult(errThrowing, "\(label) 关系解除失败，预期解除 \(expect) 条关系", metadata: ["count": .stringConvertible(count)], category: .internal)
+                                }
+                                
+                                return db.eventLoop.makeSucceededVoidResult()
+                            }.flatMap {
+                                Pivot<PivotT>.query(on: db)
+                                    .filter(\.$primaryModel.$id ~~ (reversed ? relation.right : relation.left))
+                                    .filter(\.$secondaryModel.$id ~~ (reversed ? relation.left : relation.right))
+                                    .delete()
+                                    .withError(errThrowing, "将 \(label) 关系中间表移除时失败", category: .internal)
+                            }
+                        ]
+                    }
+                }.flatten(on: db.eventLoop)
+            }
         }
     }
 }
@@ -248,6 +454,11 @@ package extension Controller {
 package enum ManyToManyAction {
     case attach
     case detach
+}
+
+package enum ManytoManyCheckList {
+    case all
+    case list(left: [UUID], right: [UUID])
 }
 
 package func SortingSQL(uuids: [UUID]) -> String {

@@ -60,12 +60,26 @@ extension PrivilegeSystem.DomainController {
     // MARK: Assign (result-builder variants)
 
     public func assign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await assign(domainToUser: content).get()
+    }
+    
+    public func assign(
         @MTMRelationBuilder<QDomain, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await assign(content).get()
     }
 
+    public func assign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await assign(domainToGroup: content).get()
+    }
+    
     public func assign(
         @MTMRelationBuilder<QDomain, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QGroup>]
@@ -76,12 +90,26 @@ extension PrivilegeSystem.DomainController {
     // MARK: Unassign (result-builder variants)
 
     public func unassign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await unassign(domainFromUser: content).get()
+    }
+    
+    public func unassign(
         @MTMRelationBuilder<QDomain, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await unassign(content).get()
     }
 
+    public func unassign(
+        @MTMRelationBuilder<UUID, UUID>
+        domainFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await unassign(domainFromGroup: content).get()
+    }
+    
     public func unassign(
         @MTMRelationBuilder<QDomain, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QDomain, QGroup>]
@@ -92,11 +120,23 @@ extension PrivilegeSystem.DomainController {
     // MARK: Assign / Unassign (array variants)
 
     public func assign(
+        domainToUser relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await assign(domainToUser: relations).get()
+    }
+    
+    public func assign(
         relations: [MTMRelation<QDomain, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await assign(relations: relations).get()
     }
 
+    public func assign(
+        domainToGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await assign(domainToGroup: relations).get()
+    }
+    
     public func assign(
         relations: [MTMRelation<QDomain, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
@@ -104,11 +144,23 @@ extension PrivilegeSystem.DomainController {
     }
 
     public func unassign(
+        domainFromUser relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await unassign(domainFromUser: relations).get()
+    }
+    
+    public func unassign(
         relations: [MTMRelation<QDomain, QUser>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await unassign(relations: relations).get()
     }
 
+    public func unassign(
+        domainFromGroup relations: [MTMRelation<UUID, UUID>]
+    ) async throws(PrivilegeSystem.Errcase.ErrType) {
+        try await unassign(domainFromGroup: relations).get()
+    }
+    
     public func unassign(
         relations: [MTMRelation<QDomain, QGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {

@@ -199,6 +199,13 @@ public extension PrivilegeSystem.RoleController {
     // MARK: - 角色任命
     
     func appoint(
+        @MTMRelationBuilder<UUID, UUID>
+        roleToUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        self.appoint(roleToUser: content())
+    }
+    
+    func appoint(
         @MTMRelationBuilder<QRole, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -206,10 +213,24 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
+        @MTMRelationBuilder<UUID, UUID>
+        roleToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        self.appoint(roleToGroup: content())
+    }
+    
+    func appoint(
         @MTMRelationBuilder<QRole, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(relations: content())
+    }
+    
+    func appoint(
+        @MTMRelationBuilder<UUID, UUID>
+        roleToUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        self.appoint(roleToUserInGroup: content())
     }
     
     func appoint(
@@ -222,10 +243,24 @@ public extension PrivilegeSystem.RoleController {
     // MARK: - 角色撤职
     
     func dismiss(
+        @MTMRelationBuilder<UUID, UUID>
+        roleFromUser content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        self.dismiss(roleFromUser: content())
+    }
+    
+    func dismiss(
         @MTMRelationBuilder<QRole, QUser>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
+    }
+    
+    func dismiss(
+        @MTMRelationBuilder<UUID, UUID>
+        roleFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        self.dismiss(roleFromGroup: content())
     }
     
     func dismiss(
@@ -236,6 +271,13 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
+        @MTMRelationBuilder<UUID, UUID>
+        roleFromUserInGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        self.dismiss(roleFromUserInGroup: content())
+    }
+    
+    func dismiss(
         @MTMRelationBuilder<QRole, QUserInGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -243,25 +285,63 @@ public extension PrivilegeSystem.RoleController {
     }
 }
 
-public extension PrivilegeSystem.RoleController {
+extension PrivilegeSystem.RoleController {
     // MARK: - 角色任命
+    func appoint(
+        roleToUser relations: [MTMRelation<UUID, UUID>],
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命用户关系详情", metadata: ["detail": .data(relations)])
+        return __manyToManyReversed(
+            on: db,
+            relations,
+            type: (QRole.self, QUser.self),
+            action: .attach,
+            label: "角色与用户",
+            errThrowing: .roleAppointUserFailed,
+            pivotType: __SDBM.Pivots.UserRole.self,
+            checkList: .all
+        )
+        .map { logger.info("角色任命用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
     func appoint(
         relations: [MTMRelation<QRole, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命用户关系详情", metadata: ["detail": .data(relations)])
-        return __manyToMany(
+        return __manyToManyReversed(
             on: db,
             relations,
             action: .attach,
             label: "角色与用户",
             errThrowing: .roleAppointUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$users },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.UserRole.self
         )
         .map { logger.info("角色任命用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func appoint(
+        roleToGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 角色任命用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命用户组关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QRole.self, QGroup.self),
+            action: .attach,
+            label: "角色与用户组",
+            errThrowing: .roleAppointGroupFailed,
+            pivotType: __SDBM.Pivots.RoleGroup.self,
+            checkList: .all
+        )
+        .map { logger.info("角色任命用户组 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -277,11 +357,29 @@ public extension PrivilegeSystem.RoleController {
             action: .attach,
             label: "角色与用户组",
             errThrowing: .roleAppointGroupFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$groups },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.RoleGroup.self
         )
         .map { logger.info("角色任命用户组 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func appoint(
+        roleToUserInGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色任命组内用户关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QRole.self, QUserInGroup.self),
+            action: .attach,
+            label: "角色与群组内用户",
+            errThrowing: .roleAppointGroupUserFailed,
+            pivotType: __SDBM.Pivots.RoleUserInGroup.self,
+            checkList: .all
+        )
+        .map { logger.info("角色任命组内用户 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -297,52 +395,68 @@ public extension PrivilegeSystem.RoleController {
             action: .attach,
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$usersInGroup },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.RoleUserInGroup.self
         )
         .map { logger.info("角色任命组内用户 操作成功") }
         .logIfFail(logger: logger)
     }
     
-    func appoint(
-        relations: [MTMRelation<QRole, PUserInGroup>]
+    // MARK: - 角色撤职
+    func dismiss(
+        roleFromUser relations: [MTMRelation<UUID, UUID>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
-        logger.info("执行 角色任命组内用户（Prepare） 操作", metadata: ["relations": .summaryData(relations)])
-        logger.debug("角色任命组内用户（Prepare）关系详情", metadata: ["detail": .data(relations)])
-        return __manyToMany(
+        logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職用户关系详情", metadata: ["detail": .data(relations)])
+        return __manyToManyReversed(
             on: db,
             relations,
-            action: .attach,
-            label: "角色与群组内用户",
-            errThrowing: .roleAppointGroupUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$usersInGroup },
-            modelsFlattenBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
+            type: (QRole.self, QUser.self),
+            action: .detach,
+            label: "角色与用户",
+            errThrowing: .roleDismissUserFailed,
+            pivotType: __SDBM.Pivots.UserRole.self,
+            checkList: .all
         )
-        .map { logger.info("角色任命组内用户（Prepare） 操作成功") }
+        .map { logger.info("角色撤職用户 操作成功") }
         .logIfFail(logger: logger)
     }
     
-    // MARK: - 角色撤职
     func dismiss(
         relations: [MTMRelation<QRole, QUser>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職用户关系详情", metadata: ["detail": .data(relations)])
-        return __manyToMany(
+        return __manyToManyReversed(
             on: db,
             relations,
             action: .detach,
             label: "角色与用户",
             errThrowing: .roleDismissUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$users },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.UserRole.self
         )
         .map { logger.info("角色撤職用户 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func dismiss(
+        roleFromGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 角色撤職用户组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職用户组关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QRole.self, QGroup.self),
+            action: .detach,
+            label: "角色与用户组",
+            errThrowing: .roleDismissGroupFailed,
+            pivotType: __SDBM.Pivots.RoleGroup.self,
+            checkList: .all
+        )
+        .map { logger.info("角色撤職用户组 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -358,11 +472,29 @@ public extension PrivilegeSystem.RoleController {
             action: .detach,
             label: "角色与用户组",
             errThrowing: .roleDismissGroupFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$groups },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.RoleGroup.self
         )
         .map { logger.info("角色撤職用户组 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    func dismiss(
+        roleFromUserInGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("角色撤職组内用户关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QRole.self, QUserInGroup.self),
+            action: .detach,
+            label: "角色与群组内用户",
+            errThrowing: .roleDismissGroupUserFailed,
+            pivotType: __SDBM.Pivots.RoleUserInGroup.self,
+            checkList: .all
+        )
+        .map { logger.info("角色撤職组内用户 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -378,31 +510,9 @@ public extension PrivilegeSystem.RoleController {
             action: .detach,
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$usersInGroup },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.RoleUserInGroup.self
         )
         .map { logger.info("角色撤職组内用户 操作成功") }
-        .logIfFail(logger: logger)
-    }
-    
-    func dismiss(
-        relations: [MTMRelation<QRole, PUserInGroup>]
-    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        let logger = getActionLogger()
-        logger.info("执行 角色撤職组内用户（Prepare） 操作", metadata: ["relations": .summaryData(relations)])
-        logger.debug("角色撤職组内用户（Prepare）关系详情", metadata: ["detail": .data(relations)])
-        return __manyToMany(
-            on: db,
-            relations,
-            action: .detach,
-            label: "角色与群组内用户",
-            errThrowing: .roleDismissGroupUserFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$usersInGroup },
-            modelsFlattenBuilder: { self.groupController.__query(on: $0, relations: $1, strict: true) }
-        )
-        .map { logger.info("角色撤職组内用户（Prepare） 操作成功") }
         .logIfFail(logger: logger)
     }
 }

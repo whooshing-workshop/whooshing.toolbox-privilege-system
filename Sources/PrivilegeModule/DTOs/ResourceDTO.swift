@@ -50,6 +50,8 @@ public extension PM {
     }
 }
 
+extension PM.QResource: __Model {}
+
 extension PM.QResource: Codable {
     public enum CodingKeys: String, DTO.CodingKey {
         case id

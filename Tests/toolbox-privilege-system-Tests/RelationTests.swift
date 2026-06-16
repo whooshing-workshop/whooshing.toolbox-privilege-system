@@ -120,7 +120,7 @@ struct RelationsTesting {
         #expect(actualCount == expectedCount, "DomainGroupPivot 表数据量应与映射配置匹配")
     }
     
-    @Test("构建 Domain 与 __SDBM.User 关系")
+    @Test("构建 Domain 与 User 关系")
     func buildDomainForUser() async throws {
         let (s, _) = try await TestingShared.getSystem()
         let allUsers = try await s.query(QUser.self).all()
@@ -143,7 +143,7 @@ struct RelationsTesting {
         #expect(actualCount == expectedCount, "UserDomainPivot 表数据量应与映射配置匹配")
     }
     
-    @Test("构建 Role 与 __SDBM.User/Group 关系")
+    @Test("构建 Role 与 User/Group 关系")
     func buildRoleForUserAndGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
         let allRoles = try await s.query(QRole.self).all()
@@ -154,7 +154,7 @@ struct RelationsTesting {
         let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
         let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
         
-        // 分配给 __SDBM.User
+        // 分配给 User
         for (roleIdx, userIndices) in TestingShared.roleForUser {
             let role = roles[roleIdx]
             let mappedUsers = userIndices.map { users[$0] }

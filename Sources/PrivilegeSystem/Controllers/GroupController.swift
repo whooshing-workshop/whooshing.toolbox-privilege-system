@@ -210,6 +210,17 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
+        @MTMRelationBuilder<UUID, UUID>
+        userToGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        join(userToGroup: content())
+    }
+    
+    /// 将一个或多个用户加入到特定群组。
+    ///
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func join(
         @MTMRelationBuilder<QUser, QGroup>
         _ content: @Sendable @escaping () -> [MTMRelation<QUser, QGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
@@ -217,6 +228,17 @@ public extension PrivilegeSystem.GroupController {
     }
     
     // MARK: - 用户移出群组
+    
+    /// 将一个或多个用户从群组中移出。
+    ///
+    /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func kick(
+        @MTMRelationBuilder<UUID, UUID>
+        userFromGroup content: @Sendable @escaping () -> [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        kick(userFromGroup: content())
+    }
     
     /// 将一个或多个用户从群组中移出。
     ///
@@ -238,6 +260,30 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
+        userToGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 用户加入群组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("用户加入群组关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QUser.self, QGroup.self),
+            action: .attach,
+            label: "用户组与用户",
+            errThrowing: .userJoinGroupFailed,
+            pivotType: __SDBM.Pivots.UserGroup.self,
+            checkList: .all
+        )
+        .map { _ in logger.info("用户加入群组 操作成功") }
+        .logIfFail(logger: logger)
+    }
+    
+    /// 将一个或多个用户加入到特定群组。
+    ///
+    /// - Parameter relations: `MTMRelation` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func join(
         relations: [MTMRelation<QUser, QGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
@@ -249,15 +295,37 @@ public extension PrivilegeSystem.GroupController {
             action: .attach,
             label: "用户组与用户",
             errThrowing: .userJoinGroupFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$groups },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.UserGroup.self
         )
         .map { _ in logger.info("用户加入群组 操作成功") }
         .logIfFail(logger: logger)
     }
     
     // MARK: - 用户移出群组
+    
+    /// 将一个或多个用户从特定群组移除。
+    ///
+    /// - Parameter relations: `MTMRelation` 多对多关系。
+    /// - Returns: `EventLoopRes<Void, Errcase>`
+    func kick(
+        userFromGroup relations: [MTMRelation<UUID, UUID>]
+    ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
+        let logger = getActionLogger()
+        logger.info("执行 用户移出群组 操作", metadata: ["relations": .summaryData(relations)])
+        logger.debug("用户移出群组关系详情", metadata: ["detail": .data(relations)])
+        return __manyToMany(
+            on: db,
+            relations,
+            type: (QUser.self, QGroup.self),
+            action: .detach,
+            label: "用户组与用户",
+            errThrowing: .userKickGroupFailed,
+            pivotType: __SDBM.Pivots.UserGroup.self,
+            checkList: .all
+        )
+        .map { _ in logger.info("用户移出群组 操作成功") }
+        .logIfFail(logger: logger)
+    }
     
     /// 将一个或多个用户从特定群组移除。
     ///
@@ -275,9 +343,7 @@ public extension PrivilegeSystem.GroupController {
             action: .detach,
             label: "用户组与用户",
             errThrowing: .userKickGroupFailed,
-            mainModelBuilder: { $1.model(from: $0) },
-            siblingBuilder: { $0.$groups },
-            modelsBuilder: { db, rs in rs.map { $0.model(from: db) } }
+            pivotType: __SDBM.Pivots.UserGroup.self
         )
         .map { _ in logger.info("用户移出群组 操作成功") }
         .logIfFail(logger: logger)
