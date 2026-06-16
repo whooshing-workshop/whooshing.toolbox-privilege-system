@@ -58,8 +58,7 @@ extension PrivilegeSystem {
         ///   - infoIds: 要删除的信息记录 UUID 列表。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            infoIds: OrderedSet<UUID>,
-            allSatisfy: Bool = true
+            infoIds: OrderedSet<UUID>
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除用户信息 操作", metadata: ["infoIds": .summaryData(infoIds)])

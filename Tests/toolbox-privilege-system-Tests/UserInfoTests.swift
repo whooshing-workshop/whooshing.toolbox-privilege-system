@@ -385,8 +385,10 @@ struct UserinfoTesting {
             .first()
         #expect(found == nil, "被删除的 UserInfo 不应被查询到")
         
-        // allSatisfy = false 不抛异常
-        try await s.userInfo.delete(infoIds: [UUID()], allSatisfy: false)
+        // 删除不存在的项目，应当抛错
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.userInfo.delete(infoIds: [UUID()])
+        }
     }
     
     @Test("扩展信息切片删除测试")
