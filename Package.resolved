@@ -1,5 +1,5 @@
 {
-  "originHash" : "738a639be2edc3830b23f987a36c62d4a633169873a43655e8d5928a98fa47cd",
+  "originHash" : "c6affaae2bbe0baf84601509db462bd28c9a814d82c94dd3f017863424acd42b",
   "pins" : [
     {
       "identity" : "anycodable",
@@ -348,8 +348,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git",
       "state" : {
-        "revision" : "3dca6053273c7c3cc655f91f3e34fd8c45795c9d",
-        "version" : "1.5.9"
+        "revision" : "b3654ddebd1d507a0c94b086783e96d20aeeb17d",
+        "version" : "1.5.10"
       }
     },
     {
@@ -366,8 +366,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git",
       "state" : {
-        "revision" : "7028a3bb0b766d91e42cf41e6843d19e4874b08a",
-        "version" : "1.0.9"
+        "revision" : "e49b7abca73ea443a5084643403116313409a928",
+        "version" : "1.0.10"
       }
     }
   ],
