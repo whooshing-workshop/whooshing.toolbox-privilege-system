@@ -64,6 +64,10 @@ public extension Resource {
         formatJson(self.json)
     }
     
+    var summaryDescription: String {
+        "Resource<\(Self.type.rawValue)>(name: \(name))"
+    }
+    
     /// 实例层面对 `Self.type` 的便捷访问。
     var rtype: ResourceType {
         Self.type

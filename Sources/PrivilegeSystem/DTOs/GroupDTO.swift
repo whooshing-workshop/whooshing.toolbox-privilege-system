@@ -18,6 +18,8 @@ public struct PGroup: DTO.Prepare {
     public let parentId: UUID?
     public let description: String?
     
+    public static let logName: String = "PGroup"
+    
     public init(
         id: UUID? = nil,
         under parent: QGroup? = nil,
@@ -46,6 +48,8 @@ public struct PGroup: DTO.Prepare {
         .description: .init(obj: self.description)
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id, .name] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case name
@@ -63,6 +67,8 @@ public struct QGroup: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static let logName: String = "QGroup"
+    
     package let __m: __SDBM.Group?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
@@ -74,6 +80,8 @@ public struct QGroup: DTO.Queried {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .name] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

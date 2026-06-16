@@ -127,7 +127,7 @@ let docResource = JsonResource(
 let resourceDTO = try await module.resource.create(
     resources: [docResource]
 ).first!
-let anyResourceDTO = AnyResource(resourceDTO)
+let anyResourceDTO = AnyResource(resourceDTO)!
 
 // 编写您的 Rego OPA 策略，以拦截不合规的操作
 let myPolicy = """
@@ -138,7 +138,7 @@ allow if {
 
 // 在系统内注册权限，并将其挂载至资源上
 let privilegeDTO = try await module.privilege.createWithReturning(
-    privileges: [PM.PrivilegeDTO(name: "doc_reader", description: "Read documents", policy: myPolicy)]
+    privileges: [PM.PPrivilege(name: "doc_reader", description: "Read documents", policy: myPolicy)]
 ).first!
 
 // 将权限和具体资源双向绑定 (attach)

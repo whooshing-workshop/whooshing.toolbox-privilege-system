@@ -20,6 +20,8 @@ public extension PM {
         /// OPA 策略表达式。控制器会自动包装 package、import 和默认 allow。
         public let policy: String
         
+        public static var logName: String { "PPrivilege" }
+        
         /// 创建一个待保存的资源权限。
         ///
         /// ```swift
@@ -48,6 +50,8 @@ public extension PM {
             .policy: .init(obj: self.policy)
         ]}
         
+        public var summaryKeys: [CodingKeys] { [.id, .name] }
+        
         public enum CodingKeys: String, DTO.CodingKey {
             case id
             case name
@@ -68,6 +72,8 @@ public extension PM {
         public let createdAt: Date
         public let updatedAt: Date
         
+        public static var logName: String { "QPrivilege" }
+        
         package let __m: __DBM.Privilege?
         package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
         
@@ -79,6 +85,8 @@ public extension PM {
             .createdAt: .init(obj: self.createdAt),
             .updatedAt: .init(obj: self.updatedAt)
         ]}
+        
+        public var summaryKeys: [CodingKeys] { [.id, .name] }
         
         public enum CodingKeys: String, DTO.CodingKey {
             case id

@@ -37,7 +37,9 @@ public extension DTO {
     {
         associatedtype CodingKeys: CodingKey
         // 用于比较和打印，不用与编解码
+        static var logName: String { get }
         var maps: [CodingKeys: AnyHashable?] { get }
+        var summaryKeys: [CodingKeys] { get }
     }
     
     protocol Prepare: Model {
@@ -75,6 +77,23 @@ where
 
 public extension DTO.Model {
     var description: String { formatJson(json.mapValues { .init($0) }) }
+    
+    var summaryDescription: String {
+        let m = self.maps
+        var res = Self.logName + "("
+        
+        res += self.summaryKeys.compactMap { m[$0]! == nil ? nil : ($0.rawValue, m[$0]!!) }.map { key, value in
+            if let loggerable = value.base as? Loggerable {
+                return "\(key): \(loggerable.summaryDescription)"
+            } else {
+                return "\(key): \(value.description)"
+            }
+        }.joined(by: ", ")
+        
+        res += ")"
+        
+        return res
+    }
     
     var json: [String: AnyHashable?] {
         var j: [String: AnyHashable?] = [:]
@@ -161,6 +180,8 @@ package extension __Queried {
         return db.eventLoop.makeSucceededResult(m)
     }
 }
+
+// MARK: - DTOUpdater
 
 package protocol DTOUpdater: Sendable, Loggerable {
     associatedtype QueriedDTO: Sendable

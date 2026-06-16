@@ -8,11 +8,13 @@ import AnyCodable
 import Policy
 import ResourceMacros
 
-public struct PUserInGroupRelation: DTO.Prepare {
-    public typealias QueriedModel = QUserInGroupRelation
+public struct PUserInGroup: DTO.Prepare {
+    public typealias QueriedModel = QUserInGroup
     public let id: UUID?
     public let user: QUser
     public let group: QGroup
+    
+    public static let logName: String = "PUserInGroup"
     
     init(
         id: UUID? = nil,
@@ -30,6 +32,8 @@ public struct PUserInGroupRelation: DTO.Prepare {
         .group: .init(obj: group.json)
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id, .user, .group] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case user
@@ -37,12 +41,14 @@ public struct PUserInGroupRelation: DTO.Prepare {
     }
 }
 
-public struct QUserInGroupRelation: DTO.Queried {
-    public typealias PrepareModel = PUserInGroupRelation
+public struct QUserInGroup: DTO.Queried {
+    public typealias PrepareModel = PUserInGroup
     public let id: UUID
     public let user: QUser
     public let group: QGroup
     public let createdAt: Date
+    
+    public static let logName: String = "QUserInGroup"
     
     package let __m: __SDBM.UserGroupPivot?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \__SDBM.UserGroupPivot.$id
@@ -53,6 +59,8 @@ public struct QUserInGroupRelation: DTO.Queried {
         .group: .init(obj: self.group.json),
         .createdAt: .init(obj: self.createdAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .user, .group] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id
@@ -93,9 +101,9 @@ public struct QUserInGroupRelation: DTO.Queried {
     }
 }
 
-extension PUserInGroupRelation: __Prepare {}
+extension PUserInGroup: __Prepare {}
 
-extension QUserInGroupRelation: __Queried {
+extension QUserInGroup: __Queried {
     public typealias Failure = PrivilegeSystem.Errcase
     public static func make(from model: __SDBM.UserGroupPivot) -> Res<Self, PrivilegeSystem.Errcase> {
         .init(throws: .userInGroupDTOFailed, category: .internal) {
@@ -117,6 +125,6 @@ infix operator =| : MappingPrecedence
 public func =| (
     left: QUser,
     right: QGroup
-) -> PUserInGroupRelation {
+) -> PUserInGroup {
     .init(user: left, group: right)
 }

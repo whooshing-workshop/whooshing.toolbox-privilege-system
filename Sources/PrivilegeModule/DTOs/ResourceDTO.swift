@@ -18,6 +18,8 @@ public extension PM {
         public let createdAt: Date
         public let updatedAt: Date
         
+        public static var logName: String { "QResource" }
+        
         public typealias S = PM<ResourceList>
         package typealias SQLModel = __DBM.ResourceModel<G>
         package let __m: SQLModel?
@@ -29,6 +31,8 @@ public extension PM {
             .createdAt: .init(obj: self.createdAt),
             .updatedAt: .init(obj: self.updatedAt)
         ]}
+        
+        public var summaryKeys: [CodingKeys] { [.id] }
         
         init(
             id: UUID,

@@ -19,6 +19,8 @@ public struct PUserInfo: DTO.Prepare {
     public let birthday: Date
     public let other: String?
     
+    public static let logName: String = "PUserInfo"
+    
     public init(
         id: UUID? = nil,
         nickname: String,
@@ -41,6 +43,8 @@ public struct PUserInfo: DTO.Prepare {
         .other: .init(obj: self.other)
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case nickname
@@ -61,6 +65,8 @@ public struct QUserInfo: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static let logName: String = "PUserInfo"
+    
     package let __m: __SDBM.User.Info?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
@@ -74,6 +80,8 @@ public struct QUserInfo: DTO.Queried {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

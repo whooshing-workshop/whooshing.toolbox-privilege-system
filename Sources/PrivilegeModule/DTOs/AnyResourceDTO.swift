@@ -19,6 +19,8 @@ public struct AnyResource: DTO.Model {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static let logName: String = "AnyResource"
+    
     package typealias SQLModel = __SDBM.AnyResource
     package let __m: SQLModel?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
@@ -31,6 +33,8 @@ public struct AnyResource: DTO.Model {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .name, .type] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

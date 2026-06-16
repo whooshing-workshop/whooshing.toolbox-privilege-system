@@ -15,6 +15,8 @@ public struct PPolicy<G: PolicyType>: DTO.Prepare {
     public let moduleId: UUID
     public let policy: String
     
+    public static var logName: String { "PPolicy<\(G.typeId.uppercased())>" }
+    
     public init(
         id: UUID? = nil,
         moduleId: UUID,
@@ -31,6 +33,8 @@ public struct PPolicy<G: PolicyType>: DTO.Prepare {
         .policy: .init(obj: self.policy)
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id, .moduleId] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case moduleId = "module_id"
@@ -46,6 +50,8 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static var logName: String { "QPolicy<\(G.typeId.uppercased())>" }
+    
     package let __m: __SDBM.PolicyExp<G>?
     package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
     
@@ -56,6 +62,8 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .moduleId] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

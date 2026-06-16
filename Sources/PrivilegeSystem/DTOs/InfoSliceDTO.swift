@@ -31,6 +31,8 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
     public let order: Int16
     public let description: String?
     
+    public static var logName: String { "PInfoSlice" }
+    
     public init(
         id: UUID? = nil,
         value: G.Model.Value,
@@ -50,6 +52,8 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
         .description: self.description
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id, .value, .order] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case value
@@ -68,6 +72,8 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static var logName: String { "QInfoSlice" }
+    
     package let __m: __SDBM.User.Info.Extended<G.Model>?
     package static var idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> { \.$id }
     
@@ -80,6 +86,8 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .value, .order] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

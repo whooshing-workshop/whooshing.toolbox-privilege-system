@@ -16,6 +16,8 @@ public struct PUser: DTO.Prepare {
     public let email: String
     public let hashedPassword: String
     
+    public static let logName: String = "PUser"
+    
     // 这里的 hashedPassword 只有第一层密码加密，存入数据库之前要进行第二次加密
     public init(
         id: UUID? = nil,
@@ -37,6 +39,8 @@ public struct PUser: DTO.Prepare {
         .email: .init(obj: self.email)
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id, .email] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case email
@@ -51,6 +55,8 @@ public struct QUser: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static let logName: String = "QUser"
+    
     package let __m: __SDBM.User?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
@@ -60,6 +66,8 @@ public struct QUser: DTO.Queried {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .email] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

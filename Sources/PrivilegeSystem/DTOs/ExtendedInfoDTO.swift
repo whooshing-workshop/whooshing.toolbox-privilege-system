@@ -15,6 +15,8 @@ public struct PExtendedInfo: DTO.Model {
     public let alternateEmails: [PInfoSlice<AlternateEmail>]
     public let phones: [PInfoSlice<Phone>]
     
+    public static let logName: String = "PExtendedInfo"
+    
     public init(
         addresses: [PInfoSlice<Address>] = [],
         alternateEmails: [PInfoSlice<AlternateEmail>] = [],
@@ -30,6 +32,8 @@ public struct PExtendedInfo: DTO.Model {
         .alternateEmails: self.alternateEmails.map { $0.json },
         .phones: self.phones.map { $0.json }
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.addresses, .alternateEmails, .phones] }
 }
 
 public struct QExtendedInfo: DTO.Model {
@@ -37,6 +41,8 @@ public struct QExtendedInfo: DTO.Model {
     public let addresses: [QInfoSlice<Address>]
     public let alternateEmails: [QInfoSlice<AlternateEmail>]
     public let phones: [QInfoSlice<Phone>]
+    
+    public static let logName: String = "QExtendedInfo"
     
     init(
         addresses: [QInfoSlice<Address>] = [],
@@ -53,6 +59,8 @@ public struct QExtendedInfo: DTO.Model {
         .alternateEmails: .init(self.alternateEmails.map { $0.json }),
         .phones: .init(self.phones.map { $0.json })
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.addresses, .alternateEmails, .phones] }
 }
 
 extension PExtendedInfo: Codable {

@@ -70,9 +70,9 @@ extension PrivilegeSystem.GroupController {
     // MARK: Query
 
     public func query(
-        relations: [PUserInGroupRelation],
+        relations: [PUserInGroup],
         strict: Bool = true
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QUserInGroupRelation] {
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QUserInGroup] {
         try await query(relations: relations, strict: strict).get()
     }
 }

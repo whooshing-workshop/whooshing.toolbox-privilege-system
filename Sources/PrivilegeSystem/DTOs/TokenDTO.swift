@@ -14,6 +14,8 @@ public struct Token: DTO.Model {
     public let credential: String
     public let tokenEncrypted: Data
     
+    public static let logName: String = "Token"
+    
     public init(
         credential: String,
         tokenEncrypted: Data
@@ -25,6 +27,8 @@ public struct Token: DTO.Model {
     public var maps: [CodingKeys: AnyHashable?] {[
         .credential: .init(obj: self.credential)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.credential] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case credential
@@ -46,6 +50,8 @@ public struct PToken: DTO.Prepare {
     public let userId: UUID
     public let valid: Bool
     public let expireAfter: Int
+    
+    public static let logName: String = "PToken"
     
     init(
         id: UUID? = nil,
@@ -70,6 +76,8 @@ public struct PToken: DTO.Prepare {
         .valid: .init(obj: self.valid),
         .expireAfter: .init(obj: self.expireAfter)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .credential, .userId] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id
@@ -117,6 +125,8 @@ public struct QToken: DTO.Queried {
     
     private let __token: String?
     
+    public static let logName: String = "QToken"
+    
     package let __m: __SDBM.Token?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
@@ -128,6 +138,8 @@ public struct QToken: DTO.Queried {
         .expireAfter: .init(obj: self.expireAfter),
         .createdAt: .init(obj: self.createdAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .credential, .userId] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case credential

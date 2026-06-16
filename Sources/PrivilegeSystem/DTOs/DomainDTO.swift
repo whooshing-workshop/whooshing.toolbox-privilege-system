@@ -19,6 +19,8 @@ public struct PDomain: DTO.Prepare {
     public let name: String?
     public let description: String?
     
+    public static let logName: String = "QDomain"
+    
     public init(
         id: UUID? = nil,
         name: String? = nil,
@@ -35,6 +37,8 @@ public struct PDomain: DTO.Prepare {
         .description: .init(obj: self.description)
     ]}
     
+    public var summaryKeys: [CodingKeys] { [.id, .name] }
+    
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case name
@@ -50,6 +54,8 @@ public struct QDomain: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    public static let logName: String = "QDomain"
+    
     package let __m: __SDBM.Domain?
     package static let idProperty: KeyPath<SQLModel, IDProperty<SQLModel, UUID>> = \.$id
     
@@ -60,6 +66,8 @@ public struct QDomain: DTO.Queried {
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
+    
+    public var summaryKeys: [CodingKeys] { [.id, .name] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id

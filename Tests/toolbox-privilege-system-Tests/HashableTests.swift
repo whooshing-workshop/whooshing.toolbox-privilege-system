@@ -233,8 +233,8 @@ struct HashableTests {
         gmodel.updatedAt = Date()
         let qgroup = try QGroup.make(from: gmodel).get()
         
-        let p1 = PUserInGroupRelation(user: quser, group: qgroup)
-        let p2 = PUserInGroupRelation(user: quser, group: qgroup)
+        let p1 = PUserInGroup(user: quser, group: qgroup)
+        let p2 = PUserInGroup(user: quser, group: qgroup)
         
         #expect(p1 == p2)
         
@@ -244,7 +244,7 @@ struct HashableTests {
         model.id = UUID()
         model.createdAt = Date()
         
-        let q1 = try QUserInGroupRelation.make(from: model).get()
+        let q1 = try QUserInGroup.make(from: model).get()
         
         #expect(p1.like(q1))
         #expect(q1.like(p1))

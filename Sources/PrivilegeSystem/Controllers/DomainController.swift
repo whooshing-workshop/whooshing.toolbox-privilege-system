@@ -156,21 +156,15 @@ public extension PrivilegeSystem.DomainController {
         logger.info("执行 创建域权限（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
-        guard (relations.allSatisfy { $0.right.id != nil }) else {
-            let error = PrivilegeSystem.Errcase.domainCreateFailed.d("所提供的 Domains id 有空值").metadata(["relations": .data(relations)])
-            return db.eventLoop.makeFailedResult(logger.errThrow(error))
-        }
-        
         return db.trans { db in
-            self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
+            self.__create(on: db, domains: relations.map { $0.right }).flatMap { domains in
                 self.policyController.__create(
                     on: db,
                     to: Domain.self,
-                    relations: relations.map { .init(left: $0.left, right: $0.right.id!) }
+                    relations: relations.enumerated().map { .init(left: $0.element.left, right: domains[$0.offset].id) }
                 )
             }
-        }
-        .map { logger.info("创建域权限（含策略） 操作成功") }
+        }.map { logger.info("创建域权限（含策略） 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -181,26 +175,19 @@ public extension PrivilegeSystem.DomainController {
         logger.info("执行 创建域权限（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
-        guard (relations.allSatisfy { $0.right.id != nil }) else {
-            let error = PrivilegeSystem.Errcase.domainCreateFailed.d("所提供的 Domains id 有空值").metadata(["relations": .data(relations)])
-            return db.eventLoop.makeFailedResult(logger.errThrow(error))
-        }
-        
         return db.trans { db in
-            self.__create(on: db, domains: relations.map { $0.right }).flatMap { _ in
+            self.__create(on: db, domains: relations.map { $0.right }).flatMap { domains in
                 self.policyController.__createWithReturning(
                     on: db,
                     to: Domain.self,
-                    relations: relations.map { .init(left: $0.left, right: $0.right.id!) }
+                    relations: relations.enumerated().map { .init(left: $0.element.left, right: domains[$0.offset].id) }
                 )
             }
-        }
-        .map { 
-                logger.info("创建域权限（含策略返回） 操作成功", metadata: ["data": .summaryData($0)])
-                logger.debug("创建域权限（含策略返回） 结果详细数据", metadata: ["data": .data($0)])
-                return $0 
-            }
-        .logIfFail(logger: logger)
+        }.map {
+            logger.info("创建域权限（含策略返回） 操作成功", metadata: ["data": .summaryData($0)])
+            logger.debug("创建域权限（含策略返回） 结果详细数据", metadata: ["data": .data($0)])
+            return $0
+        }.logIfFail(logger: logger)
     }
 }
         

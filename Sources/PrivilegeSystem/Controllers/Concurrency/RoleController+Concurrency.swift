@@ -76,8 +76,8 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func appoint(
-        @MTMRelationBuilder<QRole, QUserInGroupRelation>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroupRelation>]
+        @MTMRelationBuilder<QRole, QUserInGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
@@ -99,8 +99,8 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func dismiss(
-        @MTMRelationBuilder<QRole, QUserInGroupRelation>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroupRelation>]
+        @MTMRelationBuilder<QRole, QUserInGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
@@ -120,13 +120,13 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func appoint(
-        relations: [MTMRelation<QRole, QUserInGroupRelation>]
+        relations: [MTMRelation<QRole, QUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
 
     public func appoint(
-        relations: [MTMRelation<QRole, PUserInGroupRelation>]
+        relations: [MTMRelation<QRole, PUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
@@ -146,13 +146,13 @@ extension PrivilegeSystem.RoleController {
     }
 
     public func dismiss(
-        relations: [MTMRelation<QRole, QUserInGroupRelation>]
+        relations: [MTMRelation<QRole, QUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
 
     public func dismiss(
-        relations: [MTMRelation<QRole, PUserInGroupRelation>]
+        relations: [MTMRelation<QRole, PUserInGroup>]
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }

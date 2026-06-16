@@ -160,21 +160,15 @@ public extension PrivilegeSystem.RoleController {
         logger.info("执行 创建角色（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
-        guard (relations.allSatisfy { $0.right.id != nil }) else {
-            let error = PrivilegeSystem.Errcase.roleCreateFailed.d("所提供的 Role id 有空值").metadata(["relations": .data(relations)])
-            return db.eventLoop.makeFailedResult(logger.errThrow(error))
-        }
-        
         return db.trans { db in
-            self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
+            self.__create(on: db, roles: relations.map { $0.right }).flatMap { roles in
                 self.policyController.__create(
                     on: db,
                     to: Role.self,
-                    relations: relations.map { .init(left: $0.left, right: $0.right.id!) }
+                    relations: relations.enumerated().map { .init(left: $0.element.left, right: roles[$0.offset].id) }
                 )
             }
-        }
-        .map { logger.info("创建角色（含策略） 操作成功") }
+        }.map { logger.info("创建角色（含策略） 操作成功") }
         .logIfFail(logger: logger)
     }
     
@@ -185,25 +179,19 @@ public extension PrivilegeSystem.RoleController {
         logger.info("执行 创建角色（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
-        guard (relations.allSatisfy { $0.right.id != nil }) else {
-            let error = PrivilegeSystem.Errcase.roleCreateFailed.d("所提供的 Role id 有空值").metadata(["relations": .data(relations)])
-            return db.eventLoop.makeFailedResult(logger.errThrow(error))
-        }
-        
         return db.trans { db in
-            self.__create(on: db, roles: relations.map { $0.right }).flatMap { _ in
+            self.__create(on: db, roles: relations.map { $0.right }).flatMap { roles in
                 self.policyController.__createWithReturning(
                     on: db,
                     to: Role.self,
-                    relations: relations.map { .init(left: $0.left, right: $0.right.id!) }
+                    relations: relations.enumerated().map { .init(left: $0.element.left, right: roles[$0.offset].id) }
                 )
             }
         }.map {
-                logger.info("创建角色（含策略返回） 操作成功", metadata: ["data": .summaryData($0)])
-                logger.debug("创建角色（含策略返回） 结果详细数据", metadata: ["data": .data($0)])
-                return $0 
-            }
-        .logIfFail(logger: logger)
+            logger.info("创建角色（含策略返回） 操作成功", metadata: ["data": .summaryData($0)])
+            logger.debug("创建角色（含策略返回） 结果详细数据", metadata: ["data": .data($0)])
+            return $0
+        }.logIfFail(logger: logger)
     }
 }
 
@@ -225,8 +213,8 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        @MTMRelationBuilder<QRole, QUserInGroupRelation>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroupRelation>]
+        @MTMRelationBuilder<QRole, QUserInGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(relations: content())
     }
@@ -248,8 +236,8 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        @MTMRelationBuilder<QRole, QUserInGroupRelation>
-        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroupRelation>]
+        @MTMRelationBuilder<QRole, QUserInGroup>
+        _ content: @Sendable @escaping () -> [MTMRelation<QRole, QUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
     }
@@ -298,7 +286,7 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: [MTMRelation<QRole, QUserInGroupRelation>]
+        relations: [MTMRelation<QRole, QUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -318,7 +306,7 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: [MTMRelation<QRole, PUserInGroupRelation>]
+        relations: [MTMRelation<QRole, PUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户（Prepare） 操作", metadata: ["relations": .summaryData(relations)])
@@ -379,7 +367,7 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: [MTMRelation<QRole, QUserInGroupRelation>]
+        relations: [MTMRelation<QRole, QUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -399,7 +387,7 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: [MTMRelation<QRole, PUserInGroupRelation>]
+        relations: [MTMRelation<QRole, PUserInGroup>]
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户（Prepare） 操作", metadata: ["relations": .summaryData(relations)])

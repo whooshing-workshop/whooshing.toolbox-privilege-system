@@ -374,11 +374,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameters:
     ///   - relations: 预期需查询的关系，包含用户 DTO 和群组 DTO。
     ///   - strict: 如果为 `true`，查出的记录条数不匹配预期的 `relations` 长度则抛出失败。
-    /// - Returns: `EventLoopRes<[QUserInGroupRelation], Errcase>`
+    /// - Returns: `EventLoopRes<[QUserInGroup], Errcase>`
     func query(
-        relations: [PUserInGroupRelation],
+        relations: [PUserInGroup],
         strict: Bool = true
-    ) -> EventLoopRes<[QUserInGroupRelation], PrivilegeSystem.Errcase> {
+    ) -> EventLoopRes<[QUserInGroup], PrivilegeSystem.Errcase> {
         __query(on: db, relations: relations, strict: strict)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
@@ -394,7 +394,7 @@ public extension PrivilegeSystem.GroupController {
 extension PrivilegeSystem.GroupController {
     func __query(
         on db: PGDatabase,
-        relations: [PUserInGroupRelation],
+        relations: [PUserInGroup],
         strict: Bool
     ) -> EventLoopRes<[__SDBM.UserGroupPivot], PrivilegeSystem.Errcase> {
         __SDBM.UserGroupPivot.query(on: db)
