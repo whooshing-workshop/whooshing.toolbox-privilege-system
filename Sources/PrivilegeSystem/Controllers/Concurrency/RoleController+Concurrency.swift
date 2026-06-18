@@ -97,8 +97,8 @@ extension PrivilegeSystem.RoleController {
     }
     
     public func appoint(
-        @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        @MTMRelationBuilder<QRole, UserTGroup>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(content).get()
     }
@@ -141,8 +141,8 @@ extension PrivilegeSystem.RoleController {
     }
     
     public func dismiss(
-        @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        @MTMRelationBuilder<QRole, UserTGroup>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(content).get()
     }
@@ -180,7 +180,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     public func appoint(
-        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await appoint(relations: relations).get()
     }
@@ -218,7 +218,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     public func dismiss(
-        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
         try await dismiss(relations: relations).get()
     }
@@ -257,12 +257,26 @@ extension PrivilegeSystem.RoleController {
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         try await self.is(role: role, appointedTo: user).get()
     }
+    
+    public func `is`(
+        roleId: UUID,
+        appointedTo userId: UUID
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+        try await self.is(roleId: roleId, appointedTo: userId).get()
+    }
 
     public func `is`(
         userRole: QRole,
         appointedTo user: QUser
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         try await self.is(userRole: userRole, appointedTo: user).get()
+    }
+    
+    public func `is`(
+        userRoleId: UUID,
+        appointedTo userId: UUID
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+        try await self.is(userRoleId: userRoleId, appointedTo: userId).get()
     }
 
     public func `is`(
@@ -271,6 +285,13 @@ extension PrivilegeSystem.RoleController {
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
         try await self.is(groupRole: groupRole, appointedTo: group).get()
     }
+    
+    public func `is`(
+        groupRoleId: UUID,
+        appointedTo groupId: UUID
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+        try await self.is(groupRoleId: groupRoleId, appointedTo: groupId).get()
+    }
 
     public func verify(
         groupRole: QRole,
@@ -278,11 +299,25 @@ extension PrivilegeSystem.RoleController {
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
         try await verify(groupRole: groupRole, appointedTo: user).get()
     }
+    
+    public func verify(
+        groupRoleId: UUID,
+        appointedTo userId: UUID
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
+        try await verify(groupRoleId: groupRoleId, appointedTo: userId).get()
+    }
 
     public func verify(
         userInGroupRole: QRole,
         appointedTo user: QUser
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
         try await verify(userInGroupRole: userInGroupRole, appointedTo: user).get()
+    }
+    
+    public func verify(
+        userInGroupRoleId: UUID,
+        appointedTo userId: UUID
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QGroup] {
+        try await verify(userInGroupRoleId: userInGroupRoleId, appointedTo: userId).get()
     }
 }

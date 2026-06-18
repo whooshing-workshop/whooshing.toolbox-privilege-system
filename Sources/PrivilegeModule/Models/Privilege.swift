@@ -2,6 +2,7 @@ import PgSQL
 import Fluent
 import Foundation
 import Policy
+import DTOBuilder
 
 public extension PM.__DBM {
     final class Privilege: PGModel, @unchecked Sendable {
@@ -49,6 +50,7 @@ public extension PM.__DBM {
 }
 
 extension PM.__DBM.Privilege: PolicyType {
+    public typealias DTOModel = PrivilegeModule.QPrivilege
     public typealias Model = PrivilegeModule.__DBM.Privilege
     public static var namePrefix: String { "privilege" }
     public static var typeId: String { "privilege" }

@@ -1,6 +1,6 @@
 import PgSQL
 import Foundation
-import Policy
+import DTOBuilder
 import Fluent
 import PrivilegeModule
 
@@ -36,8 +36,8 @@ public extension __SDBM {
         
         @Siblings(
             through: UserGroupPivot.self,
-            from: \.$user,
-            to: \.$group
+            from: \.$primaryModel,
+            to: \.$secondaryModel
         )                                           var groups: [Group]
         @Siblings(
             through: UserRolePivot.self,

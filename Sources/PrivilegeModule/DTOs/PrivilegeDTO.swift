@@ -8,6 +8,7 @@ import DataConvertable
 import LoggingAdvanced
 import ResourceMacros
 import AnyCodable
+import DTOBuilder
 
 public extension PM {
     struct PPrivilege: DTO.Prepare {
@@ -72,6 +73,12 @@ public extension PM {
         public let createdAt: Date
         public let updatedAt: Date
         
+        @Sibling(
+            through: PrivilegeTAnyResource.self,
+            from: \.privilegeId,
+            to: \.resourceId
+        )                                   public var resources: [AnyResource]
+        
         public static var logName: String { "QPrivilege" }
         
         package let __m: __DBM.Privilege?
@@ -83,7 +90,9 @@ public extension PM {
             .description: .init(obj: self.description),
             .policy: .init(obj: self.policy),
             .createdAt: .init(obj: self.createdAt),
-            .updatedAt: .init(obj: self.updatedAt)
+            .updatedAt: .init(obj: self.updatedAt),
+            
+            .resources: .init(obj: self.$resources)
         ]}
         
         public var summaryKeys: [CodingKeys] { [.id, .name] }
@@ -95,6 +104,8 @@ public extension PM {
             case policy
             case createdAt = "created_at"
             case updatedAt = "updated_at"
+            
+            case resources
         }
         
         init(
@@ -113,17 +124,21 @@ public extension PM {
             self.createdAt = createdAt
             self.updatedAt = updatedAt
             self.__m = model
+            
+            self.$resources.fromId = id
         }
         
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.id = try container.decode(UUID.self, forKey: .id)
-            self.name = try container.decodeIfPresent(String.self, forKey: .name)
-            self.description = try container.decodeIfPresent(String.self, forKey: .description)
-            self.policy = try container.decode(String.self, forKey: .policy)
-            self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-            self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-            self.__m = nil
+            self = Self.init(
+                id: try container.decode(UUID.self, forKey: .id),
+                name: try container.decodeIfPresent(String.self, forKey: .name),
+                description: try container.decodeIfPresent(String.self, forKey: .description),
+                policy: try container.decode(String.self, forKey: .policy),
+                createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+                updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+                model: nil
+            )
         }
         
         public func encode(to encoder: any Encoder) throws {
@@ -134,6 +149,8 @@ public extension PM {
             try container.encode(self.policy, forKey: PrivilegeModule.QPrivilege.CodingKeys.policy)
             try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
             try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+            
+            try container.encode(self.$resources, forKey: .resources)
         }
     }
 }

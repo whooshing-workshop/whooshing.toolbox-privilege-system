@@ -1,7 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
-import Policy
+import DTOBuilder
 import DataConvertable
 
 public extension __SDBM.User.Info {

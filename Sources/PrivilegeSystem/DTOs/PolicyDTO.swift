@@ -7,6 +7,7 @@ import Query
 import DataConvertable
 import LoggingAdvanced
 import AnyCodable
+import DTOBuilder
 import ResourceMacros
 
 public struct PPolicy<G: PolicyType>: DTO.Prepare {
@@ -50,6 +51,8 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    @Super public var parent: G.DTOModel
+    
     public static var logName: String { "QPolicy<\(G.typeId.uppercased())>" }
     
     package let __m: __SDBM.PolicyExp<G>?
@@ -59,8 +62,11 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
         .id: .init(obj: self.id),
         .moduleId: .init(obj: self.moduleId),
         .policy: .init(obj: self.policy),
+        .parentId: .init(obj: self.$parent.id),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .parent: .init(obj: self.$parent)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .moduleId] }
@@ -69,6 +75,8 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
         case id
         case moduleId = "module_id"
         case policy
+        case parent
+        case parentId = "parent_id"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -77,6 +85,7 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
         id: UUID,
         moduleId: UUID,
         policy: String,
+        parentId: UUID,
         createdAt: Date,
         updatedAt: Date,
         model: SQLModel?
@@ -87,16 +96,21 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$parent.id = parentId
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.moduleId = try container.decode(UUID.self, forKey: .moduleId)
-        self.policy = try container.decode(String.self, forKey: .policy)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            moduleId: try container.decode(UUID.self, forKey: .moduleId),
+            policy: try container.decode(String.self, forKey: .policy),
+            parentId: try container.decode(UUID.self, forKey: .parentId),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -104,8 +118,11 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
         try container.encode(self.id, forKey: .id)
         try container.encode(self.moduleId, forKey: .moduleId)
         try container.encode(self.policy, forKey: .policy)
+        try container.encode(self.$parent.id, forKey: .parentId)
         try container.encode(self.createdAt, forKey: .createdAt)
         try container.encode(self.updatedAt, forKey: .updatedAt)
+        
+        try container.encode(self.$parent, forKey: .parent)
     }
 }
 
@@ -129,6 +146,7 @@ extension QPolicy: __Queried {
                 id: try model.requireID(),
                 moduleId: model.moduleId,
                 policy: model.policy,
+                parentId: model.$parent.id,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
                 model: model
@@ -141,6 +159,7 @@ extension QPolicy: Query.Queriable {
     public typealias Model = __SDBM.PolicyExp<G>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        \.$parent.id: \.$parent.$id,
         \.moduleId: \.$moduleId,
         \.policy: \.$policy,
         \.id: \.$id,

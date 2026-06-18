@@ -9,12 +9,34 @@ import NIOConcurrencyHelpers
 import Query
 @preconcurrency import AnyCodable
 
-public enum DTO {
-    public enum Errcase: String, ErrList {
-        case modelQueryFailed = "数据库查询模型失败"
-        case modelNotExist = "数据库模型不存在"
-    }
-}
+//          Public Protocols            |                      Package Protocols                   |
+//                                      |                                                          |
+//              DTO.Model               |                     __Model: DTO.Model                   |
+//             /        \               |                      /               \                   |
+//            /          \              |                     /                 \                  |
+//           /            \             |                    /                   \                 |
+//          /              \            |                   /                     \                |
+//     DTO.Prepare     DTO.DBModel      |     __Prepare: DTO.Prepare    __DBModel: DTO.DBModel     |
+//                          |           |                                          |               |
+//                          |           |                                          |               |
+//                          |           |                                          |               |
+//                          |           |                                          |               |
+//                     DTO.Queried      |                               __Queried: DTO.Queried     |
+//                                      |                                                          |
+//
+// DTO.Model 继承各种基本协议 Encodable, Sendable, Equatable, Hashable, Loggerable, CustomStringConvertible，且提供默认实现
+// __Model 为 DTO.Model 实现私有默认实现
+//
+// DTO.Prepare 为未存入数据库前的数据的协议，提供了默认实现
+// __Prepare 为 DTO.Prepare 实现私有默认实现
+//
+// DTO.DBModel 实现该协议的数据结构，均与数据库相关，可直接做为数据库模型的等比模型，且提供了默认实现
+// __DBModel 为 DTO.DBModel 实现私有默认实现
+//
+// DTO.Queried 为数据库查询或创建 Returning 的数据结构协议，且提供了默认实现
+// __Queried 为 DTO.Queried 实现私有默认实现
+
+public enum DTO {}
 
 public typealias CK = CodingKey
 
@@ -28,8 +50,8 @@ public extension DTO {
     where RawValue == String {}
     
     protocol Model:
-        Codable,
         Sendable,
+        Encodable,
         Equatable,
         Hashable,
         Loggerable,
@@ -42,14 +64,18 @@ public extension DTO {
         var summaryKeys: [CodingKeys] { get }
     }
     
-    protocol Prepare: Model {
+    protocol Prepare: Model, Codable {
         associatedtype QueriedModel: Queried
         var id: UUID? { get }
     }
     
-    protocol Queried: Model {
-        associatedtype PrepareModel: Prepare
+    protocol DBModel: Model, Query.Queriable, Codable {
         var id: UUID { get }
+        static func make(from ids: [UUID], on system: Query.System) -> EventLoopRes<[Self], DTO.Errcase>
+    }
+    
+    protocol Queried: DBModel {
+        associatedtype PrepareModel: Prepare
     }
 }
 
@@ -72,7 +98,9 @@ where
     associatedtype SQLModel: PGModel
 }
 
-package protocol __Queried: __Model, DTO.Queried
+package protocol __DBModel: __Model, DTO.DBModel {}
+
+package protocol __Queried: __DBModel, DTO.Queried
 where
     PrepareModel: __Prepare,
     PrepareModel.SQLModel == SQLModel
@@ -168,7 +196,16 @@ public extension Collection where Element: DTO.Queried, Element == Element.Prepa
     }
 }
 
-package extension __Queried {
+public extension DTO.DBModel {
+    static func make(from ids: [UUID], on system: Query.System) -> EventLoopRes<[Self], DTO.Errcase> {
+        Self.query(on: system)
+            .filter(\.id ~~ ids)
+            .all()
+            .errCast(DTO.Errcase.modelQueryFailed, "从数据库中根据 id 查询 \(Self.logName) 模型失败", category: .internal)
+    }
+}
+
+package extension __Model {
     func model(from db: PGDatabase) -> EventLoopRes<SQLModel, DTO.Errcase> {
         guard let m = __m else {
             return SQLModel.query(on: db)

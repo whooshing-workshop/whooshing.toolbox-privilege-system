@@ -1,5 +1,5 @@
 import Fluent
-import Policy
+import DTOBuilder
 import Vapor
 import PgSQL
 import ErrorHandle
@@ -232,8 +232,8 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        @MTMRelationBuilder<QRole, UserTGroup>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.appoint(relations: content())
     }
@@ -276,8 +276,8 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        @MTMRelationBuilder<QRole, QUserInGroup>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        @MTMRelationBuilder<QRole, UserTGroup>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         self.dismiss(relations: content())
     }
@@ -370,7 +370,7 @@ extension PrivilegeSystem.RoleController {
         return __manyToMany(
             on: db,
             relations,
-            type: (QRole.self, QUserInGroup.self),
+            type: (QRole.self, UserTGroup.self),
             action: .attach,
             label: "角色与群组内用户",
             errThrowing: .roleAppointGroupUserFailed,
@@ -382,7 +382,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -485,7 +485,7 @@ extension PrivilegeSystem.RoleController {
         return __manyToMany(
             on: db,
             relations,
-            type: (QRole.self, QUserInGroup.self),
+            type: (QRole.self, UserTGroup.self),
             action: .detach,
             label: "角色与群组内用户",
             errThrowing: .roleDismissGroupUserFailed,
@@ -497,7 +497,7 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: OrderedSet<MTMRelation<QRole, QUserInGroup>>
+        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
@@ -530,10 +530,22 @@ public extension PrivilegeSystem.RoleController {
         __roles(on: db, for: user)
     }
     
+    func roles(
+        for userId: UUID
+    ) -> EventLoopRes<[QRole], Errcase> {
+        __roles(on: db, for: userId)
+    }
+    
     func userRoles(
         for user: QUser
     ) -> EventLoopRes<[QRole], Errcase> {
         __userRoles(on: db, for: user)
+    }
+    
+    func userRoles(
+        for userId: UUID
+    ) -> EventLoopRes<[QRole], Errcase> {
+        __userRoles(on: db, for: userId)
     }
     
     func groupRoles(
@@ -542,10 +554,22 @@ public extension PrivilegeSystem.RoleController {
         __groupRoles(on: db, for: user)
     }
     
+    func groupRoles(
+        for userId: UUID
+    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
+        __groupRoles(on: db, for: userId)
+    }
+    
     func userInGroupRoles(
         for user: QUser
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
         __userInGroupRoles(on: db, for: user)
+    }
+    
+    func userInGroupRoles(
+        for userId: UUID
+    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
+        __userInGroupRoles(on: db, for: userId)
     }
 }
 
@@ -558,6 +582,13 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func `is`(
+        roleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<Bool, Errcase> {
+        __is(on: db, roleId: roleId, appointedTo: userId)
+    }
+    
+    func `is`(
         userRole: QRole,
         appointedTo user: QUser
     ) -> EventLoopRes<Bool, Errcase> {
@@ -565,10 +596,24 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func `is`(
+        userRoleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<Bool, Errcase> {
+        __is(on: db, userRoleId: userRoleId, appointedTo: userId)
+    }
+    
+    func `is`(
         groupRole: QRole,
         appointedTo group: QGroup
     ) -> EventLoopRes<Bool, Errcase> {
         __is(on: db, groupRole: groupRole, appointedTo: group)
+    }
+    
+    func `is`(
+        groupRoleId: UUID,
+        appointedTo groupId: UUID
+    ) -> EventLoopRes<Bool, Errcase> {
+        __is(on: db, groupRoleId: groupRoleId, appointedTo: groupId)
     }
     
     func verify(
@@ -579,15 +624,29 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func verify(
+        groupRoleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<[QGroup], Errcase> {
+        __verify(on: db, groupRoleId: groupRoleId, appointedTo: userId)
+    }
+    
+    func verify(
         userInGroupRole: QRole,
         appointedTo user: QUser
     ) -> EventLoopRes<[QGroup], Errcase> {
         __verify(on: db, userInGroupRole: userInGroupRole, appointedTo: user)
     }
-}
+    
+    func verify(
+        userInGroupRoleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<[QGroup], Errcase> {
+        __verify(on: db, userInGroupRoleId: userInGroupRoleId, appointedTo: userId)
+    }}
+
 
 extension PrivilegeSystem.RoleController {
-    // 取得 某用户 所有可用的 角色
+    // 取得 某用户 所有可用的 角色 by QUser
     func __roles(
         on db: PGDatabase,
         for user: QUser
@@ -601,22 +660,180 @@ extension PrivilegeSystem.RoleController {
         }
     }
     
-    // 取得 某用户 可用的所有用户角色
+    // 取得 某用户 所有可用的 角色 by id
+    func __roles(
+        on db: PGDatabase,
+        for userId: UUID
+    ) -> EventLoopRes<[QRole], Errcase> {
+        [
+            __userRoles(on: db, for: userId),
+            __groupRoles(on: db, for: userId).map { $0.flatMap { $0.left } },
+            __userInGroupRoles(on: db, for: userId).map { $0.flatMap { $0.left } }
+        ].flatten(on: db.eventLoop).map {
+            [QRole]($0.flatMap { $0 }.uniqued())
+        }
+    }
+    
+    // 取得 某用户 可用的所有用户角色 by QUser
     func __userRoles(
         on db: PGDatabase,
         for user: QUser
     ) -> EventLoopRes<[QRole], Errcase> {
         user.model(from: db)
-            .errCast(Errcase.userRoleQueryFailed, "取得 User 主模型失败", category: .internal)
+            .errCast(Errcase.userRoleQueryFailed, "取得 User 主模型失败", metadata: ["user": .data(user)], category: .internal)
+            .flatMap { self.__userRoles(on: db, for: $0) }
+    }
+    
+    // 取得 某用户 可用的所有用户角色 by id
+    func __userRoles(
+        on db: PGDatabase,
+        for userId: UUID
+    ) -> EventLoopRes<[QRole], Errcase> {
+        __SDBM.User.query(on: db)
+            .filter(\.$id == userId)
+            .first()
+            .withError(Errcase.userRoleQueryFailed, "取得 User 主模型失败", metadata: ["id": .stringConvertible(userId)], category: .internal)
             .flatMap
-        { userModel in
-            userModel.$roles.get(on: db)
-                .withError(Errcase.userRoleQueryFailed, "从数据库查询失败", category: .internal)
+        { user in
+            guard let u = user else {
+                return db.eventLoop.makeFailedResult(Errcase.userRoleQueryFailed, "根据所传的 id，User 主模型不存在", metadata: ["id": .stringConvertible(userId)], category: .external)
+            }
+            return db.eventLoop.makeSucceededResult(u)
+        }.flatMap {
+            self.__userRoles(on: db, for: $0)
+        }
+    }
+    
+    // 查询某个用户的所有可用群组角色(role)，即用户所在群组被赋予的角色，包括该群组的所有父群组 by QUser
+    func __groupRoles(
+        on db: PGDatabase,
+        for user: QUser
+    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
+        user.model(from: db)
+            .errCast(Errcase.userRoleQueryFailed, "取得 User 主模型失败", metadata: ["user": .data(user)], category: .internal)
+            .flatMap { self.__groupRoles(on: db, for: $0) }
+    }
+    
+    // 查询某个用户的所有可用群组角色(role)，即用户所在群组被赋予的角色，包括该群组的所有父群组 by id
+    func __groupRoles(
+        on db: PGDatabase,
+        for userId: UUID
+    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
+        __SDBM.User.query(on: db)
+            .filter(\.$id == userId)
+            .first()
+            .withError(Errcase.groupRoleQueryFailed, "取得 User 主模型失败", metadata: ["id": .stringConvertible(userId)], category: .internal)
+            .flatMap
+        { user in
+            guard let u = user else {
+                return db.eventLoop.makeFailedResult(Errcase.groupRoleQueryFailed, "根据所传的 id，User 主模型不存在", metadata: ["id": .stringConvertible(userId)], category: .external)
+            }
+            return db.eventLoop.makeSucceededResult(u)
+        }.flatMap {
+            self.__groupRoles(on: db, for: $0)
+        }
+    }
+    
+    // 查询某个用户的所有可用组内角色(role) by QUser
+    func __userInGroupRoles(
+        on db: PGDatabase,
+        for user: QUser
+    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
+        __userInGroupRoles(on: db, for: user.id)
+    }
+    
+    // 查询某个用户的所有可用组内角色(role) by Id
+    func __userInGroupRoles(
+        on db: PGDatabase,
+        for userId: UUID
+    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
+        // 1. 第一步：捞出该用户直接加入的所有群组关系，并预加载完整的 __SDBM.Group 实体
+        __SDBM.UserGroupPivot.query(on: db)
+            .filter(\.$primaryModel.$id == userId)
+            .with(\.$secondaryModel)
+            .all()
+            .withError(Errcase.userInGroupRoleQueryFailed, "从数据库查询失败", category: .internal)
+            .flatMapThrowing
+        { userGroupPivots throws(Errcase.ErrType) in
+            // 安全提取所有“用户-群组”关系表的主键 ID (UUID)
+            try required(throws: Errcase.userInGroupRoleQueryFailed, "用户群组 pivot 的 id 获取失败", category: .internal) {
+                let pivotIds = try userGroupPivots.map { try $0.requireID() }
+                return (userGroupPivots, pivotIds)
+            }
+        }.flatMap { (userGroupPivots: [__SDBM.UserGroupPivot], pivotIds: [UUID]) in
+            guard !pivotIds.isEmpty else {
+                return db.eventLoop.makeSucceededResult([])
+            }
+            
+            // 2. 第二步：一发 IN 聚合查询，直击二级中间表
+            return __SDBM.RoleUserInGroupPivot.query(on: db)
+                .filter(\.$secondaryModel.$id ~~ pivotIds)
+                .with(\.$primaryModel)
+                .all()
+                .withError(Errcase.userInGroupRoleQueryFailed, "从数据库取得 pivot 失败", category: .internal)
                 .flatMapThrowing
-            { userRoles throws(Errcase.ErrType) in
-                try required(throws: Errcase.userRoleQueryFailed, "转为 DTO 失败", category: .internal) {
-                    try userRoles.map { try QRole.make(from: $0).get() }
+            { pivots throws(Errcase.ErrType) in
+                try required(throws: Errcase.userInGroupRoleQueryFailed, "转为 DTO 失败", category: .internal) {
+                    
+                    // 3. 第三步：为了做到 O(1) 的内存装配性能，先把第一步查到的物理实体织成一张“查找表”
+                    // Key 是 UserGroupPivot 的 ID，Value 是完整的 __SDBM.Group 实体
+                    var pivotToGroupLookup: [UUID: __SDBM.Group] = [:]
+                    for ugPivot in userGroupPivots {
+                        if let ugPivotId = ugPivot.id {
+                            pivotToGroupLookup[ugPivotId] = ugPivot.secondaryModel
+                        }
+                    }
+                    
+                    // 4. 第四步：在内存里，把多条角色记录按照【群组自身的 ID】重新切分团聚
+                    let groupedByGroup = try Dictionary(grouping: pivots, by: { pivot -> UUID in
+                        // 凭借当前记录的 user_in_group_id，从刚才的查找表里瞬间拿到 group.id
+                        guard let g = pivotToGroupLookup[pivot.$secondaryModel.id], let gId = g.id else {
+                            throw Errcase.userInGroupRoleQueryFailed.d("组内角色纽带关系映射丢失", category: .internal)
+                        }
+                        return gId
+                    })
+                    
+                    // 5. 第五步：组装出符合你多对一泛型要求的 MTORelation 数组
+                    return try groupedByGroup.map { groupId, currentPivots in
+                        
+                        // 5.1 从刚才建好的查找表里，把那个直接加入的完整的 __SDBM.Group 实体揪出来
+                        // 由于同一个 groupId 对应的 __SDBM.Group 是一样的，我们直接拿 currentPivots 第一个对应的组即可
+                        let samplePivotId = currentPivots[0].$secondaryModel.id
+                        guard let associatedGroup = pivotToGroupLookup[samplePivotId] else {
+                            throw Errcase.userInGroupRoleQueryFailed.d("群组实体检索失败", category: .internal)
+                        }
+                        
+                        let groupDTO = try QGroup.make(from: associatedGroup).get()
+                        
+                        // 5.2 把这个组名下被特殊指派的所有角色批量映射为 Role DTO，并做内存去重
+                        let roleDTOs = try Array(currentPivots.map { pivot in
+                            try QRole.make(from: pivot.primaryModel).get()
+                        }.uniqued())
+                        
+                        // 5.3 完美打包塞入多对一容器
+                        return MTORelation(
+                            left: .init(roleDTOs), // 该用户在这个组内被指派的多个专属角色
+                            right: groupDTO // 指派来源的直接群组（一端）
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+extension PrivilegeSystem.RoleController {
+    // 取得 某用户 可用的所有用户角色
+    func __userRoles(
+        on db: PGDatabase,
+        for user: __SDBM.User
+    ) -> EventLoopRes<[QRole], Errcase> {
+        user.$roles.get(on: db)
+            .withError(Errcase.userRoleQueryFailed, "从数据库查询失败", category: .internal)
+            .flatMapThrowing
+        { userRoles throws(Errcase.ErrType) in
+            try required(throws: Errcase.userRoleQueryFailed, "转为 DTO 失败", category: .internal) {
+                try userRoles.map { try QRole.make(from: $0).get() }
             }
         }
     }
@@ -624,19 +841,15 @@ extension PrivilegeSystem.RoleController {
     // 查询某个用户的所有可用群组角色(role)，即用户所在群组被赋予的角色，包括该群组的所有父群组
     func __groupRoles(
         on db: PGDatabase,
-        for user: QUser
+        for user: __SDBM.User
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        user.model(from: db)
-            .errCast(Errcase.groupRoleQueryFailed, "取得 User 主模型失败", category: .internal)
-            .flatMap
-        { userModel in
-            userModel.$groups.query(on: db)
-                .with(\.$supers) { path in
-                    path.with(\.$ancestor)
-                }
-                .all()
-                .withError(Errcase.groupRoleQueryFailed, "从数据库查询失败", category: .internal)
-        }.flatMapThrowing { groupRoles throws(Errcase.ErrType) in
+        user.$groups.query(on: db)
+            .with(\.$supers) { path in
+                path.with(\.$ancestor)
+            }
+            .all()
+            .withError(Errcase.groupRoleQueryFailed, "从数据库查询失败", category: .internal)
+        .flatMapThrowing { groupRoles throws(Errcase.ErrType) in
             let gs = [__SDBM.Group]((
                 groupRoles +
                 groupRoles.flatMap { $0.supers.map { $0.ancestor } }
@@ -685,89 +898,10 @@ extension PrivilegeSystem.RoleController {
             }
         }
     }
-    
-    // 查询某个用户的所有可用组内角色(role)
-    func __userInGroupRoles(
-        on db: PGDatabase,
-        for user: QUser
-    ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        // 1. 第一步：捞出该用户直接加入的所有群组关系，并预加载完整的 __SDBM.Group 实体
-        __SDBM.UserGroupPivot.query(on: db)
-            .filter(\.$user.$id == user.id)
-            .with(\.$group)
-            .all()
-            .withError(Errcase.userInGroupRoleQueryFailed, "从数据库查询失败", category: .internal)
-            .flatMapThrowing
-        { userGroupPivots throws(Errcase.ErrType) in
-            // 安全提取所有“用户-群组”关系表的主键 ID (UUID)
-            try required(throws: Errcase.userInGroupRoleQueryFailed, "用户群组 pivot 的 id 获取失败", category: .internal) {
-                let pivotIds = try userGroupPivots.map { try $0.requireID() }
-                return (userGroupPivots, pivotIds)
-            }
-        }.flatMap { (userGroupPivots: [__SDBM.UserGroupPivot], pivotIds: [UUID]) in
-            guard !pivotIds.isEmpty else {
-                return db.eventLoop.makeSucceededResult([])
-            }
-            
-            // 2. 第二步：一发 IN 聚合查询，直击二级中间表
-            return __SDBM.RoleUserInGroupPivot.query(on: db)
-                .filter(\.$secondaryModel.$id ~~ pivotIds)
-                .with(\.$primaryModel)
-                .all()
-                .withError(Errcase.userInGroupRoleQueryFailed, "从数据库取得 pivot 失败", category: .internal)
-                .flatMapThrowing
-            { pivots throws(Errcase.ErrType) in
-                try required(throws: Errcase.userInGroupRoleQueryFailed, "转为 DTO 失败", category: .internal) {
-                    
-                    // 3. 第三步：为了做到 O(1) 的内存装配性能，先把第一步查到的物理实体织成一张“查找表”
-                    // Key 是 UserGroupPivot 的 ID，Value 是完整的 __SDBM.Group 实体
-                    var pivotToGroupLookup: [UUID: __SDBM.Group] = [:]
-                    for ugPivot in userGroupPivots {
-                        if let ugPivotId = ugPivot.id {
-                            pivotToGroupLookup[ugPivotId] = ugPivot.group
-                        }
-                    }
-                    
-                    // 4. 第四步：在内存里，把多条角色记录按照【群组自身的 ID】重新切分团聚
-                    let groupedByGroup = try Dictionary(grouping: pivots, by: { pivot -> UUID in
-                        // 凭借当前记录的 user_in_group_id，从刚才的查找表里瞬间拿到 group.id
-                        guard let g = pivotToGroupLookup[pivot.$secondaryModel.id], let gId = g.id else {
-                            throw Errcase.userInGroupRoleQueryFailed.d("组内角色纽带关系映射丢失", category: .internal)
-                        }
-                        return gId
-                    })
-                    
-                    // 5. 第五步：组装出符合你多对一泛型要求的 MTORelation 数组
-                    return try groupedByGroup.map { groupId, currentPivots in
-                        
-                        // 5.1 从刚才建好的查找表里，把那个直接加入的完整的 __SDBM.Group 实体揪出来
-                        // 由于同一个 groupId 对应的 __SDBM.Group 是一样的，我们直接拿 currentPivots 第一个对应的组即可
-                        let samplePivotId = currentPivots[0].$secondaryModel.id
-                        guard let associatedGroup = pivotToGroupLookup[samplePivotId] else {
-                            throw Errcase.userInGroupRoleQueryFailed.d("群组实体检索失败", category: .internal)
-                        }
-                        
-                        let groupDTO = try QGroup.make(from: associatedGroup).get()
-                        
-                        // 5.2 把这个组名下被特殊指派的所有角色批量映射为 Role DTO，并做内存去重
-                        let roleDTOs = try Array(currentPivots.map { pivot in
-                            try QRole.make(from: pivot.primaryModel).get()
-                        }.uniqued())
-                        
-                        // 5.3 完美打包塞入多对一容器
-                        return MTORelation(
-                            left: .init(roleDTOs), // 该用户在这个组内被指派的多个专属角色
-                            right: groupDTO // 指派来源的直接群组（一端）
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
 
 extension PrivilegeSystem.RoleController {
-    // 检查某角色对于某用户是否可用
+    // 检查某角色对于某用户是否可用 by QRole and QUser
     func __is(
         on db: PGDatabase,
         role: QRole,
@@ -780,59 +914,162 @@ extension PrivilegeSystem.RoleController {
         ].flatten(on: db.eventLoop).map { $0.reduce(false) { $0 || $1 } }
     }
     
-    // 检查某角色是否被任命某用户
+    // 检查某角色对于某用户是否可用 by id
+    func __is(
+        on db: PGDatabase,
+        roleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<Bool, Errcase> {
+        [
+            __is(on: db, userRoleId: roleId, appointedTo: userId),
+            __verify(on: db, groupRoleId: roleId, appointedTo: userId).map { !$0.isEmpty },
+            __verify(on: db, userInGroupRoleId: roleId, appointedTo: userId).map { !$0.isEmpty }
+        ].flatten(on: db.eventLoop).map { $0.reduce(false) { $0 || $1 } }
+    }
+    
+    // 检查某角色是否被任命某用户 by QRole and QUser
     func __is(
         on db: PGDatabase,
         userRole: QRole,
         appointedTo user: QUser
     ) -> EventLoopRes<Bool, Errcase> {
-        user.model(from: db)
-            .errCast(Errcase.groupRoleCheckFailed, "取得 User 主模型失败", category: .internal)
-            .flatMap
-        { userModel in
-            userModel.$roles.query(on: db)
-                .filter(\.$id == userRole.id)
-                .first()
-                .withError(Errcase.userRoleCheckFailed, "从数据库查询失败", category: .internal)
-                .map { $0 != nil }
-        }
+        dtoModelToSQLModel(on: db, model: user, errThrowing: .groupRoleVerifyFailed)
+            .flatMap { self.__is(on: db, userRoleId: userRole.id, appointedTo: $0) }
     }
     
-    // 检查某角色是否被任命某群组为群组角色
+    // 检查某角色是否被任命某用户 by id
+    func __is(
+        on db: PGDatabase,
+        userRoleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<Bool, Errcase> {
+        idToSQLModel(on: db, builder: __SDBM.User.query(on: db), id: userId, errThrowing: .groupRoleVerifyFailed)
+            .flatMap { self.__is(on: db, userRoleId: userRoleId, appointedTo: $0) }
+    }
+    
+    // 检查某角色是否被任命某群组为群组角色 by QRole and QGroup
     func __is(
         on db: PGDatabase,
         groupRole: QRole,
         appointedTo group: QGroup
     ) -> EventLoopRes<Bool, Errcase> {
-        group.model(from: db)
-            .errCast(Errcase.groupRoleCheckFailed, "取得 Group 主模型失败", category: .internal)
-            .flatMap
-        { groupModel in
-            groupModel.$groupRoles.query(on: db)
-                .filter(\.$id == groupRole.id)
-                .first()
-                .withError(Errcase.groupRoleCheckFailed, "从数据库查询失败", category: .internal)
-                .map { $0 != nil }
-        }
+        dtoModelToSQLModel(on: db, model: group, errThrowing: .groupRoleCheckFailed)
+            .flatMap { self.__is(on: db, groupRoleId: groupRole.id, appointedTo: $0) }
     }
     
-    // 验证某群组角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
+    // 检查某角色是否被任命某群组为群组角色 by id
+    func __is(
+        on db: PGDatabase,
+        groupRoleId: UUID,
+        appointedTo groupId: UUID
+    ) -> EventLoopRes<Bool, Errcase> {
+        idToSQLModel(on: db, builder: __SDBM.Group.query(on: db), id: groupId, errThrowing: .groupRoleCheckFailed)
+            .flatMap { self.__is(on: db, groupRoleId: groupRoleId, appointedTo: $0) }
+    }
+    
+    // 验证某群组角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色 by QUser and QRole
     func __verify(
         on db: PGDatabase,
         groupRole: QRole,
         appointedTo user: QUser
     ) -> EventLoopRes<[QGroup], Errcase> {
-        user.model(from: db)
-            .errCast(Errcase.groupRoleVerifyFailed, "取得 User 主模型失败", category: .internal)
-            .flatMap
-        { userModel in
-            userModel.$groups.query(on: db)
-                .with(\.$supers) { path in
-                    path.with(\.$ancestor)
+        dtoModelToSQLModel(on: db, model: user, errThrowing: .groupRoleVerifyFailed)
+            .flatMap { self.__verify(on: db, groupRoleId: groupRole.id, appointedTo: $0) }
+    }
+    
+    // 验证某群组角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色 by Id
+    func __verify(
+        on db: PGDatabase,
+        groupRoleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<[QGroup], Errcase> {
+        idToSQLModel(on: db, builder: __SDBM.User.query(on: db), id: userId, errThrowing: .groupRoleVerifyFailed)
+            .flatMap { self.__verify(on: db, groupRoleId: groupRoleId, appointedTo: $0) }
+    }
+    
+    // 验证某组内角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色 by QUser and QRole
+    func __verify(
+        on db: PGDatabase,
+        userInGroupRole: QRole,
+        appointedTo user: QUser
+    ) -> EventLoopRes<[QGroup], Errcase> {
+        __verify(on: db, userInGroupRoleId: userInGroupRole.id, appointedTo: user.id)
+    }
+    
+    // 验证某组内角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色 by Id
+    func __verify(
+        on db: PGDatabase,
+        userInGroupRoleId: UUID,
+        appointedTo userId: UUID
+    ) -> EventLoopRes<[QGroup], Errcase> {
+        __SDBM.RoleUserInGroupPivot.query(on: db)
+            .filter(\.$primaryModel.$id == userInGroupRoleId)
+            .join(__SDBM.UserGroupPivot.self, on: \__SDBM.RoleUserInGroupPivot.$secondaryModel.$id == \__SDBM.UserGroupPivot.$id)
+            .filter(__SDBM.UserGroupPivot.self, \.$primaryModel.$id == userId)
+            .with(\.$secondaryModel) { userInGroup in
+                // 通过 eager load，强行把内层中间表，以及中间表背后的 __SDBM.Group 实体全部批量捎带出来
+                userInGroup.with(\.$secondaryModel)
+            }
+            .all()
+            .withError(Errcase.userInGroupRoleVerifyFailed, "验证组内特指派角色可用性失败", category: .internal)
+            .flatMapThrowing
+        { pivots throws(Errcase.ErrType) in
+            try required(throws: Errcase.userInGroupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
+                // 穿透复合中间表，抓出最内层的 __SDBM.Group 并映射为 Group DTO
+                try pivots.map { pivot -> QGroup in
+                    // 1. 从二级表拿到内层表 UserGroupPivot
+                    let userGroupRelation = pivot.secondaryModel
+                    // 2. 从内层表拿到我们刚刚用 .with(\.$group) 提前预加载好的 __SDBM.Group 物理实体
+                    let rawGroup = userGroupRelation.secondaryModel
+                    // 3. 完美转化为安全、干净的 DTO.Group 容器交付出去
+                    return try QGroup.make(from: rawGroup).get()
                 }
-                .all()
-                .withError(Errcase.groupRoleVerifyFailed, "取得用户所加入的所有群组失败", category: .internal)
-        }.flatMap { groups in
+            }
+        }
+    }
+}
+
+extension PrivilegeSystem.RoleController {
+    // 检查某角色是否被任命某用户
+    func __is(
+        on db: PGDatabase,
+        userRoleId: UUID,
+        appointedTo user: __SDBM.User
+    ) -> EventLoopRes<Bool, Errcase> {
+        user.$roles.query(on: db)
+            .filter(\.$id == userRoleId)
+            .first()
+            .withError(Errcase.userRoleCheckFailed, "从数据库查询失败", category: .internal)
+            .map { $0 != nil }
+    }
+    
+    // 检查某角色是否被任命某群组为群组角色
+    func __is(
+        on db: PGDatabase,
+        groupRoleId: UUID,
+        appointedTo group: __SDBM.Group
+    ) -> EventLoopRes<Bool, Errcase> {
+        group.$groupRoles.query(on: db)
+            .filter(\.$id == groupRoleId)
+            .first()
+            .withError(Errcase.groupRoleCheckFailed, "从数据库查询失败", category: .internal)
+            .map { $0 != nil }
+    }
+    
+    // 验证某群组角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
+    func __verify(
+        on db: PGDatabase,
+        groupRoleId: UUID,
+        appointedTo user: __SDBM.User
+    ) -> EventLoopRes<[QGroup], Errcase> {
+        user.$groups.query(on: db)
+            .with(\.$supers) { path in
+                path.with(\.$ancestor)
+            }
+            .all()
+            .withError(Errcase.groupRoleVerifyFailed, "取得用户所加入的所有群组失败", category: .internal)
+            .flatMap
+        { groups in
             let gs = [__SDBM.Group]((
                 groups +
                 groups.flatMap { $0.supers.map { $0.ancestor } }
@@ -847,7 +1084,7 @@ extension PrivilegeSystem.RoleController {
             let groupsLookup = Dictionary(uniqueKeysWithValues: gs.map { ($0.id, $0) })
             
             return __SDBM.RoleGroupPivot.query(on: db)
-                .filter(\.$primaryModel.$id == groupRole.id)
+                .filter(\.$primaryModel.$id == groupRoleId)
                 .filter(\.$secondaryModel.$id ~~ groupIds)
                 .all()
                 .withError(Errcase.groupRoleVerifyFailed, "校验群组角色关联失败", category: .internal)
@@ -869,36 +1106,31 @@ extension PrivilegeSystem.RoleController {
         }
     }
     
-    // 验证某组内角色是否为某用户可用，若可用，指出该角色是哪个或哪些群组的群组角色
-    func __verify(
+    func idToSQLModel<T: PGModel>(
         on db: PGDatabase,
-        userInGroupRole: QRole,
-        appointedTo user: QUser
-    ) -> EventLoopRes<[QGroup], Errcase> {
-        __SDBM.RoleUserInGroupPivot.query(on: db)
-            .filter(\.$primaryModel.$id == userInGroupRole.id)
-            .join(__SDBM.UserGroupPivot.self, on: \__SDBM.RoleUserInGroupPivot.$secondaryModel.$id == \__SDBM.UserGroupPivot.$id)
-            .filter(__SDBM.UserGroupPivot.self, \.$user.$id == user.id)
-            .with(\.$secondaryModel) { userInGroup in
-                // 通过 eager load，强行把内层中间表，以及中间表背后的 __SDBM.Group 实体全部批量捎带出来
-                userInGroup.with(\.$group)
+        builder: QueryBuilder<T>,
+        id: UUID,
+        errThrowing: Errcase
+    ) -> EventLoopRes<T, Errcase> {
+        builder
+            .first()
+            .withError(errThrowing, "取得 \(T.name) 主模型失败", metadata: ["id": .stringConvertible(id)], category: .internal)
+            .flatMap
+        { user in
+            guard let u = user else {
+                return db.eventLoop.makeFailedResult(errThrowing, "根据所传的 id，\(T.name) 主模型不存在", metadata: ["id": .stringConvertible(id)], category: .external)
             }
-            .all()
-            .withError(Errcase.userInGroupRoleVerifyFailed, "验证组内特指派角色可用性失败", category: .internal)
-            .flatMapThrowing
-        { pivots throws(Errcase.ErrType) in
-            try required(throws: Errcase.userInGroupRoleVerifyFailed, "转为 DTO 失败", category: .internal) {
-                // 穿透复合中间表，抓出最内层的 __SDBM.Group 并映射为 Group DTO
-                try pivots.map { pivot -> QGroup in
-                    // 1. 从二级表拿到内层表 UserGroupPivot
-                    let userGroupRelation = pivot.secondaryModel
-                    // 2. 从内层表拿到我们刚刚用 .with(\.$group) 提前预加载好的 __SDBM.Group 物理实体
-                    let rawGroup = userGroupRelation.group
-                    // 3. 完美转化为安全、干净的 DTO.Group 容器交付出去
-                    return try QGroup.make(from: rawGroup).get()
-                }
-            }
+            return db.eventLoop.makeSucceededResult(u)
         }
+    }
+    
+    func dtoModelToSQLModel<T: __DBModel>(
+        on db: PGDatabase,
+        model: T,
+        errThrowing: Errcase
+    ) -> EventLoopRes<T.SQLModel, Errcase> {
+        model.model(from: db)
+            .errCast(errThrowing, "取得 \(T.logName) 主模型失败", metadata: ["model": .data(model)], category: .internal)
     }
 }
 

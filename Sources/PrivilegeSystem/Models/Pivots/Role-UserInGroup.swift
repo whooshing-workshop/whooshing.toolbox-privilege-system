@@ -1,5 +1,5 @@
 import PgSQL
-import Policy
+import DTOBuilder
 import Fluent
 
 public extension __SDBM {

@@ -8,6 +8,7 @@ import Query
 import Collections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 @Suite("用户信息 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct UserinfoTesting {
@@ -268,7 +269,17 @@ struct UserinfoTesting {
     func fetchQuery() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let infos = try await s.infoSlice.fetch(for: AT.ids[0])
+        let infos = try await #require(
+            QUserInfo.query(on: s)
+                .filter(\.$user.id == AT.ids[0])
+                .first()
+                .get()
+        )
+        
+        try await infos.$phones.load(on: s).get()
+        try await infos.$addresses.load(on: s).get()
+        try await infos.$alternateEmails.load(on: s).get()
+        
         #expect(infos.addresses.like(Self.infos[0].2.addresses))
         #expect(infos.alternateEmails.like(Self.infos[0].2.alternateEmails))
         #expect(infos.phones.like(Self.infos[0].2.phones))
@@ -282,7 +293,7 @@ struct UserinfoTesting {
             for address in info.2.addresses {
                 let res = try #require(
                     try await s.query(QUserInfo.self)
-                        .join(QAddressSlice.self, on: \QUserInfo.id == \QAddressSlice.userInfoId)
+                        .join(QAddressSlice.self, on: \QUserInfo.id == \QAddressSlice.$userInfo.id)
                         .filter(QAddressSlice.self, \.value == address.value)
                         .first()
                         
@@ -295,7 +306,7 @@ struct UserinfoTesting {
             for email in info.2.alternateEmails {
                 let res = try #require(
                     try await s.query(QUserInfo.self)
-                        .join(QAlternateEmailSlice.self, on: \QUserInfo.id == \QAlternateEmailSlice.userInfoId)
+                        .join(QAlternateEmailSlice.self, on: \QUserInfo.id == \QAlternateEmailSlice.$userInfo.id)
                         .filter(QAlternateEmailSlice.self, \.value == email.value)
                         .first()
                         
@@ -308,7 +319,7 @@ struct UserinfoTesting {
             for phone in info.2.phones {
                 let res = try #require(
                     try await s.query(QUserInfo.self)
-                        .join(QPhoneSlice.self, on: \QUserInfo.id == \QPhoneSlice.userInfoId)
+                        .join(QPhoneSlice.self, on: \QUserInfo.id == \QPhoneSlice.$userInfo.id)
                         .filter(QPhoneSlice.self, \.value == phone.value)
                         .first()
                         
@@ -399,7 +410,7 @@ struct UserinfoTesting {
         let userId = AT.ids[0]
         let existingInfo = try #require(
             try await s.query(QUserInfo.self)
-                .filter(\.userId == userId)
+                .filter(\.$user.id == userId)
                 .first()
         )
         

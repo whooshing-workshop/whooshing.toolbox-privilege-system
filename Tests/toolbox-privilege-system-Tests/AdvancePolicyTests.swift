@@ -3,8 +3,9 @@ import Foundation
 import Query
 import Policy
 import Fluent
-@preconcurrency import AnyCodable
 import OrderedCollections
+@preconcurrency import AnyCodable
+@testable import DTOBuilder
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 

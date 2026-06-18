@@ -8,6 +8,7 @@ import OrderedCollections
 @preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 // =============================================================================
 // ReadmeExampleTests.swift

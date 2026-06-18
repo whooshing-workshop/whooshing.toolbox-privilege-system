@@ -1,6 +1,6 @@
 import Fluent
 import Foundation
-import Policy
+import DTOBuilder
 import ErrorHandle
 import Collections
 import PrivilegeModule
@@ -54,6 +54,20 @@ public struct QDomain: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    @Sibling(
+        through: UserTDomain.self,
+        from: \.domainId,
+        to: \.userId
+    )                                               public var users: [QUser]
+    
+    @Sibling(
+        through: DomainTGroup.self,
+        from: \.domainId,
+        to: \.groupId
+    )                                               public var groups: [QGroup]
+    
+    @Subs(for: \.$parent)                           public var policies: [QPolicy<Domain>]
+    
     public static let logName: String = "QDomain"
     
     package let __m: __SDBM.Domain?
@@ -64,7 +78,11 @@ public struct QDomain: DTO.Queried {
         .name: .init(obj: self.name),
         .description: .init(obj: self.description),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .users: .init(obj: self.$users),
+        .groups: .init(obj: self.$groups),
+        .policies: .init(obj: self.$policies)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .name] }
@@ -75,6 +93,10 @@ public struct QDomain: DTO.Queried {
         case description
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case users
+        case groups
+        case policies
     }
     
     init(
@@ -91,16 +113,22 @@ public struct QDomain: DTO.Queried {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$users.fromId = id
+        self.$groups.fromId = id
+        self.$policies.fromId = id
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.name = try container.decodeIfPresent(String.self, forKey: .name)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            name: try container.decodeIfPresent(String.self, forKey: .name),
+            description: try container.decodeIfPresent(String.self, forKey: .description),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -110,6 +138,10 @@ public struct QDomain: DTO.Queried {
         try container.encodeIfPresent(description, forKey: .description)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        
+        try container.encode(self.$users, forKey: .users)
+        try container.encode(self.$groups, forKey: .groups)
+        try container.encode(self.$policies, forKey: .policies)
     }
 }
 

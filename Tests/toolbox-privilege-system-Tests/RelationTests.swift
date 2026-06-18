@@ -9,6 +9,7 @@ import Collections
 import Fluent
 import Policy
 import OrderedCollections
+@testable import DTOBuilder
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 
@@ -89,7 +90,7 @@ struct RelationsTesting {
         for (parentIdx, childIndices) in TestingShared.groupStructures {
             let parentId = groups[parentIdx].id
             let childCount = try await s.query(QGroup.self)
-                .filter(\.parentId == parentId)
+                .filter(\.$parent.id == parentId)
                 .count()
             #expect(childCount == childIndices.count,
                     "GT.ids[\(parentIdx)] 应有 \(childIndices.count) 个直接子群组，实际 \(childCount) 个")
@@ -201,11 +202,11 @@ struct RelationsTesting {
                 // 首先我们需要先在系统里检索他们的关系对 (UserInGroupRelation)
                 let relReq = try await s.group.query(
                     relations: [
-                        user =| group
+                        .init(userId: user.id, groupId: group.id)
                     ]
                 )
                 
-                if let rel = relReq.first(where: { $0.user.id == user.id && $0.group.id == group.id }) {
+                if let rel = relReq.first(where: { $0.userId == user.id && $0.groupId == group.id }) {
                     try await s.role.appoint {
                         OrderedSet([role]) => OrderedSet([rel])
                     }

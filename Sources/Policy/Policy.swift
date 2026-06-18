@@ -1,12 +1,14 @@
 import PgSQL
 import Fluent
 import Foundation
+import DTOBuilder
 
 /// 拥有 OPA 策略的模型类型。
 ///
 /// `Role`、`Domain` 和模块内的 `Privilege` Model 都会实现 `PolicyType`。
 /// 该协议提供策略表命名和 OPA 路径所需的元数据，供 `PolicyExp` 和策略控制器使用。
 public protocol PolicyType: Sendable where Model.IDValue == UUID {
+    associatedtype DTOModel: DTO.DBModel
     /// 拥有策略行的 Fluent Model。
     associatedtype Model: PGModel
     /// 策略表和外键字段使用的数据库前缀。
@@ -22,8 +24,7 @@ public extension __SDBM {
         
         public struct Fields: PGFields {
             public let id = PGField("id", .uuid)                            .primary
-            public let parentId = PGField("\(T.namePrefix)_id", .uuid)      .required
-                .foreign(T.Model.self, .id, onDelete: .cascade)
+            public let parentId = PGField("\(T.namePrefix)_id", .uuid)      .required.foreign(T.Model.self, .id, onDelete: .cascade)
             public let moduleId = PGField("module_id", .uuid)               .required
             public let policy = PGField("policy", .string)                  .required
             public let createdAt = PGField("created_at", .datetime)         .required

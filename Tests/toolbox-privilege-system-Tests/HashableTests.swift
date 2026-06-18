@@ -5,6 +5,7 @@ import AnyCodable
 @testable import PrivilegeModule
 @testable import ResourceMacros
 @testable import Policy
+@testable import DTOBuilder
 
 enum MockOperation: String, OperationList {
     case read
@@ -174,6 +175,7 @@ struct HashableTests {
         let model = __SDBM.PolicyExp<Role>()
         model.moduleId = moduleId
         model.policy = policyStr
+        model.$parent.id = UUID()
         model.id = UUID()
         model.createdAt = Date()
         model.updatedAt = Date()
@@ -223,8 +225,6 @@ struct HashableTests {
         umodel.createdAt = Date()
         umodel.updatedAt = Date()
         
-        let quser = try QUser.make(from: umodel).get()
-        
         let gmodel = __SDBM.Group()
         gmodel.name = "TestGroup"
         gmodel.id = UUID()
@@ -233,18 +233,18 @@ struct HashableTests {
         gmodel.updatedAt = Date()
         let qgroup = try QGroup.make(from: gmodel).get()
         
-        let p1 = PUserInGroup(user: quser, group: qgroup)
-        let p2 = PUserInGroup(user: quser, group: qgroup)
+        let p1 = PUserTGroup(userId: umodel.id!, groupId: qgroup.id)
+        let p2 = PUserTGroup(userId: umodel.id!, groupId: qgroup.id)
         
         #expect(p1 == p2)
         
         let model = __SDBM.UserGroupPivot()
-        model.$user.value = umodel
-        model.$group.value = gmodel
+        model.$primaryModel.id = try umodel.requireID()
+        model.$secondaryModel.id = try gmodel.requireID()
         model.id = UUID()
         model.createdAt = Date()
         
-        let q1 = try QUserInGroup.make(from: model).get()
+        let q1 = try UserTGroup.make(from: model).get()
         
         #expect(p1.like(q1))
         #expect(q1.like(p1))
@@ -270,31 +270,6 @@ struct HashableTests {
         model.updatedAt = Date()
         
         let q1 = try QAddressSlice.make(from: model).get()
-        
-        #expect(p1.like(q1))
-        #expect(q1.like(p1))
-    }
-    
-    @Test("ExtendedInfoDTO Hashable & Equatable")
-    func testExtendedInfoDTO() async throws {
-        let value = "TestValue"
-        let order: Int16 = 1
-        
-        let pSlice = PAddressSlice(value: value, order: order)
-        
-        let model = __SDBM.User.Info.Extended<UserInfoExtends.Address>()
-        model.value = value
-        model.order = order
-        model.id = UUID()
-        model.description = nil
-        model.$userInfo.id = UUID()
-        model.createdAt = Date()
-        model.updatedAt = Date()
-        
-        let qSlice = try QAddressSlice.make(from: model).get()
-        
-        let p1 = PExtendedInfo(addresses: [pSlice])
-        let q1 = QExtendedInfo(addresses: [qSlice])
         
         #expect(p1.like(q1))
         #expect(q1.like(p1))

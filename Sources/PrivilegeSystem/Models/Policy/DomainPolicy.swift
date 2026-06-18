@@ -1,6 +1,8 @@
 import Policy
+import DTOBuilder
 
 public enum Domain: PolicyType {
+    public typealias DTOModel = QDomain
     public typealias Model = __SDBM.Domain
     public static var namePrefix: String { "domain" }
     public static var typeId: String { "domain" }

@@ -1,11 +1,11 @@
 import Fluent
-import Policy
 import Vapor
 import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
 import Logging
+import DTOBuilder
 import OrderedCollections
 
 extension PrivilegeSystem {

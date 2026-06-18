@@ -6,6 +6,7 @@ import Fluent
 import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 typealias DT = DomainTesting
 

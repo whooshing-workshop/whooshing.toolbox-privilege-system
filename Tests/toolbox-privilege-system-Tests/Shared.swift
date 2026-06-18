@@ -13,6 +13,7 @@ import LoggingAdvanced
 @testable import ResourceMacros
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 typealias PModule = PrivilegeModule<ResourceList>
 

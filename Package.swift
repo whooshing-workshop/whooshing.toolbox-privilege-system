@@ -42,12 +42,6 @@ let package = Package(
             ]
         ),
         .target(
-            name: "Policy",
-            dependencies: [
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
-            ]
-        ),
-        .target(
             name: "Query",
             dependencies: [
                 .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
@@ -56,10 +50,27 @@ let package = Package(
             ]
         ),
         .target(
+            name: "DTOBuilder",
+            dependencies: [
+                .target(name: "Query"),
+                .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
+                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
+                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
+            ]
+        ),
+        .target(
+            name: "Policy",
+            dependencies: [
+                .target(name: "DTOBuilder"),
+                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
+            ]
+        ),
+        .target(
             name: "PrivilegeSystem",
             dependencies: [
                 .target(name: "Query"),
                 .target(name: "Policy"),
+                .target(name: "DTOBuilder"),
                 .target(name: "PrivilegeModule"),
                 .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
                 .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic"),
@@ -81,6 +92,7 @@ let package = Package(
             dependencies: [
                 .target(name: "Query"),
                 .target(name: "Policy"),
+                .target(name: "DTOBuilder"),
                 .target(name: "ResourceMacros"),
                 .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
                 .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic"),

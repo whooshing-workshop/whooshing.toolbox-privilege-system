@@ -1,6 +1,6 @@
 import PgSQL
 import Foundation
-import Policy
+import DTOBuilder
 import Fluent
 
 public extension __SDBM.User {

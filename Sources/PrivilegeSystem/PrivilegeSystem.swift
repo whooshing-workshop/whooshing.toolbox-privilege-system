@@ -70,7 +70,7 @@ public final class PrivilegeSystem: Sendable {
     /// 执行数据库和 OPA 操作所使用的事件循环。
     public let eventLoop: EventLoop
     let dbs: Databases
-    let db: PGDatabase
+    package let db: PGDatabase
     let opa: OPA
     
     /// 创建并加载权限系统实例。
@@ -177,7 +177,7 @@ public final class PrivilegeSystem: Sendable {
     }
 }
 
-public extension PrivilegeSystem {
+extension PrivilegeSystem: Query.System {
     /// 为某个系统 DTO 创建类型安全查询。
     ///
     /// `query(_:)` 是 Fluent 查询的小型 DSL 包装，会把 DTO 的 KeyPath 映射到
@@ -191,7 +191,9 @@ public extension PrivilegeSystem {
     ///
     /// - Parameter type: 要查询的 DTO 类型。大多数情况下 Swift 可以自动推断。
     /// - Returns: 针对该 DTO 配置好的 `Query.Builder`。
-    func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
+    public func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
         .init(query: T.Model.query(on: db))
     }
 }
+
+extension PrivilegeSystem: __QuerySystem {}

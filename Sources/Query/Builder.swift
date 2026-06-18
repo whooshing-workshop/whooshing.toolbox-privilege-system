@@ -15,6 +15,10 @@ import NIOAdvanced
 ///     .page(with: 1, size: 20)
 /// ```
 public enum Query {
+    public protocol System: Sendable {
+        func query<T>(_ model: T.Type) -> Builder<T> where T: Queriable
+    }
+    
     /// 可以被查询 DSL 读取的 DTO。
     public protocol Queriable: Sendable {
         /// DTO 背后的 Fluent Model。
@@ -27,6 +31,8 @@ public enum Query {
         static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base>
         /// 将 Fluent Model 转换为 DTO。
         static func make(from: Model) -> Res<Self, ErrorType>
+        /// 构建 Builder<Self>
+        static func query(on system: System) -> Builder<Self>
     }
     
     /// 可链式调用的类型化查询构建器。
@@ -161,4 +167,14 @@ public enum Query {
             }
         }
     }
+}
+
+public extension Query.Queriable {
+    static func query(on system: Query.System) -> Query.Builder<Self> {
+        system.query(Self.self)
+    }
+}
+
+package protocol __QuerySystem: Query.System {
+    var db: PGDatabase { get }
 }

@@ -6,6 +6,7 @@ import Fluent
 import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 typealias RT = RoleTesting
 
@@ -248,7 +249,7 @@ struct RoleTesting {
         // 3. Role <-> UserInGroup
         // 先建立 User <-> Group 关系才能指派组内用户的角色
         try await s.group.join { OrderedSet([user]) => OrderedSet([group]) }
-        let uig = try await s.group.query(relations: [user =| group])
+        let uig = try await s.group.query(relations: [.init(userId: user.id, groupId: group.id)])
         try await s.role.appoint { OrderedSet([role]) => OrderedSet(uig) }
         let c5 = try await __SDBM.RoleUserInGroupPivot.query(on: s.db)
             .count()

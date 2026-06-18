@@ -5,6 +5,7 @@ import PgSQL
 import Vapor
 import ErrorHandle
 import Logging
+import DTOBuilder
 import OrderedCollections
 
 package protocol Controller: AnyObject, Sendable where E.ErrType == BscError<E> {

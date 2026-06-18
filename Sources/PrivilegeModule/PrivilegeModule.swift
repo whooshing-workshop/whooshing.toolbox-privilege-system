@@ -68,7 +68,7 @@ public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
     /// 稳定的模块标识，用于 OPA 策略路径和仲裁报告。
     public let moduleId: UUID
     let dbs: Databases
-    let db: PGDatabase
+    package let db: PGDatabase
     let opa: OPA
     
     /// 创建并加载资源权限模块。
@@ -200,7 +200,7 @@ public struct OPAConfiguration: Sendable {
     }
 }
 
-public extension PrivilegeModule {
+extension PrivilegeModule: Query.System {
     /// 为某个模块 DTO 创建类型安全查询。
     ///
     /// ```swift
@@ -210,7 +210,9 @@ public extension PrivilegeModule {
     ///
     /// - Parameter type: 要查询的 DTO 类型。大多数情况下 Swift 可以自动推断。
     /// - Returns: 针对该 DTO 配置好的 `Query.Builder`。
-    func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
+    public func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
         .init(query: T.Model.query(on: db))
     }
 }
+
+extension PrivilegeModule: __QuerySystem {}

@@ -7,6 +7,7 @@ import OrderedCollections
 @preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 typealias PT = PolicyTesting
 
@@ -2277,10 +2278,10 @@ struct PolicyTesting {
         let group10 = try #require(allGroups.first(where: { $0.id == GT.ids[10] }))
 
         let relReq = try await s.group.query(
-            relations: [user =| group10]
+            relations: [.init(userId: user.id, groupId: group10.id)]
         )
         let rel = try #require(
-            relReq.first(where: { $0.user.id == user.id && $0.group.id == group10.id }),
+            relReq.first(where: { $0.userId == user.id && $0.groupId == group10.id }),
             "AT.ids[8] 应在 GT.ids[10] 中"
         )
 
@@ -2336,10 +2337,10 @@ struct PolicyTesting {
         let group9 = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))
 
         let relReq = try await s.group.query(
-            relations: [user =| group9]
+            relations: [.init(userId: user.id, groupId: group9.id)]
         )
         let relInGroup9 = try #require(
-            relReq.first(where: { $0.user.id == user.id && $0.group.id == group9.id }),
+            relReq.first(where: { $0.userId == user.id && $0.groupId == group9.id }),
             "AT.ids[7] 应在 GT.ids[9] 中"
         )
 

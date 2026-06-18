@@ -1,6 +1,6 @@
 import Fluent
 import Foundation
-import Policy
+import DTOBuilder
 import ErrorHandle
 import Collections
 import PrivilegeModule
@@ -51,6 +51,26 @@ public struct QRole: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    @Sibling(
+        through: UserTRole.self,
+        from: \.roleId,
+        to: \.userId
+    )                                               public var users: [QUser]
+    
+    @Sibling(
+        through: RoleTGroup.self,
+        from: \.roleId,
+        to: \.groupId
+    )                                               public var groups: [QGroup]
+    
+    @Sibling(
+        through: RoleTUserInGroup.self,
+        from: \.roleId,
+        to: \.userInGroupId
+    )                                               public var userInGroups: [UserTGroup]
+    
+    @Subs(for: \.$parent)                           public var policies: [QPolicy<Role>]
+    
     public static let logName: String = "QRole"
     
     package let __m: __SDBM.Role?
@@ -61,7 +81,12 @@ public struct QRole: DTO.Queried {
         .name: .init(obj: self.name),
         .description: .init(obj: self.description),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .users: .init(obj: self.$users),
+        .groups: .init(obj: self.$groups),
+        .userInGroups: .init(obj: self.$userInGroups),
+        .policies: .init(obj: self.$policies)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .name] }
@@ -72,6 +97,11 @@ public struct QRole: DTO.Queried {
         case description
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case users
+        case groups
+        case userInGroups = "user_in_groups"
+        case policies
     }
     
     init(
@@ -88,16 +118,23 @@ public struct QRole: DTO.Queried {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$users.fromId = id
+        self.$groups.fromId = id
+        self.$userInGroups.fromId = id
+        self.$policies.fromId = id
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.name = try container.decode(String.self, forKey: .name)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            name: try container.decode(String.self, forKey: .name),
+            description: try container.decodeIfPresent(String.self, forKey: .description),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -107,6 +144,11 @@ public struct QRole: DTO.Queried {
         try container.encodeIfPresent(description, forKey: .description)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        
+        try container.encode(self.$users, forKey: .users)
+        try container.encode(self.$groups, forKey: .groups)
+        try container.encode(self.$userInGroups, forKey: .userInGroups)
+        try container.encode(self.$policies, forKey: .policies)
     }
 }
 

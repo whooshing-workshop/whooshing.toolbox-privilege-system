@@ -2,7 +2,7 @@ import Vapor
 import Fluent
 import DataConvertable
 import ErrorHandle
-import Policy
+import DTOBuilder
 import Cryptos
 import Collections
 import PrivilegeModule
@@ -57,13 +57,17 @@ public struct PUserInfo: DTO.Prepare {
 public struct QUserInfo: DTO.Queried {
     public typealias PrepareModel = PUserInfo
     public let id: UUID
-    public let userId: UUID
     public let nickname: String
     public let identifier: String
     public let birthday: Date
     public let other: String?
     public let createdAt: Date
     public let updatedAt: Date
+    
+    @Super public var user: QUser
+    @Subs(for: \.$userInfo) public var alternateEmails: [QInfoSlice<AlternateEmail>]
+    @Subs(for: \.$userInfo) public var phones: [QInfoSlice<Phone>]
+    @Subs(for: \.$userInfo) public var addresses: [QInfoSlice<Address>]
     
     public static let logName: String = "PUserInfo"
     
@@ -72,13 +76,18 @@ public struct QUserInfo: DTO.Queried {
     
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
-        .userId: .init(obj: self.userId),
+        .userId: .init(obj: self.$user.id),
         .nickname: .init(obj: self.nickname),
         .identifier: .init(obj: self.identifier),
         .birthday: .init(obj: self.birthday),
         .other: .init(obj: self.other),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .user: .init(obj: self.$user),
+        .alternateEmails: .init(obj: self.$alternateEmails),
+        .phones: .init(obj: self.$phones),
+        .addresses: .init(obj: self.$addresses)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id] }
@@ -92,6 +101,11 @@ public struct QUserInfo: DTO.Queried {
         case other
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case user
+        case alternateEmails
+        case phones
+        case addresses
     }
     
     init(
@@ -106,7 +120,6 @@ public struct QUserInfo: DTO.Queried {
         model: SQLModel?
     ) {
         self.id = id
-        self.userId = userId
         self.nickname = nickname
         self.identifier = identifier
         self.birthday = birthday
@@ -114,31 +127,43 @@ public struct QUserInfo: DTO.Queried {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$user.id = userId
+        self.$alternateEmails.fromId = id
+        self.$phones.fromId = id
+        self.$addresses.fromId = id
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.userId = try container.decode(UUID.self, forKey: .userId)
-        self.nickname = try container.decode(String.self, forKey: .nickname)
-        self.identifier = try container.decode(String.self, forKey: .identifier)
-        self.birthday = try container.decode(Date.self, forKey: .birthday)
-        self.other = try container.decodeIfPresent(String.self, forKey: .other)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            userId: try container.decode(UUID.self, forKey: .userId),
+            nickname: try container.decode(String.self, forKey: .nickname),
+            identifier: try container.decode(String.self, forKey: .identifier),
+            birthday: try container.decode(Date.self, forKey: .birthday),
+            other: try container.decodeIfPresent(String.self, forKey: .other),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
-        try container.encode(self.userId, forKey: .userId)
+        try container.encode(self.$user.id, forKey: .userId)
         try container.encode(self.nickname, forKey: .nickname)
         try container.encode(self.identifier, forKey: .identifier)
         try container.encode(self.birthday, forKey: .birthday)
         try container.encodeIfPresent(self.other, forKey: .other)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        
+        try container.encode(self.$user, forKey: .user)
+        try container.encode(self.alternateEmails, forKey: .alternateEmails)
+        try container.encode(self.phones, forKey: .phones)
+        try container.encode(self.addresses, forKey: .addresses)
     }
 }
 
@@ -183,7 +208,7 @@ extension QUserInfo: Query.Queriable {
         \.birthday: \.$birthday,
         \.other: \.$other,
         \.id: \.$id,
-        \.userId: \.$user.$id,
+        \.$user.id: \.$user.$id,
         \.createdAt: \.$createdAt,
         \.updatedAt: \.$updatedAt
     ]}

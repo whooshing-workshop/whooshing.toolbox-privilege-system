@@ -4,6 +4,7 @@ import DataConvertable
 import ErrorHandle
 import Cryptos
 import Policy
+import DTOBuilder
 import PrivilegeModule
 import Query
 import LoggingAdvanced
@@ -55,6 +56,27 @@ public struct QUser: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
+    @OptionalSub(for: \.$user)          public var info: QUserInfo?
+    @OptionalSub(for: \.$user)          public var token: QToken?
+    
+    @Sibling(
+        through: UserTGroup.self,
+        from: \.userId,
+        to: \.groupId
+    )                                   public var groups: [QGroup]
+    
+    @Sibling(
+        through: UserTRole.self,
+        from: \.userId,
+        to: \.roleId
+    )                                   public var roles: [QRole]
+    
+    @Sibling(
+        through: UserTDomain.self,
+        from: \.userId,
+        to: \.domainId
+    )                                   public var domains: [QDomain]
+    
     public static let logName: String = "QUser"
     
     package let __m: __SDBM.User?
@@ -64,7 +86,13 @@ public struct QUser: DTO.Queried {
         .id: .init(obj: self.id),
         .email: .init(obj: self.email),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .info: .init(obj: self.$info),
+        .token: .init(obj: self.$token),
+        .groups: .init(obj: self.$groups),
+        .roles: .init(obj: self.$roles),
+        .domains: .init(obj: self.$domains)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .email] }
@@ -74,6 +102,12 @@ public struct QUser: DTO.Queried {
         case email
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case info
+        case token
+        case groups
+        case roles
+        case domains
     }
     
     init(
@@ -88,15 +122,23 @@ public struct QUser: DTO.Queried {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$info.fromId = id
+        self.$token.fromId = id
+        self.$groups.fromId = id
+        self.$roles.fromId = id
+        self.$domains.fromId = id
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.email = try container.decode(String.self, forKey: .email)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            email: try container.decode(String.self, forKey: .email),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -105,6 +147,12 @@ public struct QUser: DTO.Queried {
         try container.encode(self.email, forKey: .email)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        
+        try container.encode(self.$info, forKey: .info)
+        try container.encode(self.$token, forKey: .token)
+        try container.encode(self.$groups, forKey: .groups)
+        try container.encode(self.$roles, forKey: .roles)
+        try container.encode(self.$domains, forKey: .domains)
     }
 }
 
@@ -167,6 +215,38 @@ extension QUser: Query.Queriable {
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
     }
+}
+
+import NIOAdvanced
+
+public extension QUser {
+    
+//    func roles(on system: PrivilegeSystem) -> EventLoopRes<[QRole], PrivilegeSystem.Errcase> {
+//        // 一个 user 可用的所有 roles 包括:
+//        // 1.为 user 赋予的 用户角色
+//        // 2.user 所在组的 群组角色，包括所有父群组的 群组角色
+//        // 3.user 所在组为其赋予的 组内角色
+//        
+//        let userRoles = UserTRole.query(on: system)
+//            .filter(\.userId == self.id)
+//            .all()
+//            .errCast(PrivilegeSystem.Errcase.userRoleQueryFailed, "查询 user-role 关系时失败", category: .internal)
+//            .flatMap
+//        {
+//            QRole.make(from: $0.map { $0.roleId }, on: system)
+//                .errCast(PrivilegeSystem.Errcase.userRoleQueryFailed, "从 user-role 关系查询结果查询 roles 时失败", category: .internal)
+//        }
+//        
+//        let userGroupRoles = UserTGroup.query(on: system)
+//            .filter(\.userId == self.id)
+//            .all()
+//            .errCast(PrivilegeSystem.Errcase.groupRoleQueryFailed, "查询 user-groupRole 关系时失败", category: .internal)
+//            .flatMap
+//        {
+//            QRole.make(from: $0.map { $0.id }, on: system)
+//                .errCast(PrivilegeSystem.Errcase.userRoleQueryFailed, "从 user-role 关系查询结果查询 roles 时失败", category: .internal)
+//        }
+//    }
 }
 
 // MARK: - ModelAuthenticatable

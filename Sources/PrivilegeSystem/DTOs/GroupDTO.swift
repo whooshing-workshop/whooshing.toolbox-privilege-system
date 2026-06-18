@@ -1,6 +1,6 @@
 import Fluent
 import Foundation
-import Policy
+import DTOBuilder
 import ErrorHandle
 import Collections
 import PrivilegeModule
@@ -62,10 +62,30 @@ public struct QGroup: DTO.Queried {
     public typealias PrepareModel = PGroup
     public let id: UUID
     public let name: String
-    public let parentId: UUID?
     public let description: String?
     public let createdAt: Date
     public let updatedAt: Date
+    
+    @OptionalSuper()                    public var parent: QGroup?
+    @Subs(for: \.$parent)               public var childs: [QGroup]
+    
+    @Sibling(
+        through: UserTGroup.self,
+        from: \.groupId,
+        to: \.userId
+    )                                   public var users: [QUser]
+    
+    @Sibling(
+        through: RoleTGroup.self,
+        from: \.groupId,
+        to: \.roleId
+    )                                   public var roles: [QRole]
+    
+    @Sibling(
+        through: DomainTGroup.self,
+        from: \.groupId,
+        to: \.domainId
+    )                                   public var domains: [QDomain]
     
     public static let logName: String = "QGroup"
     
@@ -75,10 +95,16 @@ public struct QGroup: DTO.Queried {
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
         .name: .init(obj: self.name),
-        .parentId: .init(obj: self.parentId),
+        .parentId: .init(obj: self.$parent.id),
         .description: .init(obj: self.description),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .parent: .init(obj: self.$parent),
+        .childs: .init(obj: self.$childs),
+        .users: .init(obj: self.$users),
+        .roles: .init(obj: self.$roles),
+        .domains: .init(obj: self.$domains)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .name] }
@@ -90,6 +116,12 @@ public struct QGroup: DTO.Queried {
         case description
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case parent
+        case childs
+        case users
+        case roles
+        case domains
     }
     
     init(
@@ -103,32 +135,45 @@ public struct QGroup: DTO.Queried {
     ) {
         self.id = id
         self.name = name
-        self.parentId = parentId
         self.description = description
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$parent.id = parentId
+        self.$childs.fromId = id
+        self.$users.fromId = id
+        self.$roles.fromId = id
+        self.$domains.fromId = id
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.name = try container.decode(String.self, forKey: .name)
-        self.parentId = try container.decodeIfPresent(UUID.self, forKey: .parentId)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.createdAt = try container.decode(Date.self, forKey: .createdAt)
-        self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            name: try container.decode(String.self, forKey: .name),
+            parentId: try container.decodeIfPresent(UUID.self, forKey: .parentId),
+            description: try container.decodeIfPresent(String.self, forKey: .description),
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
         try container.encode(self.name, forKey: .name)
-        try container.encodeIfPresent(self.parentId, forKey: .parentId)
+        try container.encodeIfPresent(self.$parent.id, forKey: .parentId)
         try container.encodeIfPresent(self.description, forKey: .description)
         try container.encode(self.createdAt, forKey: .createdAt)
         try container.encode(self.updatedAt, forKey: .updatedAt)
+        
+        try container.encodeIfPresent(self.$parent, forKey: .parent)
+        try container.encode(self.$childs, forKey: .childs)
+        try container.encode(self.$users, forKey: .users)
+        try container.encode(self.$roles, forKey: .roles)
+        try container.encode(self.$domains, forKey: .domains)
     }
 }
 
@@ -164,7 +209,7 @@ extension QGroup: Query.Queriable {
     public typealias Model = __SDBM.Group
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
-        \.parentId: \.$parent.$id,
+        \.$parent.id: \.$parent.$id,
         \.name: \.$name,
         \.description: \.$description,
         \.id: \.$id,

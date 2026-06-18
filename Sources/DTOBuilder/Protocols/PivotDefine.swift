@@ -7,26 +7,29 @@ import ErrorHandle
 import LoggingAdvanced
 import NIOConcurrencyHelpers
 import Query
-import Policy
 @preconcurrency import AnyCodable
 
-public enum PivotCodingKeys: String, DTO.CodingKey {
-    case id
-    case primaryId = "primary_id"
-    case secondaryId = "secondary_id"
-    case createdAt = "create_at"
+public extension DTO {
+    
+    enum PivotCodingKeys: String, DTO.CodingKey {
+        case id
+        case primaryId = "primary_id"
+        case secondaryId = "secondary_id"
+        case createdAt = "create_at"
+        case role // 这是为了 PUserTGroup 单独设置的，其他类型均不需要
+    }
+    
+    protocol Pivot: DTO.Model, Query.Queriable where CodingKeys == PivotCodingKeys {
+        associatedtype Primary: DTO.Model
+        associatedtype Secondary: DTO.Model
+        var id: UUID { get }
+        var primaryId: UUID { get }
+        var secondaryId: UUID { get }
+        var createdAt: Date { get }
+    }
 }
 
-public protocol PivotDTO: DTO.Model, Query.Queriable where CodingKeys == PivotCodingKeys {
-    associatedtype Primary: DTO.Model
-    associatedtype Secondary: DTO.Model
-    var id: UUID { get }
-    var primaryId: UUID { get }
-    var secondaryId: UUID { get }
-    var createdAt: Date { get }
-}
-
-public extension PivotDTO {
+public extension DTO.Pivot {
     var summaryKeys: [CodingKeys] { [.id, .primaryId, .createdAt] }
     
     var maps: [CodingKeys: AnyHashable?] {[
@@ -37,7 +40,7 @@ public extension PivotDTO {
     ]}
 }
 
-package protocol __PivotDTO: PivotDTO, __Model
+package protocol __PivotDTO: DTO.Pivot, __DBModel
     where
         SQLModel == Pivot<PivotT>,
         Failure.ErrType == BscError<Failure>,
@@ -73,7 +76,7 @@ package protocol __PivotDTO: PivotDTO, __Model
         )
     }
     
-     public func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(primaryId, forKey: .primaryId)

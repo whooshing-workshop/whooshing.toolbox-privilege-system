@@ -29,4 +29,23 @@ extension PrivilegeSystem.Arbitrator {
             privilegeIds: privilegeIds
         ).get()
     }
+    
+    public func judge(
+        moduleId: UUID,
+        userId: UUID,
+        roleId: UUID,
+        resource: AnyResource,
+        operation: AnyOperation,
+        privilegeIds: OrderedSet<UUID>,
+        logger: Logger
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> Result {
+        try await judge(
+            moduleId: moduleId,
+            userId: userId,
+            roleId: roleId,
+            resource: resource,
+            operation: operation,
+            privilegeIds: privilegeIds
+        ).get()
+    }
 }

@@ -27,8 +27,4 @@ extension PrivilegeSystem.InfoSliceController {
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> QInfoSlice<T> {
         try await update(with: updater).get()
     }
-
-    public func fetch(for userId: UUID) async throws(PrivilegeSystem.Errcase.ErrType) -> QExtendedInfo {
-        try await fetch(for: userId).get()
-    }
 }

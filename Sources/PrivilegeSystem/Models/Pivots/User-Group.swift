@@ -1,7 +1,12 @@
 import PgSQL
-import Policy
+import DTOBuilder
 import Foundation
 import FluentKit
+import NIOConcurrencyHelpers
+
+public extension __SDBM {
+    typealias UserGroupPivot = Pivot<Pivots.UserGroup>
+}
 
 public extension __SDBM.Pivots {
     struct UserGroup: PivotType {
@@ -10,23 +15,5 @@ public extension __SDBM.Pivots {
         
         public static let foreignPrimaryName = "user"
         public static let foreignSecondaryName = "group"
-    }
-}
-
-public extension __SDBM {
-    class UserGroupPivot: CustomeIDPivot<Pivots.UserGroup>, PGModel, @unchecked Sendable {
-        @Siblings(
-            through: RoleUserInGroupPivot.self,
-            from: \.$secondaryModel,
-            to: \.$primaryModel
-        )
-        var roles: [Role]
-        
-        @ID(key: .id)                               public var id: UUID?
-        @Parent(fields.foreignPrimary)              var user: User
-        @Parent(fields.foreignSecondary)            var group: Group
-        @Timestamp(fields.createdAt, on: .create)   var createdAt: Date!
-        
-        public typealias MIG = DefaultMIG<UserGroupPivot>
     }
 }

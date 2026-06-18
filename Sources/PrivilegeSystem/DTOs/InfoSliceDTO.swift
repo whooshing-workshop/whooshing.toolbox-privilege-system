@@ -3,7 +3,7 @@ import Fluent
 import DataConvertable
 import ErrorHandle
 import Cryptos
-import Policy
+import DTOBuilder
 import Collections
 import PrivilegeModule
 import Query
@@ -65,12 +65,13 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
 public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     public typealias PrepareModel = PInfoSlice<G>
     public let id: UUID
-    public let userInfoId: UUID
     public let value: G.Model.Value
     public let order: Int16
     public let description: String?
     public let createdAt: Date
     public let updatedAt: Date
+    
+    @Super public var userInfo: QUserInfo
     
     public static var logName: String { "QInfoSlice" }
     
@@ -79,12 +80,14 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
-        .userInfoId: .init(obj: self.userInfoId),
+        .userInfoId: .init(obj: self.$userInfo.id),
         .value: .init(obj: self.value),
         .order: .init(obj: self.order),
         .description: .init(obj: self.description),
         .createdAt: .init(obj: self.createdAt),
-        .updatedAt: .init(obj: self.updatedAt)
+        .updatedAt: .init(obj: self.updatedAt),
+        
+        .userInfo: .init(obj: self.$userInfo)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .value, .order] }
@@ -97,6 +100,8 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         case description
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case userInfo = "user_info"
     }
     
     init(
@@ -107,39 +112,44 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         description: String?,
         createdAt: Date,
         updatedAt: Date,
-        model: SQLModel
+        model: SQLModel?
     ) {
         self.id = id
-        self.userInfoId = userInfoId
         self.value = value
         self.order = order
         self.description = description
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
+        
+        self.$userInfo.id = userInfoId
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.userInfoId = try container.decode(UUID.self, forKey: .userInfoId)
-        self.value = try container.decode(G.Model.Value.self, forKey: .value)
-        self.order = try container.decode(Int16.self, forKey: .order)
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            userInfoId: try container.decode(UUID.self, forKey: .userInfoId),
+            value: try container.decode(G.Model.Value.self, forKey: .value),
+            order: try container.decode(Int16.self, forKey: .order),
+            description: try container.decodeIfPresent(String.self, forKey: .description),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: QInfoSlice<G>.CodingKeys.self)
         try container.encode(self.id, forKey: .id)
-        try container.encode(self.userInfoId, forKey: .userInfoId)
+        try container.encode(self.$userInfo.id, forKey: .userInfoId)
         try container.encode(self.value, forKey: .value)
         try container.encode(self.order, forKey: .order)
         try container.encodeIfPresent(self.description, forKey: .description)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        
+        try container.encode(self.$userInfo, forKey: .userInfo)
     }
 }
 
@@ -181,7 +191,7 @@ extension QInfoSlice: Query.Queriable {
         \.order: \.$order,
         \.description: \.$description,
         \.id: \.$id,
-        \.userInfoId: \.$userInfo.$id,
+        \.$userInfo.id: \.$userInfo.$id,
         \.createdAt: \.$createdAt,
         \.updatedAt: \.$updatedAt
     ]}

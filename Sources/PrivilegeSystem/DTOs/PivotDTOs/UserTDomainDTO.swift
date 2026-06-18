@@ -1,14 +1,14 @@
 import Query
 import PrivilegeModule
 import Foundation
-import Policy
 import ErrorHandle
 import PgSQL
 import FluentKit
+import DTOBuilder
 
-public struct UserTDomain: PivotDTO {
-    public typealias Primary = QRole
-    public typealias Secondary = QGroup
+public struct UserTDomain: DTO.Pivot {
+    public typealias Primary = QUser
+    public typealias Secondary = QDomain
     
     public let id: UUID
     public let userId: UUID

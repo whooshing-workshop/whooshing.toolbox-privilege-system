@@ -7,6 +7,7 @@ import NIOAdvanced
 import OPA
 import PrivilegeModule
 import Logging
+import DTOBuilder
 import OrderedCollections
 
 extension PrivilegeSystem {

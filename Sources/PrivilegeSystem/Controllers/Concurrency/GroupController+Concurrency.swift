@@ -102,9 +102,9 @@ extension PrivilegeSystem.GroupController {
     // MARK: Query
 
     public func query(
-        relations: OrderedSet<PUserInGroup>,
+        relations: OrderedSet<PUserTGroup>,
         strict: Bool = true
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QUserInGroup] {
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> [UserTGroup] {
         try await query(relations: relations, strict: strict).get()
     }
 }

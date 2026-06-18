@@ -5,7 +5,7 @@ import Cryptos
 import PrivilegeModule
 import DataConvertable
 import Query
-import Policy
+import DTOBuilder
 import LoggingAdvanced
 import AnyCodable
 import ResourceMacros
@@ -118,10 +118,11 @@ public struct QToken: DTO.Queried {
         }
         return t
     }
-    public let userId: UUID
     public let valid: Bool
     public let expireAfter: Int
     public let createdAt: Date
+    
+    @Super public var user: QUser
     
     private let __token: String?
     
@@ -133,27 +134,32 @@ public struct QToken: DTO.Queried {
     public var maps: [CodingKeys: AnyHashable?] {[
         .credential: .init(obj: self.credential),
         .id: .init(obj: self.id),
-        .userId: .init(obj: self.userId),
+        .userId: .init(obj: self.$user.id),
         .valid: .init(obj: self.valid),
         .expireAfter: .init(obj: self.expireAfter),
-        .createdAt: .init(obj: self.createdAt)
+        .createdAt: .init(obj: self.createdAt),
+        
+        .user: .init(obj: self.$user)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .credential, .userId] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case credential
+        case token
         case id
         case userId = "user_id"
         case valid
         case expireAfter = "expire_after"
         case createdAt = "created_at"
+        
+        case user
     }
     
     init(
         id: UUID,
         credential: String,
-        token: String,
+        token: String?,
         userId: UUID,
         valid: Bool,
         expireAfter: Int,
@@ -163,31 +169,34 @@ public struct QToken: DTO.Queried {
         self.credential = credential
         self.id = id
         self.__token = token
-        self.userId = userId
         self.valid = valid
         self.expireAfter = expireAfter
         self.createdAt = createdAt
         self.__m = model
+        
+        self.$user.id = userId
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.credential = try container.decode(String.self, forKey: .credential)
-        self.userId = try container.decode(UUID.self, forKey: .userId)
-        self.valid = try container.decode(Bool.self, forKey: .valid)
-        self.expireAfter = try container.decode(Int.self, forKey: .expireAfter)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.__token = nil  // 通过编解码后赋为空值，保护属性
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            credential: try container.decode(String.self, forKey: .credential),
+            token: try container.decode(String.self, forKey: .token),
+            userId: try container.decode(UUID.self, forKey: .userId),
+            valid: try container.decode(Bool.self, forKey: .valid),
+            expireAfter: try container.decode(Int.self, forKey: .expireAfter),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            model: nil
+        )
     }
     
-    // 不编码 token 保护属性
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
         try container.encode(self.credential, forKey: .credential)
-        try container.encode(self.userId, forKey: .userId)
+        try container.encode(self.token, forKey: .token)
+        try container.encode(self.$user.id, forKey: .userId)
         try container.encode(self.valid, forKey: .valid)
         try container.encode(self.expireAfter, forKey: .expireAfter)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
@@ -249,7 +258,7 @@ extension QToken: Query.Queriable {
         \.credential: \.$credential,
         \.id: \.$id,
         \.token: \.$token,
-        \.userId: \.$user.$id,
+        \.$user.id: \.$user.$id,
         \.valid: \.$valid,
         \.expireAfter: \.$expireAfter,
         \.createdAt: \.$createdAt

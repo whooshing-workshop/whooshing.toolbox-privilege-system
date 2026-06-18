@@ -1,7 +1,7 @@
 import Fluent
 import Vapor
 import PgSQL
-import Policy
+import DTOBuilder
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule

@@ -1,5 +1,5 @@
 import Fluent
-import Policy
+import DTOBuilder
 import Vapor
 import PgSQL
 import ErrorHandle
@@ -98,7 +98,7 @@ extension PrivilegeSystem {
             privilegeIds: OrderedSet<UUID>
         ) -> EventLoopRes<Result, Errcase> {
             let logger = getActionLogger()
-            
+
             logger.info("执行 权限仲裁 操作", metadata: [
                 "moduleId": .stringConvertible(moduleId.shortString),
                 "user": .summaryData(user),
@@ -110,90 +110,204 @@ extension PrivilegeSystem {
                 "user": .data(user),
                 "role": .data(role),
                 "resource": .data(resource),
-                "privilegeIds": .array(privilegeIds.map { .init(stringLiteral: $0.shortString) })
+                "privilegeIds": .data(privilegeIds)
             ])
             
             // 检查所提供的 role 是否是 user 可用的身份，否则报错
-            let roleCheck = roleController.is(role: role, appointedTo: user).flatMap {
+            return roleController.is(role: role, appointedTo: user).flatMap {
                 $0 ?
                 self.db.eventLoop.makeSucceededResult(()) :
                 self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的 Role 并非对 User 可用", category: .external)
+            }.flatMap {
+                user.model(from: self.db).errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
+            }.flatMap {
+                self.__judge(moduleId: moduleId, user: $0, roleId: role.id, resource: resource, operation: operation, privilegeIds: privilegeIds, logger: logger)
+            }.map { res in
+                logger.info("权限仲裁 操作执行成功", metadata: ["result": .summaryData(res)])
+                logger.debug("仲裁结果", metadata: ["result": .data(res)])
+                return res
+            }.logIfFail(logger: logger, metadata: [
+                "user": .data(user),
+                "role": .data(role),
+                "resource": .data(resource),
+                "privilegeIds": .data(privilegeIds)
+            ])
+        }
+        
+        /// 使用类型化资源执行权限仲裁。
+        ///
+        /// 该重载适合已经通过 `PrivilegeModule.ResourceController` 创建并查询到资源
+        /// 的场景。资源的 JSON 内容会作为 `input.resource` 传给 OPA。
+        ///
+        /// ```swift
+        /// let anyResource = AnyResource(fileResource)
+        /// let result = try await system.arbitrator.judge(
+        ///     moduleId: module.moduleId,
+        ///     userId: userId,
+        ///     roleId: roleId,
+        ///     resource: anyResource,
+        ///     operation: AnyOperation(op: FileOperation.read),
+        ///     privilegeIds: [readPrivilege.id]
+        /// )
+        /// ```
+        ///
+        /// - Parameters:
+        ///   - moduleId: 参与仲裁的业务模块 ID。
+        ///   - userId: 请求访问资源的用户的 ID。
+        ///   - roleId: 本次访问选择使用的角色的 ID。
+        ///   - resource: 类型擦除后的资源 DTO。
+        ///   - operation: 本次访问的操作。
+        ///   - privilegeIds: 需要额外参与判断的资源权限 ID。传空数组时只判断角色和域。
+        ///
+        /// - Returns: 包含最终布尔结果和每条策略报告的仲裁结果。
+        /// - Throws: 当角色不属于用户、数据库数据收集失败或 OPA 查询失败时返回错误。
+        func judge(
+            moduleId: UUID,
+            userId: UUID,
+            roleId: UUID,
+            resource: AnyResource,
+            operation: AnyOperation,
+            privilegeIds: OrderedSet<UUID>
+        ) -> EventLoopRes<Result, Errcase> {
+            let logger = getActionLogger()
+
+            logger.info("执行 权限仲裁 操作", metadata: [
+                "moduleId": .stringConvertible(moduleId.shortString),
+                "userId": .summaryData(userId),
+                "roleId": .summaryData(roleId),
+                "operation": .summaryData(operation),
+                "resource:": .summaryData(resource)
+            ])
+            logger.debug("操作参数", metadata: [
+                "userId": .data(userId),
+                "roleId": .data(roleId),
+                "resource": .data(resource),
+                "privilegeIds": .data(privilegeIds)
+            ])
+            
+            // 检查所提供的 role 是否是 user 可用的身份，否则报错
+            return roleController.is(roleId: roleId, appointedTo: userId).flatMap {
+                $0 ?
+                self.db.eventLoop.makeSucceededResult(()) :
+                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的 Role 并非对 User 可用", category: .external)
+            }.flatMap {
+                // 从数据库中取得 User 模型
+                __SDBM.User.query(on: self.db)
+                    .filter(\.$id == userId)
+                    .first()
+                    .withError(Errcase.arbitrationDataCollectFailed, "取得 User 主模型失败", metadata: ["id": .stringConvertible(userId)], category: .internal)
+                    .flatMap
+                { user in
+                    guard let u = user else {
+                        return self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "根据所传的 id，User 主模型不存在", metadata: ["id": .stringConvertible(userId)], category: .external)
+                    }
+                    return self.db.eventLoop.makeSucceededResult(u)
+                }
+            }.flatMap {
+                self.__judge(moduleId: moduleId, user: $0, roleId: roleId, resource: resource, operation: operation, privilegeIds: privilegeIds, logger: logger)
+            }.map { res in
+                logger.info("权限仲裁 操作执行成功", metadata: ["result": .summaryData(res)])
+                logger.debug("仲裁结果", metadata: ["result": .data(res)])
+                return res
+            }.logIfFail(logger: logger, metadata: [
+                "userId": .data(userId),
+                "roleId": .data(roleId),
+                "resource": .data(resource),
+                "privilegeIds": .data(privilegeIds)
+            ])
+        }
+        
+        func __judge(
+            moduleId: UUID,
+            user: __SDBM.User,
+            roleId: UUID,
+            resource: AnyResource,
+            operation: AnyOperation,
+            privilegeIds: OrderedSet<UUID>,
+            logger: Logger
+        ) -> EventLoopRes<Result, Errcase> {
+            
+            let userGetter = db.eventLoop.submitResult { () throws(Errcase.ErrType) in
+                try required(throws: Errcase.arbitrationDataCollectFailed, "创建 User DTO 数据失败", category: .internal) {
+                    try QUser.make(from: user).get()
+                }
             }
             
-            let userModelGetter: EventLoopRes<__SDBM.User, Errcase> = user.model(from: self.db)
-                .errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
-            
             // 查询用户所在的群组，父群组的所有域权限
-            let groupDomainPolicies: EventLoopRes<[DomainData], Errcase> = userModelGetter.flatMap { userModel in
-                userModel.$groups.query(on: self.db)
+            let groupDomainPolicies: EventLoopRes<[DomainData], Errcase> = userGetter.flatMap { userDTO in
+                user.$groups.query(on: self.db)
                     .with(\.$supers) { path in
                         path.with(\.$ancestor)
                     }
                     .all()
                     .withError(Errcase.arbitrationDataCollectFailed, "取得用户所加入的所有群组失败", category: .internal)
-            }.flatMapThrowing { (groups: [__SDBM.Group]) throws(Errcase.ErrType) in
-                let gs = [__SDBM.Group]((
-                    groups +
-                    groups.flatMap { $0.supers.map { $0.ancestor } }
-                ).uniqued())
-                
-                let ids = try required(throws: Errcase.arbitrateFailed, "取得群组 ID 失败", category: .internal) {
-                    try gs.compactMap { try $0.requireID() }
-                }
-                
-                return (gs, ids)
-            }.flatMap { (groups: [__SDBM.Group], groupIds: [UUID]) in
-                guard !groupIds.isEmpty else {
-                    return self.db.eventLoop.makeSucceededResult([])
-                }
-                
-                return __SDBM.DomainGroupPivot.query(on: self.db)
-                    .filter(\.$secondaryModel.$id ~~ groupIds) // groups
-                    .with(\.$primaryModel)  // domains
-                    .all()
-                    .withError(Errcase.arbitrationDataCollectFailed, "取得 Domain Pivot 数据失败", category: .internal)
                     .flatMapThrowing
-                { pivots throws(Errcase.ErrType) in
-                    try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
-                        // 内存装配：此时每一行 pivot 都天然维护了 [Group -> Domain] 的纽带关系
-                        try pivots.map { pivot in
-                            // 从最开始传入的 groups 内存集合里，凭借 pivot 的 groupId 瞬间定位到完整的 __SDBM.Group 实体
-                            guard let associatedGroup = groups.first(where: { $0.id == pivot.$secondaryModel.id }) else {
-                                throw Errcase.arbitrationDataCollectFailed.d("群组数据映射丢失", category: .internal)
+                { (groups: [__SDBM.Group]) throws(Errcase.ErrType) in
+                    let gs = [__SDBM.Group]((
+                        groups +
+                        groups.flatMap { $0.supers.map { $0.ancestor } }
+                    ).uniqued())
+                    
+                    let ids = try required(throws: Errcase.arbitrateFailed, "取得群组 ID 失败", category: .internal) {
+                        try gs.compactMap { try $0.requireID() }
+                    }
+                    
+                    return (gs, ids)
+                }.flatMap { (groups: [__SDBM.Group], groupIds: [UUID]) in
+                    guard !groupIds.isEmpty else {
+                        return self.db.eventLoop.makeSucceededResult([])
+                    }
+                    
+                    return __SDBM.DomainGroupPivot.query(on: self.db)
+                        .filter(\.$secondaryModel.$id ~~ groupIds) // groups
+                        .with(\.$primaryModel)  // domains
+                        .all()
+                        .withError(Errcase.arbitrationDataCollectFailed, "取得 Domain Pivot 数据失败", category: .internal)
+                        .flatMapThrowing
+                    { pivots throws(Errcase.ErrType) in
+                        try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
+                            // 内存装配：此时每一行 pivot 都天然维护了 [Group -> Domain] 的纽带关系
+                            try pivots.map { pivot in
+                                // 从最开始传入的 groups 内存集合里，凭借 pivot 的 groupId 瞬间定位到完整的 __SDBM.Group 实体
+                                guard let associatedGroup = groups.first(where: { $0.id == pivot.$secondaryModel.id }) else {
+                                    throw Errcase.arbitrationDataCollectFailed.d("群组数据映射丢失", category: .internal)
+                                }
+                                
+                                return try DomainData(
+                                    domainId: pivot.primaryModel.requireID(),
+                                    resource: resource.data,
+                                    operation: operation.rawValue,
+                                    user: userDTO,
+                                    group: .make(from: associatedGroup).get()
+                                )
                             }
-                            
-                            return DomainData(
-                                domainId: try pivot.primaryModel.requireID(),
-                                resource: resource.data,
-                                operation: operation.rawValue,
-                                user: user,
-                                group: try .make(from: associatedGroup).get()
-                            )
                         }
                     }
                 }
             }
             
             // 查询用户本身被赋予的域权限
-            let userDomainPolicies: EventLoopRes<[DomainData], Errcase> = userModelGetter.flatMap { userModel in
-                userModel.$domains.get(on: self.db)
+            let userDomainPolicies: EventLoopRes<[DomainData], Errcase> = userGetter.flatMap { userDTO in
+                user.$domains.get(on: self.db)
                     .withError(Errcase.arbitrationDataCollectFailed, "数据库加载用户域权限失败", category: .internal)
-            }.flatMapThrowing { domains throws(Errcase.ErrType) in
-                try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
-                    try domains.map { domain in
-                        DomainData(
-                            domainId: try domain.requireID(),
-                            resource: resource.data,
-                            operation: operation.rawValue,
-                            user: user,
-                            group: nil
-                        )
+                    .flatMapThrowing
+                { domains throws(Errcase.ErrType) in
+                    try required(throws: Errcase.arbitrationDataCollectFailed, "取得 Domain 数据失败", category: .internal) {
+                        try domains.map { domain in
+                            try DomainData(
+                                domainId: domain.requireID(),
+                                resource: resource.data,
+                                operation: operation.rawValue,
+                                user: userDTO,
+                                group: nil
+                            )
+                        }
                     }
                 }
             }
             
-            return roleCheck.flatMap {
-                // 查询该用户所有的域权限，包括其所在的群组，父群组的所有域权限，及其本身被赋予的域权限
+            // 查询该用户所有的域权限，包括其所在的群组，父群组的所有域权限，及其本身被赋予的域权限
+            return userGetter.flatMap { userDTO in
                 [groupDomainPolicies, userDomainPolicies]
                     .flatten(on: self.db.eventLoop)
                     .flatMap
@@ -203,32 +317,23 @@ extension PrivilegeSystem {
                             moduleId: moduleId,
                             domains: .init(domainDatas.flatMap { $0 }),
                             role: .init(
-                                roleId: role.id,
+                                roleId: roleId,
                                 resource: resource.data,
                                 operation: operation.rawValue,
-                                user: user
+                                user: userDTO
                             ),
                             privileges: privilegeIds.mapToSet {
                                 .init(
                                     privilegeId: $0,
                                     resource: resource.data,
                                     operation: operation.rawValue,
-                                    user: user
+                                    user: userDTO
                                 )
                             }
                         ), logger: logger
                     )
                 }
-            }.map { res in
-                logger.info("权限仲裁 操作执行成功", metadata: ["result": .summaryData(res)])
-                logger.debug("仲裁结果", metadata: ["result": .data(res)])
-                return res
-            }.logIfFail(logger: logger, metadata: [
-                "user": .data(user),
-                "role": .data(role),
-                "resource": .data(resource),
-                "privilegeIds": .array(privilegeIds.map { .init(stringLiteral: $0.shortString) })
-            ])
+            }
         }
         
         func __judge(

@@ -1,7 +1,7 @@
 import Fluent
 import Vapor
 import PgSQL
-import Policy
+import DTOBuilder
 import ErrorHandle
 import NIOAdvanced
 import PrivilegeModule
@@ -103,42 +103,6 @@ extension PrivilegeSystem {
             .map { 
                 logger.info("更新用户扩展信息 操作成功", metadata: ["data": .summaryData($0)])
                 logger.debug("更新用户扩展信息 结果详细数据", metadata: ["data": .data($0)])
-                return $0 
-            }
-            .logIfFail(logger: logger)
-        }
-        
-        /// 拉取指定用户的全量扩展切片数据集。
-        ///
-        /// - Parameter userId: 目标用户的主键 ID。
-        /// - Returns: 包含多个维度的附加信息的完整对象 `QExtendedInfo`。
-        public func fetch(for userId: UUID) -> EventLoopRes<QExtendedInfo, Errcase> {
-            let logger = getActionLogger()
-            logger.info("执行 查询用户扩展信息 操作", metadata: ["userId": .stringConvertible(userId)])
-            return __SDBM.User.Info.query(on: db)
-                .with(\.$addresses)
-                .with(\.$alternateEmails)
-                .with(\.$phones)
-                .filter(\.$user.$id == userId)
-                .first()
-                .withError(Errcase.userExtendedInfoQueryFailed, category: .internal)
-                .flatMapThrowing
-            { info throws(Errcase.ErrType) in
-                guard let i = info else {
-                    throw Errcase.userExtendedInfoQueryFailed.d("用户信息不存在", category: .external)
-                }
-                
-                return try required(throws: Errcase.userExtendedInfoQueryFailed, "用户信息转 DTO 失败", category: .internal) {
-                    try QExtendedInfo.init(
-                        addresses: .init(i.addresses.map { try .make(from: $0).get() }),
-                        alternateEmails: .init(i.alternateEmails.map { try .make(from: $0).get() }),
-                        phones: .init(i.phones.map { try .make(from: $0).get() })
-                    )
-                }
-            }
-            .map { 
-                logger.info("查询用户扩展信息 操作成功", metadata: ["data": .summaryData($0)])
-                logger.debug("查询用户扩展信息 结果详细数据", metadata: ["data": .data($0)])
                 return $0 
             }
             .logIfFail(logger: logger)

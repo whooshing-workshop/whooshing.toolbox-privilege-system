@@ -7,6 +7,7 @@ import Policy
 import OrderedCollections
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
+@testable import DTOBuilder
 
 typealias GT = GroupTesting
 
@@ -115,10 +116,10 @@ struct GroupTesting {
         #expect(count1 == 1)
         
         // query(relations:) 验证
-        let relations = try await s.group.query(relations: [user =| group])
+        let relations = try await s.group.query(relations: [.init(userId: user.id, groupId: group.id)])
         #expect(relations.count == 1)
-        #expect(relations[0].user.id == user.id)
-        #expect(relations[0].group.id == group.id)
+        #expect(relations[0].userId == user.id)
+        #expect(relations[0].groupId == group.id)
         
         // kick 后验证清理
         try await s.group.kick { OrderedSet([user]) => OrderedSet([group]) }

@@ -5,9 +5,10 @@ import ErrorHandle
 import PgSQL
 import FluentKit
 import ResourceMacros
+import DTOBuilder
 
 public extension PM {
-    struct PrivilegeTAnyResource: PivotDTO {
+    struct PrivilegeTAnyResource: DTO.Pivot {
         public typealias Primary = QPrivilege
         public typealias Secondary = AnyResource
         
@@ -52,7 +53,7 @@ public extension PM {
 extension PM.PrivilegeTAnyResource: __PivotDTO {}
 
 public extension PM {
-    struct PrivilegeTResource<G: Resource>: PivotDTO where G.ResourceType == ResourceList {
+    struct PrivilegeTResource<G: Resource>: DTO.Pivot where G.ResourceType == ResourceList {
         public typealias Primary = QPrivilege
         public typealias Secondary = QResource<G>
         

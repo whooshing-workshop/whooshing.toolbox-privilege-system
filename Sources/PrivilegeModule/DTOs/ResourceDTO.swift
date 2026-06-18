@@ -10,13 +10,20 @@ import LoggingAdvanced
 import AnyCodable
 import NIOAdvanced
 import DataConvertable
+import DTOBuilder
 
 public extension PM {
-    struct QResource<G: Resource>: DTO.Model where G.ResourceType == ResourceList {
+    struct QResource<G: Resource>: DTO.DBModel where G.ResourceType == ResourceList {
         public let id: UUID
         public let data: G
         public let createdAt: Date
         public let updatedAt: Date
+        
+        @Sibling(
+            through: PrivilegeTResource<G>.self,
+            from: \.resourceId,
+            to: \.privilegeId
+        )                                           public var privileges: [QPrivilege]
         
         public static var logName: String { "QResource" }
         
@@ -29,7 +36,9 @@ public extension PM {
             .id: .init(obj: self.id),
             .data: .init(obj: self.data),
             .createdAt: .init(obj: self.createdAt),
-            .updatedAt: .init(obj: self.updatedAt)
+            .updatedAt: .init(obj: self.updatedAt),
+            
+            .privileges: .init(obj: self.$privileges)
         ]}
         
         public var summaryKeys: [CodingKeys] { [.id] }
@@ -46,6 +55,8 @@ public extension PM {
             self.createdAt = createdAt
             self.updatedAt = updatedAt
             self.__m = model
+            
+            self.$privileges.fromId = id
         }
     }
 }
@@ -58,15 +69,19 @@ extension PM.QResource: Codable {
         case data
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        
+        case privileges
     }
     
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try container.decode(UUID.self, forKey: .id)
-        self.data = try container.decode(G.self, forKey: .data)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
-        self.__m = nil
+        self = Self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            data: try container.decode(G.self, forKey: .data),
+            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            model: nil
+        )
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -75,6 +90,8 @@ extension PM.QResource: Codable {
         try container.encode(data, forKey: .data)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        
+        try container.encode(privileges, forKey: .privileges)
     }
 }
 
@@ -89,25 +106,6 @@ public extension PM.QResource {
                 model: model
             )
         }
-    }
-}
-
-package extension PM.QResource {
-    func model(from db: PGDatabase) -> EventLoopRes<SQLModel, DTO.Errcase> {
-        guard let m = __m else {
-            return SQLModel.query(on: db)
-                .filter(Self.idProperty == id)
-                .first()
-                .withError(DTO.Errcase.modelQueryFailed, category: .internal)
-                .flatMap
-            { res in
-                guard let r = res else {
-                    return db.eventLoop.makeFailedResult(DTO.Errcase.modelNotExist.d(category: .external))
-                }
-                return db.eventLoop.makeSucceededResult(r)
-            }
-        }
-        return db.eventLoop.makeSucceededResult(m)
     }
 }
 

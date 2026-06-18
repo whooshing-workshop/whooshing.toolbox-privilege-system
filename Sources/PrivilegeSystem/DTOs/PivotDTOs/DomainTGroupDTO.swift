@@ -1,12 +1,12 @@
 import Query
 import PrivilegeModule
 import Foundation
-import Policy
 import ErrorHandle
 import PgSQL
 import FluentKit
+import DTOBuilder
 
-public struct DomainTGroup: PivotDTO {
+public struct DomainTGroup: DTO.Pivot {
     public typealias Primary = QDomain
     public typealias Secondary = QGroup
     

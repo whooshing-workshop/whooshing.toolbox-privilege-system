@@ -1,7 +1,7 @@
 import PgSQL
 import Fluent
 import Foundation
-import Policy
+import DTOBuilder
 
 public extension __SDBM {
     final class Group: PGModel, @unchecked Sendable {
@@ -34,8 +34,8 @@ public extension __SDBM {
         @Children(for: \Path.$ancestor)                 var childs: [Path]
         @Siblings(
             through: UserGroupPivot.self,
-            from: \.$group,
-            to: \.$user
+            from: \.$secondaryModel,
+            to: \.$primaryModel
         )                                               var users: [User]
         @Siblings(
             through: RoleGroupPivot.self,

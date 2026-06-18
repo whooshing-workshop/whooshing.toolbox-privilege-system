@@ -3,6 +3,7 @@ import Testing
 @testable import PrivilegeSystem
 @testable import PrivilegeModule
 @testable import Query
+@testable import DTOBuilder
 
 @Suite("Query 模块测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct QueryTests {
@@ -35,7 +36,7 @@ struct QueryTests {
         
         // Join User 和 UserInfo
         let results = try await s.query(QUser.self)
-            .join(QUserInfo.self, on: \QUser.id == \QUserInfo.userId)
+            .join(QUserInfo.self, on: \QUser.id == \QUserInfo.$user.id)
             .first()
             
             

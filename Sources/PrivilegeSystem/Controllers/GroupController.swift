@@ -1,5 +1,5 @@
 import Fluent
-import Policy
+import DTOBuilder
 import Vapor
 import PgSQL
 import ErrorHandle
@@ -69,7 +69,7 @@ extension PrivilegeSystem {
                     res.map { group in
                         var r = db.eventLoop.makeSucceededVoidResult(throws: Errcase.ErrType.self)
                         
-                        if let parentId = group.parentId {
+                        if let parentId = group.$parent.id {
                             // 继承父辈路径：找出所有“能够到达 A”的祖先路径，复制它们，并将它们的后代改成 B，depth 在原来的基础上 +1。
                             r = r.flatMap {
                                 db.raw(
@@ -506,11 +506,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameters:
     ///   - relations: 预期需查询的关系，包含用户 DTO 和群组 DTO。
     ///   - strict: 如果为 `true`，查出的记录条数不匹配预期的 `relations` 长度则抛出失败。
-    /// - Returns: `EventLoopRes<[QUserInGroup], Errcase>`
+    /// - Returns: `EventLoopRes<[UserTGroup], Errcase>`
     func query(
-        relations: OrderedSet<PUserInGroup>,
+        relations: OrderedSet<PUserTGroup>,
         strict: Bool = true
-    ) -> EventLoopRes<[QUserInGroup], PrivilegeSystem.Errcase> {
+    ) -> EventLoopRes<[UserTGroup], PrivilegeSystem.Errcase> {
         __query(on: db, relations: relations, strict: strict)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
@@ -526,14 +526,14 @@ public extension PrivilegeSystem.GroupController {
 extension PrivilegeSystem.GroupController {
     func __query(
         on db: PGDatabase,
-        relations: OrderedSet<PUserInGroup>,
+        relations: OrderedSet<PUserTGroup>,
         strict: Bool
     ) -> EventLoopRes<[__SDBM.UserGroupPivot], PrivilegeSystem.Errcase> {
         __SDBM.UserGroupPivot.query(on: db)
-            .with(\.$user)
-            .with(\.$group)
-            .filter(\.$user.$id ~~ relations.map { $0.user.id })
-            .filter(\.$group.$id ~~ relations.map { $0.group.id })
+            .with(\.$primaryModel)
+            .with(\.$secondaryModel)
+            .filter(\.$primaryModel.$id ~~ relations.map { $0.userId })
+            .filter(\.$secondaryModel.$id ~~ relations.map { $0.groupId })
             .all()
             .withError(PrivilegeSystem.Errcase.userGroupRelationQueryFailed, "数据库查询时出错", category: .internal)
             .flatMapThrowing

@@ -9,9 +9,10 @@ import Policy
 import DataConvertable
 import LoggingAdvanced
 import NIOAdvanced
+import DTOBuilder
 @preconcurrency import AnyCodable
 
-public struct AnyResource: DTO.Model {
+public struct AnyResource: DTO.DBModel {
     public let id: UUID
     public let type: String
     public let name: String
@@ -120,25 +121,6 @@ public extension AnyResource {
                 model: model
             )
         }
-    }
-}
-
-package extension AnyResource {
-    func model(from db: PGDatabase) -> EventLoopRes<SQLModel, DTO.Errcase> {
-        guard let m = __m else {
-            return SQLModel.query(on: db)
-                .filter(Self.idProperty == id)
-                .first()
-                .withError(DTO.Errcase.modelQueryFailed, category: .internal)
-                .flatMap
-            { res in
-                guard let r = res else {
-                    return db.eventLoop.makeFailedResult(DTO.Errcase.modelNotExist.d(category: .external))
-                }
-                return db.eventLoop.makeSucceededResult(r)
-            }
-        }
-        return db.eventLoop.makeSucceededResult(m)
     }
 }
 
