@@ -202,6 +202,7 @@ extension QUser: Query.Queriable {
     public typealias Model = __SDBM.User
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.email: \.$email,
         \.id: \.$id,
         \.createdAt: \.$createdAt,
@@ -215,38 +216,6 @@ extension QUser: Query.Queriable {
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
     }
-}
-
-import NIOAdvanced
-
-public extension QUser {
-    
-//    func roles(on system: PrivilegeSystem) -> EventLoopRes<[QRole], PrivilegeSystem.Errcase> {
-//        // 一个 user 可用的所有 roles 包括:
-//        // 1.为 user 赋予的 用户角色
-//        // 2.user 所在组的 群组角色，包括所有父群组的 群组角色
-//        // 3.user 所在组为其赋予的 组内角色
-//        
-//        let userRoles = UserTRole.query(on: system)
-//            .filter(\.userId == self.id)
-//            .all()
-//            .errCast(PrivilegeSystem.Errcase.userRoleQueryFailed, "查询 user-role 关系时失败", category: .internal)
-//            .flatMap
-//        {
-//            QRole.make(from: $0.map { $0.roleId }, on: system)
-//                .errCast(PrivilegeSystem.Errcase.userRoleQueryFailed, "从 user-role 关系查询结果查询 roles 时失败", category: .internal)
-//        }
-//        
-//        let userGroupRoles = UserTGroup.query(on: system)
-//            .filter(\.userId == self.id)
-//            .all()
-//            .errCast(PrivilegeSystem.Errcase.groupRoleQueryFailed, "查询 user-groupRole 关系时失败", category: .internal)
-//            .flatMap
-//        {
-//            QRole.make(from: $0.map { $0.id }, on: system)
-//                .errCast(PrivilegeSystem.Errcase.userRoleQueryFailed, "从 user-role 关系查询结果查询 roles 时失败", category: .internal)
-//        }
-//    }
 }
 
 // MARK: - ModelAuthenticatable

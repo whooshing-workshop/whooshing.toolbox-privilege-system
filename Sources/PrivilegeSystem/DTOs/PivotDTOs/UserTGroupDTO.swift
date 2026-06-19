@@ -68,6 +68,7 @@ public struct UserTGroup: DTO.Pivot, DTO.Queried {
     package typealias PivotT = __SDBM.Pivots.UserGroup
     
     package static let aliasKeyBinds: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] = [
+        \.id: \SQLModel.$id,
         \.userId: \SQLModel.$primaryModel.$id,
         \.groupId: \SQLModel.$secondaryModel.$id
     ]

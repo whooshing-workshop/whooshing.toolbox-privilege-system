@@ -51,7 +51,6 @@ package protocol __PivotDTO: DTO.Pivot, __DBModel
     associatedtype Failure: ErrList
     
     static var errorThrows: Failure { get }
-    
     static var aliasKeyBinds: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] { get }
     
     init(
@@ -104,7 +103,7 @@ extension __PivotDTO {
 extension __PivotDTO {
     public static var paths: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] {
         var binds: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] = [
-            \Self.id: \SQLModel.$id,
+            Self.idKey: \SQLModel.$id,
             \Self.primaryId: \SQLModel.$primaryModel.$id,
             \Self.secondaryId: \SQLModel.$secondaryModel.$id,
             \Self.createdAt: \SQLModel.createdAt

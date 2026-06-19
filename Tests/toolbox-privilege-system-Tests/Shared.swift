@@ -29,6 +29,7 @@ struct TestingShared {
         case userInfo
         case relations
         case multiRelations
+        case propertyWrapper
         case query
         case policy
         case advancePolicy

@@ -66,7 +66,7 @@ public struct QGroup: DTO.Queried {
     public let createdAt: Date
     public let updatedAt: Date
     
-    @OptionalSuper()                    public var parent: QGroup?
+    @OptionalSuper                      public var parent: QGroup?
     @Subs(for: \.$parent)               public var childs: [QGroup]
     
     @Sibling(
@@ -209,6 +209,7 @@ extension QGroup: Query.Queriable {
     public typealias Model = __SDBM.Group
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.$parent.id: \.$parent.$id,
         \.name: \.$name,
         \.description: \.$description,

@@ -159,6 +159,7 @@ extension QPolicy: Query.Queriable {
     public typealias Model = __SDBM.PolicyExp<G>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.$parent.id: \.$parent.$id,
         \.moduleId: \.$moduleId,
         \.policy: \.$policy,

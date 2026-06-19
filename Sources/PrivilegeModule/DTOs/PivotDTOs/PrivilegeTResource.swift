@@ -72,6 +72,7 @@ public extension PM {
         package typealias PivotT = S.__DBM.PrivilegeResource<G>
         
         package static var aliasKeyBinds: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] {[
+            \.id: \SQLModel.$id,
             \.privilegeId: \SQLModel.$primaryModel.$id,
             \.resourceId: \SQLModel.$secondaryModel.$id
         ]}

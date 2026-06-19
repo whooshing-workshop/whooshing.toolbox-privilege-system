@@ -255,6 +255,7 @@ extension QToken: Query.Queriable {
     public typealias Model = __SDBM.Token
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.credential: \.$credential,
         \.id: \.$id,
         \.token: \.$token,

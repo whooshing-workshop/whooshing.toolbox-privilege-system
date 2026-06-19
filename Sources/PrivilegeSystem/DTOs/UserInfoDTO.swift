@@ -203,6 +203,7 @@ extension QUserInfo: Query.Queriable {
     public typealias Model = __SDBM.User.Info
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.nickname: \.$nickname,
         \.identifier: \.$identifier,
         \.birthday: \.$birthday,

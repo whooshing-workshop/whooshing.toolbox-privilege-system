@@ -142,6 +142,43 @@ struct QueryTests {
         #expect(count >= 0)
     }
     
+    @Test("空结果分页查询 (Empty Pagination)")
+    func testEmptyPagination() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let page = try await s.query(QUser.self)
+            .filter(\.email == "nonexistent_email_12345@domain.com")
+            .page(with: 1, size: 10)
+            
+        #expect(page.items.isEmpty)
+        #expect(page.metadata.total == 0)
+    }
+    
+    @Test("可选字段排序 (Sort Optional)")
+    func testSortOptional() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // QGroup.description 是可选的 String?
+        let groups = try await s.query(QGroup.self)
+            .sort(\.description, .ascending)
+            .all()
+            
+        #expect(groups.count >= 0)
+    }
+    
+    @Test("多重连接查询 (Multi-Join)")
+    func testMultiJoin() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // Join QUserInfo -> QUser and QUserInfo -> QInfoSlice<AlternateEmail>
+        let q: Query.Builder<QUserInfo> = s.query(QUserInfo.self)
+        let q1: Query.Builder<QUserInfo> = q.join(QUser.self, on: \QUserInfo.$user.id == \QUser.id)
+        let q2: Query.Builder<QUserInfo> = q1.join(QInfoSlice<AlternateEmail>.self, on: \QUserInfo.id == \QInfoSlice<AlternateEmail>.$userInfo.id)
+        let results = try await q2.all()
+            
+        #expect(results.count >= 0)
+    }
+    
     @MainActor
     @Test("测试结束")
     func end() async throws {

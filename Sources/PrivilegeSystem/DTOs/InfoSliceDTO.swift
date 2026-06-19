@@ -187,6 +187,7 @@ extension QInfoSlice: Query.Queriable {
     public typealias Model = __SDBM.User.Info.Extended<G.Model>
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.value: \.$value,
         \.order: \.$order,
         \.description: \.$description,

@@ -189,6 +189,7 @@ extension PM.QPrivilege: Query.Queriable {
     public typealias Model = S.__DBM.Privilege
     public typealias ErrorType = S.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.name: \.$name,
         \.description: \.$description,
         \.policy: \.$policy,

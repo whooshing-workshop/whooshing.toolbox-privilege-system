@@ -128,6 +128,7 @@ extension AnyResource: Query.Queriable {
     public typealias Model = __SDBM.AnyResource
     public typealias ErrorType = Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.id: \.$id,
         \.data: \.$data,
         \.createdAt: \.$createdAt,

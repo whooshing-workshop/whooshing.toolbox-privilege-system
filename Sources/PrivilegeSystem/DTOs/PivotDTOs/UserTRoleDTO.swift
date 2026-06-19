@@ -24,6 +24,7 @@ public struct UserTRole: DTO.Pivot {
     package typealias PivotT = __SDBM.Pivots.UserRole
     
     package static let aliasKeyBinds: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] = [
+        \.id: \SQLModel.$id,
         \.userId: \SQLModel.$primaryModel.$id,
         \.roleId: \SQLModel.$secondaryModel.$id
     ]

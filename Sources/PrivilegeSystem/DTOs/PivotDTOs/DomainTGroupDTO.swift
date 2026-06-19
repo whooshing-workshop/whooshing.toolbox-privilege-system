@@ -24,6 +24,7 @@ public struct DomainTGroup: DTO.Pivot {
     package typealias PivotT = __SDBM.Pivots.DomainGroup
     
     package static let aliasKeyBinds: [PartialKeyPath<Self> : PartialKeyPath<SQLModel>] = [
+        \.id: \SQLModel.$id,
         \.domainId: \SQLModel.$primaryModel.$id,
         \.groupId: \SQLModel.$secondaryModel.$id
     ]

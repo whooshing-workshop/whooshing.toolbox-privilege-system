@@ -21,7 +21,7 @@ final public class OptionalSubProperty<From, To>: @unchecked Sendable
     
     public var wrappedValue: To? {
         lock.withLock {
-            guard loaded else {
+            guard __loaded else {
                 fatalError("\(Self.logName) 未加载，请调用 $ 前缀后调用 load(on:) 函数后再取得加载后的内容")
             }
             

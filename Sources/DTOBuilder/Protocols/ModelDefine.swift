@@ -71,6 +71,7 @@ public extension DTO {
     
     protocol DBModel: Model, Query.Queriable, Codable {
         var id: UUID { get }
+        static var idKey: KeyPath<Self, UUID> { get }  // 这个属性是因为 swift keypath 判断机制，\DBModel.id != \<Model which implement DBModel>.id，使用该实例可以确保 KeyPath 比较正确
         static func make(from ids: [UUID], on system: Query.System) -> EventLoopRes<[Self], DTO.Errcase>
     }
     
@@ -138,8 +139,9 @@ public extension DTO.Model {
     }
     
     func hash(into hasher: inout Hasher) {
-        for (_, v) in json {
-            hasher.combine(v)
+        let m = self.maps
+        for key in CodingKeys.allCases {
+            hasher.combine(m[key] ?? nil)
         }
     }
     
@@ -148,7 +150,19 @@ public extension DTO.Model {
     }
 }
 
+public extension DTO.DBModel {
+    static var idKey: KeyPath<Self, UUID> { \.id }
+}
+
 public extension DTO.Prepare {
+    func hash(into hasher: inout Hasher) {
+        let m = self.maps
+        for key in CodingKeys.allCases {
+            if key.rawValue == "id" { continue }
+            hasher.combine(m[key] ?? nil)
+        }
+    }
+    
     static func == (lhs: Self, rhs: Self) -> Bool {
         let lmaps = lhs.maps
         let rmaps = rhs.maps

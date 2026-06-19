@@ -1113,6 +1113,7 @@ extension PrivilegeSystem.RoleController {
         errThrowing: Errcase
     ) -> EventLoopRes<T, Errcase> {
         builder
+            .filter(.id, .equal, id)
             .first()
             .withError(errThrowing, "取得 \(T.name) 主模型失败", metadata: ["id": .stringConvertible(id)], category: .internal)
             .flatMap

@@ -1487,6 +1487,52 @@ struct PolicyTesting {
         }
     }
 
+    @Test("混合权限仲裁：使用 userId 和 roleId 执行仲裁")
+    func edge_ArbitrateWithUserIdAndRoleId() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        let user = try await fetchUser(index: 4, s: s)
+        let role = try await fetchRole(index: 6, s: s)
+        let suffix = UUID().uuidString
+        
+        let privileges = try await m.privilege.createWithReturning(privileges: [
+            .init(
+                name: "UserIdArbitrateTest-\(suffix)",
+                policy: "allow if { input.operation == \"read\" }"
+            )
+        ])
+        let privilege = try #require(privileges.first)
+        let resource = JsonResource(name: "test", content: [:])
+        let resourceDTO = try await m.resource.create(resources: [resource]).first!
+        
+        // 验证带有 userId, roleId 和 logger 的 async 接口
+        let allow = try await s.arbitrator.judge(
+            moduleId: m.moduleId,
+            userId: user.id,
+            roleId: role.id,
+            resource: try #require(AnyResource(resourceDTO)),
+            operation: .init(op: JsonOperation.read),
+            privilegeIds: [privilege.id],
+            logger: s.arbitrator.logger
+        )
+        
+        #expect(allow.result == true)
+        
+        let deny = try await s.arbitrator.judge(
+            moduleId: m.moduleId,
+            userId: user.id,
+            roleId: role.id,
+            resource: try #require(AnyResource(resourceDTO)),
+            operation: .init(op: JsonOperation.write),
+            privilegeIds: [privilege.id],
+            logger: s.arbitrator.logger
+        )
+        
+        #expect(deny.result == false)
+        
+        // 清理
+        try await m.privilege.delete(policy: privilege)
+    }
+
     // ==================================================
     //  RBAC Privilege Relations Analysis Report
     // ==================================================

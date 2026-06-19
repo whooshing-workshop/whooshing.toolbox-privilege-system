@@ -113,6 +113,7 @@ extension PM.QResource: Query.Queriable {
     public typealias Model = S.__DBM.ResourceModel<G>
     public typealias ErrorType = S.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.id: \.$id,
         \.data: \.$data,
         \.createdAt: \.$createdAt,

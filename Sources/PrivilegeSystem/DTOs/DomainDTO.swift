@@ -175,6 +175,7 @@ extension QDomain: Query.Queriable {
     public typealias Model = __SDBM.Domain
     public typealias ErrorType = PrivilegeSystem.Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
+        Self.idKey: \.$id,
         \.name: \.$name,
         \.description: \.$description,
         \.id: \.$id,
