@@ -206,6 +206,26 @@ print(writeResult.result)
 
 > **提示:** 仲裁器会直接与 OPA 进行高性能通信，并将相关资源的元数据带入环境，无需您手动解析复杂的依赖网。所有的权限判定操作对于应用逻辑都是无感且绝对一致的。
 
+#### 6. 类型安全的查询 (Query DSL)
+
+PrivilegeSystem 提供了一套基于 Fluent 构建的高级类型安全查询 DSL。它允许你直接使用 DTO 的 KeyPath 进行数据过滤、排序和连接，而无需直接接触底层的数据库模型。此外，系统针对 `PropertyWrapper` (例如 `IDProperty`, `FieldProperty`) 和各类聚合查询 (如 `sum`, `average`) 也提供了完善的封装映射。
+
+```swift
+// 通过系统查询用户，支持安全类型推断
+let users = try await system.query(QUser.self)
+    .filter(\.email == "readme_user@example.com")
+    .sort(\.createdAt, .descending)
+    .limit(10)
+    .all()
+
+// 支持基于中间表 (Pivot) 的 Join 查询
+let joined = try await system.query(QUser.self)
+    .join(UserTRole.self, on: \.id == \.userId)
+    .fields(for: UserTRole.self) // 自动拉取 Join 产生的新字段
+    .filter(UserTRole.self, \.roleId == role.id)
+    .all()
+```
+
 ---
 
 ### 高阶特性
