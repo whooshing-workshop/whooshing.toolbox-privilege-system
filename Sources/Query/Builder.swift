@@ -97,6 +97,15 @@ public enum Query {
         ///     .all()
         /// ```
         @discardableResult
+        public func limit(_ count: Int) -> Self {
+            .init(query: query.limit(count))
+        }
+        
+        @discardableResult
+        public func offset(_ count: Int) -> Self {
+            .init(query: query.offset(count))
+        }
+
         public func group(
             _ relation: DatabaseQuery.Filter.Relation = .and,
             _ closure: (Builder<Model>) throws -> ()

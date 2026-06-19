@@ -1358,7 +1358,7 @@ struct PolicyTesting {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "PolicyTestReadPrivilege-\(suffix)",
-                description: "PolicyTests 临时资源权限",
+                summary: "PolicyTests 临时资源权限",
                 policy: "allow if { input.operation == \"read\" }"
             )
         ])
@@ -1431,12 +1431,12 @@ struct PolicyTesting {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "PolicyTestReadPrivilege-\(suffix)",
-                description: "PolicyTests 临时 read 权限",
+                summary: "PolicyTests 临时 read 权限",
                 policy: "allow if { input.operation == \"read\" }"
             ),
             .init(
                 name: "PolicyTestFilePrivilege-\(suffix)",
-                description: "PolicyTests 临时 file 权限",
+                summary: "PolicyTests 临时 file 权限",
                 policy: "allow if { input.resource.kind == \"file\" }"
             )
         ])

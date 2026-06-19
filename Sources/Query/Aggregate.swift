@@ -213,8 +213,11 @@ public extension Query.Builder {
         _ field: KeyPath<Model, Value>,
         as result: Result.Type = Result.self
     ) -> EventLoopRes<Result, Query.Errcase> where Value: Codable & Sendable, Result: Codable & Sendable {
-        castCodableAggregate(method, field, as: result)!
-            .withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        if let res = castCodableAggregate(method, field, as: result) {
+            return res.withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        } else {
+            fatalError("castCodableAggregate returned nil for \(field)")
+        }
     }
     
     func aggregate<Value, Result>(
@@ -222,8 +225,11 @@ public extension Query.Builder {
         _ field: KeyPath<Model, Value?>,
         as result: Result.Type = Result.self
     ) -> EventLoopRes<Result, Query.Errcase> where Value: Codable & Sendable, Result: Codable & Sendable {
-        castOptionalCodableAggregate(method, field, as: result)!
-            .withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        if let res = castOptionalCodableAggregate(method, field, as: result) {
+            return res.withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        } else {
+            fatalError("castOptionalCodableAggregate returned nil for \(field)")
+        }
     }
     
     func aggregate<Value, Result>(
@@ -231,8 +237,11 @@ public extension Query.Builder {
         _ field: KeyPath<Model, Value>,
         as result: Result.Type = Result.self
     ) -> EventLoopRes<Result, Query.Errcase> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String, Result: Codable & Sendable {
-        castEnumAggregate(method, field, as: result)!
-            .withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        if let res = castEnumAggregate(method, field, as: result) {
+            return res.withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        } else {
+            fatalError("castEnumAggregate returned nil for \(field)")
+        }
     }
     
     func aggregate<Value, Result>(
@@ -240,8 +249,11 @@ public extension Query.Builder {
         _ field: KeyPath<Model, Value?>,
         as result: Result.Type = Result.self
     ) -> EventLoopRes<Result, Query.Errcase> where Value: Codable & Sendable & RawRepresentable, Value.RawValue == String, Result: Codable & Sendable {
-        castOptionalEnumAggregate(method, field, as: result)!
-            .withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        if let res = castOptionalEnumAggregate(method, field, as: result) {
+            return res.withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        } else {
+            fatalError("castOptionalEnumAggregate returned nil for \(field)")
+        }
     }
     
     func aggregate<Result>(
@@ -249,8 +261,11 @@ public extension Query.Builder {
         _ field: KeyPath<Model, Date>,
         as result: Result.Type = Result.self
     ) -> EventLoopRes<Result, Query.Errcase> where Result: Codable & Sendable {
-        castTimestampAggregate(method, field, as: result)!
-            .withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        if let res = castTimestampAggregate(method, field, as: result) {
+            return res.withError(Query.Errcase.aggregateResultFailed, "\(method) 失败", category: .internal)
+        } else {
+            fatalError("castTimestampAggregate returned nil for \(field)")
+        }
     }
 }
 
@@ -283,6 +298,10 @@ extension Query.Builder {
         }
         
         if let field = k as? KeyPath<Model.Model, OptionalFieldProperty<Model.Model, Value>> {
+            return query.aggregate(method, field, as: result)
+        } else if let field = k as? KeyPath<Model.Model, FieldProperty<Model.Model, Value?>> {
+            return query.aggregate(method, field, as: result)
+        } else if let field = k as? KeyPath<Model.Model, IDProperty<Model.Model, Value>> {
             return query.aggregate(method, field, as: result)
         }
         

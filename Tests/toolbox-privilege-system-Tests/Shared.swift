@@ -22,6 +22,7 @@ struct TestingShared {
     enum TestStage: Int {
         case hashable
         case account
+        case dtoCodable
         case group
         case role
         case domain

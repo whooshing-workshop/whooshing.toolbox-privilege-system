@@ -34,15 +34,15 @@ struct UserinfoTesting {
                 addresses: [
                     .init(value: "Philippines", order: 0),
                     .init(value: "Iloilo", order: 1),
-                    .init(value: "Molo", order: 2, description: "Final location")
+                    .init(value: "Molo", order: 2, summary: "Final location")
                 ],
                 alternateEmails: [
-                    .init(value: "testing@example.com", order: 0, description: "Testing email"),
+                    .init(value: "testing@example.com", order: 0, summary: "Testing email"),
                     .init(value: "testing@qq.com", order: 1)
                 ],
                 phones: [
                     .init(value: "+8618277382119", order: 0),
-                    .init(value: "+639276382839", order: 1, description: "Philippines phone number")
+                    .init(value: "+639276382839", order: 1, summary: "Philippines phone number")
                 ]
             )
         ), (
@@ -55,11 +55,11 @@ struct UserinfoTesting {
             PExtendedInfo(
                 addresses: [
                     .init(value: "China", order: 0),
-                    .init(value: "Sichuan Province", order: 1, description: "the province")
+                    .init(value: "Sichuan Province", order: 1, summary: "the province")
                 ],
                 alternateEmails: [
                     .init(value: "lol@example.com", order: 0),
-                    .init(value: "interesting@icloud.com", order: 1, description: "only for testing")
+                    .init(value: "interesting@icloud.com", order: 1, summary: "only for testing")
                 ],
                 phones: [
                     .init(value: "+193810928375", order: 8),
@@ -77,14 +77,14 @@ struct UserinfoTesting {
                 addresses: [
                     .init(value: "Japan", order: 0),
                     .init(value: "Tokyo", order: 1),
-                    .init(value: "Akihabara", order: 2, description: "Office location")
+                    .init(value: "Akihabara", order: 2, summary: "Office location")
                 ],
                 alternateEmails: [
-                    .init(value: "tech_dev@sony.jp", order: 0, description: "Work email"),
+                    .init(value: "tech_dev@sony.jp", order: 0, summary: "Work email"),
                     .init(value: "gamer_soul@gmail.com", order: 1)
                 ],
                 phones: [
-                    .init(value: "+819012345678", order: 0, description: "Mobile JP")
+                    .init(value: "+819012345678", order: 0, summary: "Mobile JP")
                 ]
             )
         ),
@@ -98,15 +98,15 @@ struct UserinfoTesting {
             PExtendedInfo(
                 addresses: [
                     .init(value: "Thailand", order: 0),
-                    .init(value: "Chiang Mai", order: 1, description: "Digital nomad hub"),
+                    .init(value: "Chiang Mai", order: 1, summary: "Digital nomad hub"),
                     .init(value: "Nimman Road", order: 2)
                 ],
                 alternateEmails: [
-                    .init(value: "traveler@protonmail.com", order: 0, description: "Secure contact")
+                    .init(value: "traveler@protonmail.com", order: 0, summary: "Secure contact")
                 ],
                 phones: [
                     .init(value: "+66812345678", order: 0),
-                    .init(value: "+447712345678", order: 1, description: "UK roaming SIM")
+                    .init(value: "+447712345678", order: 1, summary: "UK roaming SIM")
                 ]
             )
         ),
@@ -121,11 +121,11 @@ struct UserinfoTesting {
                 addresses: [
                     .init(value: "United States", order: 0),
                     .init(value: "California", order: 1),
-                    .init(value: "Mountain View", order: 2, description: "Home")
+                    .init(value: "Mountain View", order: 2, summary: "Home")
                 ],
                 alternateEmails: [
                     .init(value: "legacy_user@aol.com", order: 0),
-                    .init(value: "backup_admin@icloud.com", order: 1, description: "Recovery only")
+                    .init(value: "backup_admin@icloud.com", order: 1, summary: "Recovery only")
                 ],
                 phones: [
                     .init(value: "+16505550199", order: 0)

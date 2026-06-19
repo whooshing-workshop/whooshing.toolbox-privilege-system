@@ -29,7 +29,7 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
     public let id: UUID?
     public let value: G.Model.Value
     public let order: Int16
-    public let description: String?
+    public let summary: String?
     
     public static var logName: String { "PInfoSlice" }
     
@@ -37,19 +37,19 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
         id: UUID? = nil,
         value: G.Model.Value,
         order: Int16,
-        description: String? = nil
+        summary: String? = nil
     ) {
         self.id = id
         self.value = value
         self.order = order
-        self.description = description
+        self.summary = summary
     }
     
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: self.id,
         .value: self.value,
         .order: self.order,
-        .description: self.description
+        .summary: self.summary
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .value, .order] }
@@ -58,7 +58,7 @@ public struct PInfoSlice<G: UserInfoModel>: DTO.Prepare {
         case id
         case value
         case order
-        case description
+        case summary
     }
 }
 
@@ -67,7 +67,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
     public let id: UUID
     public let value: G.Model.Value
     public let order: Int16
-    public let description: String?
+    public let summary: String?
     public let createdAt: Date
     public let updatedAt: Date
     
@@ -83,7 +83,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         .userInfoId: .init(obj: self.$userInfo.id),
         .value: .init(obj: self.value),
         .order: .init(obj: self.order),
-        .description: .init(obj: self.description),
+        .summary: .init(obj: self.summary),
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt),
         
@@ -97,7 +97,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         case userInfoId = "user_info_id"
         case value
         case order
-        case description
+        case summary
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         
@@ -109,7 +109,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         userInfoId: UUID,
         value: G.Model.Value,
         order: Int16,
-        description: String?,
+        summary: String?,
         createdAt: Date,
         updatedAt: Date,
         model: SQLModel?
@@ -117,7 +117,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         self.id = id
         self.value = value
         self.order = order
-        self.description = description
+        self.summary = summary
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
@@ -132,7 +132,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
             userInfoId: try container.decode(UUID.self, forKey: .userInfoId),
             value: try container.decode(G.Model.Value.self, forKey: .value),
             order: try container.decode(Int16.self, forKey: .order),
-            description: try container.decodeIfPresent(String.self, forKey: .description),
+            summary: try container.decodeIfPresent(String.self, forKey: .summary),
             createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
@@ -145,7 +145,7 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         try container.encode(self.$userInfo.id, forKey: .userInfoId)
         try container.encode(self.value, forKey: .value)
         try container.encode(self.order, forKey: .order)
-        try container.encodeIfPresent(self.description, forKey: .description)
+        try container.encodeIfPresent(self.summary, forKey: .summary)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
         
@@ -160,7 +160,7 @@ extension PInfoSlice: __Prepare {
         info.$userInfo.id = userInfoId
         info.value = value
         info.order = order
-        info.description = description
+        info.summary = summary
         return info
     }
 }
@@ -174,7 +174,7 @@ extension QInfoSlice: __Queried {
                 userInfoId: model.$userInfo.id,
                 value: model.value,
                 order: model.order,
-                description: model.description,
+                summary: model.summary,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
                 model: model
@@ -190,7 +190,7 @@ extension QInfoSlice: Query.Queriable {
         Self.idKey: \.$id,
         \.value: \.$value,
         \.order: \.$order,
-        \.description: \.$description,
+        \.summary: \.$summary,
         \.id: \.$id,
         \.$userInfo.id: \.$userInfo.$id,
         \.createdAt: \.$createdAt,
@@ -201,7 +201,7 @@ extension QInfoSlice: Query.Queriable {
         builder
             .field(Model.self, \.$value)
             .field(Model.self, \.$order)
-            .field(Model.self, \.$description)
+            .field(Model.self, \.$summary)
             .field(Model.self, \.$id)
             .field(Model.self, \.$userInfo.$id)
             .field(Model.self, \.$createdAt)
@@ -213,22 +213,22 @@ extension QInfoSlice: Query.Queriable {
 
 public protocol UserInfoModel: Sendable {
     associatedtype Model: UserInfoExtends.Model
-    static var description: String { get }
+    static var summary: String { get }
 }
 
 public struct Address: UserInfoModel {
     public typealias Model = UserInfoExtends.Address
-    public static let description = "地址"
+    public static let summary = "地址"
 }
 
 public struct AlternateEmail: UserInfoModel {
     public typealias Model = UserInfoExtends.AlternateEmail
-    public static let description = "次要邮箱"
+    public static let summary = "次要邮箱"
 }
 
 public struct Phone: UserInfoModel {
     public typealias Model = UserInfoExtends.Phone
-    public static let description = "次要手机号"
+    public static let summary = "次要手机号"
 }
 
 // MARK: - Updater
@@ -280,9 +280,9 @@ public extension PInfoSlice.Updater {
         }
     }
 
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
+    func update(summary: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.summary) { builder, _ in
+            builder.set(\.$summary, to: try summary())
         }
     }
 }
@@ -302,10 +302,10 @@ public extension PInfoSlice.Updater {
         }
     }
 
-    func update(description: @escaping (QInfoSlice<G>) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
+    func update(summary: @escaping (QInfoSlice<G>) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.summary) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
+            return builder.set(\.$summary, to: try summary(q))
         }
     }
 }

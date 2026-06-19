@@ -81,7 +81,7 @@ struct AdvancePolicyTesting {
         }
         """
         
-        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_pass", description: "Advance SQL Pass", policy: passPolicyText)]).first!
+        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_pass", summary: "Advance SQL Pass", policy: passPolicyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = try #require(AnyResource(resourceDTO))
@@ -108,7 +108,7 @@ struct AdvancePolicyTesting {
         }
         """
         
-        let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_fail", description: "Advance SQL Fail", policy: failPolicyText)]).first!
+        let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_fail", summary: "Advance SQL Fail", policy: failPolicyText)]).first!
         let failJsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let failResourceDTO = try await m.resource.create(resources: [failJsonResource]).first!
         let failAnyResource = try #require(AnyResource(failResourceDTO))
@@ -180,7 +180,7 @@ struct AdvancePolicyTesting {
         }
         """
         
-        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_time", description: "Advance Time Module", policy: policyText)]).first!
+        let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_time", summary: "Advance Time Module", policy: policyText)]).first!
         let jsonResource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = try #require(AnyResource(resourceDTO))

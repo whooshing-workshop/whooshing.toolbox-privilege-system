@@ -80,7 +80,7 @@ extension PrivilegeSystem {
         ///
         /// ```swift
         /// let roles = try await system.role.create(
-        ///     roles: [.init(name: "Admin", description: "Administrator Role")]
+        ///     roles: [.init(name: "Admin", summary: "Administrator Role")]
         /// ).get()
         /// ```
         public func create(

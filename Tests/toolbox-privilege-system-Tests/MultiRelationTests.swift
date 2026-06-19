@@ -24,27 +24,27 @@ struct MultiRelationsTesting {
     }
     
     static let roles: OrderedSet<PRole> = [
-        .init(id: UUID(), name: "MRT-ROLE1", description: "批量测试角色 1"),
-        .init(id: UUID(), name: "MRT-ROLE2", description: "批量测试角色 2"),
-        .init(id: UUID(), name: "MRT-ROLE3", description: "批量测试角色 3"),
-        .init(id: UUID(), name: "MRT-ROLE4", description: "批量测试角色 4"),
-        .init(id: UUID(), name: "MRT-ROLE5", description: "批量测试角色 5"),
-        .init(id: UUID(), name: "MRT-ROLE6", description: "批量测试角色 6"),
-        .init(id: UUID(), name: "MRT-ROLE7", description: "批量测试角色 7"),
-        .init(id: UUID(), name: "MRT-ROLE8", description: "批量测试角色 8"),
-        .init(id: UUID(), name: "MRT-ROLE9", description: "批量测试角色 9")
+        .init(id: UUID(), name: "MRT-ROLE1", summary: "批量测试角色 1"),
+        .init(id: UUID(), name: "MRT-ROLE2", summary: "批量测试角色 2"),
+        .init(id: UUID(), name: "MRT-ROLE3", summary: "批量测试角色 3"),
+        .init(id: UUID(), name: "MRT-ROLE4", summary: "批量测试角色 4"),
+        .init(id: UUID(), name: "MRT-ROLE5", summary: "批量测试角色 5"),
+        .init(id: UUID(), name: "MRT-ROLE6", summary: "批量测试角色 6"),
+        .init(id: UUID(), name: "MRT-ROLE7", summary: "批量测试角色 7"),
+        .init(id: UUID(), name: "MRT-ROLE8", summary: "批量测试角色 8"),
+        .init(id: UUID(), name: "MRT-ROLE9", summary: "批量测试角色 9")
     ]
     
     static let groups: OrderedSet<PGroup> = [
-        .init(id: UUID(), name: "MRT-GROUP1", description: "批量测试群组 1"),
-        .init(id: UUID(), name: "MRT-GROUP2", description: "批量测试群组 2"),
-        .init(id: UUID(), name: "MRT-GROUP3", description: "批量测试群组 3"),
-        .init(id: UUID(), name: "MRT-GROUP4", description: "批量测试群组 4"),
-        .init(id: UUID(), name: "MRT-GROUP5", description: "批量测试群组 5"),
-        .init(id: UUID(), name: "MRT-GROUP6", description: "批量测试群组 6"),
-        .init(id: UUID(), name: "MRT-GROUP7", description: "批量测试群组 7"),
-        .init(id: UUID(), name: "MRT-GROUP8", description: "批量测试群组 8"),
-        .init(id: UUID(), name: "MRT-GROUP9", description: "批量测试群组 9")
+        .init(id: UUID(), name: "MRT-GROUP1", summary: "批量测试群组 1"),
+        .init(id: UUID(), name: "MRT-GROUP2", summary: "批量测试群组 2"),
+        .init(id: UUID(), name: "MRT-GROUP3", summary: "批量测试群组 3"),
+        .init(id: UUID(), name: "MRT-GROUP4", summary: "批量测试群组 4"),
+        .init(id: UUID(), name: "MRT-GROUP5", summary: "批量测试群组 5"),
+        .init(id: UUID(), name: "MRT-GROUP6", summary: "批量测试群组 6"),
+        .init(id: UUID(), name: "MRT-GROUP7", summary: "批量测试群组 7"),
+        .init(id: UUID(), name: "MRT-GROUP8", summary: "批量测试群组 8"),
+        .init(id: UUID(), name: "MRT-GROUP9", summary: "批量测试群组 9")
     ]
     
     @Test("创建 Roles 与 Groups")

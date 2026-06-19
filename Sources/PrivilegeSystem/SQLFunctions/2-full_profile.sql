@@ -16,7 +16,7 @@ BEGIN
                 'id', uia.id,
                 'address', uia.address,
                 'order', uia.order,
-                'description', uia.description,
+                'summary', uia.summary,
                 'created_at', as_date(uia.created_at),
                 'updated_at', as_date(uia.updated_at)
             ))
@@ -27,7 +27,7 @@ BEGIN
             SELECT jsonb_agg(jsonb_build_object(
                 'id', uie.id,
                 'email', uie.alternate_email,
-                'description', uie.description,
+                'summary', uie.summary,
                 'created_at', as_date(uie.created_at),
                 'updated_at', as_date(uie.updated_at)
             ))
@@ -38,7 +38,7 @@ BEGIN
             SELECT jsonb_agg(jsonb_build_object(
                 'id', uip.id,
                 'phone', uip.phone,
-                'description', uip.description,
+                'summary', uip.summary,
                 'created_at', as_date(uip.created_at),
                 'updated_at', as_date(uip.updated_at)
             ))

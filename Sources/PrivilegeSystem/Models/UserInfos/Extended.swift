@@ -13,7 +13,7 @@ public extension __SDBM.User.Info {
             let userInfoId = PGField("user_info_id", .uuid)             .required.unique(composite: name + ".unique").foreign(__SDBM.User.Info.self, \.id, onDelete: .cascade)
             let value = PGField(T.valueFieldName, T.pgFieldType)        .required.unique(composite: name + ".unique")
             let order = PGField("order", .int16)                        .required.unique(composite: name + ".unique")
-            let description = PGField("description", .string)
+            let summary = PGField("summary", .string)
             let createdAt = PGField("created_at", .datetime)            .required
             let updatedAt = PGField("updated_at", .datetime)            .required
             
@@ -27,7 +27,7 @@ public extension __SDBM.User.Info {
         @Parent(fields.userInfoId)                      var userInfo: __SDBM.User.Info
         @Field(fields.value)                            var value: T.Value
         @Field(fields.order)                            var order: Int16
-        @Field(fields.description)                      var description: String?
+        @Field(fields.summary)                          var summary: String?
         
         @Timestamp(fields.createdAt, on: .create)       var createdAt: Date!
         @Timestamp(fields.updatedAt, on: .update)       var updatedAt: Date!

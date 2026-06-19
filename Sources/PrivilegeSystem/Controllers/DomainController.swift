@@ -76,7 +76,7 @@ extension PrivilegeSystem {
         ///
         /// ```swift
         /// let domains = try await system.domain.create(
-        ///     domains: [.init(name: "DomainA", description: "This is A")]
+        ///     domains: [.init(name: "DomainA", summary: "This is A")]
         /// ).get()
         /// ```
         public func create(

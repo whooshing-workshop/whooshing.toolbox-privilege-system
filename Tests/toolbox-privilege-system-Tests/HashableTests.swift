@@ -73,9 +73,9 @@ struct HashableTests {
         let name = "TestDomain"
         let desc = "Test Description"
         
-        let p1 = PDomain(name: name, description: desc)
-        let p2 = PDomain(name: name, description: desc)
-        let p3 = PDomain(name: "OtherDomain", description: desc)
+        let p1 = PDomain(name: name, summary: desc)
+        let p2 = PDomain(name: name, summary: desc)
+        let p3 = PDomain(name: "OtherDomain", summary: desc)
         
         #expect(p1 == p2)
         #expect(p1 != p3)
@@ -86,7 +86,7 @@ struct HashableTests {
         
         let model = __SDBM.Domain()
         model.name = name
-        model.description = desc
+        model.summary = desc
         model.id = UUID()
         model.createdAt = Date()
         model.updatedAt = Date()
@@ -103,9 +103,9 @@ struct HashableTests {
         let name = "TestGroup"
         let desc = "Test Description"
         
-        let p1 = PGroup(under: nil, name: name, description: desc)
-        let p2 = PGroup(under: nil, name: name, description: desc)
-        let p3 = PGroup(under: nil, name: "OtherGroup", description: desc)
+        let p1 = PGroup(under: nil, name: name, summary: desc)
+        let p2 = PGroup(under: nil, name: name, summary: desc)
+        let p3 = PGroup(under: nil, name: "OtherGroup", summary: desc)
         
         #expect(p1 == p2)
         #expect(p1 != p3)
@@ -116,7 +116,7 @@ struct HashableTests {
         
         let model = __SDBM.Group()
         model.name = name
-        model.description = desc
+        model.summary = desc
         model.id = UUID()
         model.createdAt = Date()
         model.updatedAt = Date()
@@ -132,9 +132,9 @@ struct HashableTests {
         let name = "TestRole"
         let desc = "Test Description"
         
-        let p1 = PRole(name: name, description: desc)
-        let p2 = PRole(name: name, description: desc)
-        let p3 = PRole(name: "OtherRole", description: desc)
+        let p1 = PRole(name: name, summary: desc)
+        let p2 = PRole(name: name, summary: desc)
+        let p3 = PRole(name: "OtherRole", summary: desc)
         
         #expect(p1 == p2)
         #expect(p1 != p3)
@@ -145,7 +145,7 @@ struct HashableTests {
         
         let model = __SDBM.Role()
         model.name = name
-        model.description = desc
+        model.summary = desc
         model.id = UUID()
         model.createdAt = Date()
         model.updatedAt = Date()
@@ -228,7 +228,7 @@ struct HashableTests {
         let gmodel = __SDBM.Group()
         gmodel.name = "TestGroup"
         gmodel.id = UUID()
-        gmodel.description = nil
+        gmodel.summary = nil
         gmodel.createdAt = Date()
         gmodel.updatedAt = Date()
         let qgroup = try QGroup.make(from: gmodel).get()
@@ -264,7 +264,7 @@ struct HashableTests {
         model.value = value
         model.order = order
         model.id = UUID()
-        model.description = nil
+        model.summary = nil
         model.$userInfo.id = UUID()
         model.createdAt = Date()
         model.updatedAt = Date()
@@ -282,15 +282,15 @@ struct HashableTests {
         
         // PrivilegeDTO init requires internal initializers or public ones?
         // Let's use the internal one since we use @testable!
-        let p1 = PM<ResourceList>.PPrivilege(name: name, description: nil, policy: policy)
-        let p2 = PM<ResourceList>.PPrivilege(name: name, description: nil, policy: policy)
+        let p1 = PM<ResourceList>.PPrivilege(name: name, summary: nil, policy: policy)
+        let p2 = PM<ResourceList>.PPrivilege(name: name, summary: nil, policy: policy)
         
         #expect(p1 == p2)
         
         let model = PM<ResourceList>.__DBM.Privilege()
         model.name = name
         model.policy = policy
-        model.description = nil
+        model.summary = nil
         model.id = UUID()
         model.createdAt = Date()
         model.updatedAt = Date()

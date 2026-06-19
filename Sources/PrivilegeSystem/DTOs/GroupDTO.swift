@@ -16,7 +16,7 @@ public struct PGroup: DTO.Prepare {
     public let id: UUID?
     public let name: String
     public let parentId: UUID?
-    public let description: String?
+    public let summary: String?
     
     public static let logName: String = "PGroup"
     
@@ -24,28 +24,28 @@ public struct PGroup: DTO.Prepare {
         id: UUID? = nil,
         under parent: QGroup?,
         name: String,
-        description: String? = nil
+        summary: String? = nil
     ) {
-        self = Self.init(id: id, name: name, parentId: parent?.id, description: description)
+        self = Self.init(id: id, name: name, parentId: parent?.id, summary: summary)
     }
     
     public init(
         id: UUID? = nil,
         name: String,
         parentId: UUID? = nil,
-        description: String? = nil
+        summary: String? = nil
     ) {
         self.id = id
         self.parentId = parentId
         self.name = name
-        self.description = description
+        self.summary = summary
     }
     
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
         .name: .init(obj: self.name),
         .parentId: .init(obj: self.parentId),
-        .description: .init(obj: self.description)
+        .summary: .init(obj: self.summary)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .name] }
@@ -54,7 +54,7 @@ public struct PGroup: DTO.Prepare {
         case id
         case name
         case parentId = "parent_id"
-        case description
+        case summary
     }
 }
 
@@ -62,7 +62,7 @@ public struct QGroup: DTO.Queried {
     public typealias PrepareModel = PGroup
     public let id: UUID
     public let name: String
-    public let description: String?
+    public let summary: String?
     public let createdAt: Date
     public let updatedAt: Date
     
@@ -96,7 +96,7 @@ public struct QGroup: DTO.Queried {
         .id: .init(obj: self.id),
         .name: .init(obj: self.name),
         .parentId: .init(obj: self.$parent.id),
-        .description: .init(obj: self.description),
+        .summary: .init(obj: self.summary),
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt),
         
@@ -113,7 +113,7 @@ public struct QGroup: DTO.Queried {
         case id
         case name
         case parentId = "parent_id"
-        case description
+        case summary
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         
@@ -128,14 +128,14 @@ public struct QGroup: DTO.Queried {
         id: UUID,
         name: String,
         parentId: UUID?,
-        description: String?,
+        summary: String?,
         createdAt: Date,
         updatedAt: Date,
         model: SQLModel?
     ) {
         self.id = id
         self.name = name
-        self.description = description
+        self.summary = summary
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
@@ -153,7 +153,7 @@ public struct QGroup: DTO.Queried {
             id: try container.decode(UUID.self, forKey: .id),
             name: try container.decode(String.self, forKey: .name),
             parentId: try container.decodeIfPresent(UUID.self, forKey: .parentId),
-            description: try container.decodeIfPresent(String.self, forKey: .description),
+            summary: try container.decodeIfPresent(String.self, forKey: .summary),
             createdAt: try container.decode(Date.self, forKey: .createdAt),
             updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
@@ -165,7 +165,7 @@ public struct QGroup: DTO.Queried {
         try container.encode(self.id, forKey: .id)
         try container.encode(self.name, forKey: .name)
         try container.encodeIfPresent(self.$parent.id, forKey: .parentId)
-        try container.encodeIfPresent(self.description, forKey: .description)
+        try container.encodeIfPresent(self.summary, forKey: .summary)
         try container.encode(self.createdAt, forKey: .createdAt)
         try container.encode(self.updatedAt, forKey: .updatedAt)
         
@@ -183,7 +183,7 @@ extension PGroup: __Prepare {
         group.id = id
         group.$parent.id = parentId
         group.name = name
-        group.description = description
+        group.summary = summary
         return group
     }
 }
@@ -196,7 +196,7 @@ extension QGroup: __Queried {
                 id: model.requireID(),
                 name: model.name,
                 parentId: model.$parent.id,
-                description: model.description,
+                summary: model.summary,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
                 model: model
@@ -212,7 +212,7 @@ extension QGroup: Query.Queriable {
         Self.idKey: \.$id,
         \.$parent.id: \.$parent.$id,
         \.name: \.$name,
-        \.description: \.$description,
+        \.summary: \.$summary,
         \.id: \.$id,
         \.createdAt: \.$createdAt,
         \.updatedAt: \.$updatedAt,
@@ -222,7 +222,7 @@ extension QGroup: Query.Queriable {
         builder
             .field(Model.self, \.$parent.$id)
             .field(Model.self, \.$name)
-            .field(Model.self, \.$description)
+            .field(Model.self, \.$summary)
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
@@ -272,9 +272,9 @@ public extension PGroup.Updater {
         }
     }
 
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
+    func update(summary: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.summary) { builder, _ in
+            builder.set(\.$summary, to: try summary())
         }
     }
 }
@@ -287,10 +287,10 @@ public extension PGroup.Updater {
         }
     }
 
-    func update(description: @escaping (QGroup) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
+    func update(summary: @escaping (QGroup) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.summary) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
+            return builder.set(\.$summary, to: try summary(q))
         }
     }
 }

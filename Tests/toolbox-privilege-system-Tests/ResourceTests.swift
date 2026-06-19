@@ -218,7 +218,7 @@ struct ResourceTests {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "AttachTestPrivilege-\(suffix)",
-                description: "附加测试专用",
+                summary: "附加测试专用",
                 policy: "allow if { true }"
             )
         ])
@@ -257,7 +257,7 @@ struct ResourceTests {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "QueryTestPrivilege-\(suffix)",
-                description: "查询测试专用",
+                summary: "查询测试专用",
                 policy: "allow if { true }"
             )
         ])
@@ -314,21 +314,21 @@ struct ResourceTests {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "UpdateTestPrivilege",
-                description: "更新测试专用",
+                summary: "更新测试专用",
                 policy: "allow if { true }"
             )
         ])
         let privilegeDTO = privileges[0]
         let privilegeId = privilegeDTO.id
         
-        // 1. 测试更新 name 和 description (常量形式)
+        // 1. 测试更新 name 和 summary (常量形式)
         let updater1 = PM<ResourceList>.PPrivilege.Updater(privilegeId: privilegeId)
             .update(name: "Updated Name")
-            .update(description: "Updated Description")
+            .update(summary: "Updated Description")
         
         let updated1 = try await m.privilege.update(with: updater1)
         #expect(updated1.name == "Updated Name")
-        #expect(updated1.description! == "Updated Description")
+        #expect(updated1.summary! == "Updated Description")
         #expect(updated1.policy == "allow if { true }") // policy 不变
         print("HELLO")
         // 2. 测试更新 policy (常量形式)

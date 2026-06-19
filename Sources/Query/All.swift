@@ -124,6 +124,10 @@ extension Query.Builder {
         
         if let field = k as? KeyPath<Model.Model, OptionalFieldProperty<Model.Model, Value>> {
             return query.all(field)
+        } else if let field = k as? KeyPath<Model.Model, FieldProperty<Model.Model, Value?>> {
+            return query.all(field)
+        } else if let field = k as? KeyPath<Model.Model, IDProperty<Model.Model, Value>> {
+            return query.all(field).map { $0.map { $0 as Value? } }
         }
         
         return nil
@@ -212,6 +216,10 @@ extension Query.Builder {
         
         if let field = k as? KeyPath<Joined.Model, OptionalFieldProperty<Joined.Model, Value>> {
             return query.all(Joined.Model.self, field)
+        } else if let field = k as? KeyPath<Joined.Model, FieldProperty<Joined.Model, Value?>> {
+            return query.all(Joined.Model.self, field)
+        } else if let field = k as? KeyPath<Joined.Model, IDProperty<Joined.Model, Value>> {
+            return query.all(Joined.Model.self, field).map { $0.map { $0 as Value? } }
         }
         
         return nil

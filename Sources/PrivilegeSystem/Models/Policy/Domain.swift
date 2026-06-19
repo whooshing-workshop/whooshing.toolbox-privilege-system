@@ -12,7 +12,7 @@ public extension __SDBM {
         public struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
             let name = PGField("name", .string)
-            let description = PGField("description", .string)
+            let summary = PGField("summary", .string)
             let createdAt = PGField("created_at", .datetime)            .required
             let updatedAt = PGField("updated_at", .datetime)            .required
             
@@ -24,7 +24,7 @@ public extension __SDBM {
         @ID(key: .id)                                   public var id: UUID?
         
         @Field(fields.name)                             var name: String?
-        @Field(fields.description)                      var description: String?
+        @Field(fields.summary)                          var summary: String?
         
         @Siblings(
             through: UserDomainPivot.self,

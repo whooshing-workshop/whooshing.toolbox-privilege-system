@@ -138,7 +138,7 @@ allow if {
 
 // 在系统内注册权限，并将其挂载至资源上
 let privilegeDTO = try await module.privilege.createWithReturning(
-    privileges: [PM.PPrivilege(name: "doc_reader", description: "Read documents", policy: myPolicy)]
+    privileges: [PM.PPrivilege(name: "doc_reader", summary: "Read documents", policy: myPolicy)]
 ).first!
 
 // 将权限和具体资源双向绑定 (attach)
@@ -154,7 +154,7 @@ try await module.privilege.attach {
 ```swift
 // 创建名为 "Document Viewer" 的角色
 let role = try await system.role.create(
-    roles: [.init(name: "Document Viewer", description: "Can view docs")]
+    roles: [.init(name: "Document Viewer", summary: "Can view docs")]
 ).first!
 
 // 为角色分配额外的全局门槛策略 (可选)

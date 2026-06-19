@@ -39,30 +39,12 @@ import OrderedCollections
 struct PivotDTOTesting {
 
     // MARK: - 生命周期
-
-    @Test("Pivot DTO 全流程测试")
-    func runAll() async throws {
-        try await start()
-        try await test_UserTRole()
-        try await test_UserTGroup()
-        try await test_UserTDomain()
-        try await test_RoleTGroup()
-        try await test_RoleTUserInGroup()
-        try await test_DomainTGroup()
-        try await test_PrivilegeTAnyResource()
-        try await test_PrivilegeTResource()
-        try await end()
-    }
-
+    
+    @Test("开始测试")
     func start() async throws {
         while await TestingShared.testStage != .pivotDTO {
             try await Task.sleep(nanoseconds: 250_000_000)
         }
-    }
-
-    @MainActor
-    func end() async throws {
-        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 
     // MARK: - 辅助
@@ -78,7 +60,7 @@ struct PivotDTOTesting {
     //   roleForGroupUser[3]  = [(0,0)]→ RT[3] (ObserverRole) → AT[0] in GT[0]
 
     // MARK: - UserTRole
-
+    @Test("User to Role 测试")
     func test_UserTRole() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
@@ -119,7 +101,8 @@ struct PivotDTOTesting {
     }
 
     // MARK: - UserTGroup
-
+    
+    @Test("User to Group 测试")
     func test_UserTGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
@@ -165,6 +148,7 @@ struct PivotDTOTesting {
 
     // MARK: - UserTDomain
 
+    @Test("User to Domain 测试")
     func test_UserTDomain() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
@@ -205,6 +189,7 @@ struct PivotDTOTesting {
 
     // MARK: - RoleTGroup
 
+    @Test("Role to Group 测试")
     func test_RoleTGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
@@ -245,6 +230,7 @@ struct PivotDTOTesting {
 
     // MARK: - RoleTUserInGroup
 
+    @Test("Role to UserInGroup 测试")
     func test_RoleTUserInGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
@@ -294,6 +280,7 @@ struct PivotDTOTesting {
 
     // MARK: - DomainTGroup
 
+    @Test("Domain to Group 测试")
     func test_DomainTGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
 
@@ -335,6 +322,7 @@ struct PivotDTOTesting {
 
     // MARK: - PM.PrivilegeTAnyResource
 
+    @Test("Privilege to AnyResource 测试")
     func test_PrivilegeTAnyResource() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let suffix = UUID().uuidString
@@ -343,7 +331,7 @@ struct PivotDTOTesting {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "PivotTest-AnyRes-Priv-\(suffix)",
-                description: "Pivot DTO 测试专用",
+                summary: "Pivot DTO 测试专用",
                 policy: "allow if { true }"
             )
         ])
@@ -412,6 +400,7 @@ struct PivotDTOTesting {
 
     // MARK: - PM.PrivilegeTResource<G>（具体泛型资源）
 
+    @Test("User to Resource 测试")
     func test_PrivilegeTResource() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let suffix = UUID().uuidString
@@ -420,7 +409,7 @@ struct PivotDTOTesting {
         let privileges = try await m.privilege.createWithReturning(privileges: [
             .init(
                 name: "PivotTest-TypedRes-Priv-\(suffix)",
-                description: "Pivot DTO 具体类型测试专用",
+                summary: "Pivot DTO 具体类型测试专用",
                 policy: "allow if { true }"
             )
         ])
@@ -489,5 +478,11 @@ struct PivotDTOTesting {
 
         let isAttachedAfter = try await m.privilege.is(privilege: privilegeDTO, attachedTo: fileResourceDTO)
         #expect(isAttachedAfter == false)
+    }
+    
+    @MainActor
+    @Test("测试结束")
+    func end() async throws {
+        TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
 }

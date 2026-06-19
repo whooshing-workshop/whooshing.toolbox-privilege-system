@@ -65,7 +65,7 @@ struct ReadmeExampleTests {
         
         // 在系统内注册权限，并将其挂载至资源上
         let privilegeDTO = try await module.privilege.createWithReturning(
-            privileges: [PM.PPrivilege(name: "doc_reader", description: "Read documents", policy: myPolicy)]
+            privileges: [PM.PPrivilege(name: "doc_reader", summary: "Read documents", policy: myPolicy)]
         ).first!
         
         try await module.privilege.attach {
@@ -75,7 +75,7 @@ struct ReadmeExampleTests {
         // --- 4. 创建角色并指派 ---
         // 创建名为 "Document Viewer" 的角色
         let role = try await system.role.create(
-            roles: [.init(name: "Document Viewer", description: "Can view docs")]
+            roles: [.init(name: "Document Viewer", summary: "Can view docs")]
         ).first!
         
         // 为该角色分配此前定义的资源权限，注意我们也可以为角色单独编写一层附加的策略

@@ -17,7 +17,7 @@ public extension PM {
         /// 权限名称。
         public let name: String?
         /// 权限说明。
-        public let description: String?
+        public let summary: String?
         /// OPA 策略表达式。控制器会自动包装 package、import 和默认 allow。
         public let policy: String
         
@@ -28,26 +28,26 @@ public extension PM {
         /// ```swift
         /// let privilege = PM<ResourceList>.PPrivilegeDTO(
         ///     name: "ReadFile",
-        ///     description: "允许读取文件",
+        ///     summary: "允许读取文件",
         ///     policy: "allow if { input.operation == \"read\" }"
         /// )
         /// ```
         public init(
             id: UUID? = nil,
             name: String? = nil,
-            description: String? = nil,
+            summary: String? = nil,
             policy: String
         ) {
             self.id = id
             self.name = name
-            self.description = description
+            self.summary = summary
             self.policy = policy
         }
         
         public var maps: [CodingKeys: AnyHashable?] {[
             .id: .init(obj: self.id),
             .name: .init(obj: self.name),
-            .description: .init(obj: self.description),
+            .summary: .init(obj: self.summary),
             .policy: .init(obj: self.policy)
         ]}
         
@@ -56,7 +56,7 @@ public extension PM {
         public enum CodingKeys: String, DTO.CodingKey {
             case id
             case name
-            case description
+            case summary
             case policy
         }
     }
@@ -67,7 +67,7 @@ public extension PM {
         /// 权限名称。
         public let name: String?
         /// 权限说明。
-        public let description: String?
+        public let summary: String?
         /// OPA 策略表达式。控制器会自动包装 package、import 和默认 allow。
         public let policy: String
         public let createdAt: Date
@@ -87,7 +87,7 @@ public extension PM {
         public var maps: [CodingKeys: AnyHashable?] {[
             .id: .init(obj: self.id),
             .name: .init(obj: self.name),
-            .description: .init(obj: self.description),
+            .summary: .init(obj: self.summary),
             .policy: .init(obj: self.policy),
             .createdAt: .init(obj: self.createdAt),
             .updatedAt: .init(obj: self.updatedAt),
@@ -100,7 +100,7 @@ public extension PM {
         public enum CodingKeys: String, DTO.CodingKey {
             case id
             case name
-            case description
+            case summary
             case policy
             case createdAt = "created_at"
             case updatedAt = "updated_at"
@@ -111,7 +111,7 @@ public extension PM {
         init(
             id: UUID,
             name: String?,
-            description: String?,
+            summary: String?,
             policy: String,
             createdAt: Date,
             updatedAt: Date,
@@ -119,7 +119,7 @@ public extension PM {
         ) {
             self.id = id
             self.name = name
-            self.description = description
+            self.summary = summary
             self.policy = policy
             self.createdAt = createdAt
             self.updatedAt = updatedAt
@@ -133,7 +133,7 @@ public extension PM {
             self = Self.init(
                 id: try container.decode(UUID.self, forKey: .id),
                 name: try container.decodeIfPresent(String.self, forKey: .name),
-                description: try container.decodeIfPresent(String.self, forKey: .description),
+                summary: try container.decodeIfPresent(String.self, forKey: .summary),
                 policy: try container.decode(String.self, forKey: .policy),
                 createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
                 updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
@@ -145,7 +145,7 @@ public extension PM {
             var container = encoder.container(keyedBy: PrivilegeModule<ResourceList>.QPrivilege.CodingKeys.self)
             try container.encode(self.id, forKey: PrivilegeModule.QPrivilege.CodingKeys.id)
             try container.encodeIfPresent(self.name, forKey: PrivilegeModule.QPrivilege.CodingKeys.name)
-            try container.encodeIfPresent(self.description, forKey: PrivilegeModule.QPrivilege.CodingKeys.description)
+            try container.encodeIfPresent(self.summary, forKey: PrivilegeModule.QPrivilege.CodingKeys.summary)
             try container.encode(self.policy, forKey: PrivilegeModule.QPrivilege.CodingKeys.policy)
             try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
             try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
@@ -161,7 +161,7 @@ extension PM.PPrivilege: __Prepare {
         let privilege = PM<ResourceList>.__DBM.Privilege()
         privilege.id = id
         privilege.name = name
-        privilege.description = description
+        privilege.summary = summary
         privilege.policy = policy
         return privilege
     }
@@ -175,7 +175,7 @@ extension PM.QPrivilege: __Queried {
             try Self.init(
                 id: model.requireID(),
                 name: model.name,
-                description: model.description,
+                summary: model.summary,
                 policy: model.policy,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
@@ -191,7 +191,7 @@ extension PM.QPrivilege: Query.Queriable {
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         Self.idKey: \.$id,
         \.name: \.$name,
-        \.description: \.$description,
+        \.summary: \.$summary,
         \.policy: \.$policy,
         \.id: \.$id,
         \.createdAt: \.$createdAt,
@@ -201,7 +201,7 @@ extension PM.QPrivilege: Query.Queriable {
     public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
         builder
             .field(Model.self, \.$name)
-            .field(Model.self, \.$description)
+            .field(Model.self, \.$summary)
             .field(Model.self, \.$policy)
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
@@ -298,9 +298,9 @@ public extension PM.PPrivilege.Updater {
     }
     
     /// 更新权限说明。
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
+    func update(summary: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.summary) { builder, _ in
+            builder.set(\.$summary, to: try summary())
         }
     }
     
@@ -327,10 +327,10 @@ public extension PM.PPrivilege.Updater {
     }
     
     /// 基于当前数据库值更新权限说明。
-    func update(description: @escaping (S.QPrivilege) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
+    func update(summary: @escaping (S.QPrivilege) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.summary) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
+            return builder.set(\.$summary, to: try summary(q))
         }
     }
     

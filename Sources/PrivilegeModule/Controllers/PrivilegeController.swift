@@ -67,7 +67,7 @@ public extension PrivilegeModule {
                 return PPrivilege(
                     id: UUID(),
                     name: p.name,
-                    description: p.description,
+                    summary: p.summary,
                     policy: p.policy
                 )
             }
@@ -113,7 +113,7 @@ public extension PrivilegeModule {
                 return PPrivilege(
                     id: UUID(),
                     name: p.name,
-                    description: p.description,
+                    summary: p.summary,
                     policy: p.policy
                 )
             }
@@ -199,7 +199,7 @@ public extension PrivilegeModule {
             // 而 OPA 无需进行回滚，因为仅处理一条策略数据，
             // 更新失败意味着其仍保留原数据在 OPA 中
             return db.trans { db in
-                // 先将字段更新到数据库中: name, description, policy
+                // 先将字段更新到数据库中: name, summary, policy
                 self.__update(
                     on: db,
                     updater: updater,

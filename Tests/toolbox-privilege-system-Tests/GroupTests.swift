@@ -24,34 +24,34 @@ struct GroupTesting {
     nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
     static let groups: OrderedSet<PGroup> = [
-        .init(under: nil, name: "AdministratorGroup", description: "全系统管理员的集合群组，拥有最高系统访问权限"),
-        .init(under: nil, name: "OperatorGroup", description: "运营管理群组"),
-        .init(under: nil, name: "DeveloperHub", description: "后端服务器与前端客户端的研发群体"),
-        .init(under: nil, name: "BannedUsers", description: "被封禁和限制访问的用户集合"),
-        .init(under: nil, name: "StandardUsers", description: "普通注册用户群体"),
-        .init(under: nil, name: "GuestUsers", description: "游客群体"),
-        .init(under: nil, name: "SalesTeam", description: "销售团队"),
-        .init(under: nil, name: "MarketingTeam", description: "市场营销"),
-        .init(under: nil, name: "HumanResources", description: "人力资源"),
-        .init(under: nil, name: "QualityAssurance", description: "质量保障"),
-        .init(under: nil, name: "Designers", description: "UI/UX 设计"),
-        .init(under: nil, name: "DataAnalysts", description: "数据分析师"),
-        .init(under: nil, name: "CustomerSupport", description: "客户支持"),
-        .init(under: nil, name: "LegalDepartment", description: "法务部"),
-        .init(under: nil, name: "FinanceDepartment", description: "财务部"),
-        .init(under: nil, name: "Contractors", description: "外包人员")
+        .init(under: nil, name: "AdministratorGroup", summary: "全系统管理员的集合群组，拥有最高系统访问权限"),
+        .init(under: nil, name: "OperatorGroup", summary: "运营管理群组"),
+        .init(under: nil, name: "DeveloperHub", summary: "后端服务器与前端客户端的研发群体"),
+        .init(under: nil, name: "BannedUsers", summary: "被封禁和限制访问的用户集合"),
+        .init(under: nil, name: "StandardUsers", summary: "普通注册用户群体"),
+        .init(under: nil, name: "GuestUsers", summary: "游客群体"),
+        .init(under: nil, name: "SalesTeam", summary: "销售团队"),
+        .init(under: nil, name: "MarketingTeam", summary: "市场营销"),
+        .init(under: nil, name: "HumanResources", summary: "人力资源"),
+        .init(under: nil, name: "QualityAssurance", summary: "质量保障"),
+        .init(under: nil, name: "Designers", summary: "UI/UX 设计"),
+        .init(under: nil, name: "DataAnalysts", summary: "数据分析师"),
+        .init(under: nil, name: "CustomerSupport", summary: "客户支持"),
+        .init(under: nil, name: "LegalDepartment", summary: "法务部"),
+        .init(under: nil, name: "FinanceDepartment", summary: "财务部"),
+        .init(under: nil, name: "Contractors", summary: "外包人员")
     ]
     
     static var updates: [(PGroup.Updater, String, @Sendable (QGroup) -> Bool)] {[
         (
-            .init(groupId: Self.ids[1]).update(description: "核心运营群组"),
+            .init(groupId: Self.ids[1]).update(summary: "核心运营群组"),
             "修改群组1的描述",
-            { $0.description! == "核心运营群组" }
+            { $0.summary! == "核心运营群组" }
         ),
         (
-            .init(groupId: Self.ids[2]).update(name: "NinjaDevelopers").update(description: "神出鬼没的开发者"),
+            .init(groupId: Self.ids[2]).update(name: "NinjaDevelopers").update(summary: "神出鬼没的开发者"),
             "修改群组2的名字与描述",
-            { $0.name == "NinjaDevelopers" && $0.description! == "神出鬼没的开发者" }
+            { $0.name == "NinjaDevelopers" && $0.summary! == "神出鬼没的开发者" }
         )
     ]}
     
@@ -432,9 +432,9 @@ struct GroupTesting {
         // 临时创建一个小树：tempParent → tempChild1, tempChild2
         // 用于验证删除父节点时子孙及所有 group_paths 一并清除
         let created = try await s.group.create(groups: [
-            .init(under: nil, name: "TempParent",  description: "临时父群组"),
-            .init(under: nil, name: "TempChild1",  description: "临时子群组1"),
-            .init(under: nil, name: "TempChild2",  description: "临时子群组2"),
+            .init(under: nil, name: "TempParent",  summary: "临时父群组"),
+            .init(under: nil, name: "TempChild1",  summary: "临时子群组1"),
+            .init(under: nil, name: "TempChild2",  summary: "临时子群组2"),
         ])
         let allGroups = try await s.query(QGroup.self).all()
         let tempParent = try #require(allGroups.first(where: { $0.name == "TempParent" }))
@@ -481,7 +481,7 @@ struct GroupTesting {
 
         // 临时创建一个孤立群组（无父无子），用于独立删除测试
         let temp = try await s.group.create(groups: [
-            .init(under: nil, name: "TempDeleteGroup", description: "临时删除测试群组")
+            .init(under: nil, name: "TempDeleteGroup", summary: "临时删除测试群组")
         ])
         let tempId = try #require(temp.first?.id)
 

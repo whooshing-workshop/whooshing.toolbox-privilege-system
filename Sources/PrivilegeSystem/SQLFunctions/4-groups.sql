@@ -9,7 +9,7 @@ BEGIN
                     'id', current_groups.id,
                     'parent_id', current_groups.parent_id,
                     'name', current_groups.name,
-                    'description', current_groups.description,
+                    'summary', current_groups.summary,
                     'created_at', as_date(current_groups.created_at),
                     'updated_at', as_date(current_groups.updated_at),
                     'ancestors', (
@@ -18,7 +18,7 @@ BEGIN
                                 'id', a.id,
                                 'parent_id', a.parent_id,
                                 'name', a.name,
-                                'description', a.description,
+                                'summary', a.summary,
                                 'created_at', as_date(a.created_at),
                                 'updated_at', as_date(a.updated_at),
                                 'depth', gp.depth

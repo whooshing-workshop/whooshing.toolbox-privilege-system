@@ -23,20 +23,20 @@ struct RoleTesting {
     nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
     static let roles: OrderedSet<PRole> = [
-        .init(name: "SuperAdminRole", description: "拥有全局控制面板访问权限"),
-        .init(name: "EditorRole", description: "可以编辑及发布内容"),
-        .init(name: "ModeratorRole", description: "可以审阅社区发言并封禁违规用户"),
-        .init(name: "ObserverRole", description: "只读权限角色"),
-        .init(name: "SalesManager", description: "销售部经理角色"),
-        .init(name: "HRLead", description: "人力资源总监角色"),
-        .init(name: "QAAnalyst", description: "测试分析师角色"),
-        .init(name: "GuestRole", description: "访客受限角色"),
-        .init(name: "BillingAdmin", description: "财务账单管理角色"),
-        .init(name: "SecurityOfficer", description: "安全合规管理角色"),
-        .init(name: "DataScientist", description: "数据科学家角色"),
-        .init(name: "ProductManager", description: "产品经理角色"),
-        .init(name: "ContentReviewer", description: "内容审核专员角色"),
-        .init(name: "DevOpsEngineer", description: "运维工程师角色")
+        .init(name: "SuperAdminRole", summary: "拥有全局控制面板访问权限"),
+        .init(name: "EditorRole", summary: "可以编辑及发布内容"),
+        .init(name: "ModeratorRole", summary: "可以审阅社区发言并封禁违规用户"),
+        .init(name: "ObserverRole", summary: "只读权限角色"),
+        .init(name: "SalesManager", summary: "销售部经理角色"),
+        .init(name: "HRLead", summary: "人力资源总监角色"),
+        .init(name: "QAAnalyst", summary: "测试分析师角色"),
+        .init(name: "GuestRole", summary: "访客受限角色"),
+        .init(name: "BillingAdmin", summary: "财务账单管理角色"),
+        .init(name: "SecurityOfficer", summary: "安全合规管理角色"),
+        .init(name: "DataScientist", summary: "数据科学家角色"),
+        .init(name: "ProductManager", summary: "产品经理角色"),
+        .init(name: "ContentReviewer", summary: "内容审核专员角色"),
+        .init(name: "DevOpsEngineer", summary: "运维工程师角色")
     ]
     
     static let defaultPolicy: String = """
@@ -82,9 +82,9 @@ struct RoleTesting {
             { $0.name == "AdvancedEditorRole" }
         ),
         (
-            .init(roleId: Self.ids[3]).update(description: "静默观察器"),
+            .init(roleId: Self.ids[3]).update(summary: "静默观察器"),
             "将观察角色描述更改",
-            { $0.description! == "静默观察器" }
+            { $0.summary! == "静默观察器" }
         )
     ]}
     
@@ -269,7 +269,7 @@ struct RoleTesting {
         
         // 临时创建一个角色用于删除测试
         let tempRole = try await s.role.create(roles: [
-            .init(name: "TempDeleteRole", description: "临时删除测试角色")
+            .init(name: "TempDeleteRole", summary: "临时删除测试角色")
         ])
         
         let countBefore = try await s.query(QRole.self).count()

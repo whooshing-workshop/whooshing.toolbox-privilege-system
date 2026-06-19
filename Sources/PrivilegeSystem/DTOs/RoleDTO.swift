@@ -14,24 +14,24 @@ public struct PRole: DTO.Prepare {
     public typealias QueriedModel = QRole
     public let id: UUID?
     public let name: String
-    public let description: String?
+    public let summary: String?
     
     public static let logName: String = "PRole"
     
     public init(
         id: UUID? = nil,
         name: String,
-        description: String? = nil
+        summary: String? = nil
     ) {
         self.id = id
         self.name = name
-        self.description = description
+        self.summary = summary
     }
     
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
         .name: .init(obj: self.name),
-        .description: .init(obj: self.description)
+        .summary: .init(obj: self.summary)
     ]}
     
     public var summaryKeys: [CodingKeys] { [.id, .name] }
@@ -39,7 +39,7 @@ public struct PRole: DTO.Prepare {
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case name
-        case description
+        case summary
     }
 }
 
@@ -47,7 +47,7 @@ public struct QRole: DTO.Queried {
     public typealias PrepareModel = PRole
     public let id: UUID
     public let name: String
-    public let description: String?
+    public let summary: String?
     public let createdAt: Date
     public let updatedAt: Date
     
@@ -79,7 +79,7 @@ public struct QRole: DTO.Queried {
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
         .name: .init(obj: self.name),
-        .description: .init(obj: self.description),
+        .summary: .init(obj: self.summary),
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt),
         
@@ -94,7 +94,7 @@ public struct QRole: DTO.Queried {
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case name
-        case description
+        case summary
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         
@@ -107,14 +107,14 @@ public struct QRole: DTO.Queried {
     init(
         id: UUID,
         name: String,
-        description: String?,
+        summary: String?,
         createdAt: Date,
         updatedAt: Date,
         model: SQLModel?
     ) {
         self.id = id
         self.name = name
-        self.description = description
+        self.summary = summary
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.__m = model
@@ -130,7 +130,7 @@ public struct QRole: DTO.Queried {
         self = Self.init(
             id: try container.decode(UUID.self, forKey: .id),
             name: try container.decode(String.self, forKey: .name),
-            description: try container.decodeIfPresent(String.self, forKey: .description),
+            summary: try container.decodeIfPresent(String.self, forKey: .summary),
             createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
@@ -141,7 +141,7 @@ public struct QRole: DTO.Queried {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
         try container.encode(name, forKey: .name)
-        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(summary, forKey: .summary)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
         
@@ -158,7 +158,7 @@ extension PRole: __Prepare {
         let role = SQLModel()
         role.id = id
         role.name = name
-        role.description = description
+        role.summary = summary
         return role
     }
 }
@@ -170,7 +170,7 @@ extension QRole: __Queried {
             try Self.init(
                 id: model.requireID(),
                 name: model.name,
-                description: model.description,
+                summary: model.summary,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
                 model: model
@@ -185,7 +185,7 @@ extension QRole: Query.Queriable {
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         Self.idKey: \.$id,
         \.name: \.$name,
-        \.description: \.$description,
+        \.summary: \.$summary,
         \.id: \.$id,
         \.createdAt: \.$createdAt,
         \.updatedAt: \.$updatedAt
@@ -194,7 +194,7 @@ extension QRole: Query.Queriable {
     public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
         builder
             .field(Model.self, \.$name)
-            .field(Model.self, \.$description)
+            .field(Model.self, \.$summary)
             .field(Model.self, \.$id)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
@@ -244,9 +244,9 @@ public extension PRole.Updater {
         }
     }
     
-    func update(description: @escaping @autoclosure () throws -> String?) -> Self {
-        generate(key: \.description) { builder, _ in
-            builder.set(\.$description, to: try description())
+    func update(summary: @escaping @autoclosure () throws -> String?) -> Self {
+        generate(key: \.summary) { builder, _ in
+            builder.set(\.$summary, to: try summary())
         }
     }
 }
@@ -259,10 +259,10 @@ public extension PRole.Updater {
         }
     }
     
-    func update(description: @escaping (QRole) throws -> String?) -> Self {
-        generate(needsPeek: true, key: \.description) { builder, query in
+    func update(summary: @escaping (QRole) throws -> String?) -> Self {
+        generate(needsPeek: true, key: \.summary) { builder, query in
             guard let q = query else { fatalError("应当提供 Query 结果，却没有提供") }
-            return builder.set(\.$description, to: try description(q))
+            return builder.set(\.$summary, to: try summary(q))
         }
     }
 }

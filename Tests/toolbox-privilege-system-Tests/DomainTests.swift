@@ -23,20 +23,20 @@ struct DomainTesting {
     nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
     static let domains: OrderedSet<PDomain> = [
-        .init(name: "GlobalScope", description: "全系统顶级域，可以影响所有资源"),
-        .init(name: "AsiaPacific", description: "亚太地区业务域"),
-        .init(name: "NorthAmerica", description: "北美地区业务域"),
-        .init(name: "SandboxEnvironment", description: "仅限内部访问的隔离沙盒域"),
-        .init(name: "Europe", description: "欧洲业务域"),
-        .init(name: "SouthAmerica", description: "南美洲业务域"),
-        .init(name: "Africa", description: "非洲业务域"),
-        .init(name: "InternalOnly", description: "仅限内网访问"),
-        .init(name: "PublicFacing", description: "面向公众的服务域"),
-        .init(name: "Development", description: "开发环境域"),
-        .init(name: "Staging", description: "预发布环境域"),
-        .init(name: "Production", description: "生产环境域"),
-        .init(name: "LegacySystem", description: "遗留老系统域"),
-        .init(name: "PartnerNetwork", description: "合作伙伴网络域")
+        .init(name: "GlobalScope", summary: "全系统顶级域，可以影响所有资源"),
+        .init(name: "AsiaPacific", summary: "亚太地区业务域"),
+        .init(name: "NorthAmerica", summary: "北美地区业务域"),
+        .init(name: "SandboxEnvironment", summary: "仅限内部访问的隔离沙盒域"),
+        .init(name: "Europe", summary: "欧洲业务域"),
+        .init(name: "SouthAmerica", summary: "南美洲业务域"),
+        .init(name: "Africa", summary: "非洲业务域"),
+        .init(name: "InternalOnly", summary: "仅限内网访问"),
+        .init(name: "PublicFacing", summary: "面向公众的服务域"),
+        .init(name: "Development", summary: "开发环境域"),
+        .init(name: "Staging", summary: "预发布环境域"),
+        .init(name: "Production", summary: "生产环境域"),
+        .init(name: "LegacySystem", summary: "遗留老系统域"),
+        .init(name: "PartnerNetwork", summary: "合作伙伴网络域")
     ]
     
     static let defaultPolicy: String = """
@@ -245,7 +245,7 @@ struct DomainTesting {
         let (s, _) = try await TestingShared.getSystem()
         
         let tempDomain = try await s.domain.create(domains: [
-            .init(name: "TempDeleteDomain", description: "临时删除测试域")
+            .init(name: "TempDeleteDomain", summary: "临时删除测试域")
         ])
         
         let countBefore = try await s.query(QDomain.self).count()

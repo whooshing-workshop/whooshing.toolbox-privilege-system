@@ -158,9 +158,9 @@ struct QueryTests {
     func testSortOptional() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        // QGroup.description 是可选的 String?
+        // QGroup.summary 是可选的 String?
         let groups = try await s.query(QGroup.self)
-            .sort(\.description, .ascending)
+            .sort(\.summary, .ascending)
             .all()
             
         #expect(groups.count >= 0)
@@ -178,6 +178,127 @@ struct QueryTests {
             
         #expect(results.count >= 0)
     }
+    
+    @Test("完整聚合查询 (Full Aggregate)")
+    func testFullAggregate() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // Count
+        let count1 = try await s.query(QUser.self).count()
+        let count2 = try await s.query(QUser.self).count(\.email)
+        let count3 = try await s.query(QUser.self).count(\.id)
+        #expect(count1 >= 0 && count2 >= 0 && count3 >= 0)
+        
+        // 分别测试 Optional 和 非 Optional, Enum 和 非 Enum (目前 QUser 可能没 enum)
+        // 找个有可选值的，比如 QGroup 的 summary (String?)
+        let count4 = try await s.query(QGroup.self).count(\.summary)
+        #expect(count4 >= 0)
+
+        // 测试 min/max/sum/avg (在某些可以支持的字段上比如 Int/Double，User.id 是 UUID 不行)
+        // 这里用 QInfoSlice 的 order (Int16) 试试
+        let minOrder = try await s.query(QInfoSlice<AlternateEmail>.self).min(\.order)
+        let maxOrder = try await s.query(QInfoSlice<AlternateEmail>.self).max(\.order)
+        print("Aggregate Order: min=\(minOrder), max=\(maxOrder)")
+    }
+    
+    @Test("分页/Limit/Offset (All Extensions)")
+    func testAllExtensions() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let users1 = try await s.query(QUser.self).limit(2).offset(1).all()
+        #expect(users1.count <= 2)
+        
+        let users2 = try await s.query(QUser.self).page(with: 2, size: 3)
+        #expect(users2.metadata.per == 3)
+        #expect(users2.metadata.page == 2)
+    }
+    
+    @Test("多种排序组合 (Multiple Sorts)")
+    func testMultipleSorts() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        // 排序：可选字段、正常字段
+        let q = s.query(QGroup.self)
+            .sort(\.summary, .descending)
+            .sort(\.name, .ascending)
+            .sort(\.id, .descending)
+            .sort(\.createdAt, .descending)
+        
+        let groups = try await q.all()
+        #expect(groups.count >= 0)
+        
+        // Join 后排序
+        let qJoin = s.query(QUser.self)
+            .join(QUserInfo.self, on: \QUser.id == \QUserInfo.$user.id)
+            .sort(QUserInfo.self, \.identifier, .ascending)
+            .sort(QUserInfo.self, \.nickname, .descending)
+            
+        let joinRes = try await qJoin.all()
+        #expect(joinRes.count >= 0)
+    }
+    
+    @Test("字符串操作符与数组操作符 (Operators)")
+    func testOperators() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        
+        let containsUser = try await s.query(QUser.self)
+            .filter(\.email ~~ "user") // Anywhere
+            .filter(\.email =~ "user") // Prefix
+            .filter(\.email ~= "com")  // Suffix
+            .filter(\.email !~ "nonexistent") // Not Anywhere
+            .filter(\.email !=~ "nonexistent") // Not Prefix
+            .filter(\.email !~= "nonexistent") // Not Suffix
+            .all()
+        #expect(containsUser.count >= 0)
+        
+        // Optional String
+        let descFilter = try await s.query(QGroup.self)
+            .filter(\.summary ~~ "a")
+            .filter(\.summary =~ "a")
+            .filter(\.summary ~= "a")
+            .filter(\.summary !~ "non")
+            .filter(\.summary !=~ "non")
+            .filter(\.summary !~= "non")
+            .all()
+        #expect(descFilter.count >= 0)
+        
+        // Array filter
+        let userIDs = containsUser.map { $0.id }
+        if !userIDs.isEmpty {
+            let inArray = try await s.query(QUser.self)
+                .filter(\.id ~~ userIDs)
+                .all()
+            #expect(inArray.count > 0)
+            
+            // Not in array
+            let notInArray = try await s.query(QUser.self)
+                .filter(\.id !~ userIDs)
+                .all()
+            #expect(notInArray.count >= 0)
+        }
+    }
+    
+//    @Test("字段投影查询 (Field Projection)")
+//    func testFieldProjection() async throws {
+//        let (s, _) = try await TestingShared.getSystem()
+//        
+//        let q = s.query(QUser.self)
+//            .field(\.email)
+//            .field(\.id)
+//        
+//        // 执行一个带投影的查询
+//        let users = try await q.all()
+//        #expect(users.count >= 0)
+//        
+//        // Field with Join
+//        let qJoin = s.query(QUser.self)
+//            .join(QUserInfo.self, on: \QUser.id == \QUserInfo.$user.id)
+//            .field(QUserInfo.self, \.identifier)
+//            .field(QUserInfo.self, \.nickname)
+//            
+//        let joinRes = try await qJoin.all()
+//        #expect(joinRes.count >= 0)
+//    }
     
     @MainActor
     @Test("测试结束")

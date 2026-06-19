@@ -42,7 +42,9 @@ public extension Query {
                 fatalError("KeyPath 未产生正确的 Fluent 字段映射")
             }
             
-            if let field = k as? KeyPath<M.Model, FieldProperty<M.Model, Value?>> {
+            if let field = k as? KeyPath<M.Model, IDProperty<M.Model, Value>> {
+                return .init(filter: .init(field, method, rhs == nil ? .null : .bind(rhs!)))
+            } else if let field = k as? KeyPath<M.Model, FieldProperty<M.Model, Value?>> {
                 return .init(filter: .init(field, method, .bind(rhs)))
             } else if let field = k as? KeyPath<M.Model, OptionalFieldProperty<M.Model, Value>> {
                 return .init(filter: .init(field, method, rhs == nil ? .null : .bind(rhs!)))

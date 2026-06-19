@@ -129,9 +129,11 @@ extension Query.Builder {
             fatalError("KeyPath 未产生正确的 Fluent 字段映射")
         }
         
-        if let field = k as? KeyPath<Model.Model, FieldProperty<Model.Model, Value?>> {
+        if let field = k as? KeyPath<Model.Model, OptionalFieldProperty<Model.Model, Value>> {
             return .init(query: query.sort(field, direction))
-        } else if let field = k as? KeyPath<Model.Model, OptionalFieldProperty<Model.Model, Value>> {
+        } else if let field = k as? KeyPath<Model.Model, FieldProperty<Model.Model, Value?>> {
+            return .init(query: query.sort(field, direction))
+        } else if let field = k as? KeyPath<Model.Model, IDProperty<Model.Model, Value>> {
             return .init(query: query.sort(field, direction))
         }
         
@@ -202,9 +204,9 @@ extension Query.Builder {
         }
         
         if let field = k as? KeyPath<Joined.Model, IDProperty<Joined.Model, Value>> {
-            return .init(query: query.sort(Joined.Model.self, field, alias: alias))
-        } else if let field = k as? KeyPath<Model.Model, FieldProperty<Model.Model, Value>> {
-            return .init(query: query.sort(field, direction))
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
+        } else if let field = k as? KeyPath<Joined.Model, FieldProperty<Joined.Model, Value>> {
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
         }
         
         return nil
@@ -221,7 +223,11 @@ extension Query.Builder {
         }
         
         if let field = k as? KeyPath<Joined.Model, OptionalFieldProperty<Joined.Model, Value>> {
-            return .init(query: query.sort(Joined.Model.self, field, alias: alias))
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
+        } else if let field = k as? KeyPath<Joined.Model, FieldProperty<Joined.Model, Value?>> {
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
+        } else if let field = k as? KeyPath<Joined.Model, IDProperty<Joined.Model, Value>> {
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
         }
         
         return nil
@@ -238,7 +244,7 @@ extension Query.Builder {
         }
         
         if let field = k as? KeyPath<Joined.Model, EnumProperty<Joined.Model, Value>> {
-            return .init(query: query.sort(Joined.Model.self, field, alias: alias))
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
         } else if let res = castJoinedCodableSort(joined, field, direction, alias: alias) {
             return res
         }
@@ -257,7 +263,7 @@ extension Query.Builder {
         }
         
         if let field = k as? KeyPath<Joined.Model, OptionalEnumProperty<Joined.Model, Value>> {
-            return .init(query: query.sort(Joined.Model.self, field, alias: alias))
+            return .init(query: query.sort(Joined.Model.self, field, direction, alias: alias))
         } else if let res = castJoinedOptionalCodableSort(joined, field, direction, alias: alias) {
             return res
         }
