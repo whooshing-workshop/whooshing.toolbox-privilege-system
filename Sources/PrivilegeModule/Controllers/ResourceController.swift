@@ -1,12 +1,6 @@
+import DTOBuilder
 import Fluent
-import Policy
-import Vapor
-import PgSQL
-import ErrorHandle
-import NIOAdvanced
-import ResourceMacros
-import Logging
-import OrderedCollections
+import Foundation
 
 public extension PrivilegeModule {
     /// 资源控制器，管理当前权限模块辖下所有资源的生命周期（增删改）。

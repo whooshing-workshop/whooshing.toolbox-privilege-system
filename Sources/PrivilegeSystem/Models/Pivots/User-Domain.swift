@@ -1,6 +1,4 @@
-import PgSQL
 import DTOBuilder
-import Fluent
 
 public extension __SDBM {
     typealias UserDomainPivot = Pivot<Pivots.UserDomain>

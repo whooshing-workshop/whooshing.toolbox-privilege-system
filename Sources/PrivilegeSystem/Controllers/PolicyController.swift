@@ -1,5 +1,4 @@
 import Fluent
-import Policy
 import Vapor
 import PgSQL
 import ErrorHandle

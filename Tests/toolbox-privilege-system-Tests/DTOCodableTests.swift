@@ -1,11 +1,6 @@
-import Foundation
 import Testing
-import Query
-import Collections
-import Cryptos
+import Foundation
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import DTOBuilder
 
 @Suite("DTO 序列化测试集", .serialized)
 struct DTOCodableTests {

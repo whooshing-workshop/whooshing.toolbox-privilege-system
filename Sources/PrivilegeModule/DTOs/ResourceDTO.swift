@@ -1,16 +1,5 @@
-import Fluent
-import Foundation
-import ErrorHandle
-import Collections
-import SQLKit
-import PgSQL
-import Query
-import ResourceMacros
-import LoggingAdvanced
-import AnyCodable
-import NIOAdvanced
-import DataConvertable
 import DTOBuilder
+import Foundation
 
 public extension PM {
     struct QResource<G: Resource>: DTO.DBModel where G.ResourceType == ResourceList {

@@ -1,5 +1,4 @@
 import Foundation
-import OrderedCollections
 
 package extension AnyHashable {
     init?<T: Hashable>(obj: T?) {

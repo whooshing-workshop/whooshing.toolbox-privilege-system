@@ -1,7 +1,5 @@
 import PgSQL
-import Fluent
 import Foundation
-import DTOBuilder
 
 /// 拥有 OPA 策略的模型类型。
 ///

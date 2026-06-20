@@ -1,14 +1,5 @@
-import Fluent
-import Foundation
-import ErrorHandle
-import Collections
-import SQLKit
-import Query
-import DataConvertable
-import LoggingAdvanced
-import ResourceMacros
-import AnyCodable
 import DTOBuilder
+import Foundation
 
 public extension PM {
     struct PPrivilege: DTO.Prepare {

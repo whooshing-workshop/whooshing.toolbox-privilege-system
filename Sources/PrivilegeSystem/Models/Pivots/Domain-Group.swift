@@ -1,5 +1,3 @@
-import PgSQL
-import Fluent
 import DTOBuilder
 
 public extension __SDBM {

@@ -1,14 +1,5 @@
-import Fluent
-import Policy
-import Vapor
-import PgSQL
-import SQLKit
-import ErrorHandle
-import NIOAdvanced
 import OPA
-import ResourceMacros
-import Logging
-import OrderedCollections
+import Foundation
 
 public extension PrivilegeModule {
     /// 资源权限控制器，负责对当前模块下的资源操作许可（Privilege）进行定义、维护、以及向 OPA 下发策略规则。

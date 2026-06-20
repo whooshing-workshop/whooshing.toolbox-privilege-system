@@ -1,8 +1,6 @@
-import PgSQL
+import Cryptos
 import Foundation
 import DTOBuilder
-import Cryptos
-import Fluent
 
 /// 数据库表 tokens 的映射类型
 /// 该 tokens 表记录用户口令和用户凭据的对照，用于用户认证查询

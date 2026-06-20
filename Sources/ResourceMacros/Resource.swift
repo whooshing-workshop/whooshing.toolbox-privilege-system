@@ -1,6 +1,4 @@
 import Foundation
-import ErrorHandle
-import Logging
 import LoggingAdvanced
 @preconcurrency import AnyCodable
 
@@ -82,7 +80,7 @@ public extension Resource {
 /// ```swift
 /// let operation = AnyOperation(op: FileOperation.read)
 /// ```
-public struct AnyOperation: Sendable, Decodable, Loggerable, CustomStringConvertible {
+public struct AnyOperation: Sendable, Codable, Loggerable, CustomStringConvertible {
     /// 发送给 OPA `input.operation` 的原始操作字符串。
     public let rawValue: String
     

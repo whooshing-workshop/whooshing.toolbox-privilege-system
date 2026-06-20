@@ -1,4 +1,3 @@
-import Policy
 import DTOBuilder
 
 public struct Role: PolicyType {

@@ -5,7 +5,6 @@ import PgSQL
 import ErrorHandle
 import NIOAdvanced
 import OPA
-import Policy
 import PrivilegeModule
 import Collections
 import LoggingAdvanced
@@ -161,7 +160,7 @@ extension PrivilegeSystem {
         ///
         /// - Returns: 包含最终布尔结果和每条策略报告的仲裁结果。
         /// - Throws: 当角色不属于用户、数据库数据收集失败或 OPA 查询失败时返回错误。
-        func judge(
+        public func judge(
             moduleId: UUID,
             userId: UUID,
             roleId: UUID,

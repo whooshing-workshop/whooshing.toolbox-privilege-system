@@ -1,4 +1,3 @@
-import Policy
 import DTOBuilder
 
 public enum Domain: PolicyType {

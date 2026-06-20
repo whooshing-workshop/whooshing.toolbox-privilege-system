@@ -1,8 +1,4 @@
 import OPA
-import Policy
-import ErrorHandle
-import Logging
-import LoggingAdvanced
 
 extension PrivilegeModule {
     func opaInitialize(logger: Logger) async throws(BscError<Errcase>) {

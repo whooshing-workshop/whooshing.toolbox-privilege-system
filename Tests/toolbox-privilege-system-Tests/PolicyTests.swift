@@ -1,13 +1,6 @@
 import Testing
 import Foundation
-import Query
-import Policy
-import Fluent
-import OrderedCollections
-@preconcurrency import AnyCodable
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import DTOBuilder
 
 typealias PT = PolicyTesting
 
@@ -1511,8 +1504,7 @@ struct PolicyTesting {
             roleId: role.id,
             resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.read),
-            privilegeIds: [privilege.id],
-            logger: s.arbitrator.logger
+            privilegeIds: [privilege.id]
         )
         
         #expect(allow.result == true)
@@ -1523,8 +1515,7 @@ struct PolicyTesting {
             roleId: role.id,
             resource: try #require(AnyResource(resourceDTO)),
             operation: .init(op: JsonOperation.write),
-            privilegeIds: [privilege.id],
-            logger: s.arbitrator.logger
+            privilegeIds: [privilege.id]
         )
         
         #expect(deny.result == false)

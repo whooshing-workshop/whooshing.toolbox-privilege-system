@@ -1,8 +1,4 @@
-import PgSQL
 import DTOBuilder
-import Foundation
-import FluentKit
-import NIOConcurrencyHelpers
 
 public extension __SDBM {
     typealias UserGroupPivot = Pivot<Pivots.UserGroup>

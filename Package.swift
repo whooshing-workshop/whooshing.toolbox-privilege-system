@@ -18,69 +18,40 @@ let package = Package(
         .tvOS(.v13)
     ],
     products: [
-        .library( name: "ResourceMacros", targets: ["ResourceMacros"] ),
         .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem"] ),
         .library( name: "PrivilegeModule", targets: ["PrivilegeModule"] )
     ],
     dependencies: [
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.5.10"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.0.10"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.3"),
-        .package(url: "https://github.com/Flight-School/AnyCodable", from: "0.6.0"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.0"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.1.0"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.4"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0"),
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.9.1")
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0")
     ],
     targets: [
         .target(
             name: "ResourceMacros",
             dependencies: [
                 .target(name: "MacroImplements"),
-                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
-                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "AnyCodable", package: "AnyCodable")
+                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic")
             ]
         ),
         .target(
             name: "Query",
             dependencies: [
-                .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
             ]
         ),
         .target(
             name: "DTOBuilder",
             dependencies: [
-                .target(name: "Query"),
-                .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
-            ]
-        ),
-        .target(
-            name: "Policy",
-            dependencies: [
-                .target(name: "DTOBuilder"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
+                .target(name: "Query")
             ]
         ),
         .target(
             name: "PrivilegeSystem",
             dependencies: [
-                .target(name: "Query"),
-                .target(name: "Policy"),
-                .target(name: "DTOBuilder"),
-                .target(name: "PrivilegeModule"),
-                .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "DataConvertable", package: "whooshing.toolbox-basic"),
-                .product(name: "ErrorHandle", package: "whooshing.toolbox-basic"),
-                .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
-                .product(name: "Collections", package: "swift-collections"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
-                .product(name: "OPA", package: "whooshing.toolbox-opa"),
-                .product(name: "Logging", package: "swift-log")
+                .target(name: "PrivilegeModule")
             ],
             resources: [
                 .copy("SQLFunctions"),
@@ -90,25 +61,20 @@ let package = Package(
         .target(
             name: "PrivilegeModule",
             dependencies: [
-                .target(name: "Query"),
-                .target(name: "Policy"),
                 .target(name: "DTOBuilder"),
                 .target(name: "ResourceMacros"),
-                .product(name: "NIOAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic"),
-                .product(name: "DataConvertable", package: "whooshing.toolbox-basic"),
                 .product(name: "Collections", package: "swift-collections"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
-                .product(name: "PgSQL", package: "whooshing.toolbox-pgsql"),
-                .product(name: "OPA", package: "whooshing.toolbox-opa"),
-                .product(name: "Logging", package: "swift-log")
+                .product(name: "OPA", package: "whooshing.toolbox-opa")
             ]
         ),
         .macro(
             name: "MacroImplements",
             dependencies: [
-                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax")
             ]
         ),
         .testTarget(
@@ -118,7 +84,7 @@ let package = Package(
                 .target(name: "PrivilegeModule"),
                 .target(name: "MacroImplements"),
                 .target(name: "Query"),
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
             ]
         )
     ]

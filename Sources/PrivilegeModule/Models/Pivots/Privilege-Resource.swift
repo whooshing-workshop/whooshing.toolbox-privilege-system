@@ -1,7 +1,4 @@
-import PgSQL
 import DTOBuilder
-import Fluent
-import ResourceMacros
 
 public extension PrivilegeModule.__DBM {
     typealias PrivilegeAnyResourcePivot = Pivot<PrivilegeAnyResource>

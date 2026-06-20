@@ -1,5 +1,4 @@
 import PgSQL
-import Fluent
 
 public extension Query {
     struct JoinFilterGroup<L: Queriable, R: Queriable> {

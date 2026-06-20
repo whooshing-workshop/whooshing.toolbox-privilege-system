@@ -1,5 +1,4 @@
 import PgSQL
-import Fluent
 import Foundation
 
 public extension Query.ValueFilter {

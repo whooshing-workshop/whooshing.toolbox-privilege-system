@@ -1,9 +1,7 @@
-import Vapor
 import Testing
+import Query
+import Foundation
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import Query
-@testable import DTOBuilder
 
 @Suite("Query 模块测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct QueryTests {
@@ -277,28 +275,6 @@ struct QueryTests {
             #expect(notInArray.count >= 0)
         }
     }
-    
-//    @Test("字段投影查询 (Field Projection)")
-//    func testFieldProjection() async throws {
-//        let (s, _) = try await TestingShared.getSystem()
-//        
-//        let q = s.query(QUser.self)
-//            .field(\.email)
-//            .field(\.id)
-//        
-//        // 执行一个带投影的查询
-//        let users = try await q.all()
-//        #expect(users.count >= 0)
-//        
-//        // Field with Join
-//        let qJoin = s.query(QUser.self)
-//            .join(QUserInfo.self, on: \QUser.id == \QUserInfo.$user.id)
-//            .field(QUserInfo.self, \.identifier)
-//            .field(QUserInfo.self, \.nickname)
-//            
-//        let joinRes = try await qJoin.all()
-//        #expect(joinRes.count >= 0)
-//    }
     
     @MainActor
     @Test("测试结束")

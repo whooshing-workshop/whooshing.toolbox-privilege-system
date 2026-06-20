@@ -1,5 +1,4 @@
 import Fluent
-import Policy
 import PgSQL
 import NIOAdvanced
 import OPA
@@ -36,8 +35,7 @@ extension PrivilegeSystem.Arbitrator {
         roleId: UUID,
         resource: AnyResource,
         operation: AnyOperation,
-        privilegeIds: OrderedSet<UUID>,
-        logger: Logger
+        privilegeIds: OrderedSet<UUID>
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> Result {
         try await judge(
             moduleId: moduleId,

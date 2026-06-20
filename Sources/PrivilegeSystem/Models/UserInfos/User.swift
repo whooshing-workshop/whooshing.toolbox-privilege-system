@@ -1,7 +1,4 @@
-import PgSQL
 import Foundation
-import DTOBuilder
-import Fluent
 import PrivilegeModule
 
 /// 数据库表 users 的映射类型
@@ -63,5 +60,24 @@ public extension __SDBM {
         }
         
         public typealias MIG = DefaultMIG<User>
+    }
+}
+
+// MARK: - ModelAuthenticatable
+
+extension __SDBM.User: ModelAuthenticatable {
+    public static let usernameKey: KeyPath<__SDBM.User, Field<String>> = \.$email
+    public static let passwordHashKey: KeyPath<__SDBM.User, Field<String>> = \.$hashedPassword
+    
+    public func verify(password: String) throws(PrivilegeSystem.Errcase.ErrType) -> Bool {
+        // 客户端请求所提供的密码是 其对其用户明文密码进行单次哈希的结果
+        let passwd = try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
+            try Base64String(password).dataRes.get()
+        }
+        // 对客户端密码设置后置盐，并再次哈希
+        let hashed = Crypto.hash(passwd + self.salt)
+        return try required(throws: PrivilegeSystem.Errcase.userAuthenticateFailed, "对密码进行 Base64 转换失败", category: .external) {
+            try hashed == Base64String(self.hashedPassword).dataRes.get()
+        }
     }
 }

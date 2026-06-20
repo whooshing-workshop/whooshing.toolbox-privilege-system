@@ -1,9 +1,6 @@
-import Vapor
 import Testing
+import Foundation
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import Query
-@testable import DTOBuilder
 
 @Suite("PropertyWrapper 关系测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct PropertyWrapperTests {

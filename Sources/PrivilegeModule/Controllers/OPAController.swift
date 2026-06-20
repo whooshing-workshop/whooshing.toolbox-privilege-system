@@ -1,12 +1,5 @@
-import Fluent
-import NIOAdvanced
-import PgSQL
-import Vapor
-import ErrorHandle
-import Policy
 import OPA
-import NIOConcurrencyHelpers
-import OrderedCollections
+import Foundation
 
 package protocol OPAController: Controller {
     var opa: OPA { get }

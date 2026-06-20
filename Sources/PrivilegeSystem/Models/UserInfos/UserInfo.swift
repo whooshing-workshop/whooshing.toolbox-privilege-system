@@ -1,7 +1,5 @@
-import PgSQL
 import Foundation
 import DTOBuilder
-import Fluent
 
 public extension __SDBM.User {
     final class Info: PGModel, @unchecked Sendable {

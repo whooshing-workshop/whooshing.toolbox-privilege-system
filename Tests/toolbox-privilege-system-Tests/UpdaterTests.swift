@@ -1,11 +1,6 @@
-import Foundation
 import Testing
-import Query
-import Collections
-import Cryptos
+import Foundation
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import DTOBuilder
 
 @Suite("DTO Updater 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct UpdaterTests {

@@ -1,17 +1,7 @@
-import Cryptos
 import Testing
-import ErrorHandle
-import NIOCore
-import AsyncAlgorithms
 import Foundation
 import Query
-import Collections
-import Fluent
-import Policy
-import OrderedCollections
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import DTOBuilder
 
 @Suite("批量模型关系 测试集", .serialized, .enabled(if: TestingShared.dbListening && TestingShared.opaListening))
 struct MultiRelationsTesting {

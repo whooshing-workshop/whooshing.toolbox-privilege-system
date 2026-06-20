@@ -1,8 +1,5 @@
-import PgSQL
-import Fluent
 import Foundation
 import DTOBuilder
-import DataConvertable
 
 public extension __SDBM.User.Info {
     final class Extended<T: __SDBM.User.Info.Model>: PGModel, @unchecked Sendable {

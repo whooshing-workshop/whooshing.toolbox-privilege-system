@@ -1,12 +1,6 @@
 import Testing
 import Foundation
-import Query
-import Policy
-import Fluent
-import OrderedCollections
 @testable import PrivilegeSystem
-@testable import PrivilegeModule
-@testable import DTOBuilder
 
 typealias RT = RoleTesting
 
