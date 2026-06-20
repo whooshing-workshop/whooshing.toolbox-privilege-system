@@ -1,15 +1,5 @@
-import Fluent
 import Foundation
-import DTOBuilder
-import ErrorHandle
-import Collections
 import PrivilegeModule
-import SQLKit
-import Query
-import DataConvertable
-import LoggingAdvanced
-import AnyCodable
-import ResourceMacros
 
 public struct PGroup: DTO.Prepare {
     public typealias QueriedModel = QGroup

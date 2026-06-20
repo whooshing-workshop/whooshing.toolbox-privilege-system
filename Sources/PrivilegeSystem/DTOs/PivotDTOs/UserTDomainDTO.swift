@@ -1,10 +1,5 @@
-import Query
-import PrivilegeModule
 import Foundation
-import ErrorHandle
-import PgSQL
-import FluentKit
-import DTOBuilder
+import PrivilegeModule
 
 public struct UserTDomain: DTO.Pivot {
     public typealias Primary = QUser

@@ -4,7 +4,7 @@ import NIOAdvanced
 import OPA
 import Foundation
 import PrivilegeModule
-import ResourceMacros
+import ResourceDefine
 import OrderedCollections
 @preconcurrency import AnyCodable
 

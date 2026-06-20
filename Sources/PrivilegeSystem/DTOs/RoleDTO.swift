@@ -1,14 +1,5 @@
-import Fluent
 import Foundation
-import DTOBuilder
-import ErrorHandle
-import Collections
 import PrivilegeModule
-import Query
-import LoggingAdvanced
-import AnyCodable
-import DataConvertable
-import ResourceMacros
 
 public struct PRole: DTO.Prepare {
     public typealias QueriedModel = QRole

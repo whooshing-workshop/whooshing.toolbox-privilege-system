@@ -1,17 +1,5 @@
-import Fluent
 import Foundation
-import DTOBuilder
-import ErrorHandle
-import Collections
 import PrivilegeModule
-import Query
-import SQLKit
-import DataConvertable
-import LoggingAdvanced
-import ResourceMacros
-import PgSQL
-import NIOAdvanced
-@preconcurrency import AnyCodable
 
 public struct PDomain: DTO.Prepare {
     public typealias QueriedModel = QDomain

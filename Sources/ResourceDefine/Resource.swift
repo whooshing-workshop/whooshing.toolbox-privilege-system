@@ -1,6 +1,7 @@
 import Foundation
-import LoggingAdvanced
 @preconcurrency import AnyCodable
+
+@_exported import LoggingAdvanced
 
 /// 可参与模块级鉴权的类型化资源。
 ///

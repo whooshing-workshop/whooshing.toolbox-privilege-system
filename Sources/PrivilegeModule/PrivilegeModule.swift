@@ -1,5 +1,5 @@
 import OPA
-import ResourceMacros
+import ResourceDefine
 import Foundation
 
 /// `PrivilegeModule` 的简短命名空间别名。

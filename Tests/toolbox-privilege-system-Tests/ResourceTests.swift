@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import Query
+import ResourceMacros
 @preconcurrency import AnyCodable
 @testable import PrivilegeModule
 @testable import PrivilegeSystem

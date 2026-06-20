@@ -8,7 +8,7 @@ import OPA
 import PrivilegeModule
 import Collections
 import LoggingAdvanced
-import ResourceMacros
+import ResourceDefine
 import Logging
 import OrderedCollections
 @preconcurrency import AnyCodable

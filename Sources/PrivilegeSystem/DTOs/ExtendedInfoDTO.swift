@@ -1,14 +1,5 @@
-import Fluent
 import Foundation
-import DTOBuilder
-import ErrorHandle
-import Collections
 import PrivilegeModule
-import Query
-import LoggingAdvanced
-import AnyCodable
-import ResourceMacros
-import OrderedCollections
 
 public struct PExtendedInfo: DTO.Model {
     public let addresses: OrderedSet<PInfoSlice<Address>>

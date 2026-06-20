@@ -1,5 +1,5 @@
 @_exported import DTOBuilder
-@_exported import ResourceMacros
+@_exported import ResourceDefine
 @_exported import Collections
 @_exported import Cryptos
 @_exported import class OPA.OPA

@@ -1,10 +1,5 @@
-import Query
-import PrivilegeModule
 import Foundation
-import ErrorHandle
-import PgSQL
-import FluentKit
-import DTOBuilder
+import PrivilegeModule
 
 public struct PUserTGroup: DTO.Prepare {
     public typealias QueriedModel = UserTGroup

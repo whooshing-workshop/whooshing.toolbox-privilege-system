@@ -1,15 +1,5 @@
-import Vapor
-import Fluent
-import DataConvertable
-import ErrorHandle
-import DTOBuilder
-import Cryptos
-import Collections
+import Foundation
 import PrivilegeModule
-import Query
-import LoggingAdvanced
-import AnyCodable
-import ResourceMacros
 
 public struct PUserInfo: DTO.Prepare {
     public typealias QueriedModel = QUserInfo

@@ -1,3 +1,5 @@
+@_exported import ResourceDefine
+
 /// 为 `Resource` 类型自动生成 `json` 和 `mirrors` 的实现。
 ///
 /// 该宏会扫描结构体中所有存储属性，自动合成：

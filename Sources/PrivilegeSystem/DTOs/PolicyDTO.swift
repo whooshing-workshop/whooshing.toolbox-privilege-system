@@ -1,13 +1,5 @@
-import Fluent
 import Foundation
-import ErrorHandle
 import PrivilegeModule
-import Query
-import DataConvertable
-import LoggingAdvanced
-import AnyCodable
-import DTOBuilder
-import ResourceMacros
 
 public struct PPolicy<G: PolicyType>: DTO.Prepare {
     public typealias QueriedModel = QPolicy<G>

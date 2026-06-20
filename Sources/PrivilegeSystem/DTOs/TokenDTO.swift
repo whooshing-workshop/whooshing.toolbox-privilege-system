@@ -1,16 +1,7 @@
-import Vapor
-import Fluent
-import ErrorHandle
-import Cryptos
+import Foundation
 import PrivilegeModule
-import DataConvertable
-import Query
-import DTOBuilder
-import LoggingAdvanced
-import AnyCodable
-import ResourceMacros
 
-public struct Token: DTO.Model {
+public struct Token: DTO.Model, Codable {
     public let credential: String
     public let tokenEncrypted: Data
     

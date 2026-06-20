@@ -18,6 +18,7 @@ let package = Package(
         .tvOS(.v13)
     ],
     products: [
+        .library( name: "ResourceMacros", targets: ["ResourceMacros"] ),
         .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem"] ),
         .library( name: "PrivilegeModule", targets: ["PrivilegeModule"] )
     ],
@@ -33,7 +34,7 @@ let package = Package(
             name: "ResourceMacros",
             dependencies: [
                 .target(name: "MacroImplements"),
-                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic")
+                .target(name: "ResourceDefine")
             ]
         ),
         .target(
@@ -46,6 +47,12 @@ let package = Package(
             name: "DTOBuilder",
             dependencies: [
                 .target(name: "Query")
+            ]
+        ),
+        .target(
+            name: "ResourceDefine",
+            dependencies: [
+                .product(name: "LoggingAdvanced", package: "whooshing.toolbox-basic")
             ]
         ),
         .target(
@@ -62,7 +69,7 @@ let package = Package(
             name: "PrivilegeModule",
             dependencies: [
                 .target(name: "DTOBuilder"),
-                .target(name: "ResourceMacros"),
+                .target(name: "ResourceDefine"),
                 .product(name: "Collections", package: "swift-collections"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
                 .product(name: "OPA", package: "whooshing.toolbox-opa")
