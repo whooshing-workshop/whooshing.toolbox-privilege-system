@@ -19,8 +19,8 @@ let package = Package(
     ],
     products: [
         .library( name: "ResourceMacros", targets: ["ResourceMacros"] ),
-        .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem"] ),
-        .library( name: "PrivilegeModule", targets: ["PrivilegeModule"] )
+        .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem", "ResourceMacros"] ), // 必须显式声明依赖 ResourceMacros，否则编译会报错：Target MacroImplements imports another target (SwiftCompilerPlugin) in the package without declaring it a dependency.
+        .library( name: "PrivilegeModule", targets: ["PrivilegeModule", "ResourceMacros"] )
     ],
     dependencies: [
         .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.0"),
@@ -34,7 +34,12 @@ let package = Package(
             name: "ResourceMacros",
             dependencies: [
                 .target(name: "MacroImplements"),
-                .target(name: "ResourceDefine")
+                .target(name: "ResourceDefine"),
+                // 必须显式声明依赖，否则编译会报错：Target MacroImplements imports another target (SwiftCompilerPlugin) in the package without declaring it a dependency.
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax")
             ]
         ),
         .target(

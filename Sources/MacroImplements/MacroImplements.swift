@@ -1,7 +1,7 @@
-@_exported import SwiftCompilerPlugin
-@_exported import SwiftSyntax
-@_exported import SwiftSyntaxBuilder
-@_exported import SwiftSyntaxMacros
+import SwiftCompilerPlugin
+import SwiftSyntax
+import SwiftSyntaxBuilder
+import SwiftSyntaxMacros
 
 // MARK: - ResourceMacro
 
