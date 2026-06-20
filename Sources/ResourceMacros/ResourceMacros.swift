@@ -1,11 +1,5 @@
 @_exported import ResourceDefine
 
-// 必须显式声明且 export 依赖，否则编译会报错：Target MacroImplements imports another target (SwiftCompilerPlugin) in the package without declaring it a dependency.
-@_exported import SwiftCompilerPlugin
-@_exported import SwiftSyntax
-@_exported import SwiftSyntaxBuilder
-@_exported import SwiftSyntaxMacros
-
 /// 为 `Resource` 类型自动生成 `json` 和 `mirrors` 的实现。
 ///
 /// 该宏会扫描结构体中所有存储属性，自动合成：
