@@ -97,6 +97,7 @@ let package = Package(
                 .target(name: "PrivilegeModule"),
                 .target(name: "ResourceMacros"),
                 .target(name: "Query"),
+                .target(name: "MacroImplements"),
                 .product(name: "VaporTesting", package: "Whooshing-Vapor"),
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
             ]
