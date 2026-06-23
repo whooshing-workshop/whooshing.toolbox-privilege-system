@@ -148,7 +148,7 @@ public extension PrivilegeSystem.DomainController {
         logger.info("执行 创建域权限（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
-        return db.trans { db in
+        return db.trans(throws: .domainCreateFailed, "数据库事务执行失败", category: .internal) { db in
             self.__create(on: db, domains: relations.mapToSet { $0.right }).flatMap { domains in
                 self.policyController.__create(
                     on: db,
@@ -167,7 +167,7 @@ public extension PrivilegeSystem.DomainController {
         logger.info("执行 创建域权限（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         
-        return db.trans { db in
+        return db.trans(throws: .domainCreateFailed, "数据库事务执行失败", category: .internal) { db in
             self.__create(on: db, domains: relations.mapToSet { $0.right }).flatMap { domains in
                 self.policyController.__createWithReturning(
                     on: db,

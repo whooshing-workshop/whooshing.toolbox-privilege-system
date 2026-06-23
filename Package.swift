@@ -24,7 +24,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.2"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.1.1"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.1.2"),
         .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.5"),
         .package(url: "https://github.com/whooshing-workshop/whooshing-Vapor.git", from: "1.1.4"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),

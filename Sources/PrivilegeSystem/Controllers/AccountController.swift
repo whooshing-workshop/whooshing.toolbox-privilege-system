@@ -67,7 +67,7 @@ extension PrivilegeSystem {
             logger.info("执行 账号注册 操作", metadata: ["user": .summaryData(user)])
             logger.debug("操作参数", metadata: ["user": .data(user)])
             
-            return db.trans { db in
+            return db.trans(throws: .userRegisterFailed, "数据库事务执行失败", category: .internal) { db in
                 __SDBM.User.query(on: db)
                     .filter(\.$email == user.email)
                     .count()
@@ -125,7 +125,7 @@ extension PrivilegeSystem {
             logger.info("执行 账号登录 操作", metadata: ["user": .summaryData(userData)])
             logger.debug("操作参数", metadata: ["user": .data(userData)])
             
-            return db.trans { db in
+            return db.trans(throws: .userLoginFailed, "数据库事务执行失败", category: .internal) { db in
                 __SDBM.User.query(on: db)
                     .filter(\.$email == userData.email)
                     .first()
@@ -191,7 +191,7 @@ extension PrivilegeSystem {
             logger.info("执行 Token 鉴权 操作", metadata: ["token": .summaryData(token)])
             logger.debug("操作参数", metadata: ["token": .data(token)])
             
-            return db.trans { db in
+            return db.trans(throws: .userAuthenticateFailed, "数据库事务执行失败", category: .internal) { db in
                 let tokenGetter: EventLoopRes<__SDBM.Token, PrivilegeSystem.Errcase> = db.eventLoop.submitResult { () throws(Errcase.ErrType) in
                     guard token.tokenEncrypted.count == 124 else {
                         throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 124 bytes", category: .external()).metadata(["count": .stringConvertible(token.tokenEncrypted.count)])
@@ -286,13 +286,13 @@ extension PrivilegeSystem {
             logger.info("执行 修改密码 操作", metadata: ["user": .summaryData(userData)])
             logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
             
-            return db.trans { db in
+            return db.trans(throws: .userPasswordChangeFailed, "数据库事务执行失败", category: .internal) { db in
                 __SDBM.User.query(on: db)
                     .filter(\.$email == userData.email)
                     .first()
                     .withError(Errcase.userPasswordChangeFailed, "从数据库中查询用户失败", category: .internal)
                     .flatMapThrowing
-                { (res) throws(Errcase.ErrType) in
+                { res throws(Errcase.ErrType) in
                     guard let user = res else {
                         throw Errcase.userPasswordChangeFailed.d("用户不存在", category: .external(suggestions: ["请先进行注册"]))
                     }
@@ -305,25 +305,59 @@ extension PrivilegeSystem {
                         throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external(suggestions: ["请提供正确的密码"]))
                     }
                     
-                    (user.salt, user.hashedPassword) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
-                        try PUser.doubleEncode(hashedPassword: hashedPassword).get()
-                    }
-                    
                     return user
-                }.flatMap { (user: __SDBM.User) -> EventLoopRes<__SDBM.User, Errcase> in
-                    return user
-                        .update(on: db)
-                        .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)
-                        .map { user }
-                }.flatMapThrowing { user throws(Errcase.ErrType) in
-                    try required(throws: Errcase.userPasswordChangeFailed, category: .internal) {
-                        try .make(from: user).get()
-                    }
+                }.flatMap {
+                    self.__changePassword(on: db, for: $0, to: hashedPassword)
                 }.map {
                     logger.info("修改密码 操作执行成功")
                     return $0
                 }
             }.logIfFail(logger: logger, metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
+        }
+        
+        public func changePassword(
+            for userData: QUser,
+            to hashedPassword: String
+        ) -> EventLoopRes<QUser, Errcase> {
+            let logger = getActionLogger()
+            
+            logger.info("执行 修改密码 操作", metadata: ["user": .summaryData(userData)])
+            logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
+            
+            return db.trans(throws: .userPasswordChangeFailed, "数据库事务执行失败", category: .internal) { db in
+                userData.model(from: db)
+                    .errCast(Errcase.userPasswordChangeFailed, "从数据库中查询用户失败", category: .internal)
+                    .flatMap
+                {
+                    self.__changePassword(on: db, for: $0, to: hashedPassword)
+                }.map {
+                    logger.info("修改密码 操作执行成功")
+                    return $0
+                }
+            }.logIfFail(logger: logger, metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
+        }
+        
+        func __changePassword(
+            on db: PGDatabase,
+            for user: __SDBM.User,
+            to hashedPassword: String
+        ) -> EventLoopRes<QUser, Errcase> {
+            db.eventLoop.bridge { () throws(Errcase.ErrType) in
+                (user.salt, user.hashedPassword) = try required(throws: Errcase.userPasswordChangeFailed, "双重加密密码时失败", category: .internal) {
+                    try PUser.doubleEncode(hashedPassword: hashedPassword).get()
+                }
+                
+                return user
+            }.flatMap { (user: __SDBM.User) -> EventLoopRes<__SDBM.User, Errcase> in
+                return user
+                    .update(on: db)
+                    .withError(Errcase.userPasswordChangeFailed, "更新用户密码时失败", category: .internal)
+                    .map { user }
+            }.flatMapThrowing { user throws(Errcase.ErrType) in
+                try required(throws: Errcase.userPasswordChangeFailed, category: .internal) {
+                    try .make(from: user).get()
+                }
+            }
         }
     }
 }

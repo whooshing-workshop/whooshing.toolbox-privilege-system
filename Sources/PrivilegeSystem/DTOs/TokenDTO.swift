@@ -319,6 +319,8 @@ extension QToken: Query.Queriable {
 extension QToken: Authenticatable {}
 
 public struct TokenAuthenticator: CredentialsAuthenticator {
+    public init() {}
+    
     public func authenticate(credentials: AuthorizationToken, for request: Request) -> EventLoopFuture<Void> {
         __SDBM.Token.query(on: request.db)
             .filter(\.$credential == credentials.credential)

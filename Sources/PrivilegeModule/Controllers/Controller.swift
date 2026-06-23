@@ -88,7 +88,7 @@ package extension Controller {
             return db.eventLoop.makeSucceededVoidResult()
         }
         
-        return db.trans { db in
+        return db.trans(throws: errThrowing, "数据库事务执行失败", category: .internal) { db in
             let r: EventLoopRes<Void, E>
             
             if allSatisfy {
@@ -129,7 +129,7 @@ package extension Controller {
             return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external()))
         }
         
-        return db.trans { db in
+        return db.trans(throws: errThrowing, "数据库事务执行失败", category: .internal) { db in
             let updaterRes: EventLoopRes<T.QueriedDTO?, E>
             if updater.needsPeek {
                 updaterRes = filterBuilder(T.DBModel.query(on: db))
@@ -338,7 +338,7 @@ package extension Controller {
               PivotT.PrimaryModel == Left.SQLModel,
               PivotT.SecondaryModel == Right.SQLModel
     {
-        db.trans { db in
+        db.trans(throws: errThrowing, "数据库事务执行失败", category: .internal) { db in
             var check: EventLoopRes<Void, E> = db.eventLoop.makeSucceededVoidResult()
             
             let lList: OrderedSet<UUID>

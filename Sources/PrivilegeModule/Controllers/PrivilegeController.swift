@@ -189,7 +189,7 @@ public extension PrivilegeModule {
             // 否则，无论 SQL 或 OPA 更新失败，数据库会进行回滚
             // 而 OPA 无需进行回滚，因为仅处理一条策略数据，
             // 更新失败意味着其仍保留原数据在 OPA 中
-            return db.trans { db in
+            return db.trans(throws: Errcase.privilegeUpdateFailed, "数据库事务执行失败", category: .internal) { db in
                 // 先将字段更新到数据库中: name, summary, policy
                 self.__update(
                     on: db,
@@ -228,8 +228,7 @@ public extension PrivilegeModule {
                         .errCast(Errcase.privilegeUpdateFailed, "资源权限策略 OPA 更新失败", category: .internal)
                         .map { _ in updateRes }
                 }
-            }
-            .map { 
+            }.map { 
                 logger.info("更新资源权限 操作成功", metadata: ["data": .summaryData($0)])
                 logger.debug("更新资源权限 结果详细数据", metadata: ["data": .data($0)])
                 return $0 

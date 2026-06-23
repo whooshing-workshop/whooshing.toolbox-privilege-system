@@ -60,7 +60,7 @@ package extension OPAController {
         // 只有当 OPA 也插入成功后才提交事务
         // 否则，无论 SQL 或 OPA 插入失败，数据库与 OPA 都会进行回滚
         // 其中 OPA 回滚是通过删除已增加的策略实现的
-        return db.trans { db in
+        return db.trans(throws: errThrowing, "数据库事务执行失败", category: .internal) { db in
             // 先在数据库中创建所有 policy 数据
             ps
                 .create(on: db)
@@ -147,7 +147,7 @@ package extension OPAController {
         // 否则，无论 SQL 或 OPA 删除失败，数据库会进行回滚
         // 而 OPA 无需进行回滚，因为仅处理一条策略数据，
         // 删除失败意味着其仍在 OPA 中
-        return db.trans { db in
+        return db.trans(throws: errThrowing, "数据库事务执行失败", category: .internal) { db in
             filterBuilder(db)
                 .count()
                 .withError(errThrowing, "从 \(policyType) 数据库中查询要删除的数据 \(label) 失败", category: .internal)

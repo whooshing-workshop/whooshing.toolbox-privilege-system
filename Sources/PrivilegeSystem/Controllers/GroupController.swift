@@ -50,7 +50,7 @@ extension PrivilegeSystem {
             let logger = getActionLogger()
             logger.info("执行 创建用户组 操作", metadata: ["groups": .summaryData(groups)])
             logger.debug("操作参数", metadata: ["groups": .data(groups)])
-            return db.trans { db in
+            return db.trans(throws: .userInfoCreateFailed, "数据库事务执行失败", category: .internal) { db in
                 self.__create(
                     on: db,
                     dtos: groups,
@@ -121,7 +121,7 @@ extension PrivilegeSystem {
             let logger = getActionLogger()
             logger.info("执行 删除用户组 操作", metadata: ["groupIds": .summaryData(groupIds)])
             logger.debug("操作参数", metadata: ["groupIds": .data(groupIds)])
-            return db.trans { db in
+            return db.trans(throws: .groupDeleteFailed, "数据库事务执行失败", category: .internal) { db in
                 self.__check(
                     on: db,
                     ids: groupIds,
@@ -363,7 +363,7 @@ public extension PrivilegeSystem.GroupController {
         
         let ids = relation.right == nil ? [relation.left] : [relation.left, relation.right!]
         
-        return db.trans { db in
+        return db.trans(throws: .groupMoveFailed, "数据库事务执行失败", category: .internal) { db in
             __SDBM.Group.query(on: db)
                 .filter(\.$id ~~ ids)
                 .all()
@@ -424,7 +424,7 @@ extension PrivilegeSystem.GroupController {
         _ relation: OTORelation<QGroup, QGroup?>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         
-        return db.trans { tdb in
+        return db.trans(throws: .groupMoveFailed, "数据库事务执行失败", category: .internal) { tdb in
             let oldDelete: EventLoopRes<[__SDBM.Group.Path], PrivilegeSystem.Errcase> = __SDBM.Group.Path.query(on: tdb)
                 .filter(\.$ancestor.$id == relation.left.id)
                 .all()

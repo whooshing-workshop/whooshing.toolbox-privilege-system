@@ -35,4 +35,11 @@ extension PrivilegeSystem.AccountController {
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> QUser {
         try await changePassword(for: userData, to: hashedPassword).get()
     }
+    
+    public func changePassword(
+        for userData: QUser,
+        to hashedPassword: String
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> QUser {
+        try await changePassword(for: userData, to: hashedPassword).get()
+    }
 }

@@ -105,7 +105,7 @@ public extension PrivilegeSystem.UserInfoController {
         let logger = getActionLogger()
         logger.info("执行 创建用户信息 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
-        return db.trans { db in
+        return db.trans(throws: .userInfoCreateFailed, "数据库事务执行失败", category: .internal) { db in
             let infos = relations.map { $0.right.left.raw(for: $0.left) }
             return infos
                 .create(on: db)

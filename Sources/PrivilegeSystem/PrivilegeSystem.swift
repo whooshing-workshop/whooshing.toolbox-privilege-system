@@ -123,7 +123,7 @@ public final class PrivilegeSystem: Sendable {
             let mig = Migrator(
                 databases: self.dbs,
                 migrations: migs,
-                logger: initLogger,
+                logger: logger.derive(subId: "db"),
                 on: eventLoop,
                 migrationLogLevel: initLogger.logLevel
             )
@@ -139,7 +139,7 @@ public final class PrivilegeSystem: Sendable {
             throw initLogger.errThrow(Errcase.databaseInitFailed.d("数据库迁移失败", category: .internal).subErr(error))
         }
         
-        guard let db = self.dbs.database(logger: initLogger, on: eventLoop) else {
+        guard let db = self.dbs.database(logger: logger.derive(subId: "db"), on: eventLoop) else {
             throw initLogger.errThrow(Errcase.databaseInitFailed.d("数据库获取失败", category: .internal))
         }
         
