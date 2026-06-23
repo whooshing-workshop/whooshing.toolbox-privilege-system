@@ -154,7 +154,7 @@ package extension OPAController {
                 .flatMap
             { count in
                 guard count > 0 else {
-                    return db.eventLoop.makeFailedResult(errThrowing, "\(policyType) 数据库中不存在要删除的数据", category: .external)
+                    return db.eventLoop.makeFailedResult(errThrowing, "\(policyType) 数据库中不存在要删除的数据", category: .external())
                 }
                 
                 return db.eventLoop.makeSucceededVoidResult()

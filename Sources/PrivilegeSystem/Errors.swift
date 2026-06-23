@@ -10,9 +10,11 @@ public extension PrivilegeSystem {
         // 登陆注册相关错误
         case userRegisterFailed = "用户注册失败"
         case userLoginFailed = "用户登陆失败"
-        case userAuthenticateFailed = "用户口令认证失败"
+        case userAuthenticateFailed = "用户认证失败"
         case accountDataFetchFailed = "账号数据检索失败"
         case userPasswordChangeFailed = "用户密码修改失败"
+        case tokenVerifyFailed = "用户口令验证失败"
+        case tokenAuthFailed = "用户口令认证失败"
         
         // 用户信息相关错误
         case userInfoCreateFailed = "用户信息数据创建失败"

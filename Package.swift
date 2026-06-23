@@ -23,9 +23,10 @@ let package = Package(
         .library( name: "PrivilegeModule", targets: ["PrivilegeModule", "ResourceMacros"] )
     ],
     dependencies: [
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.0"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.1.0"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.4"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.2"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.1.1"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.5"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing-Vapor.git", from: "1.1.4"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0")
     ],
@@ -94,9 +95,9 @@ let package = Package(
             dependencies: [
                 .target(name: "PrivilegeSystem"),
                 .target(name: "PrivilegeModule"),
-                .target(name: "MacroImplements"),
                 .target(name: "ResourceMacros"),
                 .target(name: "Query"),
+                .product(name: "VaporTesting", package: "Whooshing-Vapor"),
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
             ]
         )

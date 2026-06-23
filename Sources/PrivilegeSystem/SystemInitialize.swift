@@ -2,7 +2,7 @@ import OPA
 import Foundation
 
 extension PrivilegeSystem {
-    func systemInitialize(dbConfigure: SQLPostgresConfiguration, logger: Logger) async throws(BscError<Errcase>) {
+    func systemInitialize(dbConfigure: SQLPostgresConfiguration, logger: Logger) async throws(Errcase.ErrType) {
         let regos = try loadRegos(logger: logger)
         logger.info("Rego 脚本加载完成")
         let sqls = try loadSQLs(logger: logger)
@@ -21,7 +21,7 @@ extension PrivilegeSystem {
             let database = dbConfigure.coreConfiguration.database,
             let password = dbConfigure.coreConfiguration.password
         else {
-            throw logger.errThrow(Errcase.databaseInitFailed.d("连接参数缺失，无法初始化 REGO", category: .external))
+            throw logger.errThrow(Errcase.databaseInitFailed.d("连接参数缺失，无法初始化 REGO", category: .external()))
         }
         
         // REGO 数据库连接参数注入
@@ -47,7 +47,7 @@ extension PrivilegeSystem {
         logger.info("系统加载完成")
     }
     
-    private func loadRegos(logger: Logger) throws(BscError<Errcase>) -> OrderedDictionary<String, String> {
+    private func loadRegos(logger: Logger) throws(Errcase.ErrType) -> OrderedDictionary<String, String> {
         guard let rootURL = Bundle.module.resourceURL?.appendingPathComponent("Regos") else {
             throw logger.errThrow(Errcase.regoLoadFailed.d("未找到 Bundle", category: .internal))
         }
@@ -90,7 +90,7 @@ extension PrivilegeSystem {
         return policies
     }
     
-    private func loadSQLs(logger: Logger) throws(BscError<Errcase>) -> OrderedDictionary<String, String> {
+    private func loadSQLs(logger: Logger) throws(Errcase.ErrType) -> OrderedDictionary<String, String> {
         guard let rootURL = Bundle.module.resourceURL?.appendingPathComponent("SQLFunctions") else {
             throw logger.errThrow(Errcase.sqlLoadFailed.d("未找到 Bundle", category: .internal))
         }

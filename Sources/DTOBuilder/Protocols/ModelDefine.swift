@@ -1,30 +1,36 @@
 import Foundation
-import Fluent
+import Vapor
 import PgSQL
 import Collections
 import NIOAdvanced
-import ErrorHandle
-import LoggingAdvanced
 import NIOConcurrencyHelpers
 import Query
 @preconcurrency import AnyCodable
 
-//          Public Protocols            |                      Package Protocols                   |
-//                                      |                                                          |
-//              DTO.Model               |                     __Model: DTO.Model                   |
-//             /        \               |                      /               \                   |
-//            /          \              |                     /                 \                  |
-//           /            \             |                    /                   \                 |
-//          /              \            |                   /                     \                |
-//     DTO.Prepare     DTO.DBModel      |     __Prepare: DTO.Prepare    __DBModel: DTO.DBModel     |
-//                          |           |                                          |               |
-//                          |           |                                          |               |
-//                          |           |                                          |               |
-//                          |           |                                          |               |
-//                     DTO.Queried      |                               __Queried: DTO.Queried     |
-//                                      |                                                          |
+//       Public Protocols         |                    Package Protocols                |
+//                                |                                                     |
+//           DTO.Base             |                                                     |   Properties(SubProperty, SuperProperty ...)
+//               |                |                                                     |
+//               |                |                                                     |
+//               |                |                                                     |
+//               |                |                                                     |   Pre-Models(EncryptedToken, AuthorizationToken ...)
+//           DTO.Model            |                    __Model: DTO.Model               |
+//          /        \            |                    /               \                |
+//         /          \           |                   /                 \               |
+//        /            \          |                  /                   \              |
+//       /              \         |                 /                     \             |
+//  DTO.Prepare          |        |   __Prepare: DTO.Prepare               |            |   Prepare-Models(PUser, PToken, PGroup ...)
+//                  DTO.DBModel   |                             __DBModel: DTO.DBModel  |   DB-Related-Models(For generic types)
+//                       |        |                                        |            |
+//                       |        |                                        |            |
+//                       |        |                                        |            |
+//                       |        |                                        |            |
+//                  DTO.Queried   |                             __Queried: DTO.Queried  |   Queried-Models(QUser, QToken, QGroup ...)
+//                                |                                                     |
 //
-// DTO.Model 继承各种基本协议 Encodable, Sendable, Equatable, Hashable, Loggerable, CustomStringConvertible，且提供默认实现
+// DTO.Base 继承各种基本协议 Encodable, Sendable, Equatable, Hashable, Loggerable, CustomStringConvertible，且提供默认实现
+//
+// DTO.Model 为 DTO.Base 扩展实现 Content
 // __Model 为 DTO.Model 实现私有默认实现
 //
 // DTO.Prepare 为未存入数据库前的数据的协议，提供了默认实现
@@ -49,7 +55,7 @@ public extension DTO {
         RawRepresentable
     where RawValue == String {}
     
-    protocol Model:
+    protocol Base:
         Sendable,
         Encodable,
         Equatable,
@@ -63,6 +69,8 @@ public extension DTO {
         var maps: [CodingKeys: AnyHashable?] { get }
         var summaryKeys: [CodingKeys] { get }
     }
+    
+    protocol Model: Base, Content {}
     
     protocol Prepare: Model, Codable {
         associatedtype QueriedModel: Queried
@@ -110,7 +118,7 @@ where
     static func make(from model: SQLModel) -> Res<Self, Failure>
 }
 
-public extension DTO.Model {
+public extension DTO.Base {
     var description: String { formatJson(json.mapValues { .init($0) }) }
     
     var summaryDescription: String {
@@ -229,7 +237,7 @@ package extension __Model {
                 .flatMap
             { res in
                 guard let r = res else {
-                    return db.eventLoop.makeFailedResult(DTO.Errcase.modelNotExist.d(category: .external))
+                    return db.eventLoop.makeFailedResult(DTO.Errcase.modelNotExist.d(category: .internal))
                 }
                 return db.eventLoop.makeSucceededResult(r)
             }

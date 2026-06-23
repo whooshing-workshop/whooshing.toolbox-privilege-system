@@ -1,7 +1,7 @@
 import OPA
 
 extension PrivilegeModule {
-    func opaInitialize(logger: Logger) async throws(BscError<Errcase>) {
+    func opaInitialize(logger: Logger) async throws(Errcase.ErrType) {
         let policies = try await logger.required(throws: Errcase.opaInitFailed, "从数据库查询资源权限数据失败", category: .internal) {
             try await __DBM.Privilege.query(on: db).all().map {
                 (

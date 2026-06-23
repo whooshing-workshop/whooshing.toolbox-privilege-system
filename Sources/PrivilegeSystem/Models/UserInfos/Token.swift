@@ -39,8 +39,40 @@ public extension __SDBM{
     }
 }
 
+/// 用于用户通过主服务器验证时使用，Token 的加密机制为 [密钥 hash] + [明文凭据]
+/// 仅用于通讯通道已经可靠加密的情况
 extension __SDBM.Token: ModelCredentialsAuthenticatable {
     public static let usernameKey: KeyPath<__SDBM.Token, Field<String>> = \.$credential
     public static let passwordHashKey: KeyPath<__SDBM.Token, Field<String>> = \.$token
-    public func verify(password: String) throws -> Bool { password == self.token }
+    
+    // 用户发来的 password(即 token) 是 [密钥 hash]
+    public func verify(password: String) throws -> Bool {
+        // 取得用户传来 tokenHashed 的字节码
+        let userTokenData = try required(throws: PrivilegeSystem.Errcase.tokenVerifyFailed, "用户口令并非 Base64 编码", category: .external()) {
+            try Base64String(password).dataRes.get()
+        }
+        
+        return try verify(passwordData: userTokenData)
+    }
+    
+    // 用户发来的 password(即 token) 是 [密钥 hash]
+    internal func verify(passwordData: Data) throws -> Bool {
+        // 检查是否有效
+        guard self.valid == true else {
+            throw PrivilegeSystem.Errcase.tokenVerifyFailed.d("用户口令无效", category: .external(suggestions: ["请提供有效的登录口令"]))
+        }
+        
+        // 检查是否已过期
+        let expireDate = self.createdAt.addingTimeInterval(TimeInterval(self.expireAfter * 60))
+        guard Date() < expireDate else {
+            throw PrivilegeSystem.Errcase.tokenVerifyFailed.d("用户凭据已过期", category: .external(suggestions: ["请提供有效的登录口令"]))
+        }
+        
+        // 取得 db 密钥的字节码，并对其进行 hash，以进行接下来的比对
+        let dbTokenData = try required(throws: PrivilegeSystem.Errcase.tokenVerifyFailed, "对数据库中的口令哈希失败", metadata: ["credential": .data(self.credential)], category: .internal) {
+            try Crypto.hash(Base64String(self.token)).get()
+        }
+        
+        return passwordData == dbTokenData
+    }
 }

@@ -1,6 +1,7 @@
 import Testing
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
+import ResourceMacros
 import MacroImplements
 
 // MARK: - 宏测试集

@@ -102,7 +102,7 @@ public final class PrivilegeSystem: Sendable {
         opaConfigure: OPAConfiguration,
         logger: Logger,
         debuging: Debuging? = nil
-    ) async throws(BscError<Errcase>) {
+    ) async throws(Errcase.ErrType) {
         self.eventLoop = eventLoop
         self.dbs = Databases(threadPool: .singleton, on: eventLoop)
         

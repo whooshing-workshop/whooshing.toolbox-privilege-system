@@ -85,7 +85,7 @@ public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
         opaConfigure: OPAConfiguration,
         logger: Logger,
         debuging: Debuging? = nil
-    ) async throws(BscError<Errcase>) {
+    ) async throws(Errcase.ErrType) {
         self.eventLoop = eventLoop
         self.dbs = Databases(threadPool: .singleton, on: eventLoop)
         
@@ -208,3 +208,11 @@ extension PrivilegeModule: Query.System {
 }
 
 extension PrivilegeModule: __QuerySystem {}
+
+import Vapor
+
+extension Request: Query.System {
+    public func query<T>(_ model: T.Type) -> Query.Builder<T> where T : Query.Queriable {
+        .init(query: T.Model.query(on: db))
+    }
+}

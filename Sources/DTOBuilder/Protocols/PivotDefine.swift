@@ -43,7 +43,7 @@ public extension DTO.Pivot {
 package protocol __PivotDTO: DTO.Pivot, __DBModel
     where
         SQLModel == Pivot<PivotT>,
-        Failure.ErrType == BscError<Failure>,
+        Failure.ErrType == BasicError<Failure>,
         Model == SQLModel,
         ErrorType == Failure
 {

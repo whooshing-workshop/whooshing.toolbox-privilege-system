@@ -181,7 +181,7 @@ public extension PrivilegeModule {
             logger.debug("更新资源权限 详细请求数据", metadata: ["data": .data(updater)])
             
             guard updater.updates.count > 0 else {
-                return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external)
+                return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external())
             }
             
             // 在 SQL 事务中，先执行 SQL 更新，保持该事务会话
@@ -212,7 +212,7 @@ public extension PrivilegeModule {
                     do {
                         policy = try policyUpdater(updater.needsPeek ? updateRes : nil)
                     } catch {
-                        return self.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "取得要更新的 Policy 失败", category: .external)
+                        return self.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "要更新的 Policy 出错", category: .external())
                     }
                     
                     let path = policyPath(

@@ -1,12 +1,6 @@
-import Fluent
-import Vapor
-import PgSQL
-import DTOBuilder
-import ErrorHandle
-import NIOAdvanced
+import Query
+import Foundation
 import PrivilegeModule
-import Logging
-import OrderedCollections
 
 extension PrivilegeSystem {
     /// 用户信息控制器，负责管理用户的基本和扩展信息（UserInfo）。

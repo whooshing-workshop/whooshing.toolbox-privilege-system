@@ -1,12 +1,6 @@
-import Fluent
-import Vapor
-import PgSQL
-import DTOBuilder
-import ErrorHandle
-import NIOAdvanced
+import Query
+import Foundation
 import PrivilegeModule
-import Logging
-import OrderedCollections
 
 extension PrivilegeSystem {
     /// 用户附加切片信息控制器，提供对 `ExtendedInfo` 中的具体切片数据进行单独维护的能力。

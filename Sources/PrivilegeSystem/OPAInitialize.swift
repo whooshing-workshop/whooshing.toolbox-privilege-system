@@ -2,7 +2,7 @@ import OPA
 import DTOBuilder
 
 extension PrivilegeSystem {
-    func opaInitialize(logger: Logger) async throws(BscError<Errcase>) {
+    func opaInitialize(logger: Logger) async throws(Errcase.ErrType) {
         let rolePolicies = try await logger.required(throws: Errcase.opaInitFailed, "从数据库查询角色权限数据失败", category: .internal) {
             try await __SDBM.RolePolicy.query(on: db).all().map {
                 (

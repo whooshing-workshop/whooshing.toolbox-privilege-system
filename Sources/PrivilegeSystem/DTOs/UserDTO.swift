@@ -1,3 +1,4 @@
+import Vapor
 import Foundation
 import PrivilegeModule
 

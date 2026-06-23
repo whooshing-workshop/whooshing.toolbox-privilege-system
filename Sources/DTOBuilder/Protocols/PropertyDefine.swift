@@ -19,7 +19,7 @@ public extension DTO {
         case ids
     }
     
-    protocol Property: DTO.Model where CodingKeys == PropertyCodingKeys {}
+    protocol Property: DTO.Base where CodingKeys == PropertyCodingKeys {}
 }
 
 package protocol __Property: DTO.Property {

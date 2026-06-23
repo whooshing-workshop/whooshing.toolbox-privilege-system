@@ -1,8 +1,4 @@
 import Foundation
-import Cryptos
-import Fluent
-import PgSQL
-import NIOAdvanced
 import PrivilegeModule
 
 // MARK: - AccountController Concurrency (AccountController.swift)
@@ -21,7 +17,7 @@ extension PrivilegeSystem.AccountController {
     }
 
     public func authenticate(
-        token: Token
+        token: EncryptedToken
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> SendableSymmKey {
         try await authenticate(token: token).get()
     }

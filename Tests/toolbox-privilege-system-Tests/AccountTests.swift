@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import VaporTesting
 @testable import PrivilegeSystem
 
 typealias AT = AccountTesting
@@ -54,6 +55,45 @@ struct AccountTesting {
     
     nonisolated(unsafe) static var ids: OrderedSet<UUID> = []
     
+    struct AuthTestResult: Content {
+        let userEmail: String
+        let credential: String
+    }
+    
+    func withApp(_ test: (Application) async throws -> ()) async throws {
+        let app = try await Application.make(.testing)
+        
+        app.databases.use(.postgres(
+            configuration: .init(
+                hostname: TestingShared.dbHost,
+                port: TestingShared.dbPort,
+                username: "woo",
+                password: "testing",
+                database: "privilege_system",
+                tls: .disable
+            ),
+            decodingContext: .default
+        ), as: .psql)
+        
+        let protected = app.routes.grouped(
+            TokenAuthenticator(),
+            QToken.guardMiddleware()
+        )
+        protected.post("test-auth") { req -> AuthTestResult in
+            let qToken = try req.auth.require(QToken.self)
+            return AuthTestResult(userEmail: qToken.user.email, credential: qToken.credential)
+        }
+        
+        do {
+            try await test(app)
+        } catch {
+            try await app.asyncShutdown()
+            throw error
+        }
+        
+        try await app.asyncShutdown()
+    }
+    
     @Test("User 创建测试", arguments: oldPasswords)
     func create(i: Int, password: String) async throws {
         let email = Self.users[i].0
@@ -77,7 +117,33 @@ struct AccountTesting {
             )
         )
         
-        _ = try await s.account.authenticate(token: try token.toPrepare().get())
+        _ = try await s.account.authenticate(token: .make(from: token).get())
+        
+        let userToken = try AuthorizationToken.make(from: token).get()
+        let dbToken = try await token.model(from: s.db).get()
+        #expect(try dbToken.verify(password: userToken.tokenHashed) == true)
+        
+        let wrongToken = AuthorizationToken.init(
+            credential: userToken.credential,
+            tokenHashed: Crypto.hash(Crypto.Symm.makeKey().data).base64EncodedString()
+        )
+        
+        try await withApp { app in
+            try await app.testing().test(.POST, "test-auth", beforeRequest: { req in
+                try req.content.encode(userToken)
+            }, afterResponse: { res in
+                #expect(res.status == .ok)
+                let result = try res.content.decode(AuthTestResult.self)
+                #expect(result.userEmail == user.email)
+                #expect(result.credential == token.credential)
+            })
+            
+            try await app.testing().test(.POST, "test-auth", beforeRequest: { req in
+                try req.content.encode(wrongToken)
+            }, afterResponse: { res in
+                #expect(res.status == .badRequest)
+            })
+        }
         
         let newUser = try await s.account.changePassword(
             for: .init(

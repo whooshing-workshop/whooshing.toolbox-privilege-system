@@ -137,7 +137,7 @@ public enum Query {
                             }
                             
                         case .failure(let failure):
-                            return Res<Model, Errcase>.failure(.chunkResultFailed, category: .external, subErr: failure)
+                            return Res<Model, Errcase>.failure(.chunkResultFailed, category: .inherit, subErr: failure)
                         }
                     }
                 )

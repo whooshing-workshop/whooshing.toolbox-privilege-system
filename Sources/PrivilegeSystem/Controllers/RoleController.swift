@@ -1,12 +1,6 @@
-import Fluent
-import DTOBuilder
-import Vapor
-import PgSQL
-import ErrorHandle
-import NIOAdvanced
+import Query
+import Foundation
 import PrivilegeModule
-import Logging
-import OrderedCollections
 
 extension PrivilegeSystem {
     /// 角色控制器，提供对于角色（Role）的创建、更新、删除以及指派和查询功能。
@@ -696,7 +690,7 @@ extension PrivilegeSystem.RoleController {
             .flatMap
         { user in
             guard let u = user else {
-                return db.eventLoop.makeFailedResult(Errcase.userRoleQueryFailed, "根据所传的 id，User 主模型不存在", metadata: ["id": .stringConvertible(userId)], category: .external)
+                return db.eventLoop.makeFailedResult(Errcase.userRoleQueryFailed, "要查询用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external())
             }
             return db.eventLoop.makeSucceededResult(u)
         }.flatMap {
@@ -726,7 +720,7 @@ extension PrivilegeSystem.RoleController {
             .flatMap
         { user in
             guard let u = user else {
-                return db.eventLoop.makeFailedResult(Errcase.groupRoleQueryFailed, "根据所传的 id，User 主模型不存在", metadata: ["id": .stringConvertible(userId)], category: .external)
+                return db.eventLoop.makeFailedResult(Errcase.groupRoleQueryFailed, "要查询用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external())
             }
             return db.eventLoop.makeSucceededResult(u)
         }.flatMap {
@@ -1119,7 +1113,7 @@ extension PrivilegeSystem.RoleController {
             .flatMap
         { user in
             guard let u = user else {
-                return db.eventLoop.makeFailedResult(errThrowing, "根据所传的 id，\(T.name) 主模型不存在", metadata: ["id": .stringConvertible(id)], category: .external)
+                return db.eventLoop.makeFailedResult(errThrowing, "要查询的 \(T.name) 不存在", metadata: ["id": .stringConvertible(id)], category: .external())
             }
             return db.eventLoop.makeSucceededResult(u)
         }

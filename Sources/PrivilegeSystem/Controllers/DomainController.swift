@@ -1,12 +1,6 @@
-import Fluent
-import Vapor
-import PgSQL
-import ErrorHandle
-import NIOAdvanced
+import Query
+import Foundation
 import PrivilegeModule
-import Logging
-import DTOBuilder
-import OrderedCollections
 
 extension PrivilegeSystem {
     /// 域权限控制器，提供域的创建、更新、删除及关系指派接口。
