@@ -126,8 +126,8 @@ public struct QUser: DTO.Queried {
         self = Self.init(
             id: try container.decode(UUID.self, forKey: .id),
             email: try container.decode(String.self, forKey: .email),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
         
@@ -142,8 +142,8 @@ public struct QUser: DTO.Queried {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
         try container.encode(self.email, forKey: .email)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
         
         try container.encode(self.$info, forKey: .info)
         try container.encode(self.$token, forKey: .token)

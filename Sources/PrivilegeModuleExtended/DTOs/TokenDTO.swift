@@ -240,7 +240,7 @@ public struct QToken: DTO.Queried {
             userId: try container.decode(UUID.self, forKey: .userId),
             valid: try container.decode(Bool.self, forKey: .valid),
             expireAfter: try container.decode(Int.self, forKey: .expireAfter),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
             model: nil
         )
         
@@ -255,7 +255,7 @@ public struct QToken: DTO.Queried {
         try container.encode(self.$user.id, forKey: .userId)
         try container.encode(self.valid, forKey: .valid)
         try container.encode(self.expireAfter, forKey: .expireAfter)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
         
         try container.encode(self.$user, forKey: .user)
     }

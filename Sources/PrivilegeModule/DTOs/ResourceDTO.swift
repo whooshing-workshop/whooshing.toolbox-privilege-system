@@ -67,8 +67,8 @@ extension PM.QResource: Codable {
         self = Self.init(
             id: try container.decode(UUID.self, forKey: .id),
             data: try container.decode(G.self, forKey: .data),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
         
@@ -79,8 +79,8 @@ extension PM.QResource: Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(data, forKey: .data)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
         
         try container.encode($privileges, forKey: .privileges)
     }

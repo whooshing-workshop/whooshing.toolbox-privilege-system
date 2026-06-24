@@ -59,7 +59,7 @@ extension __Property {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.loaded, forKey: .loaded)
-        try container.encodeIfPresent(self.value, forKey: .value)
+        try container.encode(self.value, forKey: .value)
         if Self.hasId {
             try container.encodeIfPresent(self.contentId, forKey: .id)
         }

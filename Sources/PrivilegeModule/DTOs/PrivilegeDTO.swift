@@ -126,8 +126,8 @@ public extension PM {
                 name: try container.decodeIfPresent(String.self, forKey: .name),
                 summary: try container.decodeIfPresent(String.self, forKey: .summary),
                 policy: try container.decode(String.self, forKey: .policy),
-                createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-                updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+                createdAt: try container.decode(Date.self, forKey: .createdAt),
+                updatedAt: try container.decode(Date.self, forKey: .updatedAt),
                 model: nil
             )
             
@@ -140,8 +140,8 @@ public extension PM {
             try container.encodeIfPresent(self.name, forKey: PrivilegeModule.QPrivilege.CodingKeys.name)
             try container.encodeIfPresent(self.summary, forKey: PrivilegeModule.QPrivilege.CodingKeys.summary)
             try container.encode(self.policy, forKey: PrivilegeModule.QPrivilege.CodingKeys.policy)
-            try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-            try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+            try container.encode(self.createdAt, forKey: .createdAt)
+            try container.encode(self.updatedAt, forKey: .updatedAt)
             
             try container.encode(self.$resources, forKey: .resources)
         }

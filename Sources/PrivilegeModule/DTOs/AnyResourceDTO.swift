@@ -80,8 +80,8 @@ public struct AnyResource: DTO.DBModel {
         self.type = try container.decode(String.self, forKey: .type)
         self.name = try container.decode(String.self, forKey: .name)
         self.data = try container.decode([String: AnyCodable].self, forKey: .data)
-        self.createdAt = try container.decode(DateWrapper.self, forKey: .createdAt).date
-        self.updatedAt = try container.decode(DateWrapper.self, forKey: .updatedAt).date
+        self.createdAt = try container.decode(Date.self, forKey: .createdAt)
+        self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         self.__m = nil
     }
     
@@ -91,8 +91,8 @@ public struct AnyResource: DTO.DBModel {
         try container.encode(self.type, forKey: .type)
         try container.encode(self.name, forKey: .name)
         try container.encode(self.data, forKey: .data)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
     }
 }
 

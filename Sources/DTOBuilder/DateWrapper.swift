@@ -1,4 +1,5 @@
 import Foundation
+import AnyCodable
 
 package struct DateWrapper: Codable, Sendable {
     package let year: Int
@@ -46,5 +47,33 @@ package struct DateWrapper: Codable, Sendable {
     
     package var date: Date {
         .init(timeIntervalSince1970: Double(raw) / 1_000_000_000)
+    }
+}
+
+public struct DateWrapperEncoder: Sendable {
+    static let sharedWrapperEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .custom { date, e in
+            var container = e.singleValueContainer()
+            try container.encode(DateWrapper(date))
+        }
+        return encoder
+    }()
+    
+    static let sharedWrapperDecoder = JSONDecoder()
+    
+    static func json<T: Encodable>(from model: T) throws -> [String: AnyCodable] {
+        let jsonData = try Self.sharedWrapperEncoder.encode(model)
+        
+        // 2. 二期解码：原地复活为满足你核心网关需要的动态字典
+        return try Self.sharedWrapperDecoder.decode([String: AnyCodable].self, from: jsonData)
+    }
+}
+
+public protocol DateWrapperModel: Encodable, Sendable {}
+
+public extension DateWrapperModel {
+    func wrappedJson() throws -> [String: AnyCodable] {
+        try DateWrapperEncoder.json(from: self)
     }
 }

@@ -122,8 +122,8 @@ public struct QRole: DTO.Queried {
             id: try container.decode(UUID.self, forKey: .id),
             name: try container.decode(String.self, forKey: .name),
             summary: try container.decodeIfPresent(String.self, forKey: .summary),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
         
@@ -138,8 +138,8 @@ public struct QRole: DTO.Queried {
         try container.encode(self.id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encodeIfPresent(summary, forKey: .summary)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
         
         try container.encode(self.$users, forKey: .users)
         try container.encode(self.$groups, forKey: .groups)

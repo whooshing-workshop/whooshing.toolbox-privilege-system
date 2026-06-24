@@ -133,8 +133,8 @@ public struct QUserInfo: DTO.Queried {
             identifier: try container.decode(String.self, forKey: .identifier),
             birthday: try container.decode(Date.self, forKey: .birthday),
             other: try container.decodeIfPresent(String.self, forKey: .other),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
         
@@ -152,8 +152,8 @@ public struct QUserInfo: DTO.Queried {
         try container.encode(self.identifier, forKey: .identifier)
         try container.encode(self.birthday, forKey: .birthday)
         try container.encodeIfPresent(self.other, forKey: .other)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
         
         try container.encode(self.$user, forKey: .user)
         try container.encode(self.$alternateEmails, forKey: .alternateEmails)

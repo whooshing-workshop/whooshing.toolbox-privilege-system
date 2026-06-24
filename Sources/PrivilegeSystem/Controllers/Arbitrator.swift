@@ -330,34 +330,42 @@ extension PrivilegeSystem {
             logger: Logger
         ) -> EventLoopRes<Result, Errcase> {
             // 取得用户身份的 policy
-            ([
-                eventLoop.submitResult { () throws(Errcase.ErrType) in
-                    let id = UUID()
-                    logger.debug("进行 Role 仲裁", metadata: ["role": .data(input.role), "arbitrate-id": .stringConvertible(id)])
-                    return id
-                }.flatMap { id in
-                    self.opa.query.data(
-                        from: "/rules" + policyPath(moduleId: input.moduleId, modelId: input.role.roleId, type: Role.self, format: .path) + "/allow",
-                        input: input.role,
-                        as: RoleData.self,
-                        to: Bool.self
-                    ).errCast(Errcase.arbitrateFailed, "OPA Query 用户身份 失败", category: .internal)
-                    .map { res in
-                        logger.debug("Role 仲裁结果", metadata: ["result": .data(res), "arbitrate-id": .stringConvertible(id)])
-                        return (Result.IdKey(type: .role, moduleId: input.moduleId, id: input.role.roleId), res)
-                    }
+            let roleAuth = eventLoop.submitResult { () throws(Errcase.ErrType) in
+                let id = UUID()
+                logger.debug("进行 Role 仲裁", metadata: ["role": .data(input.role), "arbitrate-id": .stringConvertible(id)])
+                
+                let roleJson = try required(throws: Errcase.arbitrateFailed, "将角色数据转为 Json 失败", category: .internal) {
+                    try input.role.wrappedJson()
                 }
+                
+                return (id, roleJson)
+            }.flatMap { (id, json) in
+                self.opa.query.data(
+                    from: "/rules" + policyPath(moduleId: input.moduleId, modelId: input.role.roleId, type: Role.self, format: .path) + "/allow",
+                    input: json,
+                    to: Bool.self
+                ).errCast(Errcase.arbitrateFailed, "OPA Query 用户身份 失败", category: .internal)
+                .map { res in
+                    logger.debug("Role 仲裁结果", metadata: ["result": .data(res), "arbitrate-id": .stringConvertible(id)])
+                    return (Result.IdKey(type: .role, moduleId: input.moduleId, id: input.role.roleId), res)
+                }
+            }
+            
             // 取得所有域权限的 policy
-            ] + input.domains.map { domainData in
+            let domainsAuth = input.domains.map { domainData in
                 eventLoop.submitResult { () throws(Errcase.ErrType) in
                     let id = UUID()
                     logger.debug("进行 Domain 仲裁", metadata: ["domain": .data(domainData), "arbitrate-id": .stringConvertible(id)])
-                    return id
-                }.flatMap { id in
+                    
+                    let domainJson = try required(throws: Errcase.arbitrateFailed, "将域数据转为 Json 失败", category: .internal) {
+                        try domainData.wrappedJson()
+                    }
+                    
+                    return (id, domainJson)
+                }.flatMap { (id, json) in
                     self.opa.query.data(
                         from: "/rules" + policyPath(moduleId: input.moduleId, modelId: domainData.domainId, type: Domain.self, format: .path) + "/allow",
-                        input: domainData,
-                        as: DomainData.self,
+                        input: json,
                         to: Bool.self
                     )
                     .errCast(Errcase.arbitrateFailed, "OPA Query 域权限 失败", category: .internal)
@@ -366,17 +374,23 @@ extension PrivilegeSystem {
                         return (Result.IdKey(type: .domain, moduleId: input.moduleId, id: domainData.domainId), res)
                     }
                 }
+            }
+            
             // 取得资源权限的 policy
-            } + input.privileges.map { privilegeData in
+            let privilegesAuth = input.privileges.map { privilegeData in
                 eventLoop.submitResult { () throws(Errcase.ErrType) in
                     let id = UUID()
                     logger.debug("进行 Privilege 仲裁", metadata: ["privilege": .data(privilegeData), "arbitrate-id": .stringConvertible(id)])
-                    return id
-                }.flatMap { id in
+                    
+                    let privilegeJson = try required(throws: Errcase.arbitrateFailed, "将资源权限数据转为 Json 失败", category: .internal) {
+                        try privilegeData.wrappedJson()
+                    }
+                    
+                    return (id, privilegeJson)
+                }.flatMap { (id, json) in
                     self.opa.query.data(
                         from: "/rules" + policyPath(moduleId: input.moduleId, modelId: privilegeData.privilegeId, type: "privilege", format: .path) + "/allow",
-                        input: privilegeData,
-                        as: PrivilegeData.self,
+                        input: json,
                         to: Bool.self
                     )
                     .errCast(Errcase.arbitrateFailed, "OPA Query 资源权限 失败", category: .internal)
@@ -385,10 +399,14 @@ extension PrivilegeSystem {
                         return (Result.IdKey(type: .privilege, moduleId: input.moduleId, id: privilegeData.privilegeId), res)
                     }
                 }
-            })
+            }
             
             // 并行执行所有的权限判断
-            .flatten(on: eventLoop).flatMap { (res: [(Result.IdKey, OPA.Answer<Bool?>)]) in
+            return (
+                [roleAuth] +
+                domainsAuth +
+                privilegesAuth
+            ).flatten(on: eventLoop).flatMap { (res: [(Result.IdKey, OPA.Answer<Bool?>)]) in
                 var result = Result(result: true, reports: [:])
                 for (k, r) in res {
                     guard let r = r.result else {
@@ -477,7 +495,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct ArbitrateData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct ArbitrateData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable, DateWrapperModel {
         let moduleId: UUID
         let domains: OrderedSet<DomainData>
         let role: RoleData
@@ -493,7 +511,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct RoleData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct RoleData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable, DateWrapperModel {
         let roleId: UUID
         let resource: [String: AnyCodable]
         let operation: String
@@ -509,7 +527,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct DomainData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct DomainData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable, DateWrapperModel {
         let domainId: UUID
         let resource: [String: AnyCodable]
         let operation: String
@@ -527,7 +545,7 @@ extension PrivilegeSystem.Arbitrator {
         }
     }
     
-    struct PrivilegeData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable {
+    struct PrivilegeData: Hashable, Encodable, Sendable, CustomStringConvertible, Loggerable, DateWrapperModel {
         let privilegeId: UUID
         let resource: [String: AnyCodable]
         let operation: String

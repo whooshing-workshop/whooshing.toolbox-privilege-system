@@ -98,8 +98,8 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
             moduleId: try container.decode(UUID.self, forKey: .moduleId),
             policy: try container.decode(String.self, forKey: .policy),
             parentId: try container.decode(UUID.self, forKey: .parentId),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
         

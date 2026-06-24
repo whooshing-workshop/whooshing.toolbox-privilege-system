@@ -70,7 +70,7 @@ package protocol __PivotDTO: DTO.Pivot, __DBModel
             id: container.decode(UUID.self, forKey: .id),
             primaryId: container.decode(UUID.self, forKey: .primaryId),
             secondaryId: container.decode(UUID.self, forKey: .secondaryId),
-            createdAt: container.decode(DateWrapper.self, forKey: .createdAt).date,
+            createdAt: container.decode(Date.self, forKey: .createdAt),
             model: nil
         )
     }
@@ -80,7 +80,7 @@ package protocol __PivotDTO: DTO.Pivot, __DBModel
         try container.encode(id, forKey: .id)
         try container.encode(primaryId, forKey: .primaryId)
         try container.encode(secondaryId, forKey: .secondaryId)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
     }
 }
 

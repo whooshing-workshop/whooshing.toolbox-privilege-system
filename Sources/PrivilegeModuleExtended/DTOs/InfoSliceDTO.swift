@@ -122,8 +122,8 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
             value: try container.decode(G.Model.Value.self, forKey: .value),
             order: try container.decode(Int16.self, forKey: .order),
             summary: try container.decodeIfPresent(String.self, forKey: .summary),
-            createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
-            updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
+            createdAt: try container.decode(Date.self, forKey: .createdAt),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
         
@@ -137,8 +137,8 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
         try container.encode(self.value, forKey: .value)
         try container.encode(self.order, forKey: .order)
         try container.encodeIfPresent(self.summary, forKey: .summary)
-        try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
-        try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
+        try container.encode(self.createdAt, forKey: .createdAt)
+        try container.encode(self.updatedAt, forKey: .updatedAt)
         
         try container.encode(self.$userInfo, forKey: .userInfo)
     }
