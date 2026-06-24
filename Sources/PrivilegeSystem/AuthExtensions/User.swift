@@ -1,5 +1,5 @@
 import Vapor
-import PrivilegeModels
+import PrivilegeModuleExtended
 
 // MARK: - ModelAuthenticatable
 

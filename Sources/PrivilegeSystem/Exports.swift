@@ -1,1 +1,1 @@
-@_exported import PrivilegeModels
+@_exported import PrivilegeModuleExtended
