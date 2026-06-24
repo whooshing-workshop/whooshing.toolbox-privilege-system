@@ -434,6 +434,8 @@ struct DTOCodableTests {
         let data = try JSONEncoder().encode(tokenJson)
         let token = try JSONDecoder().decode(QToken.self, from: data)
         
+        #expect(token.credential == Generator.credential)
+        #expect(token.token == Generator.token)
         #expect(token.$user.id == Generator.userId)
         #expect(token.valid == true)
         #expect(token.expireAfter == 7 * 24 * 60)
@@ -499,6 +501,10 @@ struct DTOCodableTests {
 }
 
 enum Generator: Sendable {
+    static let credential = "0rZ5GsQqysbOvm/Ya7+QhA=="
+    static let token = "4r0MHtw29zNz+DfyDo8Bzvn02kyoewqYNndSo38AuLY="
+    
+    static let tokenId = UUID(uuidString: "F387F90B-5E1B-44DF-A2CD-67F3C3AA2BC1")!
     static let userId = UUID(uuidString: "8FB83B07-7FA3-4954-A981-BA35AF74653C")!
     static let infoId = UUID(uuidString: "BE3BCBE7-B127-49DC-9752-BBD0E00D01C1")!
     static let emailIds = [UUID(uuidString: "A7851C53-B49C-403B-A7AA-825D71158304")!]
@@ -509,10 +515,10 @@ enum Generator: Sendable {
     
     static let fakeTokenData: [String: AnyCodable] = {
         [
-            "id": AnyCodable(UUID()),
+            "id": AnyCodable(tokenId),
             "user_id": AnyCodable(userId),
-            "credential": AnyCodable(Crypto.randomDataGenerate(length: 16).base64EncodedString()),
-            "token": AnyCodable(Crypto.Symm.makeKey().data.base64EncodedString()),
+            "credential": AnyCodable(credential),
+            "token": AnyCodable(token),
             "valid": true,
             "expire_after": AnyCodable(7 * 24 * 60),
             "created_at": AnyCodable(Date()),
