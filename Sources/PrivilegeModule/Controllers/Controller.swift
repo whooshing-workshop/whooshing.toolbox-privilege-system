@@ -14,13 +14,13 @@ package extension Controller {
         self.logger.derive(metadata: ["action-id": .stringConvertible(UUID())])
     }
     
-    func __create<T, G, M: PGModel>(
+    func __create<T, G, M: PGModel, A: Error>(
         on db: PGDatabase,
         dtos: OrderedSet<T>,
         label: String,
         errThrowing: E,
         modelBuilder: @Sendable @escaping (T) -> Res<M, E>,
-        dtoBuilder: @Sendable @escaping (M) -> Res<G, E>
+        dtoBuilder: @Sendable @escaping (M) -> Result<G, A>
     ) -> EventLoopRes<[G], E> {
         do {
             let models = try dtos.map { try modelBuilder($0).get() }
@@ -117,13 +117,13 @@ package extension Controller {
         }
     }
     
-    func __update<T: DTOUpdater>(
+    func __update<T: DTOUpdater, A: Error>(
         on db: PGDatabase,
         updater: T,
         label: String,
         errThrowing: E,
         filterBuilder: @Sendable @escaping (QueryBuilder<T.DBModel>) -> QueryBuilder<T.DBModel>,
-        dtoBuilder: @Sendable @escaping (T.DBModel) -> Res<T.QueriedDTO, E>
+        dtoBuilder: @Sendable @escaping (T.DBModel) -> Result<T.QueriedDTO, A>
     ) -> EventLoopRes<T.QueriedDTO, E> {
         guard updater.updates.count > 0 else {
             return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external()))

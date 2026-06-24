@@ -1,0 +1,54 @@
+import Foundation
+import PrivilegeModule
+
+public extension __SDBM {
+    final class Domain: PGModel, @unchecked Sendable {
+        
+        public static let name = "domains"
+        
+        public struct Fields: PGFields {
+            let id = PGField("id", .uuid)                               .primary
+            let name = PGField("name", .string)
+            let summary = PGField("summary", .string)
+            let createdAt = PGField("created_at", .datetime)            .required
+            let updatedAt = PGField("updated_at", .datetime)            .required
+            
+            public init() {}
+        }
+        
+        public static let fields = Fields()
+        
+        @ID(key: .id)                                   public var id: UUID?
+        
+        @Field(fields.name)                             package var name: String?
+        @Field(fields.summary)                          package var summary: String?
+        
+        @Siblings(
+            through: UserDomainPivot.self,
+            from: \.$secondaryModel,
+            to: \.$primaryModel
+        )                                               package var users: [User]
+        @Siblings(
+            through: DomainGroupPivot.self,
+            from: \.$primaryModel,
+            to: \.$secondaryModel
+        )                                               package var groups: [Group]
+        @Children(
+            for: \DomainPolicy.$parent
+        )                                               package var policies: [DomainPolicy]
+        
+        @Timestamp(fields.createdAt, on: .create)       package var createdAt: Date!
+        @Timestamp(fields.updatedAt, on: .update)       package var updatedAt: Date!
+        
+        public init() {}
+        
+        package func fill() -> Self {
+            self.$users.fromId = self.id
+            self.$groups.fromId = self.id
+            self.$policies.fromId = self.id
+            return self
+        }
+        
+        public typealias MIG = DefaultMIG<Domain>
+    }
+}

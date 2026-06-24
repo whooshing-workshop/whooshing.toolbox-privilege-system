@@ -379,8 +379,10 @@ public extension PrivilegeSystem.GroupController {
             }.flatMapResult { left, right in
                 QGroup.make(from: left).flatMap { l in
                     guard let r = right else { return .success((l, nil)) }
-                    return QGroup.make(from: r).map { r in (l, r) }
-                }
+                    return QGroup
+                        .make(from: r)
+                        .map { r in (l, r) }
+                }.mapError(as: PrivilegeSystem.Errcase.groupMoveFailed, "从数据库模型创建 QGroup 失败", category: .inherit)
             }.flatMap { left, right in
                 self.__move(db: db, .init(left: left, right: right))
             }

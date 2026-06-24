@@ -19,6 +19,7 @@ let package = Package(
     ],
     products: [
         .library( name: "ResourceMacros", targets: ["ResourceMacros"] ),
+        .library( name: "PrivilegeModuleExtended", targets: ["PrivilegeModuleExtended", "ResourceMacros"] ),
         .library( name: "PrivilegeSystem", targets: ["PrivilegeSystem", "ResourceMacros"] ), // 必须显式声明依赖 ResourceMacros，否则编译会报错：Target MacroImplements imports another target (SwiftCompilerPlugin) in the package without declaring it a dependency.
         .library( name: "PrivilegeModule", targets: ["PrivilegeModule", "ResourceMacros"] )
     ],
@@ -62,16 +63,6 @@ let package = Package(
             ]
         ),
         .target(
-            name: "PrivilegeSystem",
-            dependencies: [
-                .target(name: "PrivilegeModule")
-            ],
-            resources: [
-                .copy("SQLFunctions"),
-                .copy("Regos")
-            ]
-        ),
-        .target(
             name: "PrivilegeModule",
             dependencies: [
                 .target(name: "DTOBuilder"),
@@ -79,6 +70,22 @@ let package = Package(
                 .product(name: "Collections", package: "swift-collections"),
                 .product(name: "Cryptos", package: "whooshing.toolbox-basic"),
                 .product(name: "OPA", package: "whooshing.toolbox-opa")
+            ]
+        ),
+        .target(
+            name: "PrivilegeModuleExtended",
+            dependencies: [
+                .target(name: "PrivilegeModule")
+            ]
+        ),
+        .target(
+            name: "PrivilegeSystem",
+            dependencies: [
+                .target(name: "PrivilegeModuleExtended")
+            ],
+            resources: [
+                .copy("SQLFunctions"),
+                .copy("Regos")
             ]
         ),
         .macro(

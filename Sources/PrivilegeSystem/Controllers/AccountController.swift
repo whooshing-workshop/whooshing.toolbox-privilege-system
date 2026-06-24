@@ -78,7 +78,9 @@ extension PrivilegeSystem {
                         throw Errcase.userRegisterFailed.d("要注册的用户已存在", category: .external()).metadata(["user": .data(user)])
                     }
                 }.flatMapThrowing { () throws(Errcase.ErrType) -> __SDBM.User in
-                    try user.raw().get()
+                    try required(throws: Errcase.userRegisterFailed, "创建 User 模型失败", category: .inherit) {
+                        try user.raw().get()
+                    }
                 }.flatMap { user in
                     user.save(on: db)
                         .withError(Errcase.userRegisterFailed, "将用户存入数据库时失败", category: .internal)
