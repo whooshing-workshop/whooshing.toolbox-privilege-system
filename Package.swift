@@ -103,6 +103,8 @@ let package = Package(
                 .target(name: "PrivilegeSystem"),
                 .target(name: "PrivilegeModule"),
                 .target(name: "ResourceMacros"),
+                .target(name: "DTOBuilder"),
+                .target(name: "PrivilegeModuleExtended"),
                 .target(name: "Query"),
                 .target(name: "MacroImplements"),
                 .product(name: "VaporTesting", package: "Whooshing-Vapor"),

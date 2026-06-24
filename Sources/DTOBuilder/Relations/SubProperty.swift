@@ -53,6 +53,12 @@ final public class SubProperty<From, To>: @unchecked Sendable
         self.parentKeyPath = parentKey
     }
     
+    public func inject(_ value: To) {
+        lock.withLock {
+            __value = value
+        }
+    }
+    
     public func get(on system: Query.System) -> EventLoopRes<To, DTO.Errcase> {
         To.query(on: system)
             .filter(parentKeyPath.appending(path: \.id) == self.fromId)

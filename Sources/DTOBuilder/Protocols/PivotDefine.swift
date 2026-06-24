@@ -16,7 +16,7 @@ public extension DTO {
         case primaryId = "primary_id"
         case secondaryId = "secondary_id"
         case createdAt = "create_at"
-        case role // 这是为了 PUserTGroup 单独设置的，其他类型均不需要
+        case roles // 这是为了 PUserTGroup 单独设置的，其他类型均不需要
     }
     
     protocol Pivot: DTO.Model, Query.Queriable where CodingKeys == PivotCodingKeys {

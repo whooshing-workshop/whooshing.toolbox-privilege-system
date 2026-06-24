@@ -70,6 +70,19 @@ final public class SiblingProperty<From, To, Through>: @unchecked Sendable
         self.toKeyPath = to
     }
     
+    public func inject(_ value: [To]) {
+        lock.withLock {
+            __values = value
+            __ids = value.map { $0.id }
+        }
+    }
+    
+    public func inject(ids value: [UUID]) {
+        lock.withLock {
+            __ids = value
+        }
+    }
+    
     public func getIdsOnly(on system: Query.System) -> EventLoopRes<[UUID], DTO.Errcase> {
         Through.query(on: system)
             .filter(self.fromKeyPath == fromId)
@@ -136,10 +149,29 @@ extension SiblingProperty: DTO.Property {
         ]}
     }
     
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.loaded, forKey: .loaded)
+        try container.encodeIfPresent(self.value, forKey: .value)
+        try container.encode(self.idsLoaded, forKey: .idsLoaded)
+        try container.encodeIfPresent(self.__ids, forKey: .ids)
+    }
+    
     public static var logName: String { "Sibling<\(From.logName), \(To.logName)>" }
+    
+    package var value: [To]? {
+        lock.withLock { __values }
+    }
+    
+    public func inject(from container: KeyedDecodingContainer<DTO.PropertyCodingKeys>) throws {
+        if try container.decode(Bool.self, forKey: .loaded) {
+            self.inject(try container.decode(Value.self, forKey: .value))
+        } else {
+            if try container.decode(Bool.self, forKey: .idsLoaded) {
+                self.inject(ids: try container.decode([UUID].self, forKey: .ids))
+            }
+        }
+    }
 }
 
-extension SiblingProperty: __Property {
-    // 仅为占位符，为了符合 __Property 协议
-    package typealias Value = String
-}
+extension SiblingProperty: __Property {}

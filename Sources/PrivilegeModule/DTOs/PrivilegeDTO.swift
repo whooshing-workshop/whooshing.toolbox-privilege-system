@@ -130,6 +130,8 @@ public extension PM {
                 updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
                 model: nil
             )
+            
+            try self.$resources.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .resources))
         }
         
         public func encode(to encoder: any Encoder) throws {

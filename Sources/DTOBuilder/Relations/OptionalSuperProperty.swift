@@ -56,6 +56,13 @@ final public class OptionalSuperProperty<From, To>: @unchecked Sendable
     
     public init() {}
     
+    public func inject(_ value: To?) {
+        lock.withLock {
+            __loaded = true
+            __value = value
+        }
+    }
+    
     public func get(on system: Query.System) -> EventLoopRes<To?, DTO.Errcase> {
         guard let sys = system as? __QuerySystem else {
             fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")

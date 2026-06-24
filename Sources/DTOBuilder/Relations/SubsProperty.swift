@@ -60,6 +60,12 @@ final public class SubsProperty<From, To>: @unchecked Sendable
         self.parentKeyPath = .optional(parentKey)
     }
     
+    public func inject(_ value: [To]) {
+        lock.withLock {
+            __values = value
+        }
+    }
+    
     public func get(on system: Query.System) -> EventLoopRes<[To], DTO.Errcase> {
         let builder = switch parentKeyPath {
         case .required(let keyPath):

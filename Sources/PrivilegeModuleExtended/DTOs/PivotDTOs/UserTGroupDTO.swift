@@ -93,8 +93,22 @@ public struct UserTGroup: DTO.Pivot, DTO.Queried {
         .secondaryId: .init(obj: self.secondaryId),
         .createdAt: .init(obj: self.createdAt),
         
-        .role: .init(obj: self.$roles)
+        .roles: .init(obj: self.$roles)
     ]}
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self = try Self.init(
+            id: container.decode(UUID.self, forKey: .id),
+            primaryId: container.decode(UUID.self, forKey: .primaryId),
+            secondaryId: container.decode(UUID.self, forKey: .secondaryId),
+            createdAt: container.decode(DateWrapper.self, forKey: .createdAt).date,
+            model: nil
+        )
+        
+        try self.$roles.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .roles))
+    }
     
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
@@ -103,7 +117,7 @@ public struct UserTGroup: DTO.Pivot, DTO.Queried {
         try container.encode(secondaryId, forKey: .secondaryId)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         
-        try container.encode(self.$roles, forKey: .role)
+        try container.encode(self.$roles, forKey: .roles)
     }
 }
 

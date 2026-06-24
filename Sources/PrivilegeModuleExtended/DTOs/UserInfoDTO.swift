@@ -93,7 +93,7 @@ public struct QUserInfo: DTO.Queried {
         case updatedAt = "updated_at"
         
         case user
-        case alternateEmails
+        case alternateEmails = "alternate_emails"
         case phones
         case addresses
     }
@@ -137,6 +137,11 @@ public struct QUserInfo: DTO.Queried {
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
         )
+        
+        try self.$user.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .user))
+        try self.$alternateEmails.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .alternateEmails))
+        try self.$phones.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .phones))
+        try self.$addresses.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .addresses))
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -151,9 +156,9 @@ public struct QUserInfo: DTO.Queried {
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
         
         try container.encode(self.$user, forKey: .user)
-        try container.encode(self.alternateEmails, forKey: .alternateEmails)
-        try container.encode(self.phones, forKey: .phones)
-        try container.encode(self.addresses, forKey: .addresses)
+        try container.encode(self.$alternateEmails, forKey: .alternateEmails)
+        try container.encode(self.$phones, forKey: .phones)
+        try container.encode(self.$addresses, forKey: .addresses)
     }
 }
 

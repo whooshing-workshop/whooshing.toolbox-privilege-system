@@ -126,6 +126,8 @@ public struct QInfoSlice<G: UserInfoModel>: DTO.Queried {
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
         )
+        
+        try self.$userInfo.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .userInfo))
     }
     
     public func encode(to encoder: any Encoder) throws {

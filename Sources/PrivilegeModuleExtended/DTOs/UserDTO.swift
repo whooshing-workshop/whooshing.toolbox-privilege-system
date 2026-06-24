@@ -130,6 +130,12 @@ public struct QUser: DTO.Queried {
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
         )
+        
+        try self.$info.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .info))
+        try self.$token.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .token))
+        try self.$groups.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .groups))
+        try self.$roles.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .roles))
+        try self.$domains.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .domains))
     }
     
     public func encode(to encoder: any Encoder) throws {

@@ -243,6 +243,8 @@ public struct QToken: DTO.Queried {
             createdAt: try container.decode(DateWrapper.self, forKey: .createdAt).date,
             model: nil
         )
+        
+        try self.$user.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .user))
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -254,6 +256,8 @@ public struct QToken: DTO.Queried {
         try container.encode(self.valid, forKey: .valid)
         try container.encode(self.expireAfter, forKey: .expireAfter)
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
+        
+        try container.encode(self.$user, forKey: .user)
     }
 }
 

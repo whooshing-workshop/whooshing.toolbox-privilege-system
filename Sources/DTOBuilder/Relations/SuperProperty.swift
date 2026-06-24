@@ -49,6 +49,12 @@ final public class SuperProperty<From, To>: @unchecked Sendable
     
     public init() {}
     
+    public func inject(_ value: To) {
+        lock.withLock {
+            __value = value
+        }
+    }
+    
     public func get(on system: Query.System) -> EventLoopRes<To, DTO.Errcase> {
         To.query(on: system)
             .filter(\.id == id)

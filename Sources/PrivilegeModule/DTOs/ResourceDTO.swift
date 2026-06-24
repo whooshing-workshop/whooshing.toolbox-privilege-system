@@ -71,6 +71,8 @@ extension PM.QResource: Codable {
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
         )
+        
+        try self.$privileges.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .privileges))
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -80,7 +82,7 @@ extension PM.QResource: Codable {
         try container.encode(DateWrapper(self.createdAt), forKey: .createdAt)
         try container.encode(DateWrapper(self.updatedAt), forKey: .updatedAt)
         
-        try container.encode(privileges, forKey: .privileges)
+        try container.encode($privileges, forKey: .privileges)
     }
 }
 

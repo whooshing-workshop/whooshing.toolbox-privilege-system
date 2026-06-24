@@ -102,6 +102,8 @@ public struct QPolicy<G: PolicyType>: DTO.Queried {
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
         )
+        
+        try self.$parent.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .parent))
     }
     
     public func encode(to encoder: any Encoder) throws {

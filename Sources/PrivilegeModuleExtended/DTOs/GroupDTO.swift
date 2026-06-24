@@ -148,6 +148,12 @@ public struct QGroup: DTO.Queried {
             updatedAt: try container.decode(Date.self, forKey: .updatedAt),
             model: nil
         )
+        
+        try self.$parent.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .parent))
+        try self.$childs.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .childs))
+        try self.$users.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .users))
+        try self.$roles.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .roles))
+        try self.$domains.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .domains))
     }
     
     public func encode(to encoder: any Encoder) throws {
@@ -159,7 +165,7 @@ public struct QGroup: DTO.Queried {
         try container.encode(self.createdAt, forKey: .createdAt)
         try container.encode(self.updatedAt, forKey: .updatedAt)
         
-        try container.encodeIfPresent(self.$parent, forKey: .parent)
+        try container.encode(self.$parent, forKey: .parent)
         try container.encode(self.$childs, forKey: .childs)
         try container.encode(self.$users, forKey: .users)
         try container.encode(self.$roles, forKey: .roles)

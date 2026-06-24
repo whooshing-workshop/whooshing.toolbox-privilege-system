@@ -12,7 +12,7 @@ import Query
 public extension DTO {
     
     enum PropertyCodingKeys: String, DTO.CodingKey {
-        case idsLoaded
+        case idsLoaded = "ids_loaded"
         case loaded
         case value
         case id
@@ -23,9 +23,12 @@ public extension DTO {
 }
 
 package protocol __Property: DTO.Property {
-    associatedtype Value: Hashable, Sendable, Encodable
+    associatedtype Value: Hashable, Sendable, Codable
     var loaded: Bool { get }
     var value: Value? { get }
+    
+    func inject(_ value: Value)
+    func inject(from container: KeyedDecodingContainer<DTO.PropertyCodingKeys>) throws
     
     // 有些 property 需要额外的 id 属性，例如 SuperProperty，需要存储外键 id
     // 该 hasId 若为 false，则不将 contentId 编码到 Encodable 中，也不参与 log 打印以及 json 的转换
@@ -59,6 +62,13 @@ extension __Property {
         try container.encodeIfPresent(self.value, forKey: .value)
         if Self.hasId {
             try container.encodeIfPresent(self.contentId, forKey: .id)
+        }
+    }
+    
+    public func inject(from container: KeyedDecodingContainer<DTO.PropertyCodingKeys>) throws {
+        let loaded = try container.decode(Bool.self, forKey: .loaded)
+        if loaded {
+            self.inject(try container.decode(Value.self, forKey: .value))
         }
     }
 }

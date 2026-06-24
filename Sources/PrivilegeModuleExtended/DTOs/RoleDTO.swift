@@ -126,6 +126,11 @@ public struct QRole: DTO.Queried {
             updatedAt: try container.decode(DateWrapper.self, forKey: .updatedAt).date,
             model: nil
         )
+        
+        try self.$users.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .users))
+        try self.$groups.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .groups))
+        try self.$userInGroups.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .userInGroups))
+        try self.$policies.inject(from: container.nestedContainer(keyedBy: DTO.PropertyCodingKeys.self, forKey: .policies))
     }
     
     public func encode(to encoder: any Encoder) throws {
