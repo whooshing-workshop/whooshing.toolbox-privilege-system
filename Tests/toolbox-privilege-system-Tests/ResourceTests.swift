@@ -173,7 +173,7 @@ struct ResourceTests {
         
         do {
             // 测试查询
-            queriedFiles = try await PModule.__DBM.ResourceModel<FileResource>.query(on: m.db)
+            queriedFiles = try await PModule.__DBM.ResourceModel<FileResource>.query(on: m.pgDB)
                 .filter(\.$id ~~ [createdFiles[0].id, createdFiles[1].id])
                 .count()
         } catch {
@@ -229,10 +229,10 @@ struct ResourceTests {
             OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
 
-        let privilegeModel = try await privilegeDTO.model(from: m.db).get()
+        let privilegeModel = try await privilegeDTO.model(from: m.pgDB).get()
         
         // 验证 Attach
-        let siblings = try await privilegeModel.$resources.get(on: m.db)
+        let siblings = try await privilegeModel.$resources.get(on: m.pgDB)
         #expect(siblings.contains(where: { $0.id == anyResourceDTO.id }))
         
         // 测试 Detach
@@ -240,7 +240,7 @@ struct ResourceTests {
             OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
         }
         
-        let siblingsAfter = try await privilegeModel.$resources.get(reload: true, on: m.db)
+        let siblingsAfter = try await privilegeModel.$resources.get(reload: true, on: m.pgDB)
         
         #expect(!siblingsAfter.contains(where: { $0.id == anyResourceDTO.id }))
     }
@@ -415,7 +415,7 @@ struct ResourceTests {
         try await m.resource.delete(ids: [resourceDTO.id])
         
         // 验证删除
-        let count = try await PModule.__DBM.ResourceModel<FileResource>.query(on: m.db)
+        let count = try await PModule.__DBM.ResourceModel<FileResource>.query(on: m.pgDB)
             .filter(\.$id == resourceDTO.id)
             .count()
         

@@ -133,7 +133,7 @@ struct RoleTesting {
         let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
         for role in roles {
-            let policies = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+            let policies = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
                 .filter(\.$parent.$id == role.id)
                 .all()
             
@@ -146,7 +146,7 @@ struct RoleTesting {
         let (s, m) = try await TestingShared.getSystem()
         let targetId = Self.ids[13] // DevOpsEngineer
 
-        let existing = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+        let existing = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
             .filter(\.$parent.$id == targetId).all()
         for p in existing {
             let qp = try QPolicy<Role>.make(from: p).get()
@@ -178,7 +178,7 @@ struct RoleTesting {
         let (s, m) = try await TestingShared.getSystem()
         let targetId = Self.ids[12] // ContentReviewer
 
-        let before = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+        let before = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
             .filter(\.$parent.$id == targetId).all()
         guard let first = before.first else {
             Issue.record("RT.ids[12](ContentReviewer) 应有策略")
@@ -188,13 +188,13 @@ struct RoleTesting {
         let qp = try QPolicy<Role>.make(from: first).get()
         try await s.policy.delete(from: Role.self, policy: qp => targetId)
 
-        let after = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+        let after = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
             .filter(\.$parent.$id == targetId).count()
         #expect(after == before.count - 1, "删除后应少 1 条")
 
         let def = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
         try await s.policy.create(to: Role.self) { OrderedSet([def]) => targetId }
-        let restored = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+        let restored = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
             .filter(\.$parent.$id == targetId).count()
         #expect(restored == before.count, "恢复后数量应与原来一致")
     }
@@ -222,21 +222,21 @@ struct RoleTesting {
         
         // 1. Role <-> User
         try await s.role.appoint { OrderedSet([role]) => OrderedSet([user]) }
-        let c1 = try await __SDBM.UserRolePivot.query(on: s.db)
+        let c1 = try await __SDBM.UserRolePivot.query(on: s.pgDB)
             .count()
         #expect(c1 == 1)
         try await s.role.dismiss { OrderedSet([role]) => OrderedSet([user]) }
-        let c2 = try await __SDBM.UserRolePivot.query(on: s.db)
+        let c2 = try await __SDBM.UserRolePivot.query(on: s.pgDB)
             .count()
         #expect(c2 == 0)
 
         // 2. Role <-> Group
         try await s.role.appoint { OrderedSet([role]) => OrderedSet([group]) }
-        let c3 = try await __SDBM.RoleGroupPivot.query(on: s.db)
+        let c3 = try await __SDBM.RoleGroupPivot.query(on: s.pgDB)
             .count()
         #expect(c3 == 1)
         try await s.role.dismiss { OrderedSet([role]) => OrderedSet([group]) }
-        let c4 = try await __SDBM.RoleGroupPivot.query(on: s.db)
+        let c4 = try await __SDBM.RoleGroupPivot.query(on: s.pgDB)
             .count()
         #expect(c4 == 0)
 
@@ -245,11 +245,11 @@ struct RoleTesting {
         try await s.group.join { OrderedSet([user]) => OrderedSet([group]) }
         let uig = try await s.group.query(relations: [.init(userId: user.id, groupId: group.id)])
         try await s.role.appoint { OrderedSet([role]) => OrderedSet(uig) }
-        let c5 = try await __SDBM.RoleUserInGroupPivot.query(on: s.db)
+        let c5 = try await __SDBM.RoleUserInGroupPivot.query(on: s.pgDB)
             .count()
         #expect(c5 == 1)
         try await s.role.dismiss { OrderedSet([role]) => OrderedSet(uig) }
-        let c6 = try await __SDBM.RoleUserInGroupPivot.query(on: s.db)
+        let c6 = try await __SDBM.RoleUserInGroupPivot.query(on: s.pgDB)
             .count()
         #expect(c6 == 0)
         
@@ -291,7 +291,7 @@ struct RoleTesting {
     func cleanup_AllRolesHavePolicies() async throws {
         let (s, _) = try await TestingShared.getSystem()
         for (i, roleId) in Self.ids.enumerated() {
-            let count = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+            let count = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
                 .filter(\.$parent.$id == roleId).count()
             if count < 1 {
                 Issue.record("RT.ids[\(i)] 角色应至少有 1 条策略，当前 \(count) 条")

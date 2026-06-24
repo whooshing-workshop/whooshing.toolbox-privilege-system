@@ -63,7 +63,7 @@ public final class PrivilegeSystem: Sendable {
     /// 执行数据库和 OPA 操作所使用的事件循环。
     public let eventLoop: EventLoop
     let dbs: Databases
-    package let db: PGDatabase
+    package let pgDB: PGDatabase
     let opa: OPA
     
     /// 创建并加载权限系统实例。
@@ -148,7 +148,7 @@ public final class PrivilegeSystem: Sendable {
         }
         
         self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: initLogger.derive(subId: "opa")))
-        self.db = db
+        self.pgDB = db
         
         self.account = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "account"))
         self.infoSlice = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "infoslice"))
@@ -185,7 +185,7 @@ extension PrivilegeSystem: Query.System {
     /// - Parameter type: 要查询的 DTO 类型。大多数情况下 Swift 可以自动推断。
     /// - Returns: 针对该 DTO 配置好的 `Query.Builder`。
     public func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
-        .init(query: T.Model.query(on: db))
+        .init(query: T.Model.query(on: pgDB))
     }
 }
 

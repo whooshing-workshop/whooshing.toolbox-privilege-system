@@ -18,7 +18,7 @@ extension PrivilegeSystem.AccountController {
 
     public func authenticate(
         token: EncryptedToken
-    ) async throws(PrivilegeSystem.Errcase.ErrType) -> SendableSymmKey {
+    ) async throws(PrivilegeSystem.Errcase.ErrType) -> AuthData {
         try await authenticate(token: token).get()
     }
 

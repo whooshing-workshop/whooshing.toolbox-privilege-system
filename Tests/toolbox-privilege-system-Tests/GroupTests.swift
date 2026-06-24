@@ -105,7 +105,7 @@ struct GroupTesting {
         
         // join
         try await s.group.join { OrderedSet([user]) => OrderedSet([group]) }
-        let count1 = try await __SDBM.UserGroupPivot.query(on: s.db).count()
+        let count1 = try await __SDBM.UserGroupPivot.query(on: s.pgDB).count()
         #expect(count1 == 1)
         
         // query(relations:) 验证
@@ -116,7 +116,7 @@ struct GroupTesting {
         
         // kick 后验证清理
         try await s.group.kick { OrderedSet([user]) => OrderedSet([group]) }
-        let count2 = try await __SDBM.UserGroupPivot.query(on: s.db).count()
+        let count2 = try await __SDBM.UserGroupPivot.query(on: s.pgDB).count()
         #expect(count2 == 0)
     }
     
@@ -137,12 +137,12 @@ struct GroupTesting {
         let (s, _) = try await TestingShared.getSystem()
 
         // 所有群组创建后，group_paths 中应有 groups.count 条自循环路径
-        let totalPaths = try await __SDBM.Group.Path.query(on: s.db).count()
+        let totalPaths = try await __SDBM.Group.Path.query(on: s.pgDB).count()
         #expect(totalPaths == Self.groups.count,
                 "创建 \(Self.groups.count) 个群组后 group_paths 应有等量自循环路径")
 
         // 验证每条自循环路径均 depth=0 且 ancestor==descendant
-        let selfLoops = try await __SDBM.Group.Path.query(on: s.db)
+        let selfLoops = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$depth == 0)
             .all()
         #expect(selfLoops.count == Self.groups.count, "所有路径应均为 depth=0 自循环")
@@ -152,7 +152,7 @@ struct GroupTesting {
         }
 
         // 验证特定群组的自循环路径存在
-        let adminSelf = try await __SDBM.Group.Path.query(on: s.db)
+        let adminSelf = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .filter(\.$descendant.$id == GT.ids[0])
             .first()
@@ -171,17 +171,17 @@ struct GroupTesting {
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))  // AdministratorGroup
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
 
-        let pathsBefore = try await __SDBM.Group.Path.query(on: s.db).count()
+        let pathsBefore = try await __SDBM.Group.Path.query(on: s.pgDB).count()
 
         // move: child => parent（可选类型）
         try await s.group.move(child.id => parent.id)
 
         // group_paths 应新增 1 条路径（parent.ancestor → child.descendant，depth=1）
-        let pathsAfter = try await __SDBM.Group.Path.query(on: s.db).count()
+        let pathsAfter = try await __SDBM.Group.Path.query(on: s.pgDB).count()
         #expect(pathsAfter == pathsBefore + 1, "move 单层后 group_paths 应增加 1 条路径")
 
         // 验证具体路径：ancestor=GT.ids[0], descendant=GT.ids[6], depth=1
-        let direct = try await __SDBM.Group.Path.query(on: s.db)
+        let direct = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .filter(\.$descendant.$id == GT.ids[6])
             .first()
@@ -198,7 +198,7 @@ struct GroupTesting {
 
         try await s.group.move(child.id => parent.id)
 
-        let direct = try await __SDBM.Group.Path.query(on: s.db)
+        let direct = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .filter(\.$descendant.$id == GT.ids[7])
             .first()
@@ -215,7 +215,7 @@ struct GroupTesting {
 
         try await s.group.move(child.id => parent.id)
 
-        let direct = try await __SDBM.Group.Path.query(on: s.db)
+        let direct = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[1])
             .filter(\.$descendant.$id == GT.ids[8])
             .first()
@@ -233,20 +233,20 @@ struct GroupTesting {
         // 此时 GT.ids[0] 已经是 GT.ids[6] 和 GT.ids[7] 的 parent
         // group_paths 中以 GT.ids[0] 为 ancestor 的路径：
         //   [0→0 depth=0], [0→6 depth=1], [0→7 depth=1] → 3 条
-        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .all()
         #expect(pathsFromAdmin.count == 3,
                 "AdministratorGroup 为起点的路径应有 3 条（自循环+2个子）")
 
         // GT.ids[1] 的路径：[1→1 depth=0], [1→8 depth=1] → 2 条
-        let pathsFromOp = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsFromOp = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[1])
             .all()
         #expect(pathsFromOp.count == 2, "OperatorGroup 为起点的路径应有 2 条")
 
         // 孤立群组 GT.ids[3]（BannedUsers）应只有自循环
-        let pathsBanned = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsBanned = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[3])
             .all()
         #expect(pathsBanned.count == 1, "BannedUsers 应只有自循环路径")
@@ -271,14 +271,14 @@ struct GroupTesting {
         //   0 → 9 depth=2（AdministratorGroup 到 QualityAssurance）
         //   6 → 9 depth=1（SalesTeam 到 QualityAssurance）
         //   9 → 9 depth=0（自循环）
-        let path_0_9 = try await __SDBM.Group.Path.query(on: s.db)
+        let path_0_9 = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .filter(\.$descendant.$id == GT.ids[9])
             .first()
         #expect(path_0_9 != nil, "应存在 AdministratorGroup → QualityAssurance 的跨层路径")
         #expect(path_0_9?.depth == 2, "跨层路径 depth 应为 2")
 
-        let path_6_9 = try await __SDBM.Group.Path.query(on: s.db)
+        let path_6_9 = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[6])
             .filter(\.$descendant.$id == GT.ids[9])
             .first()
@@ -286,7 +286,7 @@ struct GroupTesting {
         #expect(path_6_9?.depth == 1)
 
         // GT.ids[0] 为 ancestor 的总路径应为：0→0, 0→6, 0→7, 0→9 → 4 条
-        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .all()
         #expect(pathsFromAdmin.count == 4,
@@ -308,27 +308,27 @@ struct GroupTesting {
         try await s.group.move(child => QGroup?.none)
 
         // 旧链应被清除：不应再有 0→9 或 6→9 的路径
-        let path_0_9 = try await __SDBM.Group.Path.query(on: s.db)
+        let path_0_9 = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .filter(\.$descendant.$id == GT.ids[9])
             .first()
         #expect(path_0_9 == nil, "脱离后 AdministratorGroup → QualityAssurance 路径应被清除")
 
-        let path_6_9 = try await __SDBM.Group.Path.query(on: s.db)
+        let path_6_9 = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[6])
             .filter(\.$descendant.$id == GT.ids[9])
             .first()
         #expect(path_6_9 == nil, "脱离后 SalesTeam → QualityAssurance 路径应被清除")
 
         // GT.ids[9] 应只剩自循环
-        let selfLoop = try await __SDBM.Group.Path.query(on: s.db)
+        let selfLoop = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[9])
             .all()
         #expect(selfLoop.count == 1, "脱离后 QualityAssurance 应只剩自循环路径")
         #expect(selfLoop[0].depth == 0)
 
         // GT.ids[0] 的路径恢复为 3 条（0→0, 0→6, 0→7）
-        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .all()
         #expect(pathsFromAdmin.count == 3,
@@ -350,7 +350,7 @@ struct GroupTesting {
         try await s.group.move(child => Optional(newParent))
 
         // 新链：1→9 depth=1
-        let path_1_9 = try await __SDBM.Group.Path.query(on: s.db)
+        let path_1_9 = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[1])
             .filter(\.$descendant.$id == GT.ids[9])
             .first()
@@ -358,7 +358,7 @@ struct GroupTesting {
         #expect(path_1_9?.depth == 1)
 
         // 旧链不应存在（0→9 在前一步已被清除，不应重现）
-        let path_0_9 = try await __SDBM.Group.Path.query(on: s.db)
+        let path_0_9 = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .filter(\.$descendant.$id == GT.ids[9])
             .first()
@@ -393,7 +393,7 @@ struct GroupTesting {
         #expect(didThrow, "将父群组移入子群组应抛出错误，不应成功执行")
 
         // group_paths 不应发生改变，AdministratorGroup 路径条数保持 3 条
-        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsFromAdmin = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[0])
             .all()
         #expect(pathsFromAdmin.count == 3, "非法 move 后 paths 不应改变")
@@ -442,7 +442,7 @@ struct GroupTesting {
         //   TempParent→TempParent (0), TempParent→TempChild1 (1), TempParent→TempChild2 (1)
         //   TempChild1→TempChild1 (0), TempChild2→TempChild2 (0)
         // 共 5 条新路径
-        let pathsBefore = try await __SDBM.Group.Path.query(on: s.db).count()
+        let pathsBefore = try await __SDBM.Group.Path.query(on: s.pgDB).count()
 
         let tempParentId = try #require(created.first(where: { $0.name == "TempParent" })?.id)
 
@@ -457,12 +457,12 @@ struct GroupTesting {
         }
 
         // group_paths：3 个群组的 5 条路径应全部清除
-        let pathsAfter = try await __SDBM.Group.Path.query(on: s.db).count()
+        let pathsAfter = try await __SDBM.Group.Path.query(on: s.pgDB).count()
         #expect(pathsAfter == pathsBefore - 5,
                 "删除临时父子树（3个群组）后 group_paths 应减少 5 条")
 
         // GT.ids[1]（OperatorGroup）及 GT.ids[8] 的路径不应受影响
-        let pathsFromOp = try await __SDBM.Group.Path.query(on: s.db)
+        let pathsFromOp = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == GT.ids[1])
             .all()
         #expect(pathsFromOp.count == 2, "OperatorGroup 的路径不应受临时树删除影响")
@@ -479,7 +479,7 @@ struct GroupTesting {
         let tempId = try #require(temp.first?.id)
 
         // 创建后应有自循环路径
-        let pathAfterCreate = try await __SDBM.Group.Path.query(on: s.db)
+        let pathAfterCreate = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == tempId)
             .all()
         #expect(pathAfterCreate.count == 1, "孤立群组创建后应有 1 条自循环路径")
@@ -498,7 +498,7 @@ struct GroupTesting {
         #expect(countAfter == countBefore - 1, "删除后群组数量应减少 1")
 
         // group_paths 中该群组的自循环路径也应被清除
-        let pathAfterDelete = try await __SDBM.Group.Path.query(on: s.db)
+        let pathAfterDelete = try await __SDBM.Group.Path.query(on: s.pgDB)
             .filter(\.$ancestor.$id == tempId)
             .first()
         #expect(pathAfterDelete == nil, "群组删除后 group_paths 中的自循环路径应一并清除")

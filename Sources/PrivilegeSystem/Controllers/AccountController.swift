@@ -1,5 +1,6 @@
+import Vapor
 import Foundation
-import PrivilegeModule
+import PrivilegeModuleExtended
 
 extension PrivilegeSystem {
     /// 权限服务层，提供权限相关的业务接口，负责账号注册、登录、Token 鉴权和密码修改等。
@@ -171,6 +172,11 @@ extension PrivilegeSystem {
                 }
             }.logIfFail(logger: logger, metadata: ["user": .data(userData)])
         }
+        
+        public struct AuthData: Content {
+            let key: SendableSymmKey
+            let token: QToken
+        }
 
         /// 对传入的 Token 发起鉴权并还原为加密用对称密钥。
         ///
@@ -187,7 +193,7 @@ extension PrivilegeSystem {
         /// ```
         public func authenticate(
             token: EncryptedToken
-        ) -> EventLoopRes<SendableSymmKey, Errcase> {
+        ) -> EventLoopRes<AuthData, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 Token 鉴权 操作", metadata: ["token": .summaryData(token)])
@@ -208,11 +214,6 @@ extension PrivilegeSystem {
                         throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external(suggestions: ["请先进行登陆"]))
                     }
                     return t
-                }.flatMap { (token: __SDBM.Token) in
-                    token.$user
-                        .load(on: db)
-                        .withError(Errcase.userAuthenticateFailed, "从数据中加载用户失败", category: .internal)
-                        .map { @Sendable in token }
                 }
                 
                 // 检查口令是否正确
@@ -232,14 +233,26 @@ extension PrivilegeSystem {
                     
                     // 进行 hash 比对
                     guard
-                        try required(throws: Errcase.userAuthenticateFailed, "Token Hash 比对失败", category: .internal, {
+                        try required(throws: Errcase.userAuthenticateFailed, "用户口令 Hash 比对失败", category: .internal, {
                             try tokenResult.verify(passwordData: authData)
                         })
                     else {
                         throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external(suggestions: ["请提供正确的登陆口令"]))
                     }
                     
-                    return SendableSymmKey(key: key)
+                    let qToken = try required(throws: Errcase.userAuthenticateFailed, "用户口令转为 DTO 失败", category: .internal) {
+                        try QToken.make(from: tokenResult).get()
+                    }
+                    
+                    return (SendableSymmKey(key: key), qToken)
+                }.flatMap{ (key: SendableSymmKey, token: QToken) in
+                    token.$user.load(on: db)
+                        .errCast(Errcase.userAuthenticateFailed, "从数据库中读取 User 模型失败", category: .internal)
+                        .flatMap {
+                            token.user.$info.load(on: db)
+                                .errCast(Errcase.userAuthenticateFailed, "从数据库中读取 User Info 模型失败", category: .internal)
+                        }
+                        .map { AuthData(key: key, token: token) }
                 }.map {
                     logger.info("Token 鉴权 操作执行成功")
                     return $0

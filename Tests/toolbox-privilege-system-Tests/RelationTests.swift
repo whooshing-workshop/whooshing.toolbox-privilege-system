@@ -13,7 +13,7 @@ struct RelationsTesting {
     }
 
     private func fetchUser(index: Int, s: PrivilegeSystem) async throws -> QUser {
-        let model = try await __SDBM.User.query(on: s.db)
+        let model = try await __SDBM.User.query(on: s.pgDB)
             .filter(\.$id == AccountTesting.ids[index])
             .with(\.$groups)
             .first()
@@ -52,7 +52,7 @@ struct RelationsTesting {
         
         // 验证数据库
         let expectedCount = TestingShared.userInGroups.values.reduce(0) { $0 + $1.count }
-        let actualCount = try await __SDBM.UserGroupPivot.query(on: s.db).count()
+        let actualCount = try await __SDBM.UserGroupPivot.query(on: s.pgDB).count()
         #expect(actualCount == expectedCount, "UserGroupPivot 表数据量应与映射配置匹配")
     }
 
@@ -107,7 +107,7 @@ struct RelationsTesting {
         }
         
         let expectedCount = TestingShared.domainForGroup.values.reduce(0) { $0 + $1.count }
-        let actualCount = try await __SDBM.DomainGroupPivot.query(on: s.db).count()
+        let actualCount = try await __SDBM.DomainGroupPivot.query(on: s.pgDB).count()
         #expect(actualCount == expectedCount, "DomainGroupPivot 表数据量应与映射配置匹配")
     }
     
@@ -130,7 +130,7 @@ struct RelationsTesting {
         }
         
         let expectedCount = TestingShared.domainForUser.values.reduce(0) { $0 + $1.count }
-        let actualCount = try await __SDBM.UserDomainPivot.query(on: s.db).count()
+        let actualCount = try await __SDBM.UserDomainPivot.query(on: s.pgDB).count()
         #expect(actualCount == expectedCount, "UserDomainPivot 表数据量应与映射配置匹配")
     }
     

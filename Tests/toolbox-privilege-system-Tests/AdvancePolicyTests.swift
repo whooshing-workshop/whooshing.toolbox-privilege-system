@@ -24,7 +24,7 @@ struct AdvancePolicyTesting {
     // =========================================================================
 
     private func fetchUser(index: Int, s: PrivilegeSystem) async throws -> QUser {
-        let model = try await __SDBM.User.query(on: s.db)
+        let model = try await __SDBM.User.query(on: s.pgDB)
             .filter(\.$id == AT.ids[index])
             .with(\.$groups)
             .first()

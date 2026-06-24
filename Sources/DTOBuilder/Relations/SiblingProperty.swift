@@ -84,7 +84,37 @@ final public class SiblingProperty<From, To, Through>: @unchecked Sendable
     }
     
     public func getIdsOnly(on system: Query.System) -> EventLoopRes<[UUID], DTO.Errcase> {
-        Through.query(on: system)
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.getIdsOnly(on: sys.pgDB)
+    }
+    
+    public func get(on system: Query.System) -> EventLoopRes<[To], DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.get(on: sys.pgDB)
+    }
+    
+    public func loadIdsOnly(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.loadIdsOnly(on: sys.pgDB)
+    }
+    
+    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.load(on: sys.pgDB)
+    }
+}
+ 
+package extension SiblingProperty {
+    func getIdsOnly(on db: PGDatabase) -> EventLoopRes<[UUID], DTO.Errcase> {
+        Through.query(on: db)
             .filter(self.fromKeyPath == fromId)
             .all()
             .errCast(DTO.Errcase.siblingsLoadFailed, "从数据库中查询中间表 \(Through.logName) 失败", metadata: ["from_id": .stringConvertible(self.fromId)], category: .internal)
@@ -108,9 +138,9 @@ final public class SiblingProperty<From, To, Through>: @unchecked Sendable
         }
     }
     
-    public func get(on system: Query.System) -> EventLoopRes<[To], DTO.Errcase> {
-        getIdsOnly(on: system).flatMap { ids in
-            To.query(on: system)
+    func get(on db: PGDatabase) -> EventLoopRes<[To], DTO.Errcase> {
+        getIdsOnly(on: db).flatMap { ids in
+            To.query(on: db)
                 .filter(\.id ~~ ids)
                 .all()
                 .errCast(DTO.Errcase.siblingsLoadFailed, "从数据库中通过中间表 \(Through.logName) 查询 \(To.logName) 模型失败", metadata: ["from_id": .stringConvertible(self.fromId)], category: .internal)
@@ -130,12 +160,12 @@ final public class SiblingProperty<From, To, Through>: @unchecked Sendable
         }
     }
     
-    public func loadIdsOnly(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        getIdsOnly(on: system).map { _ in }
+    func loadIdsOnly(on db: PGDatabase) -> EventLoopRes<Void, DTO.Errcase> {
+        getIdsOnly(on: db).map { _ in }
     }
     
-    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        get(on: system).map { _ in }
+    func load(on db: PGDatabase) -> EventLoopRes<Void, DTO.Errcase> {
+        get(on: db).map { _ in }
     }
 }
 

@@ -117,10 +117,16 @@ struct AccountTesting {
             )
         )
         
-        _ = try await s.account.authenticate(token: .make(from: token).get())
+        let authData = try await s.account.authenticate(token: .make(from: token).get())
+        #expect(authData.token.id == token.id)
+        #expect(authData.token.credential == token.credential)
+        #expect(authData.token.token == token.token)
+        #expect(authData.token.$user.loaded == true)
+        #expect(authData.token.user.id == user.id)
+        #expect(authData.token.user.$info.loaded == true)
         
         let userToken = try AuthorizationToken.make(from: token).get()
-        let dbToken = try await token.model(from: s.db).get()
+        let dbToken = try await token.model(from: s.pgDB).get()
         #expect(try dbToken.verify(password: userToken.tokenHashed) == true)
         
         let wrongToken = AuthorizationToken.init(

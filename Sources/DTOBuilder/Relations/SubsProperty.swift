@@ -67,11 +67,27 @@ final public class SubsProperty<From, To>: @unchecked Sendable
     }
     
     public func get(on system: Query.System) -> EventLoopRes<[To], DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.get(on: sys.pgDB)
+    }
+    
+    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.load(on: sys.pgDB)
+    }
+}
+
+package extension SubsProperty {
+    func get(on db: PGDatabase) -> EventLoopRes<[To], DTO.Errcase> {
         let builder = switch parentKeyPath {
         case .required(let keyPath):
-            To.query(on: system).filter(keyPath.appending(path: \.id) == self.fromId)
+            To.query(on: db).filter(keyPath.appending(path: \.id) == self.fromId)
         case .optional(let keyPath):
-            To.query(on: system).filter(keyPath.appending(path: \.id) == self.fromId)
+            To.query(on: db).filter(keyPath.appending(path: \.id) == self.fromId)
         }
         
         return builder.all()
@@ -86,8 +102,8 @@ final public class SubsProperty<From, To>: @unchecked Sendable
         }
     }
     
-    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        get(on: system).map { _ in }
+    func load(on db: PGDatabase) -> EventLoopRes<Void, DTO.Errcase> {
+        get(on: db).map { _ in }
     }
 }
 

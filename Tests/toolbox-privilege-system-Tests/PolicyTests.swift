@@ -96,7 +96,7 @@ struct PolicyTesting {
     /// 通过 AT.ids[index] 精确查询用户，并 eager-load groups 关系。
     /// judge() 内部直接访问 user.model.groups（内存缓存），必须预加载。
     private func fetchUser(index: Int, s: PrivilegeSystem) async throws -> QUser {
-        let model = try await __SDBM.User.query(on: s.db)
+        let model = try await __SDBM.User.query(on: s.pgDB)
             .filter(\.$id == AT.ids[index])
             .with(\.$groups)
             .first()
@@ -1058,7 +1058,7 @@ struct PolicyTesting {
         #expect(before.reports.elements[1].key.type == .domain)
         
         // 删除旧策略
-        let old = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+        let old = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
             .filter(\.$parent.$id == targetId).all()
         for p in old {
             let qp = try QPolicy<Role>.make(from: p).get()
@@ -1088,7 +1088,7 @@ struct PolicyTesting {
         #expect(!denyRes.result, "替换后：anything → DENY")
 
         // 清理并恢复
-        let newPolicies = try await __SDBM.PolicyExp<Role>.query(on: s.db)
+        let newPolicies = try await __SDBM.PolicyExp<Role>.query(on: s.pgDB)
             .filter(\.$parent.$id == targetId).all()
         for p in newPolicies {
             let qp = try QPolicy<Role>.make(from: p).get()

@@ -60,7 +60,23 @@ final public class SubProperty<From, To>: @unchecked Sendable
     }
     
     public func get(on system: Query.System) -> EventLoopRes<To, DTO.Errcase> {
-        To.query(on: system)
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.get(on: sys.pgDB)
+    }
+    
+    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.load(on: sys.pgDB)
+    }
+}
+    
+package extension SubProperty {
+    func get(on db: PGDatabase) -> EventLoopRes<To, DTO.Errcase> {
+        To.query(on: db)
             .filter(parentKeyPath.appending(path: \.id) == self.fromId)
             .all()
             .errCast(DTO.Errcase.subLoadFailed, "从数据库中查询 \(From.logName) 模型的 Sub \(To.logName) 模型失败", metadata: ["from_id": .stringConvertible(self.fromId)], category: .internal)
@@ -82,8 +98,8 @@ final public class SubProperty<From, To>: @unchecked Sendable
         }
     }
     
-    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        get(on: system).map { _ in }
+    func load(on db: PGDatabase) -> EventLoopRes<Void, DTO.Errcase> {
+        get(on: db).map { _ in }
     }
 }
 

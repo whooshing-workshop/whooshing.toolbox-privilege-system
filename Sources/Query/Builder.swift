@@ -30,6 +30,8 @@ public enum Query {
         static func make(from: Model) -> Res<Self, ErrorType>
         /// 构建 Builder<Self>
         static func query(on system: System) -> Builder<Self>
+        /// 构建 Builder<Self>
+        static func query(on db: PGDatabase) -> Builder<Self>
     }
     
     /// 可链式调用的类型化查询构建器。
@@ -179,8 +181,12 @@ public extension Query.Queriable {
     static func query(on system: Query.System) -> Query.Builder<Self> {
         system.query(Self.self)
     }
+    
+    static func query(on db: PGDatabase) -> Query.Builder<Self> {
+        .init(query: db.query(Model.self))
+    }
 }
 
 package protocol __QuerySystem: Query.System {
-    var db: PGDatabase { get }
+    var pgDB: PGDatabase { get }
 }

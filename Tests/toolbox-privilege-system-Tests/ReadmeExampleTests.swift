@@ -120,7 +120,7 @@ struct ReadmeExampleTests {
         try await module.resource.delete(ids: [resourceDTO.id])
         
         // Note: 删除用户操作尚未直接在 controller 提供，通过模型删除
-        try await __SDBM.User.query(on: system.db).filter(\.$id == user.id).delete()
+        try await __SDBM.User.query(on: system.pgDB).filter(\.$id == user.id).delete()
     }
 
     @MainActor

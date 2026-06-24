@@ -67,12 +67,24 @@ final public class OptionalSuperProperty<From, To>: @unchecked Sendable
         guard let sys = system as? __QuerySystem else {
             fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
         }
-        
+        return self.get(on: sys.pgDB)
+    }
+    
+    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
+        guard let sys = system as? __QuerySystem else {
+            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
+        }
+        return self.load(on: sys.pgDB)
+    }
+}
+ 
+package extension OptionalSuperProperty {
+    func get(on db: PGDatabase) -> EventLoopRes<To?, DTO.Errcase> {
         guard let id = self.id else {
-            return sys.db.eventLoop.makeSucceededResult(nil)
+            return db.eventLoop.makeSucceededResult(nil)
         }
         
-        return To.query(on: sys)
+        return To.query(on: db)
             .filter(\.id == id)
             .first()
             .errCast(DTO.Errcase.optionalSuperLoadFailed, "从数据库中查询 \(From.logName) 模型的 OptionalSuper \(To.logName) 模型失败", metadata: ["optional_super_id": .stringConvertible(id)], category: .internal)
@@ -91,8 +103,8 @@ final public class OptionalSuperProperty<From, To>: @unchecked Sendable
         }
     }
     
-    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        get(on: system).map { _ in }
+    func load(on db: PGDatabase) -> EventLoopRes<Void, DTO.Errcase> {
+        get(on: db).map { _ in }
     }
 }
 

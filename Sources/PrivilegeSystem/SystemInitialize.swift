@@ -11,7 +11,7 @@ extension PrivilegeSystem {
         // SQL 函数注入
         for (_, sql) in sqls {
             _ = try await logger.required(throws: Errcase.databaseInitFailed, "将 SQL Function 注入数据库失败", category: .internal) {
-                try await self.db.query(sql).get()
+                try await self.pgDB.query(sql).get()
             }
         }
         
