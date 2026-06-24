@@ -172,11 +172,6 @@ extension PrivilegeSystem {
                 }
             }.logIfFail(logger: logger, metadata: ["user": .data(userData)])
         }
-        
-        public struct AuthData: Content {
-            let key: SendableSymmKey
-            let token: QToken
-        }
 
         /// 对传入的 Token 发起鉴权并还原为加密用对称密钥。
         ///
