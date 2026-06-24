@@ -84,7 +84,7 @@ public struct QUserInfo: DTO.Queried {
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id
-        case userId
+        case userId = "user_id"
         case nickname
         case identifier
         case birthday

@@ -152,9 +152,9 @@ extension SiblingProperty: DTO.Property {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.loaded, forKey: .loaded)
-        try container.encodeIfPresent(self.value, forKey: .value)
+        try container.encode(self.value, forKey: .value)
         try container.encode(self.idsLoaded, forKey: .idsLoaded)
-        try container.encodeIfPresent(self.__ids, forKey: .ids)
+        try container.encode(self.__ids, forKey: .ids)
     }
     
     public static var logName: String { "Sibling<\(From.logName), \(To.logName)>" }

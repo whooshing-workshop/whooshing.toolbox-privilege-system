@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+@preconcurrency import AnyCodable
 @testable import PrivilegeSystem
 
 @Suite("DTO 序列化测试集", .serialized)
@@ -254,6 +255,11 @@ struct DTOCodableTests {
         let decoder = JSONDecoder()
         
         let data = try encoder.encode(user)
+        
+        let json = try decoder.decode([String: AnyCodable].self, from: data)
+        
+        print(formatJson(json))
+        
         let decoded = try decoder.decode(QUser.self, from: data)
         
         // 验证第一层属性
@@ -422,9 +428,194 @@ struct DTOCodableTests {
         }
     }
     
+    @Test("测试从 Json Decode")
+    func decodeFromJson() async throws {
+        let tokenJson = Generator.fakeTokenData
+        let data = try JSONEncoder().encode(tokenJson)
+        let token = try JSONDecoder().decode(QToken.self, from: data)
+        
+        #expect(token.$user.id == Generator.userId)
+        #expect(token.valid == true)
+        #expect(token.expireAfter == 7 * 24 * 60)
+        
+        // 校验 user 是否正确加载
+        #expect(token.$user.loaded == true)
+        #expect(token.$user.id == Generator.userId)
+        
+        let user = token.$user.wrappedValue
+        #expect(user.id == Generator.userId)
+        #expect(user.email == "user@testing.com")
+        
+        // 校验 user 下的各项关联是否被正确解析为其指定的未加载或已加载状态
+        #expect(user.$info.loaded == true)
+        #expect(user.$token.loaded == false)
+        #expect(user.$groups.loaded == false)
+        #expect(user.$roles.loaded == false)
+        #expect(user.$domains.loaded == false)
+        
+        guard let info = user.$info.wrappedValue else {
+            Issue.record("UserInfo 必须非空")
+            return
+        }
+        
+        #expect(info.id == Generator.infoId)
+        #expect(info.nickname == "Hello World")
+        #expect(info.identifier == "FAKE0392818203815")
+        
+        #expect(info.$user.loaded == false)
+        #expect(info.$alternateEmails.loaded == true)
+        #expect(info.$phones.loaded == true)
+        #expect(info.$addresses.loaded == true)
+        
+        // 校验 Emails Slice
+        let emails = info.$alternateEmails.wrappedValue
+        #expect(emails.count == 1)
+        #expect(emails[0].id == Generator.emailIds[0])
+        #expect(emails[0].value == Generator.emails[0])
+        #expect(emails[0].order == 0)
+        #expect(emails[0].summary == "the secondary email address")
+        #expect(emails[0].$userInfo.loaded == false)
+        
+        // 校验 Phones Slice
+        let phones = info.$phones.wrappedValue
+        #expect(phones.count == 2)
+        #expect(phones[0].id == Generator.phoneIds[0])
+        #expect(phones[0].value == Generator.phones[0])
+        #expect(phones[0].order == 0)
+        #expect(phones[1].id == Generator.phoneIds[1])
+        #expect(phones[1].value == Generator.phones[1])
+        #expect(phones[1].order == 1)
+        
+        // 校验 Addresses Slice
+        let addresses = info.$addresses.wrappedValue
+        #expect(addresses.isEmpty)
+    }
+    
     @MainActor
     @Test("测试结束")
     func end() async throws {
         TestingShared.testStage = .init(rawValue: TestingShared.testStage.rawValue + 1)!
     }
+}
+
+enum Generator: Sendable {
+    static let userId = UUID(uuidString: "8FB83B07-7FA3-4954-A981-BA35AF74653C")!
+    static let infoId = UUID(uuidString: "BE3BCBE7-B127-49DC-9752-BBD0E00D01C1")!
+    static let emailIds = [UUID(uuidString: "A7851C53-B49C-403B-A7AA-825D71158304")!]
+    static let phoneIds = [UUID(uuidString: "242BE4E2-9A6E-4D7C-A3F2-0742F91EF3F1")!, UUID(uuidString: "91596272-EF53-4104-B0BD-1C6A68A80FF4")!]
+    
+    static let emails = ["testing@fake.gmail.com"]
+    static let phones = ["1234567890921", "8319210398123"]
+    
+    static let fakeTokenData: [String: AnyCodable] = {
+        [
+            "id": AnyCodable(UUID()),
+            "user_id": AnyCodable(userId),
+            "credential": AnyCodable(Crypto.randomDataGenerate(length: 16).base64EncodedString()),
+            "token": AnyCodable(Crypto.Symm.makeKey().data.base64EncodedString()),
+            "valid": true,
+            "expire_after": AnyCodable(7 * 24 * 60),
+            "created_at": AnyCodable(Date()),
+            "user": [
+                "id": userId,
+                "loaded": true,
+                "value": [
+                    "id": userId,
+                    "email": "user@testing.com",
+                    "created_at": Date(),
+                    "updated_at": Date(),
+                    "info": [
+                        "loaded": true,
+                        "value": [
+                            "id": infoId,
+                            "user_id": userId,
+                            "nickname": "Hello World",
+                            "identifier": "FAKE0392818203815",
+                            "birthday": Date(),
+                            "created_at": Date(),
+                            "updated_at": Date(),
+                            "user": [
+                                "loaded": false,
+                                "value": nil
+                            ],
+                            "alternate_emails": [
+                                "loaded": true,
+                                "value": [
+                                    [
+                                        "id": emailIds[0],
+                                        "value": emails[0],
+                                        "order": UInt16(0),
+                                        "summary": "the secondary email address",
+                                        "created_at": Date(),
+                                        "updated_at": Date(),
+                                        "user_info_id": infoId,
+                                        "user_info": [
+                                            "loaded": false,
+                                            "value": nil
+                                        ]
+                                    ]
+                                ]
+                            ],
+                            "phones": [
+                                "loaded": true,
+                                "value": [
+                                    [
+                                        "id": phoneIds[0],
+                                        "value": phones[0],
+                                        "order": UInt16(0),
+                                        "summary": "my personal phone number",
+                                        "created_at": Date(),
+                                        "updated_at": Date(),
+                                        "user_info_id": infoId,
+                                        "user_info": [
+                                            "loaded": false,
+                                            "value": nil
+                                        ]
+                                    ], [
+                                        "id": phoneIds[1],
+                                        "value": phones[1],
+                                        "order": UInt16(1),
+                                        "summary": "placeholder phone number",
+                                        "created_at": Date(),
+                                        "updated_at": Date(),
+                                        "user_info_id": infoId,
+                                        "user_info": [
+                                            "loaded": false,
+                                            "value": nil
+                                        ]
+                                    ]
+                                ]
+                            ],
+                            "addresses": [
+                                "loaded": true,
+                                "value": []
+                            ]
+                        ]
+                    ],
+                    "token": [
+                        "loaded": false,
+                        "value": nil
+                    ],
+                    "groups": [
+                        "loaded": false,
+                        "value": nil,
+                        "ids_loaded": false,
+                        "ids": nil
+                    ],
+                    "roles": [
+                        "loaded": false,
+                        "value": nil,
+                        "ids_loaded": false,
+                        "ids": nil
+                    ],
+                    "domains": [
+                        "loaded": false,
+                        "value": nil,
+                        "ids_loaded": false,
+                        "ids": nil
+                    ]
+                ]
+            ]
+        ]
+    }()
 }
