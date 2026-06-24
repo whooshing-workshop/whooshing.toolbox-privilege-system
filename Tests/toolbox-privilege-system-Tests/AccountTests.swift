@@ -60,6 +60,16 @@ struct AccountTesting {
         let credential: String
     }
     
+    struct VaporlizeMiddleware: AsyncMiddleware {
+        func respond(to request: Request, chainingTo next: any AsyncResponder) async throws -> Response {
+            do {
+                return try await next.respond(to: request)
+            } catch {
+                throw error.vaporlized
+            }
+        }
+    }
+    
     func withApp(_ test: (Application) async throws -> ()) async throws {
         let app = try await Application.make(.testing)
         
@@ -74,6 +84,8 @@ struct AccountTesting {
             ),
             decodingContext: .default
         ), as: .psql)
+        
+        app.middleware.use(VaporlizeMiddleware())
         
         let protected = app.routes.grouped(
             TokenAuthenticator(),

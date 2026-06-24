@@ -317,3 +317,5 @@ extension QToken: Query.Queriable {
             .field(Model.self, \.$createdAt)
     }
 }
+
+extension QToken: Authenticatable {}

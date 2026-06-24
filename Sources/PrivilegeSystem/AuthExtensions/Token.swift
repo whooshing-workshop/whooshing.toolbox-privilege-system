@@ -3,8 +3,6 @@ import PrivilegeModuleExtended
 
 // MARK: - Authenticate
 
-extension QToken: Authenticatable {}
-
 public struct TokenAuthenticator: CredentialsAuthenticator {
     public init() {}
     
@@ -38,7 +36,7 @@ public struct TokenAuthenticator: CredentialsAuthenticator {
                 }
                 request.auth.login(token)
             }
-        }.vaporlized
+        }.wrapped
     }
 }
 
