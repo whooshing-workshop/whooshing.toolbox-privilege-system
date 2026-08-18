@@ -24,7 +24,6 @@ let package = Package(
         .library( name: "PrivilegeModule", targets: ["PrivilegeModule", "ResourceMacros"] )
     ],
     dependencies: [
-        
         .package(url: "https://github.com/vapor/vapor", from: "4.122.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0"),
