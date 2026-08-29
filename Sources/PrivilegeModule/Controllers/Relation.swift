@@ -1,3 +1,4 @@
+import Vapor
 import LoggingAdvanced
 import OrderedCollections
 
@@ -220,3 +221,37 @@ extension MTMRelation: Loggerable where Left: Loggerable, Right: Loggerable {
         return "[\(lefts)] → [\(rights)]"
     }
 }
+
+// MARK: - Vapor Content Conformances
+
+extension OTORelation: Encodable where Left: Encodable, Right: Encodable {}
+extension OTORelation: Decodable where Left: Decodable, Right: Decodable {}
+extension OTORelation: Content where Left: Content, Right: Content {}
+extension OTORelation: RequestDecodable where Self: Content {}
+extension OTORelation: ResponseEncodable where Self: Content {}
+extension OTORelation: AsyncRequestDecodable where Self: Content {}
+extension OTORelation: AsyncResponseEncodable where Self: Content {}
+
+extension MTORelation: Encodable where Left: Encodable, Right: Encodable {}
+extension MTORelation: Decodable where Left: Decodable, Right: Decodable {}
+extension MTORelation: Content where Left: Content, Right: Content {}
+extension MTORelation: RequestDecodable where Self: Content {}
+extension MTORelation: ResponseEncodable where Self: Content {}
+extension MTORelation: AsyncRequestDecodable where Self: Content {}
+extension MTORelation: AsyncResponseEncodable where Self: Content {}
+
+extension OTMRelation: Encodable where Left: Encodable, Right: Encodable {}
+extension OTMRelation: Decodable where Left: Decodable, Right: Decodable {}
+extension OTMRelation: Content where Left: Content, Right: Content {}
+extension OTMRelation: RequestDecodable where Self: Content {}
+extension OTMRelation: ResponseEncodable where Self: Content {}
+extension OTMRelation: AsyncRequestDecodable where Self: Content {}
+extension OTMRelation: AsyncResponseEncodable where Self: Content {}
+
+extension MTMRelation: Encodable where Left: Encodable, Right: Encodable {}
+extension MTMRelation: Decodable where Left: Decodable, Right: Decodable {}
+extension MTMRelation: Content where Left: Content, Right: Content {}
+extension MTMRelation: RequestDecodable where Self: Content {}
+extension MTMRelation: ResponseEncodable where Self: Content {}
+extension MTMRelation: AsyncRequestDecodable where Self: Content {}
+extension MTMRelation: AsyncResponseEncodable where Self: Content {}
