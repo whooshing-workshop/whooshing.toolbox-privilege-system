@@ -1,5 +1,6 @@
 import OPA
 import Foundation
+import NIOHTTP1
 
 public extension PrivilegeModule {
     /// 资源权限控制器，负责对当前模块下的资源操作许可（Privilege）进行定义、维护、以及向 OPA 下发策略规则。
@@ -181,7 +182,7 @@ public extension PrivilegeModule {
             logger.debug("更新资源权限 详细请求数据", metadata: ["data": .data(updater)])
             
             guard updater.updates.count > 0 else {
-                return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external())
+                return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity)))
             }
             
             // 在 SQL 事务中，先执行 SQL 更新，保持该事务会话
@@ -212,7 +213,7 @@ public extension PrivilegeModule {
                     do {
                         policy = try policyUpdater(updater.needsPeek ? updateRes : nil)
                     } catch {
-                        return self.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "要更新的 Policy 出错", category: .external())
+                        return self.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "要更新的 Policy 出错", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity)))
                     }
                     
                     let path = policyPath(

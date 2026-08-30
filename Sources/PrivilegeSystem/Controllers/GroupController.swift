@@ -1,6 +1,7 @@
 import Query
 import Foundation
 import PrivilegeModule
+import NIOHTTP1
 
 extension PrivilegeSystem {
     /// 群组控制器，提供对于群组结构的完整生命周期管理。
@@ -130,7 +131,7 @@ extension PrivilegeSystem {
                     errThrowing: .groupDeleteFailed
                 ).flatMap { diffs in
                     guard diffs.count == 0 else {
-                        return db.eventLoop.makeFailedResult(Errcase.groupDeleteFailed, "预期记录未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external())
+                        return db.eventLoop.makeFailedResult(Errcase.groupDeleteFailed, "预期记录未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external(userdata: .init(HTTPResponseStatus.notFound)))
                     }
                     
                     return db.eventLoop.makeSucceededVoidResult()
@@ -371,7 +372,7 @@ public extension PrivilegeSystem.GroupController {
                 .flatMapThrowing
             { models throws(PrivilegeSystem.Errcase.ErrType) in
                 guard models.count == ids.count else {
-                    throw PrivilegeSystem.Errcase.groupMoveFailed.d("要移动的群组中有不存在项", category: .external(suggestions: ["群组必须存在才可移动"])).metadata(["model_ids_in_db": .data(models.map { $0.id })])
+                    throw PrivilegeSystem.Errcase.groupMoveFailed.d("要移动的群组中有不存在项", category: .external(suggestions: ["群组必须存在才可移动"], userdata: .init(HTTPResponseStatus.forbidden))).metadata(["model_ids_in_db": .data(models.map { $0.id })])
                 }
                 let left = try readGroup(id: relation.left, from: models)
                 let right = models.count == 2 ? try readGroup(id: relation.right!, from: models) : nil
@@ -439,7 +440,7 @@ extension PrivilegeSystem.GroupController {
                 // 新上级不能是自己，也不能是自己的子孙（防止形成环形死循环）
                 // 检查：如果新上级在 subTreeIDs 里面，立刻抛出异常熔断
                 if let superId = relation.right?.id, subTreeIDs.contains(superId) {
-                    return tdb.eventLoop.makeFailedResult(PrivilegeSystem.Errcase.groupMoveFailed, "不可将群组移动到自己或子群中", category: .external()) // 非法操作拦截
+                    return tdb.eventLoop.makeFailedResult(PrivilegeSystem.Errcase.groupMoveFailed, "不可将群组移动到自己或子群中", category: .external(userdata: .init(HTTPResponseStatus.forbidden))) // 非法操作拦截
                 }
 
                 return relation.left.model(from: tdb)
@@ -536,7 +537,7 @@ extension PrivilegeSystem.GroupController {
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
             if strict {
                 guard rs.count == relations.count else {
-                    throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external()).metadata(["expect": .stringConvertible(relations.count), "got": .stringConvertible(rs.count)])
+                    throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity))).metadata(["expect": .stringConvertible(relations.count), "got": .stringConvertible(rs.count)])
                 }
             }
             return rs

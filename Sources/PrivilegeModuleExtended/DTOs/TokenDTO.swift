@@ -33,7 +33,7 @@ public struct EncryptedToken: DTO.Model, Codable {
     /// 加密机制为 [密钥加密[密钥 hash]] + [明文凭据]
     public static func make(from token: QToken) -> Res<Self, PrivilegeModuleExtended.Errcase> {
         .init { () throws(PrivilegeModuleExtended.Errcase.ErrType) in
-            let keyData = try required(throws: PrivilegeModuleExtended.Errcase.tokenDTOFailed, "用户口令字节解析失败", category: .external(suggestions: ["请提供正确的登陆口令"])) {
+            let keyData = try required(throws: PrivilegeModuleExtended.Errcase.tokenDTOFailed, "用户口令字节解析失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
                 try Base64String(token.token).dataRes.get()
             }
             let key = Crypto.Symm.Key.new(data: keyData)
@@ -79,7 +79,7 @@ public struct AuthorizationToken: DTO.Model, Codable {
     /// 加密机制为 [密钥 hash] + [明文凭据]
     public static func make(from token: QToken) -> Res<Self, PrivilegeModuleExtended.Errcase> {
         .init { () throws(PrivilegeModuleExtended.Errcase.ErrType) in
-            let keyData = try required(throws: PrivilegeModuleExtended.Errcase.tokenDTOFailed, "用户口令字节解析失败", category: .external(suggestions: ["请提供正确的登陆口令"])) {
+            let keyData = try required(throws: PrivilegeModuleExtended.Errcase.tokenDTOFailed, "用户口令字节解析失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
                 try Base64String(token.token).dataRes.get()
             }
             return .init(

@@ -76,7 +76,7 @@ extension PrivilegeSystem {
                     .flatMapThrowing
                 { count throws(Errcase.ErrType) in
                     guard count == 0 else {
-                        throw Errcase.userRegisterFailed.d("要注册的用户已存在", category: .external()).metadata(["user": .data(user)])
+                        throw Errcase.userRegisterFailed.d("要注册的用户已存在", category: .external(userdata: .init(HTTPResponseStatus.conflict))).metadata(["user": .data(user)])
                     }
                 }.flatMapThrowing { () throws(Errcase.ErrType) -> __SDBM.User in
                     try required(throws: Errcase.userRegisterFailed, "创建 User 模型失败", category: .inherit) {
@@ -136,15 +136,15 @@ extension PrivilegeSystem {
                     .flatMapThrowing
                 { (res) throws(Errcase.ErrType) -> (__SDBM.User, UUID, __SDBM.Token) in
                     guard let user = res else {
-                        throw Errcase.userLoginFailed.d("用户不存在", category: .external(suggestions: ["请先进行注册"]))
+                        throw Errcase.userLoginFailed.d("用户不存在", category: .external(suggestions: ["请先进行注册"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
                     
                     guard
-                        try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .internal, {
+                        try required(throws: Errcase.userLoginFailed, "密码验证失败", category: .inherit, {
                             try user.verify(password: userData.hashedPassword)
                         })
                     else {
-                        throw Errcase.userLoginFailed.d("用户密码不正确", category: .external())
+                        throw Errcase.userLoginFailed.d("用户密码不正确", category: .external(suggestions: ["请提供正确的账号密码"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
                     
                     let userId = try required(throws: Errcase.userLoginFailed, "获取用户 ID 失败", category: .internal) {
@@ -206,7 +206,7 @@ extension PrivilegeSystem {
                         .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败", category: .internal)
                 }.flatMapThrowing { token throws(Errcase.ErrType) in
                     guard let t = token else {
-                        throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external(suggestions: ["请先进行登陆"]))
+                        throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external(suggestions: ["请先进行登陆"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
                     return t
                 }
@@ -214,7 +214,7 @@ extension PrivilegeSystem {
                 // 检查口令是否正确
                 return tokenGetter.flatMapThrowing { tokenResult throws(Errcase.ErrType) in
                     // 取得密钥的字节码
-                    let keyData = try required(throws: Errcase.userAuthenticateFailed, "口令解析失败", category: .external(suggestions: ["请提供正确的登陆口令"])) {
+                    let keyData = try required(throws: Errcase.userAuthenticateFailed, "口令解析失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
                         try Base64String(tokenResult.token).dataRes.get()
                     }
                     
@@ -222,7 +222,7 @@ extension PrivilegeSystem {
                     let key = Crypto.Symm.Key.new(data: keyData)
                     
                     // 解密 tokenEncrypted
-                    let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户口令失败", category: .external(suggestions: ["请提供正确的登陆口令"])) {
+                    let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户口令失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
                         try Crypto.Symm.decrypt(Base64String(token.tokenEncrypted).dataRes.get(), key: key).get()
                     }
                     
@@ -232,7 +232,7 @@ extension PrivilegeSystem {
                             try tokenResult.verify(passwordData: authData)
                         })
                     else {
-                        throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external(suggestions: ["请提供正确的登陆口令"]))
+                        throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
                     
                     let qToken = try required(throws: Errcase.userAuthenticateFailed, "用户口令转为 DTO 失败", category: .internal) {
@@ -304,7 +304,7 @@ extension PrivilegeSystem {
                     .flatMapThrowing
                 { res throws(Errcase.ErrType) in
                     guard let user = res else {
-                        throw Errcase.userPasswordChangeFailed.d("用户不存在", category: .external(suggestions: ["请先进行注册"]))
+                        throw Errcase.userPasswordChangeFailed.d("用户不存在", category: .external(suggestions: ["请先进行注册"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
                     
                     guard (
@@ -312,7 +312,7 @@ extension PrivilegeSystem {
                             try user.verify(password: userData.hashedPassword)
                         } == true
                     ) else {
-                        throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external(suggestions: ["请提供正确的密码"]))
+                        throw Errcase.userPasswordChangeFailed.d("用户密码不正确", category: .external(suggestions: ["请提供正确的密码"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
                     
                     return user

@@ -1,6 +1,7 @@
 import DTOBuilder
 import Fluent
 import Foundation
+import NIOHTTP1
 
 package protocol Controller: AnyObject, Sendable where E.ErrType == BasicError<E> {
     associatedtype E: ErrList
@@ -126,7 +127,7 @@ package extension Controller {
         dtoBuilder: @Sendable @escaping (T.DBModel) -> Result<T.QueriedDTO, A>
     ) -> EventLoopRes<T.QueriedDTO, E> {
         guard updater.updates.count > 0 else {
-            return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external()))
+            return db.eventLoop.makeFailedResult(errThrowing.d("没有任何数据需要更新", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity))))
         }
         
         return db.trans(throws: errThrowing, "数据库事务执行失败", category: .internal) { db in
@@ -138,7 +139,7 @@ package extension Controller {
                     .flatMapThrowing
                 { data throws(E.ErrType) in
                     guard let d = data else {
-                        throw errThrowing.d("\(label)不存在", category: .external())
+                        throw errThrowing.d("\(label)不存在", category: .external(userdata: .init(HTTPResponseStatus.notFound)))
                     }
                     return try required(throws: errThrowing, category: .internal) {
                         try dtoBuilder(d).get()
@@ -151,7 +152,7 @@ package extension Controller {
             return updaterRes.flatMapThrowing { data throws(E.ErrType) in
                 var query = filterBuilder(T.DBModel.query(on: db))
                 for builder in updater.updates.values {
-                    query = try required(throws: errThrowing, "所提供的 Updater 出错", category: .external()) {
+                    query = try required(throws: errThrowing, "所提供的 Updater 出错", category: .external(userdata: .init(HTTPResponseStatus.badRequest))) {
                         try builder(query, data)
                     }
                 }
@@ -363,7 +364,7 @@ package extension Controller {
                         errThrowing: errThrowing
                     ).flatMap { diffs in
                         guard diffs.count == 0 else {
-                            return db.eventLoop.makeFailedResult(errThrowing, "\(label) 所提供的 \(Left.logName) ID 列表中有无效项，未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external())
+                            return db.eventLoop.makeFailedResult(errThrowing, "\(label) 所提供的 \(Left.logName) ID 列表中有无效项，未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity)))
                         }
                         return db.eventLoop.makeSucceededVoidResult()
                     }
@@ -380,7 +381,7 @@ package extension Controller {
                         errThrowing: errThrowing
                     ).flatMap { diffs in
                         guard diffs.count == 0 else {
-                            return db.eventLoop.makeFailedResult(errThrowing, "\(label) 所提供的 \(Right.logName) ID 列表中有无效项，未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external())
+                            return db.eventLoop.makeFailedResult(errThrowing, "\(label) 所提供的 \(Right.logName) ID 列表中有无效项，未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity)))
                         }
                         return db.eventLoop.makeSucceededVoidResult()
                     }

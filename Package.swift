@@ -27,8 +27,9 @@ let package = Package(
         .package(url: "https://github.com/vapor/vapor", from: "4.122.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.101.3"),
         .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-opa", from: "1.0.5"),
-        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.2"),
+        .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-basic.git", from: "1.6.3"),
         .package(url: "https://github.com/whooshing-workshop/whooshing.toolbox-pgsql.git", from: "1.1.3"),
     ],
     targets: [
@@ -47,6 +48,7 @@ let package = Package(
         .target(
             name: "Query",
             dependencies: [
+                .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "PgSQL", package: "whooshing.toolbox-pgsql")
             ]
         ),

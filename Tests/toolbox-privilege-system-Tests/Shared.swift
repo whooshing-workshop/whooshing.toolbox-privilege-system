@@ -290,7 +290,7 @@ public extension Error {
                 let reason = String(describing: err.error.rawValue) + (err.explain == nil ? "" : ", " + err.explain!)
                 
                 switch err.category {
-                case .external(suggestions: let suggestions):
+                case .external(suggestions: let suggestions, _):
                     return Abort(
                         .badRequest,
                         reason: reason,

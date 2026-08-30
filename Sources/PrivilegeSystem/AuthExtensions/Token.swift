@@ -14,14 +14,14 @@ public struct TokenAuthenticator: CredentialsAuthenticator {
             .flatMapThrowing
         { t throws(PrivilegeSystem.Errcase.ErrType) in
             guard let token = t else {
-                throw PrivilegeSystem.Errcase.tokenAuthFailed.d("凭据不存在", category: .external(suggestions: ["请提供有效的凭据"]))
+                throw PrivilegeSystem.Errcase.tokenAuthFailed.d("凭据不存在", category: .external(suggestions: ["请提供有效的凭据"], userdata: .init(HTTPResponseStatus.unauthorized)))
             }
             guard
-                try required(throws: PrivilegeSystem.Errcase.tokenAuthFailed, "密钥比对时发生错误", category: .internal, {
+                try required(throws: PrivilegeSystem.Errcase.tokenAuthFailed, "密钥比对时发生错误", category: .inherit, {
                     try token.verify(password: credentials.tokenHashed)
                 })
             else {
-                throw PrivilegeSystem.Errcase.tokenAuthFailed.d("凭据无效或已撤销", category: .external(suggestions: ["清提供有效的凭据"]))
+                throw PrivilegeSystem.Errcase.tokenAuthFailed.d("凭据无效或已撤销", category: .external(suggestions: ["清提供有效的凭据"], userdata: .init(HTTPResponseStatus.unauthorized)))
             }
             
             let tokenDTO = try required(throws: PrivilegeSystem.Errcase.tokenAuthFailed, "从数据库实例转为 DTO 失败", category: .internal) {
@@ -49,7 +49,7 @@ extension __SDBM.Token: ModelCredentialsAuthenticatable {
     // 用户发来的 password(即 token) 是 [密钥 hash]
     public func verify(password: String) throws -> Bool {
         // 取得用户传来 tokenHashed 的字节码
-        let userTokenData = try required(throws: PrivilegeSystem.Errcase.tokenVerifyFailed, "用户口令并非 Base64 编码", category: .external()) {
+        let userTokenData = try required(throws: PrivilegeSystem.Errcase.tokenVerifyFailed, "用户口令并非 Base64 编码", category: .external(suggestions: ["请提供正确的用户口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
             try Base64String(password).dataRes.get()
         }
         
@@ -60,13 +60,13 @@ extension __SDBM.Token: ModelCredentialsAuthenticatable {
     internal func verify(passwordData: Data) throws -> Bool {
         // 检查是否有效
         guard self.valid == true else {
-            throw PrivilegeSystem.Errcase.tokenVerifyFailed.d("用户口令无效", category: .external(suggestions: ["请提供有效的登录口令"]))
+            throw PrivilegeSystem.Errcase.tokenVerifyFailed.d("用户口令无效", category: .external(suggestions: ["请提供有效的登录口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
         }
         
         // 检查是否已过期
         let expireDate = self.createdAt.addingTimeInterval(TimeInterval(self.expireAfter * 60))
         guard Date() < expireDate else {
-            throw PrivilegeSystem.Errcase.tokenVerifyFailed.d("用户凭据已过期", category: .external(suggestions: ["请提供有效的登录口令"]))
+            throw PrivilegeSystem.Errcase.tokenVerifyFailed.d("用户凭据已过期", category: .external(suggestions: ["请提供有效的登录口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
         }
         
         // 取得 db 密钥的字节码，并对其进行 hash，以进行接下来的比对

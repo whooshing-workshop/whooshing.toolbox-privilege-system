@@ -1,6 +1,7 @@
 import Query
 import Foundation
 import PrivilegeModule
+import NIOHTTP1
 
 extension PrivilegeSystem {
     /// 角色控制器，提供对于角色（Role）的创建、更新、删除以及指派和查询功能。
@@ -690,7 +691,7 @@ extension PrivilegeSystem.RoleController {
             .flatMap
         { user in
             guard let u = user else {
-                return db.eventLoop.makeFailedResult(Errcase.userRoleQueryFailed, "要查询用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external())
+                return db.eventLoop.makeFailedResult(Errcase.userRoleQueryFailed, "要查询用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external(userdata: .init(HTTPResponseStatus.notFound)))
             }
             return db.eventLoop.makeSucceededResult(u)
         }.flatMap {
@@ -720,7 +721,7 @@ extension PrivilegeSystem.RoleController {
             .flatMap
         { user in
             guard let u = user else {
-                return db.eventLoop.makeFailedResult(Errcase.groupRoleQueryFailed, "要查询用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external())
+                return db.eventLoop.makeFailedResult(Errcase.groupRoleQueryFailed, "要查询用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external(userdata: .init(HTTPResponseStatus.notFound)))
             }
             return db.eventLoop.makeSucceededResult(u)
         }.flatMap {
@@ -1113,7 +1114,7 @@ extension PrivilegeSystem.RoleController {
             .flatMap
         { user in
             guard let u = user else {
-                return db.eventLoop.makeFailedResult(errThrowing, "要查询的 \(T.name) 不存在", metadata: ["id": .stringConvertible(id)], category: .external())
+                return db.eventLoop.makeFailedResult(errThrowing, "要查询的 \(T.name) 不存在", metadata: ["id": .stringConvertible(id)], category: .external(userdata: .init(HTTPResponseStatus.notFound)))
             }
             return db.eventLoop.makeSucceededResult(u)
         }

@@ -1,5 +1,6 @@
 import OPA
 import Foundation
+import NIOHTTP1
 
 package protocol OPAController: Controller {
     var opa: OPA { get }
@@ -154,7 +155,7 @@ package extension OPAController {
                 .flatMap
             { count in
                 guard count > 0 else {
-                    return db.eventLoop.makeFailedResult(errThrowing, "\(policyType) 数据库中不存在要删除的数据", category: .external())
+                    return db.eventLoop.makeFailedResult(errThrowing, "\(policyType) 数据库中不存在要删除的数据", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity)))
                 }
                 
                 return db.eventLoop.makeSucceededVoidResult()

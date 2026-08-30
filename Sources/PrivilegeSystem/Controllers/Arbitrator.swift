@@ -1,6 +1,7 @@
 import Query
 import Foundation
 import PrivilegeModule
+import NIOHTTP1
 @preconcurrency import AnyCodable
 
 extension PrivilegeSystem {
@@ -106,7 +107,7 @@ extension PrivilegeSystem {
             return roleController.is(role: role, appointedTo: user).flatMap {
                 $0 ?
                 self.db.eventLoop.makeSucceededResult(()) :
-                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的身份并未被任命与用户的", metadata: ["user": .data(user), "role": .data(role)], category: .external(suggestions: ["身份必须已任命与 \(user.email)"]))
+                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的身份并未被任命与用户的", metadata: ["user": .data(user), "role": .data(role)], category: .external(suggestions: ["身份必须已任命与 \(user.email)"], userdata: .init(HTTPResponseStatus.forbidden)))
             }.flatMap {
                 user.model(from: self.db).errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
             }.flatMap {
@@ -178,7 +179,7 @@ extension PrivilegeSystem {
             return roleController.is(roleId: roleId, appointedTo: userId).flatMap {
                 $0 ?
                 self.db.eventLoop.makeSucceededResult(()) :
-                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的身份并未被任命与用户的", metadata: ["user_id": .data(userId), "role_id": .data(roleId)], category: .external(suggestions: ["身份必须已任命与该用户"]))
+                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的身份并未被任命与用户的", metadata: ["user_id": .data(userId), "role_id": .data(roleId)], category: .external(suggestions: ["身份必须已任命与该用户"], userdata: .init(HTTPResponseStatus.forbidden)))
             }.flatMap {
                 // 从数据库中取得 User 模型
                 __SDBM.User.query(on: self.db)
@@ -188,7 +189,7 @@ extension PrivilegeSystem {
                     .flatMap
                 { user in
                     guard let u = user else {
-                        return self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "要仲裁的用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external(suggestions: ["请提供有效的用户账号"]))
+                        return self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "要仲裁的用户不存在", metadata: ["id": .stringConvertible(userId)], category: .external(suggestions: ["请提供有效的用户账号"], userdata: .init(HTTPResponseStatus.notFound)))
                     }
                     return self.db.eventLoop.makeSucceededResult(u)
                 }
