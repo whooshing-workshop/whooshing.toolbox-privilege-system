@@ -31,9 +31,22 @@ extension PrivilegeSystem {
     /// // 后续基于 tokenStr 发起请求鉴权
     /// let authKey = try await system.account.authenticate(token: receivedTokenDTO)
     /// ```
-    public final class AccountController: SystemController {
+    public final class AccountController: SystemController, @unchecked Sendable {
         package let db: PGDatabase
         package let eventLoop: EventLoop
+        package var nobodyRoleId: UUID? {
+            get {
+                lock.withLock { __nobodyRoleId }
+            }
+            set {
+                lock.withLock { __nobodyRoleId = newValue }
+            }
+        }
+        
+        private let lock = NIOLock()
+        private var __nobodyRoleId: UUID?
+        
+        let roleController: RoleController
         
         /// 操作记录日志器。
         public let logger: Logger
@@ -41,11 +54,14 @@ extension PrivilegeSystem {
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
+            roleController: RoleController,
             logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
+            self.roleController = roleController
             self.logger = logger
+            self.__nobodyRoleId = nil
         }
         
         /// 注册一个新账户，并将账户数据保存到数据库中。
@@ -61,15 +77,22 @@ extension PrivilegeSystem {
         /// print("成功注册！", userQuery.id)
         /// ```
         public func register(
-            for user: PUser
+            for user: PUser,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QUser, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 账号注册 操作", metadata: ["user": .summaryData(user)])
             logger.debug("操作参数", metadata: ["user": .data(user)])
             
+            let db = transactor?.db ?? self.db
+            
             return db.trans(throws: .userRegisterFailed, "数据库事务执行失败", category: .internal) { db in
-                __SDBM.User.query(on: db)
+                guard let nobodyRoleId = self.nobodyRoleId else {
+                    return db.eventLoop.makeFailedResult(Errcase.userRegisterFailed, "未找到 nobody 角色", category: .internal)
+                }
+                
+                return __SDBM.User.query(on: db)
                     .filter(\.$email == user.email)
                     .count()
                     .withError(Errcase.userRegisterFailed, "查询用户是否存在时失败", category: .internal)
@@ -100,6 +123,12 @@ extension PrivilegeSystem {
                             }
                         }
                     }
+                }.flatMap { (user: QUser) in
+                    self.roleController.appoint(on: .init(db: db), roleToUser: {
+                        OrderedSet([nobodyRoleId]) => OrderedSet([user.id])
+                    })
+                    .errCast(Errcase.userRegisterFailed, "赋予用户 nobody 角色失败", category: .inherit)
+                    .map { user }
                 }.map {
                     logger.info("账号注册 操作执行成功")
                     return $0
@@ -121,12 +150,15 @@ extension PrivilegeSystem {
         /// print("登录完成，Token的加密体为: \(token.tokenEncrypted)")
         /// ```
         public func login(
-            by userData: PUser
+            by userData: PUser,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QToken, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 账号登录 操作", metadata: ["user": .summaryData(userData)])
             logger.debug("操作参数", metadata: ["user": .data(userData)])
+            
+            let db = transactor?.db ?? self.db
             
             return db.trans(throws: .userLoginFailed, "数据库事务执行失败", category: .internal) { db in
                 __SDBM.User.query(on: db)
@@ -187,70 +219,90 @@ extension PrivilegeSystem {
         /// let key = try await system.account.authenticate(token: tokenDto).get()
         /// ```
         public func authenticate(
-            token: EncryptedToken
+            token: EncryptedToken,
+            roleId: UUID,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<AuthData, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 Token 鉴权 操作", metadata: ["token": .summaryData(token)])
             logger.debug("操作参数", metadata: ["token": .data(token)])
             
+            let db = transactor?.db ?? self.db
+            
             return db.trans(throws: .userAuthenticateFailed, "数据库事务执行失败", category: .internal) { db in
-                let tokenGetter: EventLoopRes<__SDBM.Token, PrivilegeSystem.Errcase> = db.eventLoop.submitResult { () throws(Errcase.ErrType) in
-                    guard token.tokenEncrypted.count == 124 else {
-                        throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 124 bytes", category: .external()).metadata(["count": .stringConvertible(token.tokenEncrypted.count)])
+                __SDBM.Role.query(on: db)
+                    .filter(\.$id == roleId)
+                    .first()
+                    .withError(Errcase.userAuthenticateFailed, "从数据库中获取角色信息失败", category: .internal)
+                    .flatMap
+                { r -> EventLoopResult<__SDBM.Role, BasicError<PrivilegeSystem.Errcase>> in
+                    guard let role = r else {
+                        return db.eventLoop.makeFailedResult(Errcase.userAuthenticateFailed, "角色不存在", category: .external(suggestions: ["请提供正确的角色"], userdata: .init(HTTPResponseStatus.unauthorized)))
                     }
-                }.flatMap {
-                    __SDBM.Token.query(on: db)
-                        .filter(\.$credential == token.credential)
-                        .first()
-                        .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败", category: .internal)
-                }.flatMapThrowing { token throws(Errcase.ErrType) in
-                    guard let t = token else {
-                        throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external(suggestions: ["请先进行登陆"], userdata: .init(HTTPResponseStatus.unauthorized)))
+                    return db.eventLoop.makeSucceededResult(role)
+                }.flatMapThrowing { role throws(Errcase.ErrType) -> QRole in
+                    try required(throws: Errcase.userAuthenticateFailed, "创建用户失败", category: .inherit) {
+                        try QRole.make(from: role).get()
                     }
-                    return t
-                }
-                
-                // 检查口令是否正确
-                return tokenGetter.flatMapThrowing { tokenResult throws(Errcase.ErrType) in
-                    // 取得密钥的字节码
-                    let keyData = try required(throws: Errcase.userAuthenticateFailed, "口令解析失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
-                        try Base64String(tokenResult.token).dataRes.get()
-                    }
-                    
-                    // 转为 AES 密钥类型
-                    let key = Crypto.Symm.Key.new(data: keyData)
-                    
-                    // 解密 tokenEncrypted
-                    let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户口令失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
-                        try Crypto.Symm.decrypt(Base64String(token.tokenEncrypted).dataRes.get(), key: key).get()
-                    }
-                    
-                    // 进行 hash 比对
-                    guard
-                        try required(throws: Errcase.userAuthenticateFailed, "用户口令 Hash 比对失败", category: .internal, {
-                            try tokenResult.verify(passwordData: authData)
-                        })
-                    else {
-                        throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
-                    }
-                    
-                    let qToken = try required(throws: Errcase.userAuthenticateFailed, "用户口令转为 DTO 失败", category: .internal) {
-                        try QToken.make(from: tokenResult).get()
-                    }
-                    
-                    return (SendableSymmKey(key: key), qToken)
-                }.flatMap{ (key: SendableSymmKey, token: QToken) in
-                    token.$user.load(on: db)
-                        .errCast(Errcase.userAuthenticateFailed, "从数据库中读取 User 模型失败", category: .internal)
-                        .flatMap {
-                            token.user.$info.load(on: db)
-                                .errCast(Errcase.userAuthenticateFailed, "从数据库中读取 User Info 模型失败", category: .internal)
+                }.flatMap { role in
+                    let tokenGetter: EventLoopRes<__SDBM.Token, PrivilegeSystem.Errcase> = db.eventLoop.submitResult { () throws(Errcase.ErrType) in
+                        guard token.tokenEncrypted.count == 124 else {
+                            throw .init(.userAuthenticateFailed, "用户口令长度不正确，预期为 124 bytes", category: .external()).metadata(["count": .stringConvertible(token.tokenEncrypted.count)])
                         }
-                        .map { AuthData(key: key, token: token) }
-                }.map {
-                    logger.info("Token 鉴权 操作执行成功")
-                    return $0
+                    }.flatMap {
+                        __SDBM.Token.query(on: db)
+                            .filter(\.$credential == token.credential)
+                            .first()
+                            .withError(Errcase.userAuthenticateFailed, "从数据库中获取用户凭据失败", category: .internal)
+                    }.flatMapThrowing { token throws(Errcase.ErrType) in
+                        guard let t = token else {
+                            throw .init(.userAuthenticateFailed, "用户凭据不存在", category: .external(suggestions: ["请先进行登陆"], userdata: .init(HTTPResponseStatus.unauthorized)))
+                        }
+                        return t
+                    }
+                    
+                    // 检查口令是否正确
+                    return tokenGetter.flatMapThrowing { tokenResult throws(Errcase.ErrType) in
+                        // 取得密钥的字节码
+                        let keyData = try required(throws: Errcase.userAuthenticateFailed, "口令解析失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
+                            try Base64String(tokenResult.token).dataRes.get()
+                        }
+                        
+                        // 转为 AES 密钥类型
+                        let key = Crypto.Symm.Key.new(data: keyData)
+                        
+                        // 解密 tokenEncrypted
+                        let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户口令失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
+                            try Crypto.Symm.decrypt(Base64String(token.tokenEncrypted).dataRes.get(), key: key).get()
+                        }
+                        
+                        // 进行 hash 比对
+                        guard
+                            try required(throws: Errcase.userAuthenticateFailed, "用户口令 Hash 比对失败", category: .internal, {
+                                try tokenResult.verify(passwordData: authData)
+                            })
+                        else {
+                            throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
+                        }
+                        
+                        let qToken = try required(throws: Errcase.userAuthenticateFailed, "用户口令转为 DTO 失败", category: .internal) {
+                            try QToken.make(from: tokenResult).get()
+                        }
+                        
+                        return (SendableSymmKey(key: key), qToken)
+                    }.flatMap{ (key: SendableSymmKey, token: QToken) in
+                        token.$user.load(on: db)
+                            .errCast(Errcase.userAuthenticateFailed, "从数据库中读取 User 模型失败", category: .internal)
+                            .flatMap {
+                                token.user.$info.load(on: db)
+                                    .errCast(Errcase.userAuthenticateFailed, "从数据库中读取 User Info 模型失败", category: .internal)
+                            }
+                            .map { AuthData(key: key, token: token, role: role) }
+                    }.map {
+                        logger.info("Token 鉴权 操作执行成功")
+                        return $0
+                    }
                 }
             }.logIfFail(logger: logger, metadata: ["token": .data(token)])
         }
@@ -266,9 +318,10 @@ extension PrivilegeSystem {
         /// - Returns: `QUser` 用户新的查询对象。
         public func changePassword(
             for userData: PUser,
-            to hashedPassword: Data
+            to hashedPassword: Data,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QUser, Errcase> {
-            changePassword(for: userData, to: hashedPassword.base64EncodedString())
+            changePassword(for: userData, to: hashedPassword.base64EncodedString(), on: transactor)
         }
         
         /// 为已知用户修改密码（以 String 格式提供新哈希）。
@@ -289,12 +342,15 @@ extension PrivilegeSystem {
         /// ```
         public func changePassword(
             for userData: PUser,
-            to hashedPassword: String
+            to hashedPassword: String,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QUser, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 修改密码 操作", metadata: ["user": .summaryData(userData)])
             logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
+            
+            let db = transactor?.db ?? self.db
             
             return db.trans(throws: .userPasswordChangeFailed, "数据库事务执行失败", category: .internal) { db in
                 __SDBM.User.query(on: db)
@@ -327,12 +383,15 @@ extension PrivilegeSystem {
         
         public func changePassword(
             for userData: QUser,
-            to hashedPassword: String
+            to hashedPassword: String,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QUser, Errcase> {
             let logger = getActionLogger()
             
             logger.info("执行 修改密码 操作", metadata: ["user": .summaryData(userData)])
             logger.debug("操作参数", metadata: ["token": .data(userData), "new_hashed_length": .stringConvertible(hashedPassword.count)])
+            
+            let db = transactor?.db ?? self.db
             
             return db.trans(throws: .userPasswordChangeFailed, "数据库事务执行失败", category: .internal) { db in
                 userData.model(from: db)

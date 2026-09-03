@@ -86,12 +86,12 @@ struct DomainTesting {
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QDomain.self).count() == Self.domains.count)
+        #expect(try await s.origin.query(QDomain.self).count() == Self.domains.count)
         
         Self.ids = []
         for domainParam in Self.domains {
             let u = try #require(
-                try await s.query(QDomain.self)
+                try await s.origin.query(QDomain.self)
                     .filter(\.name == domainParam.name)
                     .first()
                     
@@ -104,7 +104,7 @@ struct DomainTesting {
     @Test("为每个域创建默认策略")
     func createPolicies() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let allDomains = try await s.query(QDomain.self).all()
+        let allDomains = try await s.origin.query(QDomain.self).all()
         let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
         for (i, domain) in domains.enumerated() {
@@ -123,7 +123,7 @@ struct DomainTesting {
     @Test("验证域策略是否成功添加")
     func verifyPolicies() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allDomains = try await s.query(QDomain.self).all()
+        let allDomains = try await s.origin.query(QDomain.self).all()
         let domains = Self.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         
         for domain in domains {
@@ -205,9 +205,9 @@ struct DomainTesting {
     @Test("域多重关联与撤除测试")
     func assignAndUnassignAll() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all()
-        let groups = try await s.query(QGroup.self).all()
-        let domains = try await s.query(QDomain.self).all()
+        let users = try await s.origin.query(QUser.self).all()
+        let groups = try await s.origin.query(QGroup.self).all()
+        let domains = try await s.origin.query(QDomain.self).all()
         
         let user = users[2]
         let group = groups[2]
@@ -242,16 +242,16 @@ struct DomainTesting {
             .init(name: "TempDeleteDomain", summary: "临时删除测试域")
         ])
         
-        let countBefore = try await s.query(QDomain.self).count()
+        let countBefore = try await s.origin.query(QDomain.self).count()
         #expect(countBefore == Self.domains.count + 1)
         
         let tempId = try #require(tempDomain.first?.id)
         try await s.domain.delete(domainIds: [tempId])
         
-        let countAfter = try await s.query(QDomain.self).count()
+        let countAfter = try await s.origin.query(QDomain.self).count()
         #expect(countAfter == Self.domains.count, "删除后域数量应恢复")
         
-        let found = try await s.query(QDomain.self)
+        let found = try await s.origin.query(QDomain.self)
             .filter(\.name == "TempDeleteDomain")
             .first()
         #expect(found == nil, "被删除的域不应被查询到")

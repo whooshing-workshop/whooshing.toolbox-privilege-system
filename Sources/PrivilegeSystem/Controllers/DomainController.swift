@@ -46,10 +46,11 @@ extension PrivilegeSystem {
         /// }.get()
         /// ```
         public func create(
+            on transactor: Transactor? = nil,
             @MTORelationBuilder<PPolicy<Domain>, PDomain>
             _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
         ) -> EventLoopRes<Void, Errcase> {
-            self.create(relations: content())
+            self.create(relations: content(), on: transactor)
         }
         
         /// 批量创建域并附带 OPA 策略，返回存入的策略查询结构。
@@ -57,10 +58,11 @@ extension PrivilegeSystem {
         /// - Parameter content: `MTORelationBuilder` 闭包，用于构建域与策略间的多对一关系。
         /// - Returns: 一个字典，Key为域的 ID，Value 为该域关联的策略查询对象 `QPolicy<Domain>`。
         public func createWithReturning(
+            on transactor: Transactor? = nil,
             @MTORelationBuilder<PPolicy<Domain>, PDomain>
             _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
         ) -> EventLoopRes<[UUID: [QPolicy<Domain>]], Errcase> {
-            self.createWithReturning(relations: content())
+            self.createWithReturning(relations: content(), on: transactor)
         }
         
         /// 批量创建裸域（无策略附带）。
@@ -74,11 +76,13 @@ extension PrivilegeSystem {
         /// ).get()
         /// ```
         public func create(
-            domains: OrderedSet<PDomain>
+            domains: OrderedSet<PDomain>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<[QDomain], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建域权限 操作", metadata: ["domains": .summaryData(domains)])
             logger.debug("操作参数", metadata: ["domains": .data(domains)])
+            let db = transactor?.db ?? self.db
             return __create(on: db, domains: domains)
                 .map { 
                 logger.info("创建域权限 操作成功", metadata: ["data": .summaryData($0)])
@@ -94,11 +98,13 @@ extension PrivilegeSystem {
         ///   - domainIds: 欲删除域的 UUID 数组。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            domainIds: OrderedSet<UUID>
+            domainIds: OrderedSet<UUID>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除域权限 操作", metadata: ["domainIds": .summaryData(domainIds)])
             logger.debug("操作参数", metadata: ["domainIds": .data(domainIds)])
+            let db = transactor?.db ?? self.db
             return __delete(
                 on: db,
                 QDomain.self,
@@ -117,11 +123,13 @@ extension PrivilegeSystem {
         /// - Parameter updater: 更新器对象 `PDomain.Updater`。
         /// - Returns: 更新完毕的域对象 `QDomain`。
         public func update(
-            with updater: PDomain.Updater
+            with updater: PDomain.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QDomain, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新域权限 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新域权限 详细请求数据", metadata: ["data": .data(updater)])
+            let db = transactor?.db ?? self.db
             return __update(
                 on: db,
                 updater: updater,
@@ -142,11 +150,14 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.DomainController {
     func create(
-        relations: OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
+        relations: OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建域权限（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        
+        let db = transactor?.db ?? self.db
         
         return db.trans(throws: .domainCreateFailed, "数据库事务执行失败", category: .internal) { db in
             self.__create(on: db, domains: relations.mapToSet { $0.right }).flatMap { domains in
@@ -161,11 +172,14 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func createWithReturning(
-        relations: OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>
+        relations: OrderedSet<MTORelation<PPolicy<Domain>, PDomain>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[UUID: [QPolicy<Domain>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建域权限（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        
+        let db = transactor?.db ?? self.db
         
         return db.trans(throws: .domainCreateFailed, "数据库事务执行失败", category: .internal) { db in
             self.__create(on: db, domains: relations.mapToSet { $0.right }).flatMap { domains in
@@ -197,10 +211,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         domainToUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        assign(domainToUser: content())
+        assign(domainToUser: content(), on: transactor)
     }
     
     /// 将一个或多个域指派给一个或多个用户。
@@ -214,10 +229,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QDomain, QUser>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        assign(relations: content())
+        assign(relations: content(), on: transactor)
     }
     
     /// 将一个或多个域指派给一个或多个群组。
@@ -225,10 +241,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         domainToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        assign(domainToGroup: content())
+        assign(domainToGroup: content(), on: transactor)
     }
     
     /// 将一个或多个域指派给一个或多个群组。
@@ -236,10 +253,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func assign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QDomain, QGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        assign(relations: content())
+        assign(relations: content(), on: transactor)
     }
     
     // MARK: - 域权限撤销
@@ -249,10 +267,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         domainFromUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        unassign(domainFromUser: content())
+        unassign(domainFromUser: content(), on: transactor)
     }
     
     /// 撤销特定用户对某些域的指派关系。
@@ -260,10 +279,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QDomain, QUser>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        unassign(relations: content())
+        unassign(relations: content(), on: transactor)
     }
     
     /// 撤销特定群组对某些域的指派关系。
@@ -271,10 +291,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         domainFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        unassign(domainFromGroup: content())
+        unassign(domainFromGroup: content(), on: transactor)
     }
     
     /// 撤销特定群组对某些域的指派关系。
@@ -282,10 +303,11 @@ public extension PrivilegeSystem.DomainController {
     /// - Parameter content: 欲撤销的 `MTMRelationBuilder` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func unassign(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QDomain, QGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QDomain, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        unassign(relations: content())
+        unassign(relations: content(), on: transactor)
     }
 }
 
@@ -293,11 +315,13 @@ public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限指派
     
     func assign(
-        domainToUser relations: OrderedSet<MTMRelation<UUID, UUID>>
+        domainToUser relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限指派用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -313,11 +337,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func assign(
-        relations: OrderedSet<MTMRelation<QDomain, QUser>>
+        relations: OrderedSet<MTMRelation<QDomain, QUser>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限指派用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -331,11 +357,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func assign(
-        domainToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        domainToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限指派用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -351,11 +379,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func assign(
-        relations: OrderedSet<MTMRelation<QDomain, QGroup>>
+        relations: OrderedSet<MTMRelation<QDomain, QGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限指派用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限指派用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -371,11 +401,13 @@ public extension PrivilegeSystem.DomainController {
     // MARK: - 域权限撤销
     
     func unassign(
-        domainFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>
+        domainFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限撤销用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -391,11 +423,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func unassign(
-        relations: OrderedSet<MTMRelation<QDomain, QUser>>
+        relations: OrderedSet<MTMRelation<QDomain, QUser>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限撤销用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -409,11 +443,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func unassign(
-        domainFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        domainFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限撤销用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -429,11 +465,13 @@ public extension PrivilegeSystem.DomainController {
     }
     
     func unassign(
-        relations: OrderedSet<MTMRelation<QDomain, QGroup>>
+        relations: OrderedSet<MTMRelation<QDomain, QGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 域权限撤销用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("域权限撤销用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,

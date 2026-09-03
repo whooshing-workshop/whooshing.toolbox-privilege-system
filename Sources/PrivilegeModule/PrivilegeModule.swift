@@ -59,6 +59,9 @@ public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
     public let eventLoop: EventLoop
     /// 稳定的模块标识，用于 OPA 策略路径和仲裁报告。
     public let moduleId: UUID
+    
+    public let origin: Transactor
+    
     let dbs: Databases
     package let pgDB: PGDatabase
     let opa: OPA
@@ -135,6 +138,8 @@ public final class PrivilegeModule<ResourceList: ResourceTypeList>: Sendable {
         self.privilege = .init(db: db, opa: opa, moduleId: moduleId, eventLoop: eventLoop, logger: logger.derive(subId: "privilege"))
         self.resource = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "resource"))
         
+        self.origin = .init(db: pgDB)
+        
         initLogger.info("权限控制器模块初始化完成")
         
         initLogger.info("正在进行 OPA 数据同步")
@@ -192,33 +197,10 @@ public struct OPAConfiguration: Sendable {
     }
 }
 
-extension PrivilegeModule: Query.System {
-    /// 为某个模块 DTO 创建类型安全查询。
-    ///
-    /// ```swift
-    /// let resources = try await module.query(AnyResource.self)
-    ///     .page(with: 1, size: 20)
-    /// ```
-    ///
-    /// - Parameter type: 要查询的 DTO 类型。大多数情况下 Swift 可以自动推断。
-    /// - Returns: 针对该 DTO 配置好的 `Query.Builder`。
-    public func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
-        .init(query: T.Model.query(on: pgDB))
-    }
-}
-
-extension PrivilegeModule: __QuerySystem {}
-
 import Vapor
 
-extension Request: Query.System {
-    public func query<T>(_ model: T.Type) -> Query.Builder<T> where T : Query.Queriable {
-        .init(query: T.Model.query(on: db))
-    }
-}
-
-extension Request: __QuerySystem {
-    package var pgDB: any PGDatabase {
-        self.db as! PGDatabase
+public extension Request {
+    var origin: Transactor {
+        .init(db: self.db as! PGDatabase)
     }
 }

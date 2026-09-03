@@ -16,7 +16,7 @@ struct DTOCodableTests {
     @Test("QToken 序列化和反序列化")
     func testTokenCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let token = try await s.query(QToken.self).first()
+        let token = try await s.origin.query(QToken.self).first()
         guard let token = token else { return }
         
         let encoder = JSONEncoder()
@@ -32,7 +32,7 @@ struct DTOCodableTests {
         #expect(decoded.$user.id == token.$user.id)
         
         // 测试已加载情况下的序列化
-        try await token.$user.load(on: s).get()
+        try await token.$user.load(on: s.origin).get()
         let dataLoaded = try encoder.encode(token)
         let decodedLoaded = try decoder.decode(QToken.self, from: dataLoaded)
         
@@ -44,7 +44,7 @@ struct DTOCodableTests {
     @Test("QRole 序列化和反序列化")
     func testRoleCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let role = try await s.query(QRole.self).first()
+        let role = try await s.origin.query(QRole.self).first()
         guard let role = role else { return }
         
         let encoder = JSONEncoder()
@@ -59,7 +59,7 @@ struct DTOCodableTests {
         #expect(decoded.$users.loaded == false)
         
         // 测试已加载状态
-        try await role.$users.load(on: s).get()
+        try await role.$users.load(on: s.origin).get()
         let dataLoaded = try encoder.encode(role)
         let decodedLoaded = try decoder.decode(QRole.self, from: dataLoaded)
         
@@ -72,7 +72,7 @@ struct DTOCodableTests {
     @Test("QDomain 序列化和反序列化")
     func testDomainCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let domain = try await s.query(QDomain.self).first()
+        let domain = try await s.origin.query(QDomain.self).first()
         guard let domain = domain else { return }
         
         let encoder = JSONEncoder()
@@ -87,7 +87,7 @@ struct DTOCodableTests {
         #expect(decoded.$users.loaded == false)
         
         // 测试已加载状态
-        try await domain.$users.load(on: s).get()
+        try await domain.$users.load(on: s.origin).get()
         let dataLoaded = try encoder.encode(domain)
         let decodedLoaded = try decoder.decode(QDomain.self, from: dataLoaded)
         
@@ -98,7 +98,7 @@ struct DTOCodableTests {
     @Test("QGroup 序列化和反序列化")
     func testGroupCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let group = try await s.query(QGroup.self).first()
+        let group = try await s.origin.query(QGroup.self).first()
         guard let group = group else { return }
         
         let encoder = JSONEncoder()
@@ -113,7 +113,7 @@ struct DTOCodableTests {
         #expect(decoded.$users.loaded == false)
         
         // 测试已加载状态
-        try await group.$users.load(on: s).get()
+        try await group.$users.load(on: s.origin).get()
         let dataLoaded = try encoder.encode(group)
         let decodedLoaded = try decoder.decode(QGroup.self, from: dataLoaded)
         
@@ -124,7 +124,7 @@ struct DTOCodableTests {
     @Test("QUserInfo 序列化和反序列化")
     func testUserInfoCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let userInfo = try await s.query(QUserInfo.self).first()
+        let userInfo = try await s.origin.query(QUserInfo.self).first()
         guard let userInfo = userInfo else { return }
         
         let encoder = JSONEncoder()
@@ -140,8 +140,8 @@ struct DTOCodableTests {
         #expect(decoded.$alternateEmails.loaded == false)
         
         // 测试已加载状态
-        try await userInfo.$user.load(on: s).get()
-        try await userInfo.$alternateEmails.load(on: s).get()
+        try await userInfo.$user.load(on: s.origin).get()
+        try await userInfo.$alternateEmails.load(on: s.origin).get()
         
         let dataLoaded = try encoder.encode(userInfo)
         let decodedLoaded = try decoder.decode(QUserInfo.self, from: dataLoaded)
@@ -157,7 +157,7 @@ struct DTOCodableTests {
     @Test("QInfoSlice 序列化和反序列化")
     func testInfoSliceCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let slice = try await s.query(QInfoSlice<AlternateEmail>.self).first()
+        let slice = try await s.origin.query(QInfoSlice<AlternateEmail>.self).first()
         guard let slice = slice else { return }
         
         let encoder = JSONEncoder()
@@ -170,7 +170,7 @@ struct DTOCodableTests {
         #expect(decoded.$userInfo.id == slice.$userInfo.id)
         #expect(decoded.$userInfo.loaded == false)
         
-        try await slice.$userInfo.load(on: s).get()
+        try await slice.$userInfo.load(on: s.origin).get()
         let dataLoaded = try encoder.encode(slice)
         let decodedLoaded = try decoder.decode(QInfoSlice<AlternateEmail>.self, from: dataLoaded)
         
@@ -181,7 +181,7 @@ struct DTOCodableTests {
     @Test("QPolicy 序列化和反序列化")
     func testPolicyCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let policy = try await s.query(QPolicy<Domain>.self).first()
+        let policy = try await s.origin.query(QPolicy<Domain>.self).first()
         guard let policy = policy else { return }
         
         let encoder = JSONEncoder()
@@ -195,7 +195,7 @@ struct DTOCodableTests {
         // Parent 是 SuperProperty
         let pid = policy.$parent.id
         #expect(decoded.$parent.id == pid)
-        try await policy.$parent.load(on: s).get()
+        try await policy.$parent.load(on: s.origin).get()
         
         let dataLoaded = try encoder.encode(policy)
         let decodedLoaded = try decoder.decode(QPolicy<Domain>.self, from: dataLoaded)
@@ -206,7 +206,7 @@ struct DTOCodableTests {
     @Test("QUser 序列化和反序列化")
     func testUserCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let user = try await s.query(QUser.self).first()
+        let user = try await s.origin.query(QUser.self).first()
         guard let user = user else { return }
         
         let encoder = JSONEncoder()
@@ -219,7 +219,7 @@ struct DTOCodableTests {
         #expect(decoded.$info.loaded == false)
         #expect(decoded.$roles.loaded == false)
         
-        try await user.$roles.load(on: s).get()
+        try await user.$roles.load(on: s.origin).get()
         let dataLoaded = try encoder.encode(user)
         let decodedLoaded = try decoder.decode(QUser.self, from: dataLoaded)
         
@@ -232,22 +232,22 @@ struct DTOCodableTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 找出一个 user
-        let user = try await s.query(QUser.self).first()
+        let user = try await s.origin.query(QUser.self).first()
         guard let user = user else { return }
         
         // 加载它的 groups
-        try await user.$groups.load(on: s).get()
+        try await user.$groups.load(on: s.origin).get()
         guard let firstGroup = user.$groups.wrappedValue.first else { return }
         
         // 再加载其中一个 group 的 domains 和 users
-        try await firstGroup.$domains.load(on: s).get()
-        try await firstGroup.$users.load(on: s).get()
+        try await firstGroup.$domains.load(on: s.origin).get()
+        try await firstGroup.$users.load(on: s.origin).get()
         
         // 加载 user 的 info
-        try await user.$info.load(on: s).get()
+        try await user.$info.load(on: s.origin).get()
         // 再进一步加载 info 的 alternateEmails
         if let info = user.$info.wrappedValue {
-            try await info.$alternateEmails.load(on: s).get()
+            try await info.$alternateEmails.load(on: s.origin).get()
         }
         
         // 进行转码
@@ -292,12 +292,12 @@ struct DTOCodableTests {
     @Test("混合复杂的 Token 与深层 User 属性级联序列化测试")
     func testComplexTokenCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let token = try await s.query(QToken.self).first()
+        let token = try await s.origin.query(QToken.self).first()
         guard let token = token else { return }
         
-        try await token.$user.load(on: s).get()
-        try await token.$user.wrappedValue.$roles.load(on: s).get()
-        try await token.$user.wrappedValue.$domains.load(on: s).get()
+        try await token.$user.load(on: s.origin).get()
+        try await token.$user.wrappedValue.$roles.load(on: s.origin).get()
+        try await token.$user.wrappedValue.$domains.load(on: s.origin).get()
         
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -319,18 +319,18 @@ struct DTOCodableTests {
     @Test("混合复杂的 Role 与 Group/User 深层分支加载序列化测试")
     func testComplexRoleCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let role = try await s.query(QRole.self).first()
+        let role = try await s.origin.query(QRole.self).first()
         guard let role = role else { return }
         
-        try await role.$groups.load(on: s).get()
-        try await role.$users.load(on: s).get()
+        try await role.$groups.load(on: s.origin).get()
+        try await role.$users.load(on: s.origin).get()
         
         if let firstGroup = role.$groups.wrappedValue.first {
-            try await firstGroup.$domains.load(on: s).get()
+            try await firstGroup.$domains.load(on: s.origin).get()
         }
         
         if let firstUser = role.$users.wrappedValue.first {
-            try await firstUser.$info.load(on: s).get()
+            try await firstUser.$info.load(on: s.origin).get()
         }
         
         let encoder = JSONEncoder()
@@ -358,12 +358,12 @@ struct DTOCodableTests {
     func testComplexPolicyCodable() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let policies = try await s.query(QPolicy<Domain>.self).all()
+        let policies = try await s.origin.query(QPolicy<Domain>.self).all()
         guard let policy = policies.first else { return }
         
-        try await policy.$parent.load(on: s).get()
+        try await policy.$parent.load(on: s.origin).get()
         let parentDomain = policy.$parent.wrappedValue
-        try await parentDomain.$users.load(on: s).get()
+        try await parentDomain.$users.load(on: s.origin).get()
         
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
@@ -383,20 +383,20 @@ struct DTOCodableTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 获取一批 User，比如前 3 个
-        let users = try await s.query(QUser.self).all()
+        let users = try await s.origin.query(QUser.self).all()
         let targetUsers = Array(users.prefix(3))
         guard !targetUsers.isEmpty else { return }
         
         // 分别加载不同属性以制造状态差异
         for (index, user) in targetUsers.enumerated() {
             if index % 2 == 0 {
-                try await user.$roles.load(on: s).get()
+                try await user.$roles.load(on: s.origin).get()
                 if let role = user.$roles.wrappedValue.first {
-                    try await role.$policies.load(on: s).get()
+                    try await role.$policies.load(on: s.origin).get()
                 }
             } else {
-                try await user.$groups.load(on: s).get()
-                try await user.$info.load(on: s).get()
+                try await user.$groups.load(on: s.origin).get()
+                try await user.$info.load(on: s.origin).get()
             }
         }
         

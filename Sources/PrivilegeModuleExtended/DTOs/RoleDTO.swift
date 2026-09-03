@@ -1,3 +1,4 @@
+import Vapor
 import Foundation
 import PrivilegeModule
 
@@ -262,3 +263,5 @@ public extension PRole.Updater {
         }
     }
 }
+
+extension QRole: Authenticatable {}

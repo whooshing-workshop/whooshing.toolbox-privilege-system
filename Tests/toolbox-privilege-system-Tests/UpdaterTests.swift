@@ -16,7 +16,7 @@ struct UpdaterTests {
     func testDomainUpdater() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let domains = try await s.query(QDomain.self).limit(1).all()
+        let domains = try await s.origin.query(QDomain.self).limit(1).all()
         guard let domain = domains.first else { return }
         
         let oldName = domain.name ?? ""
@@ -37,7 +37,7 @@ struct UpdaterTests {
     func testRoleUpdater() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let roles = try await s.query(QRole.self).limit(1).all()
+        let roles = try await s.origin.query(QRole.self).limit(1).all()
         guard let role = roles.first else { return }
         
         let oldName = role.name
@@ -58,7 +58,7 @@ struct UpdaterTests {
     func testGroupUpdater() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let groups = try await s.query(QGroup.self).limit(2).all()
+        let groups = try await s.origin.query(QGroup.self).limit(2).all()
         guard let group = groups.first else { return }
         
         let oldName = group.name
@@ -78,7 +78,7 @@ struct UpdaterTests {
     func testUserInfoUpdater() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let userInfos = try await s.query(QUserInfo.self).limit(1).all()
+        let userInfos = try await s.origin.query(QUserInfo.self).limit(1).all()
         guard let userInfo = userInfos.first else { return }
         
         let oldNickname = userInfo.nickname
@@ -102,7 +102,7 @@ struct UpdaterTests {
     func testInfoSliceUpdater() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let slices = try await s.query(QInfoSlice<AlternateEmail>.self).limit(1).all()
+        let slices = try await s.origin.query(QInfoSlice<AlternateEmail>.self).limit(1).all()
         guard let slice = slices.first else { return }
         
         let oldValue = slice.value

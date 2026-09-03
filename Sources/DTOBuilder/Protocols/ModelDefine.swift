@@ -80,7 +80,7 @@ public extension DTO {
     protocol DBModel: Model, Query.Queriable, Codable {
         var id: UUID { get }
         static var idKey: KeyPath<Self, UUID> { get }  // 这个属性是因为 swift keypath 判断机制，\DBModel.id != \<Model which implement DBModel>.id，使用该实例可以确保 KeyPath 比较正确
-        static func make(from ids: [UUID], on system: Query.System) -> EventLoopRes<[Self], DTO.Errcase>
+        static func make(from ids: [UUID], on transactor: Transactor) -> EventLoopRes<[Self], DTO.Errcase>
     }
     
     protocol Queried: DBModel {
@@ -219,8 +219,8 @@ public extension Collection where Element: DTO.Queried, Element == Element.Prepa
 }
 
 public extension DTO.DBModel {
-    static func make(from ids: [UUID], on system: Query.System) -> EventLoopRes<[Self], DTO.Errcase> {
-        Self.query(on: system)
+    static func make(from ids: [UUID], on transactor: Transactor) -> EventLoopRes<[Self], DTO.Errcase> {
+        Self.query(on: transactor)
             .filter(\.id ~~ ids)
             .all()
             .errCast(DTO.Errcase.modelQueryFailed, "从数据库中根据 id 查询 \(Self.logName) 模型失败", category: .internal)

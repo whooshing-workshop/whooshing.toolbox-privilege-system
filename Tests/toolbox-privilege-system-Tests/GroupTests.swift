@@ -58,9 +58,9 @@ struct GroupTesting {
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QGroup.self).count() == Self.groups.count)
+        #expect(try await s.origin.query(QGroup.self).count() == Self.groups.count)
         
-        let res = try await s.query(QGroup.self)
+        let res = try await s.origin.query(QGroup.self)
             .group(.or) { g in
                 g.filter(\.name == "OperatorGroup")
                  .filter(\.name == "StandardUsers")
@@ -73,7 +73,7 @@ struct GroupTesting {
         Self.ids = []
         for groupParam in Self.groups {
             let u = try #require(
-                try await s.query(QGroup.self)
+                try await s.origin.query(QGroup.self)
                     .filter(\.name == groupParam.name)
                     .first()
                     
@@ -97,8 +97,8 @@ struct GroupTesting {
     @Test("群组关联与移除测试")
     func relationAndKick() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all()
-        let groups = try await s.query(QGroup.self).all()
+        let users = try await s.origin.query(QUser.self).all()
+        let groups = try await s.origin.query(QGroup.self).all()
         
         let user = users[0]
         let group = groups[0]
@@ -167,7 +167,7 @@ struct GroupTesting {
     @Test("move 单层：GT.ids[6] 移入 GT.ids[0]，group_paths 应增加直接子路径")
     func paths_MoveSingleLevel_Child6ToParent0() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))  // AdministratorGroup
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
 
@@ -192,7 +192,7 @@ struct GroupTesting {
     @Test("move 单层：GT.ids[7] 移入 GT.ids[0]，group_paths 正确新增")
     func paths_MoveSingleLevel_Child7ToParent0() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[0] }))
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[7] }))  // MarketingTeam
 
@@ -209,7 +209,7 @@ struct GroupTesting {
     @Test("move 单层：GT.ids[8] 移入 GT.ids[1]，group_paths 正确新增")
     func paths_MoveSingleLevel_Child8ToParent1() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[1] }))  // OperatorGroup
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[8] }))  // HumanResources
 
@@ -261,7 +261,7 @@ struct GroupTesting {
     func paths_MoveMultiLevel_Child9ToChild6() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // 前置：GT.ids[6](SalesTeam) 已在 GT.ids[0](AdministratorGroup) 下
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let parent = try #require(allGroups.first(where: { $0.id == GT.ids[6] }))  // SalesTeam
         let child  = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
 
@@ -301,7 +301,7 @@ struct GroupTesting {
     func paths_MoveToRoot_Child9FromChild6() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // 前置：GT.ids[9] 在 GT.ids[6] 下（三层链 0→6→9）
-        let freshGroups = try await s.query(QGroup.self).all()
+        let freshGroups = try await s.origin.query(QGroup.self).all()
         let child = try #require(freshGroups.first(where: { $0.id == GT.ids[9] }))
 
         // move 到 nil 表示脱离父群组，成为根节点
@@ -343,7 +343,7 @@ struct GroupTesting {
     func paths_MoveRebuild_Child9ToParent1() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // 前置：GT.ids[9] 已是根节点
-        let freshGroups = try await s.query(QGroup.self).all()
+        let freshGroups = try await s.origin.query(QGroup.self).all()
         let newParent = try #require(freshGroups.first(where: { $0.id == GT.ids[1] }))  // OperatorGroup
         let child     = try #require(freshGroups.first(where: { $0.id == GT.ids[9] }))  // QualityAssurance
 
@@ -365,7 +365,7 @@ struct GroupTesting {
         #expect(path_0_9 == nil, "不应有 AdministratorGroup → QualityAssurance 的旧链")
 
         // 清理：将 GT.ids[9] 脱离，保持后续测试环境干净
-        let cleanGroups = try await s.query(QGroup.self).all()
+        let cleanGroups = try await s.origin.query(QGroup.self).all()
         let cleanChild = try #require(cleanGroups.first(where: { $0.id == GT.ids[9] }))
         try await s.group.move(cleanChild => QGroup?.none)
     }
@@ -378,7 +378,7 @@ struct GroupTesting {
     func paths_MoveIllegal_ParentIntoChild() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // 前置：GT.ids[6] 在 GT.ids[0] 下，即 GT.ids[0] 是 GT.ids[6] 的祖先
-        let freshGroups = try await s.query(QGroup.self).all()
+        let freshGroups = try await s.origin.query(QGroup.self).all()
         let parent = try #require(freshGroups.first(where: { $0.id == GT.ids[0] }))
         let child  = try #require(freshGroups.first(where: { $0.id == GT.ids[6] }))
 
@@ -402,7 +402,7 @@ struct GroupTesting {
     @Test("move 非法：将群组移入自身，应抛出 groupMoveFailed")
     func paths_MoveIllegal_SelfToSelf() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let group = try #require(allGroups.first(where: { $0.id == GT.ids[3] }))  // BannedUsers（独立群组）
 
         var didThrow = false
@@ -429,7 +429,7 @@ struct GroupTesting {
             .init(under: nil, name: "TempChild1",  summary: "临时子群组1"),
             .init(under: nil, name: "TempChild2",  summary: "临时子群组2"),
         ])
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let tempParent = try #require(allGroups.first(where: { $0.name == "TempParent" }))
         let tempChild1 = try #require(allGroups.first(where: { $0.name == "TempChild1" }))
         let tempChild2 = try #require(allGroups.first(where: { $0.name == "TempChild2" }))
@@ -451,7 +451,7 @@ struct GroupTesting {
 
         // 主表：三个临时群组应全部消失
         for name in ["TempParent", "TempChild1", "TempChild2"] {
-            let found = try await s.query(QGroup.self)
+            let found = try await s.origin.query(QGroup.self)
                 .filter(\.name == name).first()
             #expect(found == nil, "\(name) 被级联删除后不应存在")
         }
@@ -484,17 +484,17 @@ struct GroupTesting {
             .all()
         #expect(pathAfterCreate.count == 1, "孤立群组创建后应有 1 条自循环路径")
 
-        let countBefore = try await s.query(QGroup.self).count()
+        let countBefore = try await s.origin.query(QGroup.self).count()
 
         try await s.group.delete(groupIds: [tempId])
 
         // 主表中不应再找到该群组
-        let found = try await s.query(QGroup.self)
+        let found = try await s.origin.query(QGroup.self)
             .filter(\.name == "TempDeleteGroup")
             .first()
         #expect(found == nil, "被删除的群组不应被查询到")
 
-        let countAfter = try await s.query(QGroup.self).count()
+        let countAfter = try await s.origin.query(QGroup.self).count()
         #expect(countAfter == countBefore - 1, "删除后群组数量应减少 1")
 
         // group_paths 中该群组的自循环路径也应被清除

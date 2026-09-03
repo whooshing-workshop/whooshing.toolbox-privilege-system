@@ -19,13 +19,13 @@ struct FileResource: Resource, Hashable {
     typealias Operations = FileOperation
 
     static let type: ResourceList = .file
-    var name: String
+    var appId: String
     var path: String
     var isPrivate: Bool
 
     var json: [String: AnyCodable] {
         return [
-            "name": AnyCodable(name),
+            "appId": AnyCodable(appId),
             "path": AnyCodable(path),
             "isPrivate": AnyCodable(isPrivate)
         ]
@@ -33,7 +33,7 @@ struct FileResource: Resource, Hashable {
 
     static var mirrors: [PartialKeyPath<FileResource>: [String]] {
         return [
-            \.name: ["name"],
+            \.appId: ["appId"],
             \.path: ["path"],
             \.isPrivate: ["isPrivate"]
         ]
@@ -60,26 +60,26 @@ struct JsonResource: Resource, Hashable {
     typealias Operations = JsonOperation
 
     static let type: ResourceList = .file
-    var name: String
+    var appId: String
     var content: [String: AnyCodable]
 
     var json: [String: AnyCodable] {
         var base = content
-        base["name"] = AnyCodable(name)
+        base["appId"] = AnyCodable(appId)
         return base
     }
 
     public static func == (lhs: JsonResource, rhs: JsonResource) -> Bool {
-        lhs.name == rhs.name
+        lhs.appId == rhs.appId
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(name)
+        hasher.combine(appId)
     }
 
     static var mirrors: [PartialKeyPath<JsonResource>: [String]] {
         return [
-            \.name: ["name"]
+            \.appId: ["name"]
         ]
     }
 }
@@ -98,7 +98,7 @@ struct DirectoryResource: Hashable {
     typealias Operations = DirectoryOperation
 
     static let type: ResourceList = .directory
-    var name: String
+    var appId: String
     var path: String
     var ownerId: UUID
 }
@@ -115,7 +115,7 @@ struct AliasResource: Hashable {
     typealias Operations = AliasOperation
 
     static let type: ResourceList = .alias
-    var name: String
+    var appId: String
     var targetId: UUID
 }
 
@@ -132,14 +132,14 @@ struct ResourceTests {
     @Test("创建多种资源并验证")
     func resource_CreateAndQuery() async throws {
         let (_, m) = try await TestingShared.getSystem()
-        let file1 = FileResource(name: "public_doc.txt", path: "/docs/public_doc.txt", isPrivate: false)
-        let file2 = FileResource(name: "secret_keys.env", path: "/etc/secret_keys.env", isPrivate: true)
-        let file3 = FileResource(name: "report.pdf", path: "/reports/report.pdf", isPrivate: false)
+        let file1 = FileResource(appId: "public_doc.txt", path: "/docs/public_doc.txt", isPrivate: false)
+        let file2 = FileResource(appId: "secret_keys.env", path: "/etc/secret_keys.env", isPrivate: true)
+        let file3 = FileResource(appId: "report.pdf", path: "/reports/report.pdf", isPrivate: false)
         
-        let dir1 = DirectoryResource(name: "docs_folder", path: "/docs", ownerId: UUID())
-        let dir2 = DirectoryResource(name: "etc_folder", path: "/etc", ownerId: UUID())
+        let dir1 = DirectoryResource(appId: "docs_folder", path: "/docs", ownerId: UUID())
+        let dir2 = DirectoryResource(appId: "etc_folder", path: "/etc", ownerId: UUID())
         
-        let alias1 = AliasResource(name: "shortcut_to_report", targetId: UUID())
+        let alias1 = AliasResource(appId: "shortcut_to_report", targetId: UUID())
         
         let fileDtos: OrderedSet<FileResource> = [
             file1,
@@ -165,7 +165,7 @@ struct ResourceTests {
         #expect(createdDirs.count == 2)
         #expect(createdAliases.count == 1)
         
-        #expect(createdFiles[0].data.name == "public_doc.txt")
+        #expect(createdFiles[0].data.appId == "public_doc.txt")
         #expect(createdFiles[1].data.isPrivate == true)
         #expect(createdDirs[0].data.path == "/docs")
         
@@ -187,7 +187,7 @@ struct ResourceTests {
     @Test("修改资源信息")
     func resource_Update() async throws {
         let (_, m) = try await TestingShared.getSystem()
-        let file = FileResource(name: "temp.txt", path: "/tmp/temp.txt", isPrivate: false)
+        let file = FileResource(appId: "temp.txt", path: "/tmp/temp.txt", isPrivate: false)
         let created = try await m.resource.create(resources: [
             file
         ])
@@ -203,13 +203,13 @@ struct ResourceTests {
         
         let updated: QFileResource = try await m.resource.update(with: updater)
         #expect(updated.data.isPrivate == true)
-        #expect(updated.data.name == "temp.txt") // 其余信息不变
+        #expect(updated.data.appId == "temp.txt") // 其余信息不变
     }
     
     @Test("附加与移除资源权限 (MTMRelation)")
     func resource_Privilege_AttachDetach() async throws {
         let (_, m) = try await TestingShared.getSystem()
-        let file = FileResource(name: "attach.txt", path: "/tmp/attach.txt", isPrivate: true)
+        let file = FileResource(appId: "attach.txt", path: "/tmp/attach.txt", isPrivate: true)
         let resourceDTO = try await m.resource.create(resources: [file]).first!
         
         let suffix = UUID().uuidString
@@ -248,7 +248,7 @@ struct ResourceTests {
     @Test("查询与验证资源权限")
     func resource_Privilege_QueryAndVerify() async throws {
         let (_, m) = try await TestingShared.getSystem()
-        let file = FileResource(name: "query_verify.txt", path: "/tmp/query_verify.txt", isPrivate: true)
+        let file = FileResource(appId: "query_verify.txt", path: "/tmp/query_verify.txt", isPrivate: true)
         let resourceDTO = try await m.resource.create(resources: [file]).first!
         
         let suffix = UUID().uuidString
@@ -353,7 +353,7 @@ struct ResourceTests {
     @Test("完整测试修改资源信息")
     func resource_Update_Comprehensive() async throws {
         let (_, m) = try await TestingShared.getSystem()
-        let file = FileResource(name: "comp_test.txt", path: "/tmp/comp.txt", isPrivate: false)
+        let file = FileResource(appId: "comp_test.txt", path: "/tmp/comp.txt", isPrivate: false)
         let created: [QFileResource] = try await m.resource.create(resources: [file])
         let resourceId = created[0].id
         
@@ -367,27 +367,27 @@ struct ResourceTests {
         
         let updated1: QFileResource = try await m.resource.update(with: updater1)
         #expect(updated1.data.isPrivate == true)
-        #expect(updated1.data.name == "comp_test.txt")
+        #expect(updated1.data.appId == "comp_test.txt")
         
         // 2. 更新整个 data 对象 (常量形式)
-        let newFile = FileResource(name: "new_comp.txt", path: "/tmp/new_comp.txt", isPrivate: false)
+        let newFile = FileResource(appId: "new_comp.txt", path: "/tmp/new_comp.txt", isPrivate: false)
         let updater2 = QFileResource.Updater(resourceId: resourceId)
             .update(data: newFile)
         
         let updated2: QFileResource = try await m.resource.update(with: updater2)
-        #expect(updated2.data.name == "new_comp.txt")
+        #expect(updated2.data.appId == "new_comp.txt")
         #expect(updated2.data.path == "/tmp/new_comp.txt")
         
         // 3. 依赖原值的更新 (闭包形式)
         let updater3 = QFileResource.Updater(resourceId: resourceId)
             .update(data: { q in
                 var d = q.data
-                d.name = q.data.name + " - Updated"
+                d.appId = q.data.appId + " - Updated"
                 return d
             })
         
         let updated3: QFileResource = try await m.resource.update(with: updater3)
-        #expect(updated3.data.name == "new_comp.txt - Updated")
+        #expect(updated3.data.appId == "new_comp.txt - Updated")
         
         // 4. 依赖原值更新整个 data (闭包形式)
         let updater4 = QFileResource.Updater(resourceId: resourceId)
@@ -399,7 +399,7 @@ struct ResourceTests {
         
         let updated4: QFileResource = try await m.resource.update(with: updater4)
         #expect(updated4.data.path == "/tmp/final.txt")
-        #expect(updated4.data.name == "new_comp.txt - Updated") // 保持上次的名字
+        #expect(updated4.data.appId == "new_comp.txt - Updated") // 保持上次的名字
         
         // 清理
         try await m.resource.delete(ids: [resourceId])
@@ -408,7 +408,7 @@ struct ResourceTests {
     @Test("删除资源")
     func resource_Delete() async throws {
         let (_, m) = try await TestingShared.getSystem()
-        let file = FileResource(name: "delete.txt", path: "/tmp/delete.txt", isPrivate: true)
+        let file = FileResource(appId: "delete.txt", path: "/tmp/delete.txt", isPrivate: true)
         let resourceDTO: QFileResource = try await m.resource.create(resources: [file]).first!
         
         // 删除资源

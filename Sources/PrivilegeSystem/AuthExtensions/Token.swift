@@ -29,10 +29,10 @@ public struct TokenAuthenticator: CredentialsAuthenticator {
             }
             
             return tokenDTO
-        }.flatMap { token in
+        }.flatMap { (token: QToken) in
             request.db.eventLoop.bridge { () throws(PrivilegeSystem.Errcase.ErrType) in
                 try await required(throws: PrivilegeSystem.Errcase.tokenAuthFailed, "取得 Token 关联 User 对象失败", category: .internal) {
-                    try await token.$user.load(on: request).get()
+                    try await token.$user.load(on: request.origin).get()
                 }
                 request.auth.login(token)
             }

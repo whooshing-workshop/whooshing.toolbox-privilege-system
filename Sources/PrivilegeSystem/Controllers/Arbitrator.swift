@@ -111,7 +111,15 @@ extension PrivilegeSystem {
             }.flatMap {
                 user.model(from: self.db).errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
             }.flatMap {
-                self.__judge(moduleId: moduleId, user: $0, roleId: role.id, resource: resource, operation: operation, privilegeIds: privilegeIds, logger: logger)
+                self.__judge(
+                    moduleId: moduleId,
+                    user: $0,
+                    roleId: role.id,
+                    resource: resource,
+                    operation: operation,
+                    privilegeIds: privilegeIds,
+                    logger: logger
+                )
             }.map { res in
                 logger.info("权限仲裁 操作执行成功", metadata: ["result": .summaryData(res)])
                 logger.debug("仲裁结果", metadata: ["result": .data(res)])

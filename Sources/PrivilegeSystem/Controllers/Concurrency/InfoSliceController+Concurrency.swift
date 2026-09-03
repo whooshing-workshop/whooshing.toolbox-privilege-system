@@ -6,21 +6,24 @@ import PrivilegeModule
 extension PrivilegeSystem.InfoSliceController {
     public func create<T>(
         for infoId: UUID,
-        extendedInfos: OrderedSet<PInfoSlice<T>>
+        extendedInfos: OrderedSet<PInfoSlice<T>>,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> [QInfoSlice<T>] {
-        try await create(for: infoId, extendedInfos: extendedInfos).get()
+        try await create(for: infoId, extendedInfos: extendedInfos, on: transactor).get()
     }
 
     public func delete<T: UserInfoModel>(
         infoIds: OrderedSet<UUID>,
-        type: T.Type = T.self
+        type: T.Type = T.self,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeSystem.Errcase.ErrType) {
-        try await delete(infoIds: infoIds, type: type).get()
+        try await delete(infoIds: infoIds, type: type, on: transactor).get()
     }
 
     public func update<T>(
-        with updater: PInfoSlice<T>.Updater
+        with updater: PInfoSlice<T>.Updater,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeSystem.Errcase.ErrType) -> QInfoSlice<T> {
-        try await update(with: updater).get()
+        try await update(with: updater, on: transactor).get()
     }
 }

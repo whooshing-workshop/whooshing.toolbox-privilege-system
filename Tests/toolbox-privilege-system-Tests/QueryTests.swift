@@ -19,7 +19,7 @@ struct QueryTests {
         
         let email = "user1@example.com" // 使用 AccountTests 中创建的邮箱
         
-        let user = try await s.query(QUser.self)
+        let user = try await s.origin.query(QUser.self)
             .filter(\.email == email)
             .first()
             
@@ -33,7 +33,7 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // Join User 和 UserInfo
-        let results = try await s.query(QUser.self)
+        let results = try await s.origin.query(QUser.self)
             .join(QUserInfo.self, on: \QUser.id == \QUserInfo.$user.id)
             .first()
             
@@ -48,7 +48,7 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 测试 OR 条件
-        let results = try await s.query(QUser.self)
+        let results = try await s.origin.query(QUser.self)
             .group(.or) { group in
                 group.filter(\.email == "user1@example.com")
                 group.filter(\.email == "user2@gmail.com")
@@ -63,7 +63,7 @@ struct QueryTests {
     func testPagination() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let page = try await s.query(QUser.self)
+        let page = try await s.origin.query(QUser.self)
             .page(with: 1, size: 2)
             
             
@@ -87,7 +87,7 @@ struct QueryTests {
         }
         let counter = SafeCounter()
         
-        try await s.query(QUser.self)
+        try await s.origin.query(QUser.self)
             .chunk(max: 2) { res in
                 counter.add(res.count)
                 print("Chunked \(res.count) items")
@@ -102,7 +102,7 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 查询 Domain
-        let domain = try await s.query(QDomain.self)
+        let domain = try await s.origin.query(QDomain.self)
             .filter(\.name == "GlobalScope")
             .first()
             
@@ -110,7 +110,7 @@ struct QueryTests {
         print("Domain result: \(String(describing: domain))")
         
         // 查询 Group
-        let group = try await s.query(QGroup.self)
+        let group = try await s.origin.query(QGroup.self)
             .filter(\.name == "AdministratorGroup")
             .first()
             
@@ -122,7 +122,7 @@ struct QueryTests {
     func testSort() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let users = try await s.query(QUser.self)
+        let users = try await s.origin.query(QUser.self)
             .sort(\.email, .descending)
             .page(with: 1, size: 10)
             
@@ -134,7 +134,7 @@ struct QueryTests {
     func testAggregate() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let count = try await s.query(QUser.self).count()
+        let count = try await s.origin.query(QUser.self).count()
         print("Total users count: \(count)")
         
         #expect(count >= 0)
@@ -144,7 +144,7 @@ struct QueryTests {
     func testEmptyPagination() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let page = try await s.query(QUser.self)
+        let page = try await s.origin.query(QUser.self)
             .filter(\.email == "nonexistent_email_12345@domain.com")
             .page(with: 1, size: 10)
             
@@ -157,7 +157,7 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // QGroup.summary 是可选的 String?
-        let groups = try await s.query(QGroup.self)
+        let groups = try await s.origin.query(QGroup.self)
             .sort(\.summary, .ascending)
             .all()
             
@@ -169,7 +169,7 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // Join QUserInfo -> QUser and QUserInfo -> QInfoSlice<AlternateEmail>
-        let q: Query.Builder<QUserInfo> = s.query(QUserInfo.self)
+        let q: Query.Builder<QUserInfo> = s.origin.query(QUserInfo.self)
         let q1: Query.Builder<QUserInfo> = q.join(QUser.self, on: \QUserInfo.$user.id == \QUser.id)
         let q2: Query.Builder<QUserInfo> = q1.join(QInfoSlice<AlternateEmail>.self, on: \QUserInfo.id == \QInfoSlice<AlternateEmail>.$userInfo.id)
         let results = try await q2.all()
@@ -182,20 +182,20 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // Count
-        let count1 = try await s.query(QUser.self).count()
-        let count2 = try await s.query(QUser.self).count(\.email)
-        let count3 = try await s.query(QUser.self).count(\.id)
+        let count1 = try await s.origin.query(QUser.self).count()
+        let count2 = try await s.origin.query(QUser.self).count(\.email)
+        let count3 = try await s.origin.query(QUser.self).count(\.id)
         #expect(count1 >= 0 && count2 >= 0 && count3 >= 0)
         
         // 分别测试 Optional 和 非 Optional, Enum 和 非 Enum (目前 QUser 可能没 enum)
         // 找个有可选值的，比如 QGroup 的 summary (String?)
-        let count4 = try await s.query(QGroup.self).count(\.summary)
+        let count4 = try await s.origin.query(QGroup.self).count(\.summary)
         #expect(count4 >= 0)
 
         // 测试 min/max/sum/avg (在某些可以支持的字段上比如 Int/Double，User.id 是 UUID 不行)
         // 这里用 QInfoSlice 的 order (Int16) 试试
-        let minOrder = try await s.query(QInfoSlice<AlternateEmail>.self).min(\.order)
-        let maxOrder = try await s.query(QInfoSlice<AlternateEmail>.self).max(\.order)
+        let minOrder = try await s.origin.query(QInfoSlice<AlternateEmail>.self).min(\.order)
+        let maxOrder = try await s.origin.query(QInfoSlice<AlternateEmail>.self).max(\.order)
         print("Aggregate Order: min=\(minOrder), max=\(maxOrder)")
     }
     
@@ -203,10 +203,10 @@ struct QueryTests {
     func testAllExtensions() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let users1 = try await s.query(QUser.self).limit(2).offset(1).all()
+        let users1 = try await s.origin.query(QUser.self).limit(2).offset(1).all()
         #expect(users1.count <= 2)
         
-        let users2 = try await s.query(QUser.self).page(with: 2, size: 3)
+        let users2 = try await s.origin.query(QUser.self).page(with: 2, size: 3)
         #expect(users2.metadata.per == 3)
         #expect(users2.metadata.page == 2)
     }
@@ -216,7 +216,7 @@ struct QueryTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 排序：可选字段、正常字段
-        let q = s.query(QGroup.self)
+        let q = s.origin.query(QGroup.self)
             .sort(\.summary, .descending)
             .sort(\.name, .ascending)
             .sort(\.id, .descending)
@@ -226,7 +226,7 @@ struct QueryTests {
         #expect(groups.count >= 0)
         
         // Join 后排序
-        let qJoin = s.query(QUser.self)
+        let qJoin = s.origin.query(QUser.self)
             .join(QUserInfo.self, on: \QUser.id == \QUserInfo.$user.id)
             .sort(QUserInfo.self, \.identifier, .ascending)
             .sort(QUserInfo.self, \.nickname, .descending)
@@ -239,7 +239,7 @@ struct QueryTests {
     func testOperators() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        let containsUser = try await s.query(QUser.self)
+        let containsUser = try await s.origin.query(QUser.self)
             .filter(\.email ~~ "user") // Anywhere
             .filter(\.email =~ "user") // Prefix
             .filter(\.email ~= "com")  // Suffix
@@ -250,7 +250,7 @@ struct QueryTests {
         #expect(containsUser.count >= 0)
         
         // Optional String
-        let descFilter = try await s.query(QGroup.self)
+        let descFilter = try await s.origin.query(QGroup.self)
             .filter(\.summary ~~ "a")
             .filter(\.summary =~ "a")
             .filter(\.summary ~= "a")
@@ -263,13 +263,13 @@ struct QueryTests {
         // Array filter
         let userIDs = containsUser.map { $0.id }
         if !userIDs.isEmpty {
-            let inArray = try await s.query(QUser.self)
+            let inArray = try await s.origin.query(QUser.self)
                 .filter(\.id ~~ userIDs)
                 .all()
             #expect(inArray.count > 0)
             
             // Not in array
-            let notInArray = try await s.query(QUser.self)
+            let notInArray = try await s.origin.query(QUser.self)
                 .filter(\.id !~ userIDs)
                 .all()
             #expect(notInArray.count >= 0)

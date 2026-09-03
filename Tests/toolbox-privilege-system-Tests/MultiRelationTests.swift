@@ -49,8 +49,8 @@ struct MultiRelationsTesting {
         let roleIds = Self.roles.map { $0.id! }
         let groupIds = Self.groups.map { $0.id! }
         
-        #expect(try await s.query(QRole.self).filter(\.id ~~ roleIds).count() == Self.roles.count)
-        #expect(try await s.query(QGroup.self).filter(\.id ~~ groupIds).count() == Self.groups.count)
+        #expect(try await s.origin.query(QRole.self).filter(\.id ~~ roleIds).count() == Self.roles.count)
+        #expect(try await s.origin.query(QGroup.self).filter(\.id ~~ groupIds).count() == Self.groups.count)
     }
     
     @Test("正常多对多创建")
@@ -64,7 +64,7 @@ struct MultiRelationsTesting {
             roleIds => groupIds
         })
         
-        var count = try await s.query(RoleTGroup.self)
+        var count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -75,7 +75,7 @@ struct MultiRelationsTesting {
             roleIds => groupIds
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -94,7 +94,7 @@ struct MultiRelationsTesting {
             roleIds => groupIds
         })
         
-        var count = try await s.query(RoleTGroup.self)
+        var count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -105,7 +105,7 @@ struct MultiRelationsTesting {
             roleIds => groupIds
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -126,7 +126,7 @@ struct MultiRelationsTesting {
             })
         }
         
-        var count = try await s.query(RoleTGroup.self)
+        var count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -142,7 +142,7 @@ struct MultiRelationsTesting {
             })
         }
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ rs)
             .filter(\.groupId ~~ gs)
             .count()
@@ -155,7 +155,7 @@ struct MultiRelationsTesting {
             rs => gs2 // 0, 1 => 0, 1, 2, 3, 4
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ rs)
             .filter(\.groupId ~~ gs2)
             .count()
@@ -174,7 +174,7 @@ struct MultiRelationsTesting {
             OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[0].id!])
         })
         
-        var count = try await s.query(RoleTGroup.self)
+        var count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -189,7 +189,7 @@ struct MultiRelationsTesting {
             })
         }
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -209,7 +209,7 @@ struct MultiRelationsTesting {
             OrderedSet(roleIds.dropLast()) => OrderedSet(groupIds.dropLast(2))
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -225,7 +225,7 @@ struct MultiRelationsTesting {
             OrderedSet([Self.roles[1].id!]) => OrderedSet([Self.groups[2].id!, Self.groups[3].id!])
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -256,7 +256,7 @@ struct MultiRelationsTesting {
             OrderedSet([Self.roles[0].id!]) => OrderedSet([Self.groups[3].id!])
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -274,7 +274,7 @@ struct MultiRelationsTesting {
             OrderedSet([Self.roles[1].id!]) => OrderedSet([Self.groups[0].id!, Self.groups[1].id!])
         })
         
-        count = try await s.query(RoleTGroup.self)
+        count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()
@@ -290,10 +290,10 @@ struct MultiRelationsTesting {
         try await s.role.delete(roleIds: roleIds)
         try await s.group.delete(groupIds: groupIds)
         
-        #expect(try await s.query(QRole.self).filter(\.id ~~ roleIds).count() == 0)
-        #expect(try await s.query(QGroup.self).filter(\.id ~~ groupIds).count() == 0)
+        #expect(try await s.origin.query(QRole.self).filter(\.id ~~ roleIds).count() == 0)
+        #expect(try await s.origin.query(QGroup.self).filter(\.id ~~ groupIds).count() == 0)
         
-        let count = try await s.query(RoleTGroup.self)
+        let count = try await s.origin.query(RoleTGroup.self)
             .filter(\.roleId ~~ roleIds)
             .filter(\.groupId ~~ groupIds)
             .count()

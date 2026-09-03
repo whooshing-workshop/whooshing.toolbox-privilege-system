@@ -15,10 +15,10 @@ extension PrivilegeSystem {
     /// - `appoint` / `dismiss`: 进行角色的指派或撤销指派。支持多对多操作。
     /// - `roles` / `verify` / `is`: 动态查询和验证角色指派情况。
     public final class RoleController: SystemController {
+        public let defaultTransactor: Transactor
         package let db: PGDatabase
         package let eventLoop: EventLoop
         
-        let groupController: GroupController
         let policyController: PolicyController
         
         /// 操作记录日志器。
@@ -27,15 +27,14 @@ extension PrivilegeSystem {
         init(
             db: PGDatabase,
             eventLoop: EventLoop,
-            groupController: GroupController,
             policyController: PolicyController,
             logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
-            self.groupController = groupController
             self.policyController = policyController
             self.logger = logger
+            self.defaultTransactor = .init(db: db)
         }
         
         /// 批量创建角色并附带 OPA 策略。
@@ -51,10 +50,11 @@ extension PrivilegeSystem {
         /// }.get()
         /// ```
         public func create(
+            on transactor: Transactor? = nil,
             @MTORelationBuilder<PPolicy<Role>, PRole>
             _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Role>, PRole>>
         ) -> EventLoopRes<Void, Errcase> {
-            create(relations: content())
+            create(relations: content(), on: transactor)
         }
         
         /// 批量创建角色并附带 OPA 策略，返回存入的策略查询结构。
@@ -62,10 +62,11 @@ extension PrivilegeSystem {
         /// - Parameter content: `MTORelationBuilder` 闭包，用于构建角色与策略间的多对一关系。
         /// - Returns: 一个字典，Key为角色的 ID，Value 为该角色关联的策略查询对象 `QPolicy<Role>`。
         public func createWithReturning(
+            on transactor: Transactor? = nil,
             @MTORelationBuilder<PPolicy<Role>, PRole>
             _ content: @Sendable @escaping () ->OrderedSet<MTORelation<PPolicy<Role>, PRole>>
         ) -> EventLoopRes<[UUID: [QPolicy<Role>]], Errcase> {
-            createWithReturning(relations: content())
+            createWithReturning(relations: content(), on: transactor)
         }
         
         /// 批量创建裸角色（无策略附带）。
@@ -79,11 +80,13 @@ extension PrivilegeSystem {
         /// ).get()
         /// ```
         public func create(
-            roles:OrderedSet<PRole>
+            roles:OrderedSet<PRole>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<[QRole], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建角色 操作", metadata: ["roles": .summaryData(roles)])
             logger.debug("操作参数", metadata: ["roles": .data(roles)])
+            let db = transactor?.db ?? self.db
             return __create(on: db, roles: roles)
                 .map { 
                 logger.info("创建角色 操作成功", metadata: ["data": .summaryData($0)])
@@ -99,11 +102,13 @@ extension PrivilegeSystem {
         ///   - roleIds: 欲删除角色的 UUID 数组。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            roleIds: OrderedSet<UUID>
+            roleIds: OrderedSet<UUID>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除角色 操作", metadata: ["roleIds": .summaryData(roleIds)])
             logger.debug("操作参数", metadata: ["roleIds": .data(roleIds)])
+            let db = transactor?.db ?? self.db
             return __delete(
                 on: db,
                 QRole.self,
@@ -122,11 +127,13 @@ extension PrivilegeSystem {
         /// - Parameter updater: 更新器对象 `PRole.Updater`。
         /// - Returns: 更新完毕的角色对象 `QRole`。
         public func update(
-            with updater: PRole.Updater
+            with updater: PRole.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QRole, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新角色 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新角色 详细请求数据", metadata: ["data": .data(updater)])
+            let db = transactor?.db ?? self.db
             return __update(
                 on: db,
                 updater: updater,
@@ -147,11 +154,14 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.RoleController {
     func create(
-        relations:OrderedSet<MTORelation<PPolicy<Role>, PRole>>
+        relations:OrderedSet<MTORelation<PPolicy<Role>, PRole>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建角色（含策略） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        
+        let db = transactor?.db ?? self.db
         
         return db.trans(throws: .roleCreateFailed, "数据库事务执行失败", category: .internal) { db in
             self.__create(on: db, roles: relations.mapToSet { $0.right }).flatMap { roles in
@@ -166,11 +176,14 @@ public extension PrivilegeSystem.RoleController {
     }
     
     func createWithReturning(
-        relations:OrderedSet<MTORelation<PPolicy<Role>, PRole>>
+        relations:OrderedSet<MTORelation<PPolicy<Role>, PRole>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[UUID: [QPolicy<Role>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建角色（含策略返回） 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        
+        let db = transactor?.db ?? self.db
         
         return db.trans(throws: .roleCreateFailed, "数据库事务执行失败", category: .internal) { db in
             self.__create(on: db, roles: relations.mapToSet { $0.right }).flatMap { roles in
@@ -192,89 +205,101 @@ public extension PrivilegeSystem.RoleController {
     // MARK: - 角色任命
     
     func appoint(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         roleToUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(roleToUser: content())
+        self.appoint(roleToUser: content(), on: transactor)
     }
     
     func appoint(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QRole, QUser>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(relations: content())
+        self.appoint(relations: content(), on: transactor)
     }
     
     func appoint(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         roleToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(roleToGroup: content())
+        self.appoint(roleToGroup: content(), on: transactor)
     }
     
     func appoint(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QRole, QGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(relations: content())
+        self.appoint(relations: content(), on: transactor)
     }
     
     func appoint(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         roleToUserInGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(roleToUserInGroup: content())
+        self.appoint(roleToUserInGroup: content(), on: transactor)
     }
     
     func appoint(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QRole, UserTGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.appoint(relations: content())
+        self.appoint(relations: content(), on: transactor)
     }
     
     // MARK: - 角色撤职
     
     func dismiss(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         roleFromUser content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(roleFromUser: content())
+        self.dismiss(roleFromUser: content(), on: transactor)
     }
     
     func dismiss(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QRole, QUser>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QUser>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(relations: content())
+        self.dismiss(relations: content(), on: transactor)
     }
     
     func dismiss(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         roleFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(roleFromGroup: content())
+        self.dismiss(roleFromGroup: content(), on: transactor)
     }
     
     func dismiss(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QRole, QGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(relations: content())
+        self.dismiss(relations: content(), on: transactor)
     }
     
     func dismiss(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         roleFromUserInGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(roleFromUserInGroup: content())
+        self.dismiss(roleFromUserInGroup: content(), on: transactor)
     }
     
     func dismiss(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QRole, UserTGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QRole, UserTGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        self.dismiss(relations: content())
+        self.dismiss(relations: content(), on: transactor)
     }
 }
 
@@ -282,10 +307,12 @@ extension PrivilegeSystem.RoleController {
     // MARK: - 角色任命
     func appoint(
         roleToUser relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -301,11 +328,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: OrderedSet<MTMRelation<QRole, QUser>>
+        relations: OrderedSet<MTMRelation<QRole, QUser>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -319,11 +348,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        roleToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        roleToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -339,11 +370,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: OrderedSet<MTMRelation<QRole, QGroup>>
+        relations: OrderedSet<MTMRelation<QRole, QGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -357,11 +390,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        roleToUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        roleToUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命组内用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -377,11 +412,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func appoint(
-        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>
+        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色任命组内用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色任命组内用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -396,11 +433,13 @@ extension PrivilegeSystem.RoleController {
     
     // MARK: - 角色撤职
     func dismiss(
-        roleFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>
+        roleFromUser relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -416,11 +455,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: OrderedSet<MTMRelation<QRole, QUser>>
+        relations: OrderedSet<MTMRelation<QRole, QUser>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToManyReversed(
             on: db,
             relations,
@@ -434,11 +475,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        roleFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        roleFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -454,11 +497,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: OrderedSet<MTMRelation<QRole, QGroup>>
+        relations: OrderedSet<MTMRelation<QRole, QGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職用户组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職用户组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -472,11 +517,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        roleFromUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        roleFromUserInGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職组内用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -492,11 +539,13 @@ extension PrivilegeSystem.RoleController {
     }
     
     func dismiss(
-        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>
+        relations: OrderedSet<MTMRelation<QRole, UserTGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 角色撤職组内用户 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("角色撤職组内用户关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -520,123 +569,141 @@ public extension PrivilegeSystem.RoleController {
     typealias Errcase = PrivilegeSystem.Errcase
     
     func roles(
-        for user: QUser
+        for user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QRole], Errcase> {
-        __roles(on: db, for: user)
+        __roles(on: transactor?.db ?? self.db, for: user)
     }
     
     func roles(
-        for userId: UUID
+        for userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QRole], Errcase> {
-        __roles(on: db, for: userId)
+        __roles(on: transactor?.db ?? self.db, for: userId)
     }
     
     func userRoles(
-        for user: QUser
+        for user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QRole], Errcase> {
-        __userRoles(on: db, for: user)
+        __userRoles(on: transactor?.db ?? self.db, for: user)
     }
     
     func userRoles(
-        for userId: UUID
+        for userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QRole], Errcase> {
-        __userRoles(on: db, for: userId)
+        __userRoles(on: transactor?.db ?? self.db, for: userId)
     }
     
     func groupRoles(
-        for user: QUser
+        for user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        __groupRoles(on: db, for: user)
+        __groupRoles(on: transactor?.db ?? self.db, for: user)
     }
     
     func groupRoles(
-        for userId: UUID
+        for userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        __groupRoles(on: db, for: userId)
+        __groupRoles(on: transactor?.db ?? self.db, for: userId)
     }
     
     func userInGroupRoles(
-        for user: QUser
+        for user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        __userInGroupRoles(on: db, for: user)
+        __userInGroupRoles(on: transactor?.db ?? self.db, for: user)
     }
     
     func userInGroupRoles(
-        for userId: UUID
+        for userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[MTORelation<QRole, QGroup>], Errcase> {
-        __userInGroupRoles(on: db, for: userId)
+        __userInGroupRoles(on: transactor?.db ?? self.db, for: userId)
     }
 }
 
 public extension PrivilegeSystem.RoleController {
     func `is`(
         role: QRole,
-        appointedTo user: QUser
+        appointedTo user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, role: role, appointedTo: user)
+        __is(on: transactor?.db ?? self.db, role: role, appointedTo: user)
     }
     
     func `is`(
         roleId: UUID,
-        appointedTo userId: UUID
+        appointedTo userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, roleId: roleId, appointedTo: userId)
+        __is(on: transactor?.db ?? self.db, roleId: roleId, appointedTo: userId)
     }
     
     func `is`(
         userRole: QRole,
-        appointedTo user: QUser
+        appointedTo user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, userRole: userRole, appointedTo: user)
+        __is(on: transactor?.db ?? self.db, userRole: userRole, appointedTo: user)
     }
     
     func `is`(
         userRoleId: UUID,
-        appointedTo userId: UUID
+        appointedTo userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, userRoleId: userRoleId, appointedTo: userId)
+        __is(on: transactor?.db ?? self.db, userRoleId: userRoleId, appointedTo: userId)
     }
     
     func `is`(
         groupRole: QRole,
-        appointedTo group: QGroup
+        appointedTo group: QGroup,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, groupRole: groupRole, appointedTo: group)
+        __is(on: transactor?.db ?? self.db, groupRole: groupRole, appointedTo: group)
     }
     
     func `is`(
         groupRoleId: UUID,
-        appointedTo groupId: UUID
+        appointedTo groupId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, groupRoleId: groupRoleId, appointedTo: groupId)
+        __is(on: transactor?.db ?? self.db, groupRoleId: groupRoleId, appointedTo: groupId)
     }
     
     func verify(
         groupRole: QRole,
-        appointedTo user: QUser
+        appointedTo user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QGroup], Errcase> {
-        __verify(on: db, groupRole: groupRole, appointedTo: user)
+        __verify(on: transactor?.db ?? self.db, groupRole: groupRole, appointedTo: user)
     }
     
     func verify(
         groupRoleId: UUID,
-        appointedTo userId: UUID
+        appointedTo userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QGroup], Errcase> {
-        __verify(on: db, groupRoleId: groupRoleId, appointedTo: userId)
+        __verify(on: transactor?.db ?? self.db, groupRoleId: groupRoleId, appointedTo: userId)
     }
     
     func verify(
         userInGroupRole: QRole,
-        appointedTo user: QUser
+        appointedTo user: QUser,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QGroup], Errcase> {
-        __verify(on: db, userInGroupRole: userInGroupRole, appointedTo: user)
+        __verify(on: transactor?.db ?? self.db, userInGroupRole: userInGroupRole, appointedTo: user)
     }
     
     func verify(
         userInGroupRoleId: UUID,
-        appointedTo userId: UUID
+        appointedTo userId: UUID,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[QGroup], Errcase> {
-        __verify(on: db, userInGroupRoleId: userInGroupRoleId, appointedTo: userId)
+        __verify(on: transactor?.db ?? self.db, userInGroupRoleId: userInGroupRoleId, appointedTo: userId)
     }}
 
 

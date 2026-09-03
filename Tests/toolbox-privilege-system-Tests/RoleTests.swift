@@ -92,12 +92,12 @@ struct RoleTesting {
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QRole.self).count() == Self.roles.count)
+        #expect(try await s.origin.query(QRole.self).filter(\.id != BasicRoleCreatesTesting.nobodyRoleId).count() == Self.roles.count)
         
         Self.ids = []
         for roleParam in Self.roles {
             let u = try #require(
-                try await s.query(QRole.self)
+                try await s.origin.query(QRole.self)
                     .filter(\.name == roleParam.name)
                     .first()
                     
@@ -110,7 +110,7 @@ struct RoleTesting {
     @Test("为每个角色创建默认策略")
     func createPolicies() async throws {
         let (s, m) = try await TestingShared.getSystem()
-        let allRoles = try await s.query(QRole.self).all()
+        let allRoles = try await s.origin.query(QRole.self).all()
         let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
         for (i, role) in roles.enumerated() {
@@ -129,7 +129,7 @@ struct RoleTesting {
     @Test("验证角色策略是否成功添加")
     func verifyPolicies() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allRoles = try await s.query(QRole.self).all()
+        let allRoles = try await s.origin.query(QRole.self).all()
         let roles = Self.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         
         for role in roles {
@@ -212,9 +212,11 @@ struct RoleTesting {
     @Test("角色多重关联与撤除测试")
     func appointAndDismissAll() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let users = try await s.query(QUser.self).all()
-        let groups = try await s.query(QGroup.self).all()
-        let roles = try await s.query(QRole.self).all()
+        let users = try await s.origin.query(QUser.self).all()
+        let groups = try await s.origin.query(QGroup.self).all()
+        let roles = try await s.origin.query(QRole.self).all().filter { role in
+            role.name != "nobody"
+        }
         
         let user = users[1]
         let group = groups[1]
@@ -223,20 +225,24 @@ struct RoleTesting {
         // 1. Role <-> User
         try await s.role.appoint { OrderedSet([role]) => OrderedSet([user]) }
         let c1 = try await __SDBM.UserRolePivot.query(on: s.pgDB)
+            .filter(\.$secondaryModel.$id != BasicRoleCreatesTesting.nobodyRoleId)
             .count()
         #expect(c1 == 1)
         try await s.role.dismiss { OrderedSet([role]) => OrderedSet([user]) }
         let c2 = try await __SDBM.UserRolePivot.query(on: s.pgDB)
+            .filter(\.$secondaryModel.$id != BasicRoleCreatesTesting.nobodyRoleId)
             .count()
         #expect(c2 == 0)
 
         // 2. Role <-> Group
         try await s.role.appoint { OrderedSet([role]) => OrderedSet([group]) }
         let c3 = try await __SDBM.RoleGroupPivot.query(on: s.pgDB)
+            .filter(\.$primaryModel.$id != BasicRoleCreatesTesting.nobodyRoleId)
             .count()
         #expect(c3 == 1)
         try await s.role.dismiss { OrderedSet([role]) => OrderedSet([group]) }
         let c4 = try await __SDBM.RoleGroupPivot.query(on: s.pgDB)
+            .filter(\.$primaryModel.$id != BasicRoleCreatesTesting.nobodyRoleId)
             .count()
         #expect(c4 == 0)
 
@@ -246,10 +252,12 @@ struct RoleTesting {
         let uig = try await s.group.query(relations: [.init(userId: user.id, groupId: group.id)])
         try await s.role.appoint { OrderedSet([role]) => OrderedSet(uig) }
         let c5 = try await __SDBM.RoleUserInGroupPivot.query(on: s.pgDB)
+            .filter(\.$primaryModel.$id != BasicRoleCreatesTesting.nobodyRoleId)
             .count()
         #expect(c5 == 1)
         try await s.role.dismiss { OrderedSet([role]) => OrderedSet(uig) }
         let c6 = try await __SDBM.RoleUserInGroupPivot.query(on: s.pgDB)
+            .filter(\.$primaryModel.$id != BasicRoleCreatesTesting.nobodyRoleId)
             .count()
         #expect(c6 == 0)
         
@@ -266,16 +274,20 @@ struct RoleTesting {
             .init(name: "TempDeleteRole", summary: "临时删除测试角色")
         ])
         
-        let countBefore = try await s.query(QRole.self).count()
+        let countBefore = try await s.origin.query(QRole.self)
+            .filter(\.id != BasicRoleCreatesTesting.nobodyRoleId)
+            .count()
         #expect(countBefore == Self.roles.count + 1)
         
         let tempId = try #require(tempRole.first?.id)
         try await s.role.delete(roleIds: [tempId])
         
-        let countAfter = try await s.query(QRole.self).count()
+        let countAfter = try await s.origin.query(QRole.self)
+            .filter(\.id != BasicRoleCreatesTesting.nobodyRoleId)
+            .count()
         #expect(countAfter == Self.roles.count, "删除后角色数量应恢复")
         
-        let found = try await s.query(QRole.self)
+        let found = try await s.origin.query(QRole.self)
             .filter(\.name == "TempDeleteRole")
             .first()
         #expect(found == nil, "被删除的角色不应被查询到")

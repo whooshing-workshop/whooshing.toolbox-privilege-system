@@ -46,11 +46,13 @@ public extension PrivilegeModule {
         /// let resourceDTO = try await module.resource.create(resources: OrderedSet<docResource>).first!
         /// ```
         public func create<T: Resource>(
-            resources: OrderedSet<T>
+            resources: OrderedSet<T>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<[QResource<T>], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源 操作", metadata: ["resources": .summaryData(resources)])
             logger.debug("操作参数", metadata: ["resources": .data(resources)])
+            let db = transactor?.db ?? self.db
             return __create(
                 on: db,
                 dtos: resources,
@@ -75,11 +77,13 @@ public extension PrivilegeModule {
         ///   - ids: 资源的 UUID 列表。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            ids: OrderedSet<UUID>
+            ids: OrderedSet<UUID>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除资源 操作", metadata: ["ids": .summaryData(ids)])
             logger.debug("操作参数", metadata: ["ids": .data(ids)])
+            let db = transactor?.db ?? self.db
             return __delete(
                 on: db,
                 AnyResource.self,
@@ -100,11 +104,13 @@ public extension PrivilegeModule {
         /// - Parameter updater: `ResourceDTO<T, DTO.Prepare>.Updater` 更新执行器。
         /// - Returns: `ResourceDTO<T, DTO.Queried>`
         public func update<T: Resource>(
-            with updater: QResource<T>.Updater
+            with updater: QResource<T>.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QResource<T>, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新资源 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新资源 详细请求数据", metadata: ["data": .data(updater)])
+            let db = transactor?.db ?? self.db
             return __update(
                 on: db,
                 updater: updater,

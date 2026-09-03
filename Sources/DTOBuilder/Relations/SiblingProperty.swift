@@ -83,32 +83,20 @@ final public class SiblingProperty<From, To, Through>: @unchecked Sendable
         }
     }
     
-    public func getIdsOnly(on system: Query.System) -> EventLoopRes<[UUID], DTO.Errcase> {
-        guard let sys = system as? __QuerySystem else {
-            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
-        }
-        return self.getIdsOnly(on: sys.pgDB)
+    public func getIdsOnly(on transactor: Transactor) -> EventLoopRes<[UUID], DTO.Errcase> {
+        self.getIdsOnly(on: transactor.db)
     }
     
-    public func get(on system: Query.System) -> EventLoopRes<[To], DTO.Errcase> {
-        guard let sys = system as? __QuerySystem else {
-            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
-        }
-        return self.get(on: sys.pgDB)
+    public func get(on transactor: Transactor) -> EventLoopRes<[To], DTO.Errcase> {
+        self.get(on: transactor.db)
     }
     
-    public func loadIdsOnly(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        guard let sys = system as? __QuerySystem else {
-            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
-        }
-        return self.loadIdsOnly(on: sys.pgDB)
+    public func loadIdsOnly(on transactor: Transactor) -> EventLoopRes<Void, DTO.Errcase> {
+        self.loadIdsOnly(on: transactor.db)
     }
     
-    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        guard let sys = system as? __QuerySystem else {
-            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
-        }
-        return self.load(on: sys.pgDB)
+    public func load(on transactor: Transactor) -> EventLoopRes<Void, DTO.Errcase> {
+        self.load(on: transactor.db)
     }
 }
  

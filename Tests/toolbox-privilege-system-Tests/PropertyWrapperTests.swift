@@ -17,7 +17,7 @@ struct PropertyWrapperTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 查找一个有 user info 的 user (例如 AT.ids[0])
-        let user = try await s.query(QUser.self)
+        let user = try await s.origin.query(QUser.self)
             .filter(\.id == AT.ids[0])
             .first()
         
@@ -27,7 +27,7 @@ struct PropertyWrapperTests {
         #expect(u.$info.loaded == false)
         
         // 加载 info
-        try await u.$info.load(on: s).get()
+        try await u.$info.load(on: s.origin).get()
         
         #expect(u.$info.loaded == true)
         #expect(u.info != nil)
@@ -44,7 +44,7 @@ struct PropertyWrapperTests {
         
         #expect(subProperty.loaded == false)
         
-        try await subProperty.load(on: s).get()
+        try await subProperty.load(on: s.origin).get()
         
         #expect(subProperty.loaded == true)
         #expect(subProperty.wrappedValue.nickname == "HelloWorld")
@@ -55,7 +55,7 @@ struct PropertyWrapperTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // 找到有父群组的群组 (由 GT.ids[0] 和 GT.ids[6] 构成父子关系，即 parentId 为 GT.ids[0])
-        let group = try await s.query(QGroup.self)
+        let group = try await s.origin.query(QGroup.self)
             .filter(\.id == GT.ids[6])
             .first()
             
@@ -63,7 +63,7 @@ struct PropertyWrapperTests {
         
         #expect(g.$parent.loaded == false)
         
-        try await g.$parent.load(on: s).get()
+        try await g.$parent.load(on: s.origin).get()
         
         #expect(g.$parent.loaded == true)
         #expect(g.parent != nil)
@@ -75,7 +75,7 @@ struct PropertyWrapperTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // QUserInfo.user 是 @Super 关系
-        let userInfo = try await s.query(QUserInfo.self)
+        let userInfo = try await s.origin.query(QUserInfo.self)
             .filter(\.$user.id == AT.ids[0])
             .first()
             
@@ -83,7 +83,7 @@ struct PropertyWrapperTests {
         
         #expect(info.$user.loaded == false)
         
-        try await info.$user.load(on: s).get()
+        try await info.$user.load(on: s.origin).get()
         
         #expect(info.$user.loaded == true)
         #expect(info.user.id == AT.ids[0])
@@ -94,7 +94,7 @@ struct PropertyWrapperTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // QGroup.childs 是 @Subs 关系
-        let group = try await s.query(QGroup.self)
+        let group = try await s.origin.query(QGroup.self)
             .filter(\.id == GT.ids[0])
             .first()
             
@@ -102,7 +102,7 @@ struct PropertyWrapperTests {
         
         #expect(g.$childs.loaded == false)
         
-        try await g.$childs.load(on: s).get()
+        try await g.$childs.load(on: s.origin).get()
         
         #expect(g.$childs.loaded == true)
         #expect(g.childs.count > 0)
@@ -114,7 +114,7 @@ struct PropertyWrapperTests {
         let (s, _) = try await TestingShared.getSystem()
         
         // QUser.groups 是 @Sibling 关系
-        let user = try await s.query(QUser.self)
+        let user = try await s.origin.query(QUser.self)
             .filter(\.id == AT.ids[0])
             .first()
             
@@ -124,13 +124,13 @@ struct PropertyWrapperTests {
         #expect(u.$groups.idsLoaded == false)
         
         // 只加载 IDs
-        try await u.$groups.loadIdsOnly(on: s).get()
+        try await u.$groups.loadIdsOnly(on: s.origin).get()
         #expect(u.$groups.idsLoaded == true)
         #expect(u.$groups.loaded == false)
         #expect(u.$groups.ids.contains(GT.ids[0]))
         
         // 完整加载
-        try await u.$groups.load(on: s).get()
+        try await u.$groups.load(on: s.origin).get()
         #expect(u.$groups.loaded == true)
         #expect(u.groups.contains { $0.id == GT.ids[0] })
     }

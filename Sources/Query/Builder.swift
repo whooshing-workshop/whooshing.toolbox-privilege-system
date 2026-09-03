@@ -12,10 +12,6 @@ import PgSQL
 ///     .page(with: 1, size: 20)
 /// ```
 public enum Query {
-    public protocol System: Sendable {
-        func query<T>(_ model: T.Type) -> Builder<T> where T: Queriable
-    }
-    
     /// 可以被查询 DSL 读取的 DTO。
     public protocol Queriable: Sendable {
         /// DTO 背后的 Fluent Model。
@@ -29,7 +25,7 @@ public enum Query {
         /// 将 Fluent Model 转换为 DTO。
         static func make(from: Model) -> Res<Self, ErrorType>
         /// 构建 Builder<Self>
-        static func query(on system: System) -> Builder<Self>
+        static func query(on transactor: Transactor) -> Builder<Self>
         /// 构建 Builder<Self>
         static func query(on db: PGDatabase) -> Builder<Self>
     }
@@ -178,15 +174,11 @@ public enum Query {
 }
 
 public extension Query.Queriable {
-    static func query(on system: Query.System) -> Query.Builder<Self> {
-        system.query(Self.self)
+    static func query(on transactor: Transactor) -> Query.Builder<Self> {
+        transactor.query(Self.self)
     }
     
     static func query(on db: PGDatabase) -> Query.Builder<Self> {
         .init(query: db.query(Model.self))
     }
-}
-
-package protocol __QuerySystem: Query.System {
-    var pgDB: PGDatabase { get }
 }

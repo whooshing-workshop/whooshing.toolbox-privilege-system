@@ -8,7 +8,7 @@ public extension __SDBM {
         
         public struct Fields: PGFields {
             let id = PGField("id", .uuid)                               .primary
-            let name = PGField("name", .string)                         .required
+            let appId = PGField("app_id", .string)                      .required.unique
             let type = PGField("type", .string)                         .required
             let data = PGField("data", .json)                           .required
             let createdAt = PGField("created_at", .datetime)            .required
@@ -21,7 +21,7 @@ public extension __SDBM {
         
         @ID(key: .id)                               public var id: UUID?
         
-        @Field(fields.name)                         var name: String
+        @Field(fields.appId)                        var appId: String
         @Field(fields.type)                         var type: String
         @Field(fields.data)                         var data: [String: AnyCodable]
         
@@ -32,7 +32,7 @@ public extension __SDBM {
         
         init<T, G>(from resource: PrivilegeModule<G>.__DBM.ResourceModel<T>) {
             self.id = resource.id
-            self.name = resource.name
+            self.appId = resource.appId
             self.type = resource.type.rawValue
             self.data = resource.data.json
             self.createdAt = resource.createdAt
@@ -53,7 +53,7 @@ extension PM.__DBM {
         
         public struct Fields: PGFields {
             let id = PGField("id", .uuid)                           .primary
-            let name = PGField("name", .string)                     .required
+            let appId = PGField("app_id", .string)                  .required.unique
             let type = PGField("type",
                 .enum(ResourceList.self, as: "resource_type")
             )                                                       .required
@@ -68,7 +68,7 @@ extension PM.__DBM {
         
         @ID(key: .id)                               public var id: UUID?
         
-        @Field(fields.name)                         var name: String
+        @Field(fields.appId)                        var appId: String
         @Enum(fields.type)                          var type: ResourceList
         @Field(fields.data)                         var data: T
         
@@ -85,14 +85,14 @@ extension PM.__DBM {
         
         init(from resource: T) {
             self.type = T.type
-            self.name = resource.name
+            self.appId = resource.appId
             self.data = resource
         }
         
-        // data 字段的 json 中有一个 "name" 字段，值应当与表结构中的 name 字段值一致
+        // data 字段的 json 中有一个 "appId" 字段，值应当与表结构中的 appId 字段值一致
         // 要解包的 Resource 类型的 type 必须与表结构中 type 的类型相同
         var isValid: Bool {
-            T.type == type && data.name == name
+            T.type == type && data.appId == appId
         }
         
         func fill() -> Self {

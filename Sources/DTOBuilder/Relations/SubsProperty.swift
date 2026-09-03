@@ -66,18 +66,12 @@ final public class SubsProperty<From, To>: @unchecked Sendable
         }
     }
     
-    public func get(on system: Query.System) -> EventLoopRes<[To], DTO.Errcase> {
-        guard let sys = system as? __QuerySystem else {
-            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
-        }
-        return self.get(on: sys.pgDB)
+    public func get(on transactor: Transactor) -> EventLoopRes<[To], DTO.Errcase> {
+        self.get(on: transactor.db)
     }
     
-    public func load(on system: Query.System) -> EventLoopRes<Void, DTO.Errcase> {
-        guard let sys = system as? __QuerySystem else {
-            fatalError("传入的实例并非 PrivilegeSystem 或 PrivilegeModule: \(type(of: system))")
-        }
-        return self.load(on: sys.pgDB)
+    public func load(on transactor: Transactor) -> EventLoopRes<Void, DTO.Errcase> {
+        self.load(on: transactor.db)
     }
 }
 

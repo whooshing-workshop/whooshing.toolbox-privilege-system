@@ -7,6 +7,12 @@ public extension PrivilegeSystem {
         case regoLoadFailed = "REGO 策略加载失败"
         case sqlLoadFailed = " SQL 函数加载失败"
         
+        case adminCreateFailed = "管理员账户创建失败"
+        case nobodyRoleCreateFailed = "基础角色创建失败"
+        
+        case nextRespondFailed = "后续操作失败"
+        case roleAuthenticationFailed = "角色身份验证失败"
+        
         // 登陆注册相关错误
         case userRegisterFailed = "用户注册失败"
         case userLoginFailed = "用户登陆失败"

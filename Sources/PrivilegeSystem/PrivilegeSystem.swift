@@ -62,6 +62,10 @@ public final class PrivilegeSystem: Sendable {
     
     /// 执行数据库和 OPA 操作所使用的事件循环。
     public let eventLoop: EventLoop
+    public let logger: Logger
+    
+    public let origin: Transactor
+    
     let dbs: Databases
     package let pgDB: PGDatabase
     let opa: OPA
@@ -150,14 +154,16 @@ public final class PrivilegeSystem: Sendable {
         self.opa = .init(argument: opaConfigure.conf(eventLoop: eventLoop, logger: initLogger.derive(subId: "opa")))
         self.pgDB = db
         
-        self.account = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "account"))
         self.infoSlice = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "infoslice"))
         self.userInfo = .init(db: db, eventLoop: eventLoop, infoSliceController: self.infoSlice, logger: logger.derive(subId: "userinfo"))
         self.group = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "group"))
         self.policy = .init(db: db, eventLoop: eventLoop, opa: opa, logger: logger.derive(subId: "policy"))
-        self.role = .init(db: db, eventLoop: eventLoop, groupController: self.group, policyController: self.policy, logger: logger.derive(subId: "role"))
+        self.role = .init(db: db, eventLoop: eventLoop, policyController: self.policy, logger: logger.derive(subId: "role"))
+        self.account = .init(db: db, eventLoop: eventLoop, roleController: self.role, logger: logger.derive(subId: "account"))
         self.domain = .init(db: db, eventLoop: eventLoop, policyController: self.policy, logger: logger.derive(subId: "domain"))
         self.arbitrator = .init(db: db, eventLoop: eventLoop, opa: opa, roleController: self.role, logger: logger.derive(subId: "arbitrator"))
+        self.logger = logger
+        self.origin = .init(db: db)
         
         initLogger.info("权限控制器模块初始化完成")
         
@@ -169,24 +175,3 @@ public final class PrivilegeSystem: Sendable {
         initLogger.info("权限系统初始化完成")
     }
 }
-
-extension PrivilegeSystem: Query.System {
-    /// 为某个系统 DTO 创建类型安全查询。
-    ///
-    /// `query(_:)` 是 Fluent 查询的小型 DSL 包装，会把 DTO 的 KeyPath 映射到
-    /// 数据库字段。调用方可以直接获取 DTO，而不需要接触底层 Fluent Model。
-    ///
-    /// ```swift
-    /// let users = try await system.query(QUser.self)
-    ///     .filter(\.email == "user1@example.com")
-    ///     .all()
-    /// ```
-    ///
-    /// - Parameter type: 要查询的 DTO 类型。大多数情况下 Swift 可以自动推断。
-    /// - Returns: 针对该 DTO 配置好的 `Query.Builder`。
-    public func query<T>(_ type: T.Type = T.self) -> Query.Builder<T> {
-        .init(query: T.Model.query(on: pgDB))
-    }
-}
-
-extension PrivilegeSystem: __QuerySystem {}

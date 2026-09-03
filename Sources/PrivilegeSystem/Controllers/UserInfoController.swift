@@ -40,10 +40,11 @@ extension PrivilegeSystem {
         /// - Parameter content: `OTOChainRelationBuilder` 构建链式关系的闭包。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
+            on transactor: Transactor? = nil,
             @OTOChainRelationBuilder<UUID, PUserInfo, PExtendedInfo>
             _ content: @Sendable @escaping () ->OrderedSet<OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>>
         ) -> EventLoopRes<Void, Errcase> {
-            create(relations: content())
+            create(relations: content(), on: transactor)
         }
         
         /// 根据 ID 批量删除用户信息记录。
@@ -52,11 +53,13 @@ extension PrivilegeSystem {
         ///   - infoIds: 要删除的信息记录 UUID 列表。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            infoIds: OrderedSet<UUID>
+            infoIds: OrderedSet<UUID>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除用户信息 操作", metadata: ["infoIds": .summaryData(infoIds)])
             logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
+            let db = transactor?.db ?? self.db
             return __delete(
                 on: db,
                 QUserInfo.self,
@@ -75,11 +78,13 @@ extension PrivilegeSystem {
         /// - Parameter updater: `PUserInfo.Updater` 对象。
         /// - Returns: 更新完成的 `QUserInfo`。
         public func update(
-            with updater: PUserInfo.Updater
+            with updater: PUserInfo.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QUserInfo, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新用户信息 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新用户信息 详细请求数据", metadata: ["data": .data(updater)])
+            let db = transactor?.db ?? self.db
             return __update(
                 on: db,
                 updater: updater,
@@ -100,11 +105,13 @@ extension PrivilegeSystem {
 
 public extension PrivilegeSystem.UserInfoController {
     func create(
-        relations:OrderedSet<OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>>
+        relations:OrderedSet<OTORelation<UUID, OTORelation<PUserInfo, PExtendedInfo>>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建用户信息 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        let db = transactor?.db ?? self.db
         return db.trans(throws: .userInfoCreateFailed, "数据库事务执行失败", category: .internal) { db in
             let infos = relations.map { $0.right.left.raw(for: $0.left) }
             return infos

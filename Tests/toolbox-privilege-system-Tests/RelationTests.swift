@@ -23,7 +23,7 @@ struct RelationsTesting {
 
     private func fetchRole(index: Int, s: PrivilegeSystem) async throws -> QRole {
         try #require(
-            try await s.query(QRole.self)
+            try await s.origin.query(QRole.self)
                 .filter(\.id == RT.ids[index])
                 .first()
         )
@@ -32,8 +32,8 @@ struct RelationsTesting {
     @Test("构建 User 与 Group 关系")
     func buildUserInGroups() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allUsers = try await s.query(QUser.self).all()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allUsers = try await s.origin.query(QUser.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
 
         let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
         let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
@@ -59,7 +59,7 @@ struct RelationsTesting {
     @Test("构建群组嵌套结构（move）")
     func buildGroupStructures() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
 
         // 通过 GroupTesting.ids 索引精确映射
         let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
@@ -78,7 +78,7 @@ struct RelationsTesting {
         // 验证：用 QGroup.parentId 确认每个子群组已成功挂载到父群组下
         for (parentIdx, childIndices) in TestingShared.groupStructures {
             let parentId = groups[parentIdx].id
-            let childCount = try await s.query(QGroup.self)
+            let childCount = try await s.origin.query(QGroup.self)
                 .filter(\.$parent.id == parentId)
                 .count()
             #expect(childCount == childIndices.count,
@@ -89,8 +89,8 @@ struct RelationsTesting {
     @Test("构建 Domain 与 Group 关系")
     func buildDomainForGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allDomains = try await s.query(QDomain.self).all()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allDomains = try await s.origin.query(QDomain.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         
         let domains = DomainTesting.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         let groups = GroupTesting.ids.compactMap { id in allGroups.first(where: { $0.id == id }) }
@@ -114,8 +114,8 @@ struct RelationsTesting {
     @Test("构建 Domain 与 User 关系")
     func buildDomainForUser() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allUsers = try await s.query(QUser.self).all()
-        let allDomains = try await s.query(QDomain.self).all()
+        let allUsers = try await s.origin.query(QUser.self).all()
+        let allDomains = try await s.origin.query(QDomain.self).all()
         let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
         let domains = DomainTesting.ids.compactMap { id in allDomains.first(where: { $0.id == id }) }
         for (domainIdx, userIndices) in TestingShared.domainForUser {
@@ -137,9 +137,9 @@ struct RelationsTesting {
     @Test("构建 Role 与 User/Group 关系")
     func buildRoleForUserAndGroup() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allRoles = try await s.query(QRole.self).all()
-        let allUsers = try await s.query(QUser.self).all()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allRoles = try await s.origin.query(QRole.self).all()
+        let allUsers = try await s.origin.query(QUser.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         
         let roles = RoleTesting.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
@@ -173,9 +173,9 @@ struct RelationsTesting {
     @Test("构建 Role 与 组内用户 (UserInGroup) 的关系")
     func buildRoleForGroupUser() async throws {
         let (s, _) = try await TestingShared.getSystem()
-        let allRoles = try await s.query(QRole.self).all()
-        let allUsers = try await s.query(QUser.self).all()
-        let allGroups = try await s.query(QGroup.self).all()
+        let allRoles = try await s.origin.query(QRole.self).all()
+        let allUsers = try await s.origin.query(QUser.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         
         let roles = RoleTesting.ids.compactMap { id in allRoles.first(where: { $0.id == id }) }
         let users = AccountTesting.ids.compactMap { id in allUsers.first(where: { $0.id == id }) }
@@ -290,7 +290,7 @@ struct RelationsTesting {
     func roleAPI_is_groupRole_ExactCheck() async throws {
         let (s, _) = try await TestingShared.getSystem()
         // group3(BannedUsers) 绑 RT[5] 为群组角色
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let group3 = try #require(allGroups.first(where: { $0.id == GT.ids[3] }))
         let rt5 = try await fetchRole(index: 5, s: s)
         let rt1 = try await fetchRole(index: 1, s: s)

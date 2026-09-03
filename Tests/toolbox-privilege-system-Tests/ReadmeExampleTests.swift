@@ -40,7 +40,7 @@ struct ReadmeExampleTests {
         // 创建一个代表特定文档的资源 (假设这篇文档是 resource1)
         // 使用测试库自带的 `JsonResource` 结构
         let docResource = JsonResource(
-            name: "Secret_Doc",
+            appId: "Secret_Doc",
             content: ["isPrivate": AnyCodable(true)]
         )
         let resourceDTO = try await module.resource.create(

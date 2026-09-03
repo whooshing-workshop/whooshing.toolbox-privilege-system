@@ -20,7 +20,7 @@ import Foundation
 ///     typealias Operations = FileOperation
 ///
 ///     static let type: ResourceList = .file
-///     var name: String
+///     var appId: String
 ///     var path: String
 /// }
 /// ```
@@ -35,8 +35,8 @@ public protocol Resource: Sendable, Codable, Hashable, Loggerable, CustomStringC
     /// 该资源在模块数据库中保存的资源类别。
     static var type: ResourceType { get }
     
-    /// 资源名称，用于日志和通用资源 DTO。
-    var name: String { get }
+    /// 事务层 Id，用于区分不同的资源。
+    var appId: String { get }
     
     /// 传给 OPA `input.resource` 的 JSON 表示。
     var json: [String: AnyCodable] { get }
@@ -64,7 +64,7 @@ public extension Resource {
     }
     
     var summaryDescription: String {
-        "Resource<\(Self.type.rawValue)>(name: \(name))"
+        "Resource<\(Self.type.rawValue)>(appId: \(appId))"
     }
     
     /// 实例层面对 `Self.type` 的便捷访问。

@@ -44,13 +44,15 @@ extension PrivilegeSystem {
         /// ).get().first!
         /// ```
         public func create(
-            groups: OrderedSet<PGroup>
+            groups: OrderedSet<PGroup>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<[QGroup], Errcase> {
             // 创建组，需要修改 groups 表，也需要修改 group_paths 内接表
             // 通过一个 pg 事务包括，保证两个表的修改为一个原子操作
             let logger = getActionLogger()
             logger.info("执行 创建用户组 操作", metadata: ["groups": .summaryData(groups)])
             logger.debug("操作参数", metadata: ["groups": .data(groups)])
+            let db = transactor?.db ?? self.db
             return db.trans(throws: .userInfoCreateFailed, "数据库事务执行失败", category: .internal) { db in
                 self.__create(
                     on: db,
@@ -113,7 +115,8 @@ extension PrivilegeSystem {
         ///   - allSatisfy: 是否必须满足全部找到并删除。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            groupIds: OrderedSet<UUID>
+            groupIds: OrderedSet<UUID>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             // 删除组，必须先清理 group_paths 表中的内接链接
             // 再从 groups 主表中批量删除表
@@ -122,6 +125,7 @@ extension PrivilegeSystem {
             let logger = getActionLogger()
             logger.info("执行 删除用户组 操作", metadata: ["groupIds": .summaryData(groupIds)])
             logger.debug("操作参数", metadata: ["groupIds": .data(groupIds)])
+            let db = transactor?.db ?? self.db
             return db.trans(throws: .groupDeleteFailed, "数据库事务执行失败", category: .internal) { db in
                 self.__check(
                     on: db,
@@ -177,11 +181,13 @@ extension PrivilegeSystem {
         /// - Parameter updater: 更新器对象 `PGroup.Updater`。
         /// - Returns: `QGroup`
         public func update(
-            with updater: PGroup.Updater
+            with updater: PGroup.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QGroup, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新用户组 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新用户组 详细请求数据", metadata: ["data": .data(updater)])
+            let db = transactor?.db ?? self.db
             return __update(
                 on: db,
                 updater: updater,
@@ -208,10 +214,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         userToGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        join(userToGroup: content())
+        join(userToGroup: content(), on: transactor)
     }
     
     /// 将一个或多个用户加入到特定群组。
@@ -219,10 +226,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QUser, QGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QUser, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        join(relations: content())
+        join(relations: content(), on: transactor)
     }
     
     // MARK: - 用户移出群组
@@ -232,10 +240,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         userFromGroup content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        kick(userFromGroup: content())
+        kick(userFromGroup: content(), on: transactor)
     }
     
     /// 将一个或多个用户从群组中移出。
@@ -243,10 +252,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter content: `MTMRelationBuilder` 多对多关系构建器。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<QUser, QGroup>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<QUser, QGroup>>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        kick(relations: content())
+        kick(relations: content(), on: transactor)
     }
 }
 
@@ -258,11 +268,13 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
-        userToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        userToGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户加入群组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("用户加入群组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -282,11 +294,13 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func join(
-        relations: OrderedSet<MTMRelation<QUser, QGroup>>
+        relations: OrderedSet<MTMRelation<QUser, QGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户加入群组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("用户加入群组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -306,11 +320,13 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
-        userFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>
+        userFromGroup relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户移出群组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("用户移出群组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -330,11 +346,13 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relations: `MTMRelation` 多对多关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func kick(
-        relations: OrderedSet<MTMRelation<QUser, QGroup>>
+        relations: OrderedSet<MTMRelation<QUser, QGroup>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 用户移出群组 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("用户移出群组关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -356,12 +374,14 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relation: `OTORelation` 描述从源群组到目标群组（可以为 nil）的一对一关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func move(
-        _ relation: OTORelation<UUID, UUID?>
+        _ relation: OTORelation<UUID, UUID?>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 群组移动 操作", metadata: ["relation": .summaryData(relation)])
         logger.info("群组移动操作详情", metadata: ["relation": .data(relation)])
         
+        let db = transactor?.db ?? self.db
         let ids = relation.right == nil ? [relation.left] : [relation.left, relation.right!]
         
         return db.trans(throws: .groupMoveFailed, "数据库事务执行失败", category: .internal) { db in
@@ -409,11 +429,14 @@ public extension PrivilegeSystem.GroupController {
     /// - Parameter relation: `OTORelation` 描述从源群组到目标群组（可以为 nil）的一对一关系。
     /// - Returns: `EventLoopRes<Void, Errcase>`
     func move(
-        _ relation: OTORelation<QGroup, QGroup?>
+        _ relation: OTORelation<QGroup, QGroup?>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 群组移动 操作", metadata: ["relation": .summaryData(relation)])
         logger.info("群组移动操作详情", metadata: ["relation": .data(relation)])
+        
+        let db = transactor?.db ?? self.db
         
         return __move(db: db, relation)
             .map { logger.info("群组移动 操作成功") }
@@ -426,8 +449,7 @@ extension PrivilegeSystem.GroupController {
         db: PGDatabase,
         _ relation: OTORelation<QGroup, QGroup?>
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
-        
-        return db.trans(throws: .groupMoveFailed, "数据库事务执行失败", category: .internal) { tdb in
+        db.trans(throws: .groupMoveFailed, "数据库事务执行失败", category: .internal) { tdb in
             let oldDelete: EventLoopRes<[__SDBM.Group.Path], PrivilegeSystem.Errcase> = __SDBM.Group.Path.query(on: tdb)
                 .filter(\.$ancestor.$id == relation.left.id)
                 .all()
@@ -506,9 +528,11 @@ public extension PrivilegeSystem.GroupController {
     /// - Returns: `EventLoopRes<[UserTGroup], Errcase>`
     func query(
         relations: OrderedSet<PUserTGroup>,
-        strict: Bool = true
+        strict: Bool = true,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[UserTGroup], PrivilegeSystem.Errcase> {
-        __query(on: db, relations: relations, strict: strict)
+        let db = transactor?.db ?? self.db
+        return __query(on: db, relations: relations, strict: strict)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
             try required(throws: PrivilegeSystem.Errcase.userGroupRelationQueryFailed, category: .internal) {

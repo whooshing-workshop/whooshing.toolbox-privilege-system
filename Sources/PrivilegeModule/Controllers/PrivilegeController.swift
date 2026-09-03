@@ -49,7 +49,8 @@ public extension PrivilegeModule {
         /// - Parameter privileges: 一组预备状态的资源权限 DTO 集合。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func create(
-            privileges: OrderedSet<PPrivilege>
+            privileges: OrderedSet<PPrivilege>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源权限 操作", metadata: ["privileges": .summaryData(privileges)])
@@ -63,6 +64,8 @@ public extension PrivilegeModule {
                     policy: p.policy
                 )
             }
+            
+            let db = transactor?.db ?? self.db
             
             // Pr: PPrivilege
             // P == Pr
@@ -95,7 +98,8 @@ public extension PrivilegeModule {
         /// - Parameter privileges: 一组预备状态的资源权限 DTO 集合。
         /// - Returns: 已成功保存到数据库中并下发给 OPA 的权限 DTO 列表。
         public func createWithReturning(
-            privileges: OrderedSet<PPrivilege>
+            privileges: OrderedSet<PPrivilege>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<[QPrivilege], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建资源权限（返回） 操作", metadata: ["privileges": .summaryData(privileges)])
@@ -109,6 +113,8 @@ public extension PrivilegeModule {
                     policy: p.policy
                 )
             }
+            
+            let db = transactor?.db ?? self.db
             
             return __createPolicy(
                 on: db,
@@ -146,10 +152,12 @@ public extension PrivilegeModule {
         /// - Parameter policy: 处于已查询状态的目标策略 `QPrivilege`。
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete(
-            policy: QPrivilege
+            policy: QPrivilege,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除资源权限 操作", metadata: ["privilegeId": .stringConvertible(policy.id)])
+            let db = transactor?.db ?? self.db
             return __deletePolicy(
                 on: db,
                 policy: policy,
@@ -175,7 +183,8 @@ public extension PrivilegeModule {
         /// - Parameter updater: `PPrivilege.Updater` 更新执行器。
         /// - Returns: `EventLoopRes<QPrivilege, Errcase>` 更新完成的新对象。
         public func update(
-            with updater: PPrivilege.Updater
+            with updater: PPrivilege.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QPrivilege, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新资源权限 操作", metadata: ["data": .summaryData(updater)])
@@ -184,6 +193,8 @@ public extension PrivilegeModule {
             guard updater.updates.count > 0 else {
                 return db.eventLoop.makeFailedResult(Errcase.privilegeUpdateFailed, "没有任何数据需要更新", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity)))
             }
+            
+            let db = transactor?.db ?? self.db
             
             // 在 SQL 事务中，先执行 SQL 更新，保持该事务会话
             // 只有当 OPA 也更新成功后才提交事务
@@ -251,10 +262,11 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter content: `@MTMRelationBuilder` 提供用于建立关系的 DSL 闭包。
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         privilegeToResource content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, S.Errcase> {
-        attach(privilegeToResource: content())
+        attach(privilegeToResource: content(), on: transactor)
     }
     
     /// 将多个权限绑定至多个资源（使用链式构造器模式）。
@@ -265,10 +277,11 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter content: `@MTMRelationBuilder` 提供用于建立关系的 DSL 闭包。
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) -> EventLoopRes<Void, S.Errcase> {
-        attach(relations: content())
+        attach(relations: content(), on: transactor)
     }
     
     // MARK: - 资源权限解除
@@ -281,10 +294,11 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter content: `@MTMRelationBuilder` 提供用于解绑关系的 DSL 闭包。
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func detach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         privilegeFromResource content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) -> EventLoopRes<Void, S.Errcase>  {
-        detach(privilegeFromResource: content())
+        detach(privilegeFromResource: content(), on: transactor)
     }
     
     /// 将多个权限从多个资源上解绑（使用链式构造器模式）。
@@ -295,10 +309,11 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter content: `@MTMRelationBuilder` 提供用于解绑关系的 DSL 闭包。
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func detach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) -> EventLoopRes<Void, S.Errcase>  {
-        detach(relations: content())
+        detach(relations: content(), on: transactor)
     }
 }
 
@@ -308,11 +323,13 @@ public extension PrivilegeModule.PrivilegeController {
     /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
     /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
-        privilegeToResource relations: OrderedSet<MTMRelation<UUID, UUID>>
+        privilegeToResource relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 资源权限附加资源 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("资源权限附加资源关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -329,11 +346,13 @@ public extension PrivilegeModule.PrivilegeController {
     /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
     /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 资源权限附加资源 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("资源权限附加资源关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -350,11 +369,13 @@ public extension PrivilegeModule.PrivilegeController {
     /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
     /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
     func detach(
-        privilegeFromResource relations: OrderedSet<MTMRelation<UUID, UUID>>
+        privilegeFromResource relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
         logger.info("执行 资源权限解除资源 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("资源权限解除资源关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -371,11 +392,13 @@ public extension PrivilegeModule.PrivilegeController {
     /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
     /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
     func detach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
         logger.info("执行 资源权限解除资源 操作", metadata: ["relations": .summaryData(relations)])
         logger.debug("资源权限解除资源关系详情", metadata: ["detail": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __manyToMany(
             on: db,
             relations,
@@ -396,9 +419,10 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter resource: 需要探查的资源对象 `S.ResourceDTO<T, DTO.Queried>`。
     /// - Returns: 与该资源绑定的策略集合 `EventLoopRes<[S.QPrivilege], Errcase>`。
     func privilege<T: Resource>(
-        attachedTo resource: S.QResource<T>
+        attachedTo resource: S.QResource<T>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
-        __privilege(on: db, attachedTo: resource)
+        __privilege(on: transactor?.db ?? self.db, attachedTo: resource)
     }
     
     /// 取得附加到任意擦除类型资源上的所有策略集。
@@ -406,9 +430,10 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter resource: 擦除了具体类型的资源包装体 `AnyResource`。
     /// - Returns: 与该资源绑定的策略集合 `EventLoopRes<[S.QPrivilege], Errcase>`。
     func privilege(
-        attachedTo resource: AnyResource
+        attachedTo resource: AnyResource,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
-        __privilege(on: db, attachedTo: resource)
+        __privilege(on: transactor?.db ?? self.db, attachedTo: resource)
     }
 }
 
@@ -421,9 +446,10 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: 如果存在绑定关系则返回 `true`，否则 `false`。
     func `is`<T: Resource>(
         privilege: S.QPrivilege,
-        attachedTo resource: S.QResource<T>
+        attachedTo resource: S.QResource<T>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, privilege: privilege, attachedTo: resource)
+        __is(on: transactor?.db ?? self.db, privilege: privilege, attachedTo: resource)
     }
     
     /// 判定特定的策略对象是否正绑定于该擦除类型资源之上。
@@ -434,9 +460,10 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: 如果存在绑定关系则返回 `true`，否则 `false`。
     func `is`(
         privilege: S.QPrivilege,
-        attachedTo resource: AnyResource
+        attachedTo resource: AnyResource,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        __is(on: db, privilege: privilege, attachedTo: resource)
+        __is(on: transactor?.db ?? self.db, privilege: privilege, attachedTo: resource)
     }
 }
 
@@ -444,9 +471,11 @@ extension PrivilegeModule.PrivilegeController {
     // 取得 某资源 的所有资源权限
     func __privilege<T: Resource>(
         on db: PGDatabase,
-        attachedTo resource: S.QResource<T>
+        attachedTo resource: S.QResource<T>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
-        resource.model(from: db)
+        let db = transactor?.db ?? self.db
+        return resource.model(from: db)
             .errCast(Errcase.privilegeFetchFailed, "取得 Resource 主模型失败", category: .internal)
             .flatMap
         { resourceModel in
@@ -462,9 +491,11 @@ extension PrivilegeModule.PrivilegeController {
     // 取得 某资源 的所有资源权限
     func __privilege(
         on db: PGDatabase,
-        attachedTo resource: AnyResource
+        attachedTo resource: AnyResource,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
-        S.__DBM.PrivilegeAnyResourcePivot.query(on: db)
+        let db = transactor?.db ?? self.db
+        return S.__DBM.PrivilegeAnyResourcePivot.query(on: db)
             .filter(\.$secondaryModel.$id == resource.id)
             .with(\.$primaryModel)
             .all()
@@ -483,9 +514,11 @@ extension PrivilegeModule.PrivilegeController {
     func __is<T: Resource>(
         on db: PGDatabase,
         privilege: S.QPrivilege,
-        attachedTo resource: S.QResource<T>
+        attachedTo resource: S.QResource<T>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        resource.model(from: db)
+        let db = transactor?.db ?? self.db
+        return resource.model(from: db)
             .errCast(Errcase.privilegeCheckFailed, "取得 Resource 主模型失败", category: .internal)
             .flatMap
         { resourceModel in
@@ -501,9 +534,11 @@ extension PrivilegeModule.PrivilegeController {
     func __is(
         on db: PGDatabase,
         privilege: S.QPrivilege,
-        attachedTo resource: AnyResource
+        attachedTo resource: AnyResource,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
-        S.__DBM.PrivilegeAnyResourcePivot.query(on: db)
+        let db = transactor?.db ?? self.db
+        return S.__DBM.PrivilegeAnyResourcePivot.query(on: db)
             .filter(\.$secondaryModel.$id == resource.id)
             .first()
             .withError(Errcase.privilegeFetchFailed, "从数据库查询失败", category: .internal)

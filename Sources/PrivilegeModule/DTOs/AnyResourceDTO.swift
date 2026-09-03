@@ -5,7 +5,7 @@ import Foundation
 public struct AnyResource: DTO.DBModel {
     public let id: UUID
     public let type: String
-    public let name: String
+    public let appId: String
     public let data: [String: AnyCodable]
     public let createdAt: Date
     public let updatedAt: Date
@@ -19,18 +19,18 @@ public struct AnyResource: DTO.DBModel {
     public var maps: [CodingKeys: AnyHashable?] {[
         .id: .init(obj: self.id),
         .type: .init(obj: self.type),
-        .name: .init(obj: self.name),
+        .appId: .init(obj: self.appId),
         .data: .init(obj: self.data),
         .createdAt: .init(obj: self.createdAt),
         .updatedAt: .init(obj: self.updatedAt)
     ]}
     
-    public var summaryKeys: [CodingKeys] { [.id, .name, .type] }
+    public var summaryKeys: [CodingKeys] { [.id, .appId, .type] }
     
     public enum CodingKeys: String, DTO.CodingKey {
         case id
         case type
-        case name
+        case appId = "app_id"
         case data
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -48,7 +48,7 @@ public struct AnyResource: DTO.DBModel {
         self = Self.init(
             id: resource.id,
             type: resource.data.rtype.rawValue,
-            name: resource.data.name,
+            appId: resource.data.appId,
             data: resource.data.json,
             createdAt: resource.createdAt,
             updatedAt: resource.updatedAt,
@@ -59,7 +59,7 @@ public struct AnyResource: DTO.DBModel {
     init(
         id: UUID,
         type: String,
-        name: String,
+        appId: String,
         data: [String: AnyCodable],
         createdAt: Date,
         updatedAt: Date,
@@ -67,7 +67,7 @@ public struct AnyResource: DTO.DBModel {
     ) {
         self.id = id
         self.type = type
-        self.name = name
+        self.appId = appId
         self.data = data
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -78,7 +78,7 @@ public struct AnyResource: DTO.DBModel {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(UUID.self, forKey: .id)
         self.type = try container.decode(String.self, forKey: .type)
-        self.name = try container.decode(String.self, forKey: .name)
+        self.appId = try container.decode(String.self, forKey: .appId)
         self.data = try container.decode([String: AnyCodable].self, forKey: .data)
         self.createdAt = try container.decode(Date.self, forKey: .createdAt)
         self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
@@ -89,7 +89,7 @@ public struct AnyResource: DTO.DBModel {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.id, forKey: .id)
         try container.encode(self.type, forKey: .type)
-        try container.encode(self.name, forKey: .name)
+        try container.encode(self.appId, forKey: .appId)
         try container.encode(self.data, forKey: .data)
         try container.encode(self.createdAt, forKey: .createdAt)
         try container.encode(self.updatedAt, forKey: .updatedAt)
@@ -104,7 +104,7 @@ public extension AnyResource {
             Self.init(
                 id: try model.requireID(),
                 type: model.type,
-                name: model.name,
+                appId: model.appId,
                 data: model.data,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,

@@ -31,13 +31,14 @@ extension PrivilegeSystem {
         ///   - content: `@MTORelationBuilder` 闭包，用于声明策略对象与实体 UUID 的关系。
         /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
         public func create<T: PolicyType>(
+            on transactor: Transactor? = nil,
             to model: T.Type,
             @MTORelationBuilder<PPolicy<T>, T.Model.IDValue>
             _ content: @Sendable @escaping () -> OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建策略 操作", metadata: ["type": .string(String(describing: model))])
-            return create(to: model, relations: content())
+            return create(to: model, relations: content(), on: transactor)
                 .map { logger.info("创建策略 操作成功") }
                 .logIfFail(logger: logger)
         }
@@ -52,13 +53,14 @@ extension PrivilegeSystem {
         ///   - content: `@MTORelationBuilder` 闭包。
         /// - Returns: 按绑定的目标模型 ID 分组的策略列表 `EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase>`。
         public func createWithReturning<T: PolicyType>(
+            on transactor: Transactor? = nil,
             to model: T.Type,
             @MTORelationBuilder<PPolicy<T>, T.Model.IDValue>
             _ content: @Sendable @escaping () -> OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
         ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建策略（返回） 操作", metadata: ["type": .string(String(describing: model))])
-            return createWithReturning(to: model, relations: content())
+            return createWithReturning(to: model, relations: content(), on: transactor)
                 .map { logger.info("创建策略（返回） 操作成功"); return $0 }
                 .logIfFail(logger: logger)
         }
@@ -73,10 +75,12 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
         public func delete<T: PolicyType>(
             from model: T.Type = T.self,
-            policy: OTORelation<QPolicy<T>, T.Model.IDValue>
+            policy: OTORelation<QPolicy<T>, T.Model.IDValue>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除策略 操作", metadata: ["type": .string(String(describing: model)), "policyId": .stringConvertible(policy.left.id)])
+            let db = transactor?.db ?? self.db
             return __deletePolicy(
                 on: db,
                 policy: policy,
@@ -106,11 +110,13 @@ public extension PrivilegeSystem.PolicyController {
     /// - Returns: `EventLoopRes<Void, PrivilegeSystem.Errcase>`
     func create<T: PolicyType>(
         to model: T.Type,
-        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
+        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建策略（数组） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __create(on: db, to: model, relations: relations)
             .map { _ in logger.info("创建策略（数组） 操作成功") }
             .logIfFail(logger: logger)
@@ -124,11 +130,13 @@ public extension PrivilegeSystem.PolicyController {
     /// - Returns: 按实体 ID 分组返回所有被分配的查询状态策略。
     func createWithReturning<T: PolicyType>(
         to model: T.Type,
-        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>
+        relations: OrderedSet<MTORelation<PPolicy<T>, T.Model.IDValue>>,
+        on transactor: Transactor? = nil
     ) -> EventLoopRes<[T.Model.IDValue: [QPolicy<T>]], PrivilegeSystem.Errcase> {
         let logger = getActionLogger()
         logger.info("执行 创建策略（数组返回） 操作", metadata: ["type": .string(String(describing: model)), "relations": .summaryData(relations)])
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
+        let db = transactor?.db ?? self.db
         return __createWithReturning(on: db, to: model, relations: relations)
             .map { logger.info("创建策略（数组返回） 操作成功"); return $0 }
             .logIfFail(logger: logger)

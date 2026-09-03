@@ -35,11 +35,13 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<[QInfoSlice<T>], Errcase>`
         public func create<T>(
             for infoId: UUID,
-            extendedInfos: OrderedSet<PInfoSlice<T>>
+            extendedInfos: OrderedSet<PInfoSlice<T>>,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<[QInfoSlice<T>], Errcase> {
             let logger = getActionLogger()
             logger.info("执行 创建用户扩展信息 操作", metadata: ["infoId": .stringConvertible(infoId), "extendedInfos": .summaryData(extendedInfos)])
             logger.debug("操作参数", metadata: ["extendedInfos": .data(extendedInfos)])
+            let db = transactor?.db ?? self.db
             return __create(on: db, for: infoId, extendedInfos: extendedInfos)
                 .map { 
                 logger.info("创建用户扩展信息 操作成功", metadata: ["data": .summaryData($0)])
@@ -58,11 +60,13 @@ extension PrivilegeSystem {
         /// - Returns: `EventLoopRes<Void, Errcase>`
         public func delete<T: UserInfoModel>(
             infoIds: OrderedSet<UUID>,
-            type: T.Type = T.self
+            type: T.Type = T.self,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<Void, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 删除用户扩展信息 操作", metadata: ["infoIds": .summaryData(infoIds)])
             logger.debug("操作参数", metadata: ["infoIds": .data(infoIds)])
+            let db = transactor?.db ?? self.db
             return __delete(
                 on: db,
                 QInfoSlice<T>.self,
@@ -81,11 +85,13 @@ extension PrivilegeSystem {
         /// - Parameter updater: 特定切片的更新器对象 `PInfoSlice<T>.Updater`。
         /// - Returns: 更新完毕的实体对象 `QInfoSlice<T>`。
         public func update<T>(
-            with updater: PInfoSlice<T>.Updater
+            with updater: PInfoSlice<T>.Updater,
+            on transactor: Transactor? = nil
         ) -> EventLoopRes<QInfoSlice<T>, Errcase> {
             let logger = getActionLogger()
             logger.info("执行 更新用户扩展信息 操作", metadata: ["data": .summaryData(updater)])
             logger.debug("更新用户扩展信息 详细请求数据", metadata: ["data": .data(updater)])
+            let db = transactor?.db ?? self.db
             return __update(
                 on: db,
                 updater: updater,

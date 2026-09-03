@@ -107,7 +107,7 @@ struct PolicyTesting {
     /// 通过 RT.ids[index] 精确查询角色（策略写入 OPA 时用的就是这个 ID）。
     private func fetchRole(index: Int, s: PrivilegeSystem) async throws -> QRole {
         try #require(
-            try await s.query(QRole.self)
+            try await s.origin.query(QRole.self)
                 .filter(\.id == RT.ids[index])
                 .first()
         )
@@ -144,7 +144,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test1", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -185,7 +185,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 7, s: s) // RT[7]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test2", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -227,7 +227,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 0, s: s) // RT[0] = SuperAdminRole
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test3", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -260,7 +260,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 0, s: s)
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test4", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -300,8 +300,8 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 1, s: s) // RT[1] = EditorRole
 
-        for op in ["edit", "publish"] {
-            let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        for (i, op) in ["edit", "publish"].enumerated() {
+            let resource = JsonResource(appId: "test5_\(i)", content: ["region": AnyCodable("asia")])
             let resourceDTO = try await m.resource.create(resources: [resource]).first!
             let res = try await s.arbitrator.judge(
                 moduleId: m.moduleId, user: user, role: role,
@@ -314,7 +314,7 @@ struct PolicyTesting {
             #expect(res.reports.elements[1].key.type == .domain)
         }
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource = JsonResource(appId: "test6", content: ["region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let denied = try await s.arbitrator.judge(
@@ -351,7 +351,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 2, s: s)
         let role = try await fetchRole(index: 2, s: s)
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource = JsonResource(appId: "test7", content: ["region": AnyCodable("na")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -364,7 +364,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
         
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource2 = JsonResource(appId: "test8", content: ["region": AnyCodable("na")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let deny = try await s.arbitrator.judge(
@@ -400,7 +400,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 3, s: s) // RT[3] = ObserverRole
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource = JsonResource(appId: "test9", content: ["region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -444,7 +444,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 3, s: s) // RT[3] = ObserverRole: view
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test10", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -479,7 +479,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 3, s: s) // RT[3] ObserverRole
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource = JsonResource(appId: "test11", content: ["global": AnyCodable(false)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -515,7 +515,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 0, s: s) // RT[0] = SuperAdminRole: manage_all only
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test12", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // operation=view → SuperAdminRole 不允许 → role 失败；domain0(global=true) 通过
@@ -552,7 +552,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 0, s: s)
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource = JsonResource(appId: "test13", content: ["global": AnyCodable(false)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -595,7 +595,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 3, s: s) // RT[3] = ObserverRole: view (user1 用户角色)
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource = JsonResource(appId: "test14", content: ["region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -608,7 +608,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource2 = JsonResource(appId: "test15", content: ["region": AnyCodable("na")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let deny = try await s.arbitrator.judge(
@@ -644,7 +644,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 2, s: s)
         let role = try await fetchRole(index: 2, s: s) // RT[2] = ModeratorRole: moderate (user2 用户角色)
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource = JsonResource(appId: "test16", content: ["region": AnyCodable("na")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -657,7 +657,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource2 = JsonResource(appId: "test17", content: ["region": AnyCodable("asia")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let deny = try await s.arbitrator.judge(
@@ -703,7 +703,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 3, s: s)
         let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}（user3 的用户角色）
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true), "env": AnyCodable("sandbox")])
+        let resource = JsonResource(appId: "test18", content: ["global": AnyCodable(true), "env": AnyCodable("sandbox")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -744,7 +744,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 3, s: s)
         let role = try await fetchRole(index: 4, s: s) // RT[4]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test19", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -787,7 +787,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 3, s: s)
         let role = try await fetchRole(index: 5, s: s) // RT[5]: 群组角色，allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["env": AnyCodable("sandbox")])
+        let resource = JsonResource(appId: "test20", content: ["env": AnyCodable("sandbox")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -832,7 +832,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 3, s: s)
         let role = try await fetchRole(index: 4, s: s)
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test21", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -893,7 +893,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 5, s: s)
         let role = try await fetchRole(index: 8, s: s) // RT[8]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: [
+        let resource = JsonResource(appId: "test22", content: [
             "global": AnyCodable(true),
             "env": AnyCodable("sandbox"),
             "region": AnyCodable("asia") // domain2 需要 na，并预 asia → domain2 失败
@@ -952,7 +952,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 3, s: s)
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test23", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -965,7 +965,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource2 = JsonResource(appId: "test24", content: ["global": AnyCodable(false)])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let deny = try await s.arbitrator.judge(
@@ -999,7 +999,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 0, s: s)  // SuperAdminRole: manage_all only
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test25", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1043,7 +1043,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 8, s: s)
         let role = try await fetchRole(index: 12, s: s) // RT[12] = user8 的用户角色
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource = JsonResource(appId: "test26", content: ["region": AnyCodable("na")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // 替换前：allow if { true } → 任何操作都通过（配合 region=na 满足域策略）
@@ -1125,7 +1125,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 1, s: s)
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource = JsonResource(appId: "test27", content: ["region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // ✓ 亚太地区 + edit
@@ -1139,7 +1139,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("eu")])
+        let resource2 = JsonResource(appId: "test28", content: ["region": AnyCodable("eu")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // ✗ 欧洲地区 + publish（region 不匹配 domain1）
@@ -1155,7 +1155,7 @@ struct PolicyTesting {
         #expect(denyRegion.reports.elements[0].value == true)
         #expect(denyRegion.reports.elements[1].value == false)
 
-        let resource3 = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource3 = JsonResource(appId: "test29", content: ["region": AnyCodable("asia")])
         let resourceDTO3 = try await m.resource.create(resources: [resource3]).first!
         
         // ✗ 正确地区但无权操作
@@ -1193,7 +1193,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 2, s: s)
         let role = try await fetchRole(index: 2, s: s)  // ModeratorRole: moderate
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource = JsonResource(appId: "test30", content: ["region": AnyCodable("na")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -1206,7 +1206,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource2 = JsonResource(appId: "test31", content: ["region": AnyCodable("asia")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let denyAsia = try await s.arbitrator.judge(
@@ -1268,13 +1268,13 @@ struct PolicyTesting {
         }
 
         let cases: [Case] = [
-            .init(resource: JsonResource(name: "test", content: ["global": AnyCodable(true), "env": AnyCodable("sandbox")]),
+            .init(resource: JsonResource(appId: "test32", content: ["global": AnyCodable(true), "env": AnyCodable("sandbox")]),
                   op: .view, expected: true,   desc: "双域全满足 + view → ALLOW"),
-            .init(resource: JsonResource(name: "test", content: ["global": AnyCodable(false), "env": AnyCodable("sandbox")]),
+            .init(resource: JsonResource(appId: "test33", content: ["global": AnyCodable(false), "env": AnyCodable("sandbox")]),
                   op: .view, expected: false,  desc: "global=false → domain0 失败 → DENY"),
-            .init(resource: JsonResource(name: "test", content: ["global": AnyCodable(true)]),
+            .init(resource: JsonResource(appId: "test34", content: ["global": AnyCodable(true)]),
                   op: .view, expected: false,  desc: "env 缺失 → domain3 失败 → DENY"),
-            .init(resource: JsonResource(name: "test", content: [:]), op: .view, expected: false, desc: "两域均失败 → DENY")
+            .init(resource: JsonResource(appId: "test35", content: [:]), op: .view, expected: false, desc: "两域均失败 → DENY")
         ]
 
         for c in cases {
@@ -1315,7 +1315,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 6, s: s) // RT[6]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test36", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1357,7 +1357,7 @@ struct PolicyTesting {
         ])
         let privilege = try #require(privileges.first)
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test37", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -1442,7 +1442,7 @@ struct PolicyTesting {
             type: .privilege, moduleId: m.moduleId, id: filePrivilege.id
         )
         
-        let resource = JsonResource(name: "test", content: ["kind": AnyCodable("file")])
+        let resource = JsonResource(appId: "test38", content: ["kind": AnyCodable("file")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
 
         let allow = try await s.arbitrator.judge(
@@ -1463,7 +1463,7 @@ struct PolicyTesting {
         #expect(denyOperation.reports[readKey] == false)
         #expect(denyOperation.reports[fileKey] == true)
 
-        let resource2 = JsonResource(name: "test", content: ["kind": AnyCodable("directory")])
+        let resource2 = JsonResource(appId: "test39", content: ["kind": AnyCodable("directory")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let denyResource = try await s.arbitrator.judge(
@@ -1494,7 +1494,7 @@ struct PolicyTesting {
             )
         ])
         let privilege = try #require(privileges.first)
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test40", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // 验证带有 userId, roleId 和 logger 的 async 接口
@@ -1545,7 +1545,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 4, s: s)
         let role = try await fetchRole(index: 7, s: s) // RT[7]: user4 的用户角色
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test41", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1585,7 +1585,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 9, s: s)
         let role = try await fetchRole(index: 7, s: s)
 
-        let resource = JsonResource(name: "test", content: [:])
+        let resource = JsonResource(appId: "test42", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1621,7 +1621,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 0, s: s) // RT[0] = SuperAdminRole: manage_all only
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)]) // domain0 通过
+        let resource = JsonResource(appId: "test43", content: ["global": AnyCodable(true)]) // domain0 通过
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1660,7 +1660,7 @@ struct PolicyTesting {
         let role = try await fetchRole(index: 0, s: s) // RT[0] 不属于 user4
 
         do {
-            let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+            let resource = JsonResource(appId: "test44", content: ["global": AnyCodable(true)])
             let resourceDTO = try await m.resource.create(resources: [resource]).first!
             
             _ = try await s.arbitrator.judge(
@@ -1702,7 +1702,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 6, s: s)
         let role = try await fetchRole(index: 10, s: s) // RT[10]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)]) // 满足继承s的 domain0
+        let resource = JsonResource(appId: "test45", content: ["global": AnyCodable(true)]) // 满足继承s的 domain0
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1762,7 +1762,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 6, s: s)
         let role = try await fetchRole(index: 10, s: s) // RT[10]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test46", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -1806,7 +1806,7 @@ struct PolicyTesting {
         let applicableGroups = try await s.role.verify(groupRole: role, appointedTo: user)
         #expect(applicableGroups.map { $0.id }.contains(GT.ids[0]), "RT[11] 应作为父群组 group0 的群组角色对 user6 可用")
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test47", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1847,7 +1847,7 @@ struct PolicyTesting {
         // RT[4]: user6 的组内角色(in group6), allow if {true}
         let role = try await fetchRole(index: 4, s: s)
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource = JsonResource(appId: "test48", content: ["global": AnyCodable(false)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let deny = try await s.arbitrator.judge(
@@ -1890,7 +1890,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s) // user0 在 group0(domain0: global==true)
         let role = try await fetchRole(index: 0, s: s) // RT[0] SuperAdminRole: manage_all only
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test49", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -1937,7 +1937,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 7, s: s)
         let role = try await fetchRole(index: 11, s: s) // RT[11]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource = JsonResource(appId: "test50", content: ["region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // 尝试只满足 domain1
@@ -1955,7 +1955,7 @@ struct PolicyTesting {
         #expect(denyWithAsia.reports.elements[1].value == true)
         #expect(denyWithAsia.reports.elements[2].value == false)
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource2 = JsonResource(appId: "test51", content: ["region": AnyCodable("na")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // 尝试只满足 domain2
@@ -1973,7 +1973,7 @@ struct PolicyTesting {
         #expect(denyWithNa.reports.elements[1].value == false)
         #expect(denyWithNa.reports.elements[2].value == true)
 
-        let resource3 = JsonResource(name: "test", content: [:])
+        let resource3 = JsonResource(appId: "test52", content: [:])
         let resourceDTO3 = try await m.resource.create(resources: [resource3]).first!
         
         // 两者均不满足
@@ -2016,7 +2016,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 8, s: s)
         let role = try await fetchRole(index: 12, s: s) // RT[12]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource = JsonResource(appId: "test53", content: ["region": AnyCodable("na")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let allow = try await s.arbitrator.judge(
@@ -2029,7 +2029,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource2 = JsonResource(appId: "test54", content: ["region": AnyCodable("asia")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         let deny = try await s.arbitrator.judge(
@@ -2072,7 +2072,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 6, s: s)
         let role = try await fetchRole(index: 10, s: s) // RT[10]: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test55", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // global=true → 全通过
@@ -2091,7 +2091,7 @@ struct PolicyTesting {
         #expect(allPass.reports.elements[1].key.type == .domain)
         #expect(allPass.reports.elements[2].key.type == .domain)
         
-        let resource2 = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource2 = JsonResource(appId: "test56", content: ["global": AnyCodable(false)])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // global=false → domain0(继承) 失败 → DENY
@@ -2133,7 +2133,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 3, s: s) // RT[3] ObserverRole: view
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test57", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         let res = try await s.arbitrator.judge(
@@ -2152,7 +2152,7 @@ struct PolicyTesting {
         #expect(res.reports.elements[0].key.type == .role)
         #expect(res.reports.elements[1].key.type == .domain)
 
-        let resource2 = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource2 = JsonResource(appId: "test58", content: ["global": AnyCodable(false)])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // global=false → domain0 均失败 → DENY
@@ -2208,7 +2208,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let role = try await fetchRole(index: 3, s: s)
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test59", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // domain 满足 + role 满足 → ALLOW
@@ -2223,7 +2223,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[0].key.type == .role)
         #expect(allow.reports.elements[1].key.type == .domain)
         
-        let resource2 = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource2 = JsonResource(appId: "test60", content: ["global": AnyCodable(false)])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // domain 失败 → DENY（组内角色不能越过域策略）
@@ -2266,7 +2266,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 6, s: s)
         let role = try await fetchRole(index: 4, s: s) // SalesManager: allow if {true}
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test61", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // SalesManager 策略 allow if {true}，global=true 满足 domain0 → ALLOW
@@ -2282,7 +2282,7 @@ struct PolicyTesting {
         #expect(allow.reports.elements[1].key.type == .domain)
         #expect(allow.reports.elements[2].key.type == .domain)
         
-        let resource2 = JsonResource(name: "test", content: ["global": AnyCodable(false)])
+        let resource2 = JsonResource(appId: "test62", content: ["global": AnyCodable(false)])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // global=false → 父群组 domain0 失败 → DENY
@@ -2311,7 +2311,7 @@ struct PolicyTesting {
         let role = try await fetchRole(index: 2, s: s) // ModeratorRole: moderate
 
         // ─── 第一步：查询 user8 在 group10 中的关系对 ────────────────────────
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let group10 = try #require(allGroups.first(where: { $0.id == GT.ids[10] }))
 
         let relReq = try await s.group.query(
@@ -2327,7 +2327,7 @@ struct PolicyTesting {
             OrderedSet([role]) => OrderedSet([rel])
         }
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("na")])
+        let resource = JsonResource(appId: "test63", content: ["region": AnyCodable("na")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // ─── 第三步：鉴权验证（appoint 后应通过）────────────────────────────
@@ -2339,7 +2339,7 @@ struct PolicyTesting {
         )
         #expect(allowAfterAppoint.result, "appoint 后：ModeratorRole + domain2(region=na) → ALLOW")
 
-        let resource2 = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource2 = JsonResource(appId: "test64", content: ["region": AnyCodable("asia")])
         let resourceDTO2 = try await m.resource.create(resources: [resource2]).first!
         
         // region=asia → domain2 失败 → DENY
@@ -2370,7 +2370,7 @@ struct PolicyTesting {
         let hrLeadRole = try await fetchRole(index: 5, s: s) // HRLead: allow if {true}
         let role6 = try await fetchRole(index: 6, s: s)      // RT.ids[6]: allow if {true}
 
-        let allGroups = try await s.query(QGroup.self).all()
+        let allGroups = try await s.origin.query(QGroup.self).all()
         let group9 = try #require(allGroups.first(where: { $0.id == GT.ids[9] }))
 
         let relReq = try await s.group.query(
@@ -2386,7 +2386,7 @@ struct PolicyTesting {
             OrderedSet([role6]) => OrderedSet([relInGroup9])
         }
 
-        let resource = JsonResource(name: "test", content: ["region": AnyCodable("asia")])
+        let resource = JsonResource(appId: "test65", content: ["region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // ─── 测试场景：HRLead + group8 继承 domain1(asia) → 只满足 asia ───
@@ -2419,7 +2419,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 0, s: s)
         let superAdminRole = try await fetchRole(index: 0, s: s) // RT[0]: manage_all only
 
-        let resource = JsonResource(name: "test", content: ["global": AnyCodable(true)])
+        let resource = JsonResource(appId: "test66", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
         // RT[0] + view → role 策略不通过 → DENY（组内 RT[3] 不干扰）
@@ -2472,7 +2472,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 1, s: s) // EditorRole: edit 或 publish
         
-        let jsonResource = JsonResource(name: "public_doc.txt", content: ["isPrivate": AnyCodable(false), "region": AnyCodable("asia")])
+        let jsonResource = JsonResource(appId: "public_doc_1.txt", content: ["isPrivate": AnyCodable(false), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
@@ -2547,7 +2547,7 @@ struct PolicyTesting {
         let role = try await fetchRole(index: 1, s: s) // EditorRole: edit or publish
         
         // 这是一个私有文件
-        let jsonResource = JsonResource(name: "secret_keys.env", content: ["isPrivate": AnyCodable(true), "region": AnyCodable("asia")])
+        let jsonResource = JsonResource(appId: "secret_keys_1.env", content: ["isPrivate": AnyCodable(true), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
@@ -2621,7 +2621,7 @@ struct PolicyTesting {
         let user = try await fetchUser(index: 1, s: s)
         let role = try await fetchRole(index: 1, s: s) // EditorRole
         
-        let jsonResource = JsonResource(name: "user_home", content: ["ownerId": AnyCodable(user.id.uuidString), "region": AnyCodable("asia")])
+        let jsonResource = JsonResource(appId: "user_home_1", content: ["ownerId": AnyCodable(user.id.uuidString), "region": AnyCodable("asia")])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
         let anyResourceDTO = try #require(AnyResource(resourceDTO))
         
@@ -2656,7 +2656,7 @@ struct PolicyTesting {
         let otherUser = try await fetchUser(index: 0, s: s)
         let otherRole = try await fetchRole(index: 0, s: s)
         
-        let jsonResourceOther = JsonResource(name: "user_home", content: ["ownerId": AnyCodable(user.id.uuidString), "global": AnyCodable(true)])
+        let jsonResourceOther = JsonResource(appId: "user_home_2", content: ["ownerId": AnyCodable(user.id.uuidString), "global": AnyCodable(true)])
         let resourceDTO2 = try await m.resource.create(resources: [jsonResourceOther]).first!
         let deny = try await s.arbitrator.judge(
             moduleId: m.moduleId, user: otherUser, role: otherRole,

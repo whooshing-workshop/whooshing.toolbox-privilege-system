@@ -7,112 +7,128 @@ public extension PrivilegeModule.PrivilegeController {
     // MARK: CRUD
 
     func create(
-        privileges: OrderedSet<S.PPrivilege>
+        privileges: OrderedSet<S.PPrivilege>,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeModule.Errcase.ErrType) {
-        try await create(privileges: privileges).get()
+        try await create(privileges: privileges, on: transactor).get()
     }
 
     func createWithReturning(
-        privileges: OrderedSet<S.PPrivilege>
+        privileges: OrderedSet<S.PPrivilege>,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeModule.Errcase.ErrType) -> [S.QPrivilege] {
-        try await createWithReturning(privileges: privileges).get()
+        try await createWithReturning(privileges: privileges, on: transactor).get()
     }
 
     func delete(
-        policy: S.QPrivilege
+        policy: S.QPrivilege,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeModule.Errcase.ErrType) {
-        try await delete(policy: policy).get()
+        try await delete(policy: policy, on: transactor).get()
     }
 
     func update(
-        with updater: S.PPrivilege.Updater
+        with updater: S.PPrivilege.Updater,
+        on transactor: Transactor? = nil
     ) async throws(PrivilegeModule.Errcase.ErrType) -> S.QPrivilege {
-        try await update(with: updater).get()
+        try await update(with: updater, on: transactor).get()
     }
 
     // MARK: Attach / Detach (result-builder overloads)
 
     func attach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         privilegeToResource content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(S.Errcase.ErrType) {
-        try await attach(privilegeToResource: content).get()
+        try await attach(on: transactor, privilegeToResource: content).get()
     }
     
     func attach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) async throws(S.Errcase.ErrType) {
-        try await attach(content).get()
+        try await attach(on: transactor, content).get()
     }
     
     func detach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<UUID, UUID>
         privilegeFromResource content: @Sendable @escaping () -> OrderedSet<MTMRelation<UUID, UUID>>
     ) async throws(S.Errcase.ErrType) {
-        try await detach(privilegeFromResource: content).get()
+        try await detach(on: transactor, privilegeFromResource: content).get()
     }
 
     func detach(
+        on transactor: Transactor? = nil,
         @MTMRelationBuilder<S.QPrivilege, AnyResource>
         _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
     ) async throws(S.Errcase.ErrType) {
-        try await detach(content).get()
+        try await detach(on: transactor, content).get()
     }
 
     // MARK: Attach / Detach (array overloads)
 
     func attach(
-        privilegeToResource relations: OrderedSet<MTMRelation<UUID, UUID>>
+        privilegeToResource relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) async throws(S.Errcase.ErrType) {
-        try await attach(privilegeToResource: relations).get()
+        try await attach(privilegeToResource: relations, on: transactor).get()
     }
     
     func attach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        on transactor: Transactor? = nil
     ) async throws(S.Errcase.ErrType) {
-        try await attach(relations: relations).get()
+        try await attach(relations: relations, on: transactor).get()
     }
 
     func detach(
-        privilegeFromResource relations: OrderedSet<MTMRelation<UUID, UUID>>
+        privilegeFromResource relations: OrderedSet<MTMRelation<UUID, UUID>>,
+        on transactor: Transactor? = nil
     ) async throws(S.Errcase.ErrType) {
-        try await detach(privilegeFromResource: relations).get()
+        try await detach(privilegeFromResource: relations, on: transactor).get()
     }
     
     func detach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        on transactor: Transactor? = nil
     ) async throws(S.Errcase.ErrType) {
-        try await detach(relations: relations).get()
+        try await detach(relations: relations, on: transactor).get()
     }
 
     // MARK: Privilege query
 
     func privilege<T: Resource>(
-        attachedTo resource: S.QResource<T>
+        attachedTo resource: S.QResource<T>,
+        on transactor: Transactor? = nil
     ) async throws(Errcase.ErrType) -> [S.QPrivilege] {
-        try await privilege(attachedTo: resource).get()
+        try await privilege(attachedTo: resource, on: transactor).get()
     }
 
     func privilege(
-        attachedTo resource: AnyResource
+        attachedTo resource: AnyResource,
+        on transactor: Transactor? = nil
     ) async throws(Errcase.ErrType) -> [S.QPrivilege] {
-        try await privilege(attachedTo: resource).get()
+        try await privilege(attachedTo: resource, on: transactor).get()
     }
 
     // MARK: Is-attached check
 
     func `is`<T: Resource>(
         privilege: S.QPrivilege,
-        attachedTo resource: S.QResource<T>
+        attachedTo resource: S.QResource<T>,
+        on transactor: Transactor? = nil
     ) async throws(Errcase.ErrType) -> Bool {
-        try await self.is(privilege: privilege, attachedTo: resource).get()
+        try await self.is(privilege: privilege, attachedTo: resource, on: transactor).get()
     }
 
     func `is`(
         privilege: S.QPrivilege,
-        attachedTo resource: AnyResource
+        attachedTo resource: AnyResource,
+        on transactor: Transactor? = nil
     ) async throws(Errcase.ErrType) -> Bool {
-        try await self.is(privilege: privilege, attachedTo: resource).get()
+        try await self.is(privilege: privilege, attachedTo: resource, on: transactor).get()
     }
 }

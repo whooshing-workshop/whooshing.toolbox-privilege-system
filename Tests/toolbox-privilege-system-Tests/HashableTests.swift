@@ -12,13 +12,13 @@ struct MockResource: Resource, Hashable {
     typealias Operations = MockOperation
     
     static let type: ResourceList = .file
-    let name: String
+    let appId: String
     
-    var id: String { name }
-    var json: [String : AnyCodable] { ["name": AnyCodable(name)] }
+    var id: String { appId }
+    var json: [String : AnyCodable] { ["app_id": AnyCodable(appId)] }
     
     static var mirrors: [PartialKeyPath<MockResource>: [String]] {
-        [\.name: ["name"]]
+        [\.appId: ["appId"]]
     }
 }
 

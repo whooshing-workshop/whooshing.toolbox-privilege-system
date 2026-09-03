@@ -129,13 +129,15 @@ struct AccountTesting {
             )
         )
         
-        let authData = try await s.account.authenticate(token: .make(from: token).get())
+        let authData = try await s.account.authenticate(token: .make(from: token).get(), roleId: BasicRoleCreatesTesting.nobodyRoleId)
         #expect(authData.token.id == token.id)
         #expect(authData.token.credential == token.credential)
         #expect(authData.token.token == token.token)
         #expect(authData.token.$user.loaded == true)
         #expect(authData.token.user.id == user.id)
         #expect(authData.token.user.$info.loaded == true)
+        #expect(authData.role.id == BasicRoleCreatesTesting.nobodyRoleId)
+        #expect(authData.role.name == "nobody")
         
         let userToken = try AuthorizationToken.make(from: token).get()
         let dbToken = try await token.model(from: s.pgDB).get()
@@ -205,9 +207,9 @@ struct AccountTesting {
     func query() async throws {
         let (s, _) = try await TestingShared.getSystem()
         
-        #expect(try await s.query(QUser.self).count() == Self.users.count);
+        #expect(try await s.origin.query(QUser.self).count() == Self.users.count);
         
-        let res = try await s.query(QUser.self)
+        let res = try await s.origin.query(QUser.self)
             .group(.or) { g in
                 g
                     .filter(\.email == "user6@example.com")
@@ -224,7 +226,7 @@ struct AccountTesting {
         
         for user in Self.users {
             let u = try #require(
-                try await s.query(QUser.self)
+                try await s.origin.query(QUser.self)
                     .filter(\.email == user.0)
                     .first()
                     

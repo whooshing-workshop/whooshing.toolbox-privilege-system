@@ -8,6 +8,7 @@ struct TestingShared {
 
     enum TestStage: Int {
         case hashable
+        case basicRoleCreates
         case account
         case dtoCodable
         case group
@@ -23,6 +24,7 @@ struct TestingShared {
         case policy
         case advancePolicy
         case readmeExamples
+        case adminCreates
         case end
     }
     
@@ -170,6 +172,8 @@ struct TestingShared {
     static let opaHost = ProcessInfo.processInfo.environment["GITHUB_EOPA_TESTING_HOST"] ?? "localhost"
     static let opaPort = Int(ProcessInfo.processInfo.environment["GITHUB_EOPA_TESTING_PORT"] ?? "8181")!
     static let opaListening = try! isPortOpen(host: opaHost, port: opaPort)
+    
+    static let systemModuleId = UUID(uuidString: "4B5F79E2-6C98-4D2A-91A4-F2D7E088A53B")!
     
     @MainActor static var privilegeSystem: PrivilegeSystem? = nil
     @MainActor static var privilegeModule: PrivilegeModule<ResourceList>? = nil
