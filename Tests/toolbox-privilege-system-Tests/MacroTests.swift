@@ -23,12 +23,12 @@ struct MacroTests {
             """
             @Resource
             struct MyRes {
-                var name: String
+                var appId: String
             }
             """,
             expandedSource: """
             struct MyRes {
-                var name: String
+                var appId: String
             }
 
             extension MyRes: Resource {
@@ -54,14 +54,14 @@ struct MacroTests {
             """
             @Resource
             struct FileResource {
-                var name: String
+                var appId: String
                 var path: String
                 var isPrivate: Bool
             }
             """,
             expandedSource: """
             struct FileResource {
-                var name: String
+                var appId: String
                 var path: String
                 var isPrivate: Bool
             }
@@ -69,7 +69,7 @@ struct MacroTests {
             extension FileResource: Resource {
                 public var json: [String: AnyCodable] {
                     [
-                        "name": AnyCodable(name),
+                        "appId": AnyCodable(appId),
                         "path": AnyCodable(path),
                         "isPrivate": AnyCodable(isPrivate)
                     ]
@@ -96,21 +96,21 @@ struct MacroTests {
             @Resource
             struct DirectoryResource {
                 static let type: String = "directory"
-                var name: String
+                var appId: String
                 var path: String
             }
             """,
             expandedSource: """
             struct DirectoryResource {
                 static let type: String = "directory"
-                var name: String
+                var appId: String
                 var path: String
             }
 
             extension DirectoryResource: Resource {
                 public var json: [String: AnyCodable] {
                     [
-                        "name": AnyCodable(name),
+                        "appId": AnyCodable(appId),
                         "path": AnyCodable(path)
                     ]
                 }
@@ -134,14 +134,14 @@ struct MacroTests {
             """
             @Resource
             struct AliasResource {
-                var name: String
+                var appId: String
                 var targetId: String
                 var display: String { name + " -> " + targetId }
             }
             """,
             expandedSource: """
             struct AliasResource {
-                var name: String
+                var appId: String
                 var targetId: String
                 var display: String { name + " -> " + targetId }
             }
@@ -149,7 +149,7 @@ struct MacroTests {
             extension AliasResource: Resource {
                 public var json: [String: AnyCodable] {
                     [
-                        "name": AnyCodable(name),
+                        "appId": AnyCodable(appId),
                         "targetId": AnyCodable(targetId)
                     ]
                 }
@@ -186,7 +186,7 @@ struct MacroTests {
             extension ImmutableRes: Resource {
                 public var json: [String: AnyCodable] {
                     [
-                        "name": AnyCodable(name),
+                        "appId": AnyCodable(appId),
                         "ownerId": AnyCodable(ownerId)
                     ]
                 }
