@@ -4,6 +4,7 @@ import Foundation
 public extension PM {
     struct QResource<G: Resource>: DTO.DBModel where G.ResourceType == ResourceList {
         public let id: UUID
+        public let appId: String
         public let data: G
         public let createdAt: Date
         public let updatedAt: Date
@@ -23,6 +24,7 @@ public extension PM {
         
         public var maps: [CodingKeys: AnyHashable?] {[
             .id: .init(obj: self.id),
+            .appId: .init(obj: self.appId),
             .data: .init(obj: self.data),
             .createdAt: .init(obj: self.createdAt),
             .updatedAt: .init(obj: self.updatedAt),
@@ -34,12 +36,14 @@ public extension PM {
         
         init(
             id: UUID,
+            appId: String,
             data: G,
             createdAt: Date,
             updatedAt: Date,
             model: SQLModel?
         ) {
             self.id = id
+            self.appId = appId
             self.data = data
             self.createdAt = createdAt
             self.updatedAt = updatedAt
@@ -55,6 +59,7 @@ extension PM.QResource: __Model {}
 extension PM.QResource: Codable {
     public enum CodingKeys: String, DTO.CodingKey {
         case id
+        case appId = "app_id"
         case data
         case createdAt = "created_at"
         case updatedAt = "updated_at"
@@ -66,6 +71,7 @@ extension PM.QResource: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self = Self.init(
             id: try container.decode(UUID.self, forKey: .id),
+            appId: try container.decode(String.self, forKey: .appId),
             data: try container.decode(G.self, forKey: .data),
             createdAt: try container.decode(Date.self, forKey: .createdAt),
             updatedAt: try container.decode(Date.self, forKey: .updatedAt),
@@ -78,6 +84,7 @@ extension PM.QResource: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        try container.encode(appId, forKey: .appId)
         try container.encode(data, forKey: .data)
         try container.encode(self.createdAt, forKey: .createdAt)
         try container.encode(self.updatedAt, forKey: .updatedAt)
@@ -91,6 +98,7 @@ public extension PM.QResource {
         .init(throws: .resourceDTOFailed, category: .internal) {
             try Self.init(
                 id: model.requireID(),
+                appId: model.appId,
                 data: model.data,
                 createdAt: model.createdAt,
                 updatedAt: model.updatedAt,
@@ -106,6 +114,7 @@ extension PM.QResource: Query.Queriable {
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         Self.idKey: \.$id,
         \.id: \.$id,
+        \.appId: \.$appId,
         \.data: \.$data,
         \.createdAt: \.$createdAt,
         \.updatedAt: \.$updatedAt
@@ -114,6 +123,7 @@ extension PM.QResource: Query.Queriable {
     public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
         builder
             .field(Model.self, \.$id)
+            .field(Model.self, \.$appId)
             .field(Model.self, \.$data)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)
