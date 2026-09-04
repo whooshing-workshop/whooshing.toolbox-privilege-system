@@ -337,6 +337,70 @@ extension QToken: Query.Queriable {
 extension QToken: Authenticatable {}
 
 public extension QToken {
+    // 用户发来的 password(即 token) 是 [AES 加密[密钥 hash]]
+    func verify(encryptedToken: String) throws(PrivilegeModuleExtended.Errcase.ErrType) -> Crypto.Symm.Key {
+        // 取得用户传来 encryptedToken 的字节码
+        let encryptedData = try required(throws: PrivilegeModuleExtended.Errcase.tokenVerifyFailed, "用户口令并非 Base64 编码", category: .external(suggestions: ["请提供正确的用户口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
+            try Base64String(encryptedToken).dataRes.get()
+        }
+        
+        let origin = try required(throws: PrivilegeModuleExtended.Errcase.tokenVerifyFailed, "数据库中的用户口令并非 Base64 编码", category: .inherit) {
+            try Base64String(token).dataRes.get()
+        }
+        
+        let key = Crypto.Symm.Key(data: origin)
+        
+        let authData: Data
+        do {
+            authData = try Crypto.Symm.decrypt(encryptedData, key: key).get()
+        } catch {
+            var suggestions: [String] = ["请提供正确的 Token"]
+            if let possibleToken = try? Crypto.Symm.encrypt(Crypto.hash(encryptedData), key: .init(data: encryptedData)).get().base64EncodedString() {
+                suggestions.append("可能是由于提供的 Token 为未加密格式，尝试加密格式: \(possibleToken)")
+            }
+            throw PrivilegeModuleExtended.Errcase.tokenVerifyFailed.d("所提供的 Token 无法解析", category: .external(suggestions: suggestions, userdata: .init(HTTPResponseStatus.unauthorized)))
+        }
+        
+        try verify(hashedTokenData: authData)
+        
+        return key
+    }
+    
+    // 用户发来的 password(即 token) 是 [密钥 hash]
+    func verify(hashedToken: String) throws(PrivilegeModuleExtended.Errcase.ErrType) {
+        // 取得用户传来 tokenHashed 的字节码
+        let userTokenData = try required(throws: PrivilegeModuleExtended.Errcase.tokenVerifyFailed, "用户口令并非 Base64 编码", category: .external(suggestions: ["请提供正确的用户口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
+            try Base64String(hashedToken).dataRes.get()
+        }
+        
+        try verify(hashedTokenData: userTokenData)
+    }
+    
+    // 用户发来的 hashedTokenData(即 token) 是 [密钥 hash]
+    internal func verify(hashedTokenData: Data) throws(PrivilegeModuleExtended.Errcase.ErrType) {
+        // 检查是否有效
+        guard self.valid == true else {
+            throw PrivilegeModuleExtended.Errcase.tokenVerifyFailed.d("用户口令无效", category: .external(suggestions: ["请提供有效的登录口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
+        }
+        
+        // 检查是否已过期
+        let expireDate = self.createdAt.addingTimeInterval(TimeInterval(self.expireAfter * 60))
+        guard Date() < expireDate else {
+            throw PrivilegeModuleExtended.Errcase.tokenVerifyFailed.d("用户凭据已过期", category: .external(suggestions: ["请提供有效的登录口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
+        }
+        
+        // 取得 db 密钥的字节码，并对其进行 hash，以进行接下来的比对
+        let dbTokenData = try required(throws: PrivilegeModuleExtended.Errcase.tokenVerifyFailed, "对数据库中的口令哈希失败", metadata: ["credential": .data(self.credential)], category: .internal) {
+            try Crypto.hash(Base64String(self.token)).get()
+        }
+        
+        guard hashedTokenData == dbTokenData else {
+            throw PrivilegeModuleExtended.Errcase.tokenVerifyFailed.d("用户口令不正确", category: .external(suggestions: ["请提供有效的登录口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
+        }
+    }
+}
+
+public extension QToken {
     static func testMake(
         id: UUID = UUID(),
         credential: String,

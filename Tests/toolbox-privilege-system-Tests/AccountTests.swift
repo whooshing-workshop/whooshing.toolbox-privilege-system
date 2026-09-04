@@ -141,7 +141,9 @@ struct AccountTesting {
         
         let userToken = try AuthorizationToken.make(from: token).get()
         let dbToken = try await token.model(from: s.pgDB).get()
-        #expect(try dbToken.verify(password: userToken.tokenHashed) == true)
+        
+        let qToken = try QToken.make(from: dbToken).get()
+        try qToken.verify(hashedToken: userToken.tokenHashed)
         
         let wrongToken = AuthorizationToken.init(
             credential: userToken.credential,

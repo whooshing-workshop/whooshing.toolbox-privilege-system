@@ -264,30 +264,12 @@ extension PrivilegeSystem {
                     
                     // 检查口令是否正确
                     return tokenGetter.flatMapThrowing { tokenResult throws(Errcase.ErrType) in
-                        // 取得密钥的字节码
-                        let keyData = try required(throws: Errcase.userAuthenticateFailed, "口令解析失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
-                            try Base64String(tokenResult.token).dataRes.get()
-                        }
-                        
-                        // 转为 AES 密钥类型
-                        let key = Crypto.Symm.Key.new(data: keyData)
-                        
-                        // 解密 tokenEncrypted
-                        let authData: Data = try required(throws: Errcase.userAuthenticateFailed, "解密用户口令失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
-                            try Crypto.Symm.decrypt(Base64String(token.tokenEncrypted).dataRes.get(), key: key).get()
-                        }
-                        
-                        // 进行 hash 比对
-                        guard
-                            try required(throws: Errcase.userAuthenticateFailed, "用户口令 Hash 比对失败", category: .internal, {
-                                try tokenResult.verify(passwordData: authData)
-                            })
-                        else {
-                            throw .init(.userAuthenticateFailed, "用户口令不正确", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized)))
-                        }
-                        
                         let qToken = try required(throws: Errcase.userAuthenticateFailed, "用户口令转为 DTO 失败", category: .internal) {
                             try QToken.make(from: tokenResult).get()
+                        }
+                        
+                        let key = try required(throws: Errcase.userAuthenticateFailed, "口令认证失败", category: .external(suggestions: ["请提供正确的登陆口令"], userdata: .init(HTTPResponseStatus.unauthorized))) {
+                            try qToken.verify(encryptedToken: token.tokenEncrypted)
                         }
                         
                         return (SendableSymmKey(key: key), qToken)
