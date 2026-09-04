@@ -164,6 +164,8 @@ struct TestingShared {
         6: [(8, 10)],
         7: [(9, 11)]
     ]
+    
+    static let reservedRoleName = ["admin"]
      
     static let dbHost = ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_HOST"] ?? "localhost"
     static let dbPort = Int(ProcessInfo.processInfo.environment["GITHUB_PG_TESTING_PORT"] ?? "5432")!
@@ -210,6 +212,7 @@ struct TestingShared {
             eventLoop: eventLoop,
             dbConfigure: .init(hostname: dbHost, port: dbPort, username: "woo", password: "testing", database: "privilege_system", tls: .disable),
             opaConfigure: .init(host: opaHost, port: opaPort, proxy: proxy),
+            reservedRoleName: reservedRoleName,
             logger: sysLogger,
             debuging: .init(tdeEncrypt: false)
         )
