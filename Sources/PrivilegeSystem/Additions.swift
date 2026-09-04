@@ -102,6 +102,7 @@ public extension PrivilegeSystem {
 }
 
 public extension PrivilegeSystem {
+    @discardableResult
     func createAdminIfNotExist(
         using role: PRole = .init(name: "admin", summary: "系统最高管理者"),
         to moduleId: UUID,
@@ -111,6 +112,7 @@ public extension PrivilegeSystem {
         try await createAdminIfNotExist(using: role, to: moduleId, for: user, on: transactor).get()
     }
     
+    @discardableResult
     func createNobodyIfNotExist(roleId: UUID? = nil, on transactor: Transactor? = nil) async throws(Errcase.ErrType) -> QRole? {
         try await createNobodyIfNotExist(roleId: roleId, on: transactor).get()
     }

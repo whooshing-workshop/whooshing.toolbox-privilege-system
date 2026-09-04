@@ -18,6 +18,22 @@ public struct EncryptedToken: DTO.Model, Codable {
         self.tokenEncrypted = tokenEncrypted
     }
     
+    /// 谨慎使用该初始化函数
+    /// 若提供的 tokenBase64 不合法会直接导致程序崩溃
+    public init(
+        credential: String,
+        tokenBase64: String
+    ) {
+        self.credential = credential
+        
+        let data = try! Base64String(tokenBase64).dataRes.get()
+        let hashedData = try! Crypto.hash(data)
+        let key = Crypto.Symm.Key(data: data)
+        let cipher = try! Crypto.Symm.encrypt(hashedData, key: key).get()
+        
+        self.tokenEncrypted = cipher.base64EncodedString()
+    }
+    
     public var maps: [CodingKeys: AnyHashable?] {[
         .credential: .init(obj: self.credential)
     ]}
