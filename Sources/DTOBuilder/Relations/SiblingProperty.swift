@@ -193,3 +193,12 @@ extension SiblingProperty: DTO.Property {
 }
 
 extension SiblingProperty: __Property {}
+
+package extension SiblingProperty {
+    func setIfNeed(to value: TestingRelation<[To], Void>) {
+        if case let .set(v) = value {
+            self.__values = v
+            self.__ids = v.map { $0.id }
+        }
+    }
+}

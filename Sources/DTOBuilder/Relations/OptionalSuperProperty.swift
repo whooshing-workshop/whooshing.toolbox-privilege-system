@@ -117,3 +117,12 @@ extension OptionalSuperProperty: DTO.Property {
 }
 
 extension OptionalSuperProperty: __Property {}
+
+package extension OptionalSuperProperty {
+    func setIfNeed(to value: TestingRelation<To?, UUID>) {
+        if case let .set(v) = value {
+            self.__loaded = true
+            self.__value = v
+        }
+    }
+}

@@ -133,3 +133,24 @@ extension AnyResource: Query.Queriable {
             .field(Model.self, \.$updatedAt)
     }
 }
+
+public extension AnyResource {
+    static func testMake(
+        id: UUID,
+        type: String,
+        appId: String,
+        data: [String: AnyCodable],
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        .init(
+            id: id,
+            type: type,
+            appId: appId,
+            data: data,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+    }
+}

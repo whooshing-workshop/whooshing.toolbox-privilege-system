@@ -250,3 +250,31 @@ public extension PDomain.Updater {
         }
     }
 }
+
+public extension QDomain {
+    static func testMake(
+        id: UUID,
+        name: String? = nil,
+        summary: String? = nil,
+        users: TestingRelation<[QUser], Void> = .unset(()),
+        groups: TestingRelation<[QGroup], Void> = .unset(()),
+        policies: TestingRelation<[QPolicy<Domain>], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let domain = QDomain(
+            id: id,
+            name: name,
+            summary: summary,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        domain.$users.setIfNeed(to: users)
+        domain.$groups.setIfNeed(to: groups)
+        domain.$policies.setIfNeed(to: policies)
+        
+        return domain
+    }
+}

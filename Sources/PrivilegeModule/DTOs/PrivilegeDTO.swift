@@ -343,3 +343,29 @@ public extension PM.PPrivilege.Updater {
         )
     }
 }
+
+public extension PM.QPrivilege {
+    static func testMake(
+        id: UUID,
+        name: String? = nil,
+        summary: String? = nil,
+        policy: String,
+        resources: TestingRelation<[AnyResource], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let privilege = Self(
+            id: id,
+            name: name,
+            summary: summary,
+            policy: policy,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        privilege.$resources.setIfNeed(to: resources)
+        
+        return privilege
+    }
+}

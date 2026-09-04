@@ -106,3 +106,12 @@ extension SubProperty: DTO.Property {
 }
 
 extension SubProperty: __Property {}
+
+package extension SubProperty {
+    func setIfNeed(to value: TestingRelation<To, Void>) {
+        if case let .set(v) = value {
+            self.__value = v
+        }
+    }
+}
+

@@ -203,6 +203,30 @@ public extension PM.QResource.Updater {
     }
 }
 
+public extension PM.QResource {
+    static func testMake(
+        id: UUID,
+        appId: String,
+        data: G,
+        privileges: TestingRelation<[S.QPrivilege], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let resource = Self(
+            id: id,
+            appId: appId,
+            data: data,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        resource.$privileges.setIfNeed(to: privileges)
+        
+        return resource
+    }
+}
+
 func jsonbSetSql<V: Encodable>(field: String, path: [String], value: V) throws -> SQLRaw {
     let data = try JSONEncoder().encode(value)
     

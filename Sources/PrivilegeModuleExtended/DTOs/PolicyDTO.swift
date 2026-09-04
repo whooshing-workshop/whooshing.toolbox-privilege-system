@@ -170,3 +170,33 @@ extension QPolicy: Query.Queriable {
             .field(Model.self, \.$updatedAt)
     }
 }
+
+public extension QPolicy {
+    static func testMake(
+        id: UUID,
+        moduleId: UUID,
+        policy: String,
+        parent: TestingRelation<G.DTOModel, UUID>,
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let parentId = switch parent {
+        case .unset(let uuid): uuid
+        case .set(let parent): parent.id
+        }
+        
+        let policy = QPolicy(
+            id: id,
+            moduleId: moduleId,
+            policy: policy,
+            parentId: parentId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        policy.$parent.setIfNeed(to: parent)
+        
+        return policy
+    }
+}

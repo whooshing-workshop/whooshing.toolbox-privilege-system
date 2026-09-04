@@ -300,3 +300,35 @@ public extension PInfoSlice.Updater {
         }
     }
 }
+
+public extension QInfoSlice {
+    static func testMake(
+        id: UUID,
+        value: G.Model.Value,
+        order: Int16,
+        summary: String? = nil,
+        userInfo: TestingRelation<QUserInfo, UUID>,
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let userInfoId = switch userInfo {
+        case .unset(let uuid): uuid
+        case .set(let userInfo): userInfo.id
+        }
+        
+        let infoSlice = QInfoSlice(
+            id: id,
+            userInfoId: userInfoId,
+            value: value,
+            order: order,
+            summary: summary,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        infoSlice.$userInfo.setIfNeed(to: userInfo)
+        
+        return infoSlice
+    }
+}

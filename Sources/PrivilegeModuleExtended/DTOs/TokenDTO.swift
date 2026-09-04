@@ -27,7 +27,7 @@ public struct EncryptedToken: DTO.Model, Codable {
         self.credential = credential
         
         let data = try! Base64String(tokenBase64).dataRes.get()
-        let hashedData = try! Crypto.hash(data)
+        let hashedData = Crypto.hash(data)
         let key = Crypto.Symm.Key(data: data)
         let cipher = try! Crypto.Symm.encrypt(hashedData, key: key).get()
         
@@ -335,3 +335,35 @@ extension QToken: Query.Queriable {
 }
 
 extension QToken: Authenticatable {}
+
+public extension QToken {
+    static func testMake(
+        id: UUID = UUID(),
+        credential: String,
+        token: String,
+        valid: Bool = true,
+        expireAfter: Int = 7 * 24 * 60,
+        user: TestingRelation<QUser, UUID>,
+        createdAt: Date = .init()
+    ) -> Self {
+        let userId = switch user {
+        case .unset(let uuid): uuid
+        case .set(let user): user.id
+        }
+        
+        let token = QToken(
+            id: id,
+            credential: credential,
+            token: token,
+            userId: userId,
+            valid: valid,
+            expireAfter: expireAfter,
+            createdAt: createdAt,
+            model: nil
+        )
+        
+        token.$user.setIfNeed(to: user)
+        
+        return token
+    }
+}

@@ -43,8 +43,8 @@ final public class SuperProperty<From, To>: @unchecked Sendable
     
     public var loaded: Bool { __value != nil }
     
-    private var __value: To? = nil
-    private var __id: UUID? = nil   // 是 Super 字段所存储的外键 id，非模型本体的 id 主键
+    package var __value: To? = nil
+    package var __id: UUID? = nil   // 是 Super 字段所存储的外键 id，非模型本体的 id 主键
     private let lock = NIOLock()
     
     public init() {}
@@ -104,3 +104,11 @@ extension SuperProperty: DTO.Property {
 }
 
 extension SuperProperty: __Property {}
+
+package extension SuperProperty {
+    func setIfNeed(to value: TestingRelation<To, UUID>) {
+        if case let .set(v) = value {
+            self.__value = v
+        }
+    }
+}

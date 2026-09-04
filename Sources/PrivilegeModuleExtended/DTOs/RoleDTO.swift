@@ -265,3 +265,33 @@ public extension PRole.Updater {
 }
 
 extension QRole: Authenticatable {}
+
+public extension QRole {
+    static func testMake(
+        id: UUID,
+        name: String,
+        summary: String? = nil,
+        users: TestingRelation<[QUser], Void> = .unset(()),
+        groups: TestingRelation<[QGroup], Void> = .unset(()),
+        userInGroups: TestingRelation<[UserTGroup], Void> = .unset(()),
+        policies: TestingRelation<[QPolicy<Role>], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let role = QRole(
+            id: id,
+            name: name,
+            summary: summary,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        role.$users.setIfNeed(to: users)
+        role.$groups.setIfNeed(to: groups)
+        role.$userInGroups.setIfNeed(to: userInGroups)
+        role.$policies.setIfNeed(to: policies)
+        
+        return role
+    }
+}

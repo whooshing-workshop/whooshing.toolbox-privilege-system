@@ -124,3 +124,25 @@ public struct UserTGroup: DTO.Pivot, DTO.Queried {
 extension PUserTGroup: __Prepare {}
 
 extension UserTGroup: __PivotDTO, __Queried {}
+
+public extension UserTGroup {
+    static func testMake(
+        id: UUID,
+        primaryId: UUID,
+        secondaryId: UUID,
+        roles: TestingRelation<[QRole], Void>,
+        createdAt: Date = .init()
+    ) -> Self {
+        let pivot = Self(
+            id: id,
+            primaryId: primaryId,
+            secondaryId: secondaryId,
+            createdAt: createdAt,
+            model: nil
+        )
+        
+        pivot.$roles.setIfNeed(to: roles)
+        
+        return pivot
+    }
+}

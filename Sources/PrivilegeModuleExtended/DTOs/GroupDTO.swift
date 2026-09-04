@@ -290,3 +290,41 @@ public extension PGroup.Updater {
         }
     }
 }
+
+public extension QGroup {
+    static func testMake(
+        id: UUID,
+        name: String,
+        summary: String? = nil,
+        parent: TestingRelation<QGroup?, UUID>,
+        childs: TestingRelation<[QGroup], Void> = .unset(()),
+        users: TestingRelation<[QUser], Void> = .unset(()),
+        roles: TestingRelation<[QRole], Void> = .unset(()),
+        domains: TestingRelation<[QDomain], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let parentId = switch parent {
+        case .unset(let uuid): uuid
+        case .set(let p): p?.id
+        }
+        
+        let group = QGroup(
+            id: id,
+            name: name,
+            parentId: parentId,
+            summary: summary,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        group.$parent.setIfNeed(to: parent)
+        group.$childs.setIfNeed(to: childs)
+        group.$users.setIfNeed(to: users)
+        group.$roles.setIfNeed(to: roles)
+        group.$domains.setIfNeed(to: domains)
+        
+        return group
+    }
+}

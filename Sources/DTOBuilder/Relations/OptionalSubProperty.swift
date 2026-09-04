@@ -107,3 +107,12 @@ extension OptionalSubProperty: DTO.Property {
 }
 
 extension OptionalSubProperty: __Property {}
+
+package extension OptionalSubProperty {
+    func setIfNeed(to value: TestingRelation<To?, Void>) {
+        if case let .set(v) = value {
+            self.__loaded = true
+            self.__value = v
+        }
+    }
+}

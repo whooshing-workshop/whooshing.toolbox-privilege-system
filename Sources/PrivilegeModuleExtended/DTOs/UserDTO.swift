@@ -214,3 +214,33 @@ extension QUser: Query.Queriable {
             .field(Model.self, \.$updatedAt)
     }
 }
+
+public extension QUser {
+    static func testMake(
+        id: UUID,
+        email: String,
+        info: TestingRelation<QUserInfo?, Void> = .unset(()),
+        token: TestingRelation<QToken?, Void> = .unset(()),
+        groups: TestingRelation<[QGroup], Void> = .unset(()),
+        roles: TestingRelation<[QRole], Void> = .unset(()),
+        domains: TestingRelation<[QDomain], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let user = QUser(
+            id: id,
+            email: email,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        user.$info.setIfNeed(to: info)
+        user.$token.setIfNeed(to: token)
+        user.$groups.setIfNeed(to: groups)
+        user.$roles.setIfNeed(to: roles)
+        user.$domains.setIfNeed(to: domains)
+        
+        return user
+    }
+}

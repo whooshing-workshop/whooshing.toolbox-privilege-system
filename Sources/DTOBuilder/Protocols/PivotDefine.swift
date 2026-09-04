@@ -123,6 +123,23 @@ extension __PivotDTO {
             .field(Model.self, \.$secondaryModel.$id)
             .field(Model.self, \.$createdAt)
     }
+    
+    public static func testMake(
+        id: UUID,
+        primaryId: UUID,
+        secondaryId: UUID,
+        createdAt: Date = .init()
+    ) -> Self {
+        let pivot = Self(
+            id: id,
+            primaryId: primaryId,
+            secondaryId: secondaryId,
+            createdAt: createdAt,
+            model: nil
+        )
+        
+        return pivot
+    }
 }
 
 extension PartialKeyPath: @retroactive @unchecked Sendable {}

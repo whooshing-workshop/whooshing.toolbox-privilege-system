@@ -313,3 +313,43 @@ public extension PUserInfo.Updater {
         }
     }
 }
+
+public extension QUserInfo {
+    static func testMake(
+        id: UUID,
+        nickname: String,
+        identifier: String,
+        birthday: Date,
+        other: String? = nil,
+        user: TestingRelation<QUser, UUID>,
+        alternateEmails: TestingRelation<[QInfoSlice<AlternateEmail>], Void> = .unset(()),
+        phones: TestingRelation<[QInfoSlice<Phone>], Void> = .unset(()),
+        addresses: TestingRelation<[QInfoSlice<Address>], Void> = .unset(()),
+        createdAt: Date = .init(),
+        updatedAt: Date = .init()
+    ) -> Self {
+        let userId = switch user {
+        case .unset(let uuid): uuid
+        case .set(let user): user.id
+        }
+        
+        let info = QUserInfo(
+            id: id,
+            userId: userId,
+            nickname: nickname,
+            identifier: identifier,
+            birthday: birthday,
+            other: other,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            model: nil
+        )
+        
+        info.$user.setIfNeed(to: user)
+        info.$alternateEmails.setIfNeed(to: alternateEmails)
+        info.$phones.setIfNeed(to: phones)
+        info.$addresses.setIfNeed(to: addresses)
+        
+        return info
+    }
+}

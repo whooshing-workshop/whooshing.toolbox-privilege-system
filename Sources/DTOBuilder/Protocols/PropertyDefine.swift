@@ -72,3 +72,8 @@ extension __Property {
         }
     }
 }
+
+public enum TestingRelation<T, G>: Sendable where T: Sendable, G: Sendable {
+    case unset(G)
+    case set(T)
+}
