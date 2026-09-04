@@ -44,6 +44,15 @@ struct AdminCreatesTesting {
         }
     }
     
+    @Test("私自创建 Admin role 应当失败")
+    func adminCreateShouldFail() async throws {
+        let (s, _) = try await TestingShared.getSystem()
+        let role = PRole(name: "admin")
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.role.create(roles: [role])
+        }
+    }
+    
     @MainActor
     @Test("测试结束")
     func end() async throws {

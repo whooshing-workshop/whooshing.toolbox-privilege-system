@@ -15,9 +15,9 @@ extension PrivilegeSystem {
     /// - `appoint` / `dismiss`: 进行角色的指派或撤销指派。支持多对多操作。
     /// - `roles` / `verify` / `is`: 动态查询和验证角色指派情况。
     public final class RoleController: SystemController {
-        public let defaultTransactor: Transactor
         package let db: PGDatabase
         package let eventLoop: EventLoop
+        package let reservedRoleName: [String]
         
         let policyController: PolicyController
         
@@ -28,13 +28,14 @@ extension PrivilegeSystem {
             db: PGDatabase,
             eventLoop: EventLoop,
             policyController: PolicyController,
+            reservedRoleName: [String],
             logger: Logger
         ) {
             self.db = db
             self.eventLoop = eventLoop
             self.policyController = policyController
+            self.reservedRoleName = reservedRoleName
             self.logger = logger
-            self.defaultTransactor = .init(db: db)
         }
         
         /// 批量创建角色并附带 OPA 策略。
@@ -87,13 +88,11 @@ extension PrivilegeSystem {
             logger.info("执行 创建角色 操作", metadata: ["roles": .summaryData(roles)])
             logger.debug("操作参数", metadata: ["roles": .data(roles)])
             let db = transactor?.db ?? self.db
-            return __create(on: db, roles: roles)
-                .map { 
+            return __create(on: db, roles: roles, noReservedName: false).map {
                 logger.info("创建角色 操作成功", metadata: ["data": .summaryData($0)])
                 logger.debug("创建角色 结果详细数据", metadata: ["data": .data($0)])
                 return $0 
-            }
-                .logIfFail(logger: logger)
+            }.logIfFail(logger: logger)
         }
         
         /// 根据 ID 批量删除角色。
@@ -164,7 +163,7 @@ public extension PrivilegeSystem.RoleController {
         let db = transactor?.db ?? self.db
         
         return db.trans(throws: .roleCreateFailed, "数据库事务执行失败", category: .internal) { db in
-            self.__create(on: db, roles: relations.mapToSet { $0.right }).flatMap { roles in
+            self.__create(on: db, roles: relations.mapToSet { $0.right }, noReservedName: false).flatMap { roles in
                 self.policyController.__create(
                     on: db,
                     to: Role.self,
@@ -186,7 +185,7 @@ public extension PrivilegeSystem.RoleController {
         let db = transactor?.db ?? self.db
         
         return db.trans(throws: .roleCreateFailed, "数据库事务执行失败", category: .internal) { db in
-            self.__create(on: db, roles: relations.mapToSet { $0.right }).flatMap { roles in
+            self.__create(on: db, roles: relations.mapToSet { $0.right }, noReservedName: false).flatMap { roles in
                 self.policyController.__createWithReturning(
                     on: db,
                     to: Role.self,
@@ -1200,9 +1199,23 @@ extension PrivilegeSystem.RoleController {
 extension PrivilegeSystem.RoleController {
     public func __create(
         on db: PGDatabase,
-        roles: OrderedSet<PRole>
+        roles: OrderedSet<PRole>,
+        noReservedName: Bool
     ) -> EventLoopRes<[QRole], PrivilegeSystem.Errcase> {
-        __create(
+        if !noReservedName {
+            var badNames: [String] = []
+            for role in roles {
+                if (self.reservedRoleName.contains(role.name)) {
+                    badNames.append(role.name)
+                }
+            }
+            
+            guard badNames.isEmpty else {
+                return db.eventLoop.makeFailedResult(PrivilegeSystem.Errcase.roleCreateFailed, "\"\(badNames.joined(separator: "\", \""))\" 均为保留名称，不可作为角色名称", category: .external(suggestions: ["请选择非保留字的名称作为角色名称"], userdata: .init(HTTPResponseStatus.unprocessableEntity)))
+            }
+        }
+        
+        return __create(
             on: db,
             dtos: roles,
             label: "角色",

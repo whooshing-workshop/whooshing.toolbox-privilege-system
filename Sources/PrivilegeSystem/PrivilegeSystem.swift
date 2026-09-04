@@ -66,6 +66,11 @@ public final class PrivilegeSystem: Sendable {
     
     public let origin: Transactor
     
+    /// 保留的角色名称，无法创建该名称的角色，除非使用所提供的特殊方式
+    public static let reservedRoleName: [String] = [
+        "admin"
+    ]
+    
     let dbs: Databases
     package let pgDB: PGDatabase
     let opa: OPA
@@ -158,7 +163,7 @@ public final class PrivilegeSystem: Sendable {
         self.userInfo = .init(db: db, eventLoop: eventLoop, infoSliceController: self.infoSlice, logger: logger.derive(subId: "userinfo"))
         self.group = .init(db: db, eventLoop: eventLoop, logger: logger.derive(subId: "group"))
         self.policy = .init(db: db, eventLoop: eventLoop, opa: opa, logger: logger.derive(subId: "policy"))
-        self.role = .init(db: db, eventLoop: eventLoop, policyController: self.policy, logger: logger.derive(subId: "role"))
+        self.role = .init(db: db, eventLoop: eventLoop, policyController: self.policy, reservedRoleName: Self.reservedRoleName, logger: logger.derive(subId: "role"))
         self.account = .init(db: db, eventLoop: eventLoop, roleController: self.role, logger: logger.derive(subId: "account"))
         self.domain = .init(db: db, eventLoop: eventLoop, policyController: self.policy, logger: logger.derive(subId: "domain"))
         self.arbitrator = .init(db: db, eventLoop: eventLoop, opa: opa, roleController: self.role, logger: logger.derive(subId: "arbitrator"))

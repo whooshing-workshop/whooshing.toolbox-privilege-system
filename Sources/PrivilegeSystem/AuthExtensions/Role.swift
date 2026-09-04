@@ -2,6 +2,8 @@ import Vapor
 import PrivilegeModuleExtended
 
 public struct RoleAuthenticator: AsyncMiddleware {
+    public init() {}
+    
     public func respond(to request: Request, chainingTo next: any AsyncResponder) async throws -> Response {
         try await run(to: request, chainingTo: next)
     }

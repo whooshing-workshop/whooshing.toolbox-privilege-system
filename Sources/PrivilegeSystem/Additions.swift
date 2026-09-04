@@ -24,11 +24,13 @@ public extension PrivilegeSystem {
                     return t.eventLoop.makeSucceededResult(role)
                 } else {
                     self.logger.info("角色不存在，正在创建")
-                    return self.role.create(roles: [role], on: t).flatMap { r in
+                    return self.role.__create(on: t.db, roles: [role], noReservedName: true).flatMap { r in
                         guard let role = r.first else {
                             return t.eventLoop.makeFailedResult(Errcase.adminCreateFailed, category: .internal)
                         }
                         return t.eventLoop.makeSucceededResult(role)
+                        
+                        
                     }.flatMap { (role: QRole) in
                         self.logger.info("正在创建 admin 权限")
                         let policy = PPolicy<Role>(moduleId: moduleId, policy: "allow if { true }")
