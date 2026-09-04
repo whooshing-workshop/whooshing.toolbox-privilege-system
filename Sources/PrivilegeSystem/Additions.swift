@@ -1,3 +1,4 @@
+import NIOHTTP1
 import Foundation
 import PrivilegeModuleExtended
 
@@ -20,14 +21,14 @@ public extension PrivilegeSystem {
             { (r: QRole?) -> EventLoopRes<QRole, Errcase> in
                 if let role = r {
                     self.logger.info("角色已存在，无需创建")
-                    return self.eventLoop.makeSucceededResult(role)
+                    return t.eventLoop.makeSucceededResult(role)
                 } else {
                     self.logger.info("角色不存在，正在创建")
                     return self.role.create(roles: [role], on: t).flatMap { r in
                         guard let role = r.first else {
-                            return self.eventLoop.makeFailedResult(Errcase.adminCreateFailed, category: .internal)
+                            return t.eventLoop.makeFailedResult(Errcase.adminCreateFailed, category: .internal)
                         }
-                        return self.eventLoop.makeSucceededResult(role)
+                        return t.eventLoop.makeSucceededResult(role)
                     }.flatMap { (role: QRole) in
                         self.logger.info("正在创建 admin 权限")
                         let policy = PPolicy<Role>(moduleId: moduleId, policy: "allow if { true }")
@@ -46,7 +47,7 @@ public extension PrivilegeSystem {
                 { u -> EventLoopRes<QUser?, Errcase> in
                     if u != nil {
                         self.logger.info("用户已存在，无需创建")
-                        return self.eventLoop.makeSucceededResult(nil)
+                        return t.eventLoop.makeSucceededResult(nil)
                     } else {
                         self.logger.info("正在创建管理员用户")
                         return self.account.register(for: user, on: t).flatMap { u in
@@ -63,7 +64,7 @@ public extension PrivilegeSystem {
         }
     }
     
-    func createNobodyIfNotExist(on transactor: Transactor? = nil) -> EventLoopRes<QRole?, Errcase> {
+    func createNobodyIfNotExist(roleId: UUID? = nil, on transactor: Transactor? = nil) -> EventLoopRes<QRole?, Errcase> {
         let logger = self.logger.derive(subId: "create_nobody")
         logger.info("检查用户是否存在")
         let trans = transactor ?? self.origin
@@ -76,17 +77,20 @@ public extension PrivilegeSystem {
             { r -> EventLoopRes<QRole?, Errcase> in
                 if let role = r {
                     self.logger.info("角色已存在，无需创建")
+                    if let rId = roleId, roleId != role.id {
+                        return t.eventLoop.makeFailedResult(Errcase.nobodyRoleCreateFailed.d("所要指定创建的角色 ID 与原有角色冲突", category: .external(suggestions: ["尝试使用随机 ID 创建 nobody 角色", "或指定正确的 ID"], userdata: .init(HTTPResponseStatus.conflict))))
+                    }
                     self.account.nobodyRoleId = role.id
-                    return self.eventLoop.makeSucceededResult(nil)
+                    return t.eventLoop.makeSucceededResult(nil)
                 } else {
                     self.logger.info("用户不存在，正在创建")
-                    let role = PRole(name: "nobody", summary: "最基本无权限角色")
+                    let role = PRole(id: roleId, name: "nobody", summary: "最基本无权限角色")
                     return self.role.create(roles: [role], on: t).flatMap { rs in
                         guard let role = rs.first else {
-                            return self.eventLoop.makeFailedResult(Errcase.nobodyRoleCreateFailed, "将角色创建与数据库时失败", category: .internal)
+                            return t.eventLoop.makeFailedResult(Errcase.nobodyRoleCreateFailed, "将角色创建与数据库时失败", category: .internal)
                         }
                         self.account.nobodyRoleId = role.id
-                        return self.eventLoop.makeSucceededResult(role).map {
+                        return t.eventLoop.makeSucceededResult(role).map {
                             self.logger.info("nobody 角色创建成功")
                             return $0
                         }
@@ -107,7 +111,7 @@ public extension PrivilegeSystem {
         try await createAdminIfNotExist(using: role, to: moduleId, for: user, on: transactor).get()
     }
     
-    func createNobodyIfNotExist(on transactor: Transactor? = nil) async throws(Errcase.ErrType) -> QRole? {
-        try await createNobodyIfNotExist(on: transactor).get()
+    func createNobodyIfNotExist(roleId: UUID? = nil, on transactor: Transactor? = nil) async throws(Errcase.ErrType) -> QRole? {
+        try await createNobodyIfNotExist(roleId: roleId, on: transactor).get()
     }
 }

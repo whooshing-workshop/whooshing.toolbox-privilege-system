@@ -4,6 +4,8 @@ import Foundation
 public struct Transactor: Sendable {
     package let db: PGDatabase
     
+    public var eventLoop: EventLoop { db.eventLoop }
+    
     package init(db: PGDatabase) {
         self.db = db
     }
