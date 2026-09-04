@@ -77,7 +77,7 @@ public extension PrivilegeSystem {
             { r -> EventLoopRes<QRole?, Errcase> in
                 if let role = r {
                     self.logger.info("角色已存在，无需创建")
-                    if let rId = roleId, roleId != role.id {
+                    if let rId = roleId, rId != role.id {
                         return t.eventLoop.makeFailedResult(Errcase.nobodyRoleCreateFailed.d("所要指定创建的角色 ID 与原有角色冲突", category: .external(suggestions: ["尝试使用随机 ID 创建 nobody 角色", "或指定正确的 ID"], userdata: .init(HTTPResponseStatus.conflict))))
                     }
                     self.account.nobodyRoleId = role.id
