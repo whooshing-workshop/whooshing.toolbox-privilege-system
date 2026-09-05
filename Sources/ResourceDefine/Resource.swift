@@ -47,7 +47,7 @@ public protocol Resource: Sendable, Codable, Hashable, Loggerable, CustomStringC
 /// 某种资源类型的封闭操作列表。
 ///
 /// 使用 `String` 作为 RawValue，便于把操作作为 `input.operation` 传给 OPA。
-public protocol OperationList: Sendable, Codable, CaseIterable, RawRepresentable
+public protocol OperationList: Sendable, Hashable, Codable, CaseIterable, RawRepresentable
 where Self.RawValue == String {}
 
 /// 一个资源权限模块拥有的封闭资源类别列表。
