@@ -2,7 +2,9 @@ import DTOBuilder
 import Foundation
 @preconcurrency import AnyCodable
 
-public struct AnyResource: DTO.DBModel {
+public typealias GResource = GenericResource
+
+public struct GenericResource: DTO.DBModel {
     public let id: UUID
     public let type: String
     public let appId: String
@@ -10,7 +12,7 @@ public struct AnyResource: DTO.DBModel {
     public let createdAt: Date
     public let updatedAt: Date
     
-    public static let logName: String = "AnyResource"
+    public static let logName: String = "GenericResource"
     
     package typealias SQLModel = __SDBM.AnyResource
     package let __m: SQLModel?
@@ -38,7 +40,7 @@ public struct AnyResource: DTO.DBModel {
     
     public init<L, G>(resource: PM<L>.QResource<G>) {
         guard let m = Self.init(resource) else {
-            fatalError("不允许将一个未从数据库中读取的模型强制转为 AnyResource")
+            fatalError("不允许将一个未从数据库中读取的模型强制转为 GResource")
         }
         self = m
     }
@@ -96,9 +98,9 @@ public struct AnyResource: DTO.DBModel {
     }
 }
 
-extension AnyResource: __Model {}
+extension GResource: __Model {}
 
-public extension AnyResource {
+public extension GResource {
     static func make(from model: __SDBM.AnyResource) -> Res<Self, Errcase> {
         .init(throws: .resourceDTOFailed, category: .internal) {
             Self.init(
@@ -114,7 +116,7 @@ public extension AnyResource {
     }
 }
 
-extension AnyResource: Query.Queriable {
+extension GResource: Query.Queriable {
     public typealias Model = __SDBM.AnyResource
     public typealias ErrorType = Errcase
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
@@ -134,7 +136,7 @@ extension AnyResource: Query.Queriable {
     }
 }
 
-public extension AnyResource {
+public extension GResource {
     static func testMake(
         id: UUID,
         type: String,
@@ -151,6 +153,16 @@ public extension AnyResource {
             createdAt: createdAt,
             updatedAt: updatedAt,
             model: nil
+        )
+    }
+}
+
+public extension AnyResource {
+    init(from resource: GResource) {
+        self = Self.init(
+            type: resource.type,
+            appId: resource.appId,
+            json: resource.data
         )
     }
 }

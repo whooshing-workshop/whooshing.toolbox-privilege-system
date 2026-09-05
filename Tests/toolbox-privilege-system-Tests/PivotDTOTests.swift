@@ -18,7 +18,7 @@ import Query
 //     DomainTGroup      - (Domain, Group)       多对多域-群组分配
 //
 //   PrivilegeModule 侧:
-//     PM.PrivilegeTAnyResource  - (Privilege, AnyResource)
+//     PM.PrivilegeTAnyResource  - (Privilege, GResource)
 //     PM.PrivilegeTResource<G>  - (Privilege, QResource<G>)
 //
 // 测试维度：
@@ -317,7 +317,7 @@ struct PivotDTOTesting {
 
     // MARK: - PM.PrivilegeTAnyResource
 
-    @Test("Privilege to AnyResource 测试")
+    @Test("Privilege to GResource 测试")
     func test_PrivilegeTAnyResource() async throws {
         let (_, m) = try await TestingShared.getSystem()
         let suffix = UUID().uuidString
@@ -333,7 +333,7 @@ struct PivotDTOTesting {
         let privilegeDTO = try #require(privileges.first)
         let resource = JsonResource(appId: "PivotTest-AnyRes-\(suffix)", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
-        let anyResourceDTO = try #require(AnyResource(resourceDTO))
+        let anyResourceDTO = try #require(GResource(resourceDTO))
 
         defer {
             Task {
@@ -417,7 +417,7 @@ struct PivotDTOTesting {
         )
         let fileResources: [QFileResource] = try await m.resource.create(resources: [file])
         let fileResourceDTO = try #require(fileResources.first)
-        let anyResourceDTO  = try #require(AnyResource(fileResourceDTO))
+        let anyResourceDTO  = try #require(GResource(fileResourceDTO))
 
         defer {
             Task {

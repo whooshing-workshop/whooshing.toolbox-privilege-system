@@ -273,7 +273,7 @@ extension PrivilegeSystem {
                                 
                                 return try DomainData(
                                     domainId: pivot.primaryModel.requireID(),
-                                    resource: resource.data,
+                                    resource: resource.json,
                                     operation: operation.rawValue,
                                     user: userDTO,
                                     group: .make(from: associatedGroup).get()
@@ -294,7 +294,7 @@ extension PrivilegeSystem {
                         try domains.map { domain in
                             try DomainData(
                                 domainId: domain.requireID(),
-                                resource: resource.data,
+                                resource: resource.json,
                                 operation: operation.rawValue,
                                 user: userDTO,
                                 group: nil
@@ -316,14 +316,14 @@ extension PrivilegeSystem {
                             domains: .init(domainDatas.flatMap { $0 }),
                             role: .init(
                                 roleId: roleId,
-                                resource: resource.data,
+                                resource: resource.json,
                                 operation: operation.rawValue,
                                 user: userDTO
                             ),
                             privileges: privilegeIds.mapToSet {
                                 .init(
                                     privilegeId: $0,
-                                    resource: resource.data,
+                                    resource: resource.json,
                                     operation: operation.rawValue,
                                     user: userDTO
                                 )
@@ -427,6 +427,44 @@ extension PrivilegeSystem {
                 return self.eventLoop.makeSucceededResult(result)
             }
         }
+    }
+}
+
+extension PrivilegeSystem.Arbitrator {
+    public func judge(
+        moduleId: UUID,
+        user: QUser,
+        role: QRole,
+        resource: GResource,
+        operation: AnyOperation,
+        privilegeIds: OrderedSet<UUID>
+    ) -> EventLoopRes<Result, PrivilegeSystem.Errcase> {
+        judge(
+            moduleId: moduleId,
+            user: user,
+            role: role,
+            resource: AnyResource(from: resource),
+            operation: operation,
+            privilegeIds: privilegeIds
+        )
+    }
+    
+    public func judge(
+        moduleId: UUID,
+        userId: UUID,
+        roleId: UUID,
+        resource: GResource,
+        operation: AnyOperation,
+        privilegeIds: OrderedSet<UUID>
+    ) -> EventLoopRes<Result, PrivilegeSystem.Errcase> {
+        judge(
+            moduleId: moduleId,
+            userId: userId,
+            roleId: roleId,
+            resource: AnyResource(from: resource),
+            operation: operation,
+            privilegeIds: privilegeIds
+        )
     }
 }
 

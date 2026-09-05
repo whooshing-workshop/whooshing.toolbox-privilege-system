@@ -25,7 +25,7 @@ public extension PrivilegeModule {
     }
 }
 
-public extension AnyResource {
+public extension GResource {
     enum Errcase: String, ErrList {
         case resourceDTOFailed = "资源数据 DTO 处理失败"
     }

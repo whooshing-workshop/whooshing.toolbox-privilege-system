@@ -222,7 +222,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = try #require(AnyResource(resourceDTO))
+        let anyResourceDTO = try #require(GResource(resourceDTO))
         
         // 测试 Attach
         try await m.privilege.attach {
@@ -261,7 +261,7 @@ struct ResourceTests {
         ])
         let privilegeDTO = privileges[0]
         
-        let anyResourceDTO = try #require(AnyResource(resourceDTO))
+        let anyResourceDTO = try #require(GResource(resourceDTO))
         
         // 先 Attach
         try await m.privilege.attach {
@@ -272,7 +272,7 @@ struct ResourceTests {
         let attachedPrivileges = try await m.privilege.privilege(attachedTo: resourceDTO)
         #expect(attachedPrivileges.contains(where: { $0.id == privilegeDTO.id }))
         
-        // 2. 测试 privilege(attachedTo:) -> AnyResource
+        // 2. 测试 privilege(attachedTo:) -> GResource
         let attachedPrivilegesAny = try await m.privilege.privilege(attachedTo: anyResourceDTO)
         #expect(attachedPrivilegesAny.contains(where: { $0.id == privilegeDTO.id }))
         
@@ -280,7 +280,7 @@ struct ResourceTests {
         let isAttached = try await m.privilege.is(privilege: privilegeDTO, attachedTo: resourceDTO)
         #expect(isAttached == true)
         
-        // 4. 测试 is(privilege:attachedTo:) -> AnyResource
+        // 4. 测试 is(privilege:attachedTo:) -> GResource
         let isAttachedAny = try await m.privilege.is(privilege: privilegeDTO, attachedTo: anyResourceDTO)
         #expect(isAttachedAny == true)
         

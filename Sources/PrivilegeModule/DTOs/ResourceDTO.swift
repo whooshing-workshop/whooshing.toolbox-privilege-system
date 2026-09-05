@@ -1,5 +1,6 @@
 import DTOBuilder
 import Foundation
+import ResourceDefine
 
 public extension PM {
     struct QResource<G: Resource>: DTO.DBModel where G.ResourceType == ResourceList {

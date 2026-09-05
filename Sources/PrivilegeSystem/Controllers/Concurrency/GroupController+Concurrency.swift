@@ -6,6 +6,7 @@ import PrivilegeModule
 extension PrivilegeSystem.GroupController {
     // MARK: CRUD
 
+    @discardableResult
     public func create(
         groups: OrderedSet<PGroup>,
         on transactor: Transactor? = nil
@@ -20,6 +21,7 @@ extension PrivilegeSystem.GroupController {
         try await delete(groupIds: groupIds, on: transactor).get()
     }
 
+    @discardableResult
     public func update(
         with updater: PGroup.Updater,
         on transactor: Transactor? = nil

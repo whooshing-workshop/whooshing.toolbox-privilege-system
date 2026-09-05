@@ -4,6 +4,7 @@ import PrivilegeModule
 // MARK: - InfoSliceController Concurrency (InfoSliceController.swift)
 
 extension PrivilegeSystem.InfoSliceController {
+    @discardableResult
     public func create<T>(
         for infoId: UUID,
         extendedInfos: OrderedSet<PInfoSlice<T>>,
@@ -20,6 +21,7 @@ extension PrivilegeSystem.InfoSliceController {
         try await delete(infoIds: infoIds, type: type, on: transactor).get()
     }
 
+    @discardableResult
     public func update<T>(
         with updater: PInfoSlice<T>.Updater,
         on transactor: Transactor? = nil

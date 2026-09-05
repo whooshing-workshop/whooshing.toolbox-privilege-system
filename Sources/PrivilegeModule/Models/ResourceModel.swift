@@ -103,3 +103,16 @@ extension PM.__DBM {
         public typealias MIG = DefaultMIG<__SDBM.AnyResource>
     }
 }
+
+import ResourceDefine
+
+extension AnyResource {
+    var dbInstance: __SDBM.AnyResource {
+        let new = __SDBM.AnyResource()
+        new.id = UUID()
+        new.appId = self.appId
+        new.type = self.type
+        new.data = self.json
+        return new
+    }
+}

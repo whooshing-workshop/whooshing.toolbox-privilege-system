@@ -27,6 +27,7 @@ public extension PrivilegeModule.PrivilegeController {
         try await delete(policy: policy, on: transactor).get()
     }
 
+    @discardableResult
     func update(
         with updater: S.PPrivilege.Updater,
         on transactor: Transactor? = nil
@@ -46,8 +47,8 @@ public extension PrivilegeModule.PrivilegeController {
     
     func attach(
         on transactor: Transactor? = nil,
-        @MTMRelationBuilder<S.QPrivilege, AnyResource>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        @MTMRelationBuilder<S.QPrivilege, GResource>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, GResource>>
     ) async throws(S.Errcase.ErrType) {
         try await attach(on: transactor, content).get()
     }
@@ -62,8 +63,8 @@ public extension PrivilegeModule.PrivilegeController {
 
     func detach(
         on transactor: Transactor? = nil,
-        @MTMRelationBuilder<S.QPrivilege, AnyResource>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        @MTMRelationBuilder<S.QPrivilege, GResource>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, GResource>>
     ) async throws(S.Errcase.ErrType) {
         try await detach(on: transactor, content).get()
     }
@@ -78,7 +79,7 @@ public extension PrivilegeModule.PrivilegeController {
     }
     
     func attach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        relations: OrderedSet<MTMRelation<S.QPrivilege, GResource>>,
         on transactor: Transactor? = nil
     ) async throws(S.Errcase.ErrType) {
         try await attach(relations: relations, on: transactor).get()
@@ -92,7 +93,7 @@ public extension PrivilegeModule.PrivilegeController {
     }
     
     func detach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        relations: OrderedSet<MTMRelation<S.QPrivilege, GResource>>,
         on transactor: Transactor? = nil
     ) async throws(S.Errcase.ErrType) {
         try await detach(relations: relations, on: transactor).get()
@@ -108,7 +109,7 @@ public extension PrivilegeModule.PrivilegeController {
     }
 
     func privilege(
-        attachedTo resource: AnyResource,
+        attachedTo resource: GResource,
         on transactor: Transactor? = nil
     ) async throws(Errcase.ErrType) -> [S.QPrivilege] {
         try await privilege(attachedTo: resource, on: transactor).get()
@@ -126,7 +127,7 @@ public extension PrivilegeModule.PrivilegeController {
 
     func `is`(
         privilege: S.QPrivilege,
-        attachedTo resource: AnyResource,
+        attachedTo resource: GResource,
         on transactor: Transactor? = nil
     ) async throws(Errcase.ErrType) -> Bool {
         try await self.is(privilege: privilege, attachedTo: resource, on: transactor).get()

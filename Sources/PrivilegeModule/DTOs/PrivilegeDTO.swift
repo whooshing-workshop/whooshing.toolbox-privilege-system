@@ -68,7 +68,7 @@ public extension PM {
             through: PrivilegeTAnyResource.self,
             from: \.privilegeId,
             to: \.resourceId
-        )                                   public var resources: [AnyResource]
+        )                                   public var resources: [GResource]
         
         public static var logName: String { "QPrivilege" }
         
@@ -350,7 +350,7 @@ public extension PM.QPrivilege {
         name: String? = nil,
         summary: String? = nil,
         policy: String,
-        resources: TestingRelation<[AnyResource], Void> = .unset(()),
+        resources: TestingRelation<[GResource], Void> = .unset(()),
         createdAt: Date = .init(),
         updatedAt: Date = .init()
     ) -> Self {

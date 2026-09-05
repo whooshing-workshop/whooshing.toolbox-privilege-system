@@ -36,6 +36,7 @@ extension PrivilegeSystem.DomainController {
         try await delete(domainIds: domainIds, on: transactor).get()
     }
 
+    @discardableResult
     public func update(
         with updater: PDomain.Updater,
         on transactor: Transactor? = nil

@@ -77,7 +77,7 @@ struct AdvancePolicyTesting {
         let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_pass_1", summary: "Advance SQL Pass", policy: passPolicyText)]).first!
         let jsonResource = JsonResource(appId: "test_100", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = try #require(AnyResource(resourceDTO))
+        let anyResourceDTO = try #require(GResource(resourceDTO))
         
         try await m.privilege.attach {
             OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])
@@ -104,7 +104,7 @@ struct AdvancePolicyTesting {
         let failPrivilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_fail_1", summary: "Advance SQL Fail", policy: failPolicyText)]).first!
         let failJsonResource = JsonResource(appId: "test_101", content: ["global": AnyCodable(true)])
         let failResourceDTO = try await m.resource.create(resources: [failJsonResource]).first!
-        let failAnyResource = try #require(AnyResource(failResourceDTO))
+        let failAnyResource = try #require(GResource(failResourceDTO))
 
         try await m.privilege.attach {
             OrderedSet([failPrivilegeDTO]) => OrderedSet([failAnyResource])
@@ -176,7 +176,7 @@ struct AdvancePolicyTesting {
         let privilegeDTO = try await m.privilege.createWithReturning(privileges: [PM.PPrivilege(name: "advance_time_1", summary: "Advance Time Module", policy: policyText)]).first!
         let jsonResource = JsonResource(appId: "test_102", content: ["global": AnyCodable(true)])
         let resourceDTO = try await m.resource.create(resources: [jsonResource]).first!
-        let anyResourceDTO = try #require(AnyResource(resourceDTO))
+        let anyResourceDTO = try #require(GResource(resourceDTO))
         
         try await m.privilege.attach {
             OrderedSet([privilegeDTO]) => OrderedSet([anyResourceDTO])

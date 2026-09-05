@@ -26,6 +26,7 @@ extension PrivilegeSystem.AccountController {
         try await authenticate(token: token, roleId: roleId, on: transactor).get()
     }
 
+    @discardableResult
     public func changePassword(
         for userData: PUser,
         to hashedPassword: Data,
@@ -34,6 +35,7 @@ extension PrivilegeSystem.AccountController {
         try await changePassword(for: userData, to: hashedPassword, on: transactor).get()
     }
 
+    @discardableResult
     public func changePassword(
         for userData: PUser,
         to hashedPassword: String,
@@ -42,6 +44,7 @@ extension PrivilegeSystem.AccountController {
         try await changePassword(for: userData, to: hashedPassword, on: transactor).get()
     }
     
+    @discardableResult
     public func changePassword(
         for userData: QUser,
         to hashedPassword: String,

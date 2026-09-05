@@ -278,8 +278,8 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func attach(
         on transactor: Transactor? = nil,
-        @MTMRelationBuilder<S.QPrivilege, AnyResource>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        @MTMRelationBuilder<S.QPrivilege, GResource>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, GResource>>
     ) -> EventLoopRes<Void, S.Errcase> {
         attach(relations: content(), on: transactor)
     }
@@ -310,8 +310,8 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: `EventLoopRes<Void, S.Errcase>`
     func detach(
         on transactor: Transactor? = nil,
-        @MTMRelationBuilder<S.QPrivilege, AnyResource>
-        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>
+        @MTMRelationBuilder<S.QPrivilege, GResource>
+        _ content: @Sendable @escaping () -> OrderedSet<MTMRelation<S.QPrivilege, GResource>>
     ) -> EventLoopRes<Void, S.Errcase>  {
         detach(relations: content(), on: transactor)
     }
@@ -333,7 +333,7 @@ public extension PrivilegeModule.PrivilegeController {
         return __manyToMany(
             on: db,
             relations,
-            type: (S.QPrivilege.self, AnyResource.self),
+            type: (S.QPrivilege.self, GResource.self),
             action: .attach,
             label: "资源权限与资源",
             errThrowing: .privilegeAttachResourceFailed,
@@ -346,7 +346,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 将多对多关系批量写入底层 Pivot 中，建立权限与资源之间的映射（直接传参模式）。
     /// 附加权限动作要求资源与权限都必须已存在于数据库中，任一不存在都会导致失败。
     func attach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        relations: OrderedSet<MTMRelation<S.QPrivilege, GResource>>,
         on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, S.Errcase> {
         let logger = getActionLogger()
@@ -379,7 +379,7 @@ public extension PrivilegeModule.PrivilegeController {
         return __manyToMany(
             on: db,
             relations,
-            type: (S.QPrivilege.self, AnyResource.self),
+            type: (S.QPrivilege.self, GResource.self),
             action: .detach,
             label: "资源权限与资源",
             errThrowing: .privilegeDetachResourceFailed,
@@ -392,7 +392,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// 从多对多 Pivot 中移除指定关系，切断权限与资源之间的关联（直接传参模式）。
     /// 解除权限动作的 Resource 无需从数据库中查得，可以实例化 AnyResource 类型的 Resource 并赋值 UUID。
     func detach(
-        relations: OrderedSet<MTMRelation<S.QPrivilege, AnyResource>>,
+        relations: OrderedSet<MTMRelation<S.QPrivilege, GResource>>,
         on transactor: Transactor? = nil
     ) -> EventLoopRes<Void, S.Errcase>  {
         let logger = getActionLogger()
@@ -430,7 +430,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Parameter resource: 擦除了具体类型的资源包装体 `AnyResource`。
     /// - Returns: 与该资源绑定的策略集合 `EventLoopRes<[S.QPrivilege], Errcase>`。
     func privilege(
-        attachedTo resource: AnyResource,
+        attachedTo resource: GResource,
         on transactor: Transactor? = nil
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
         __privilege(on: transactor?.db ?? self.db, attachedTo: resource)
@@ -460,7 +460,7 @@ public extension PrivilegeModule.PrivilegeController {
     /// - Returns: 如果存在绑定关系则返回 `true`，否则 `false`。
     func `is`(
         privilege: S.QPrivilege,
-        attachedTo resource: AnyResource,
+        attachedTo resource: GResource,
         on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
         __is(on: transactor?.db ?? self.db, privilege: privilege, attachedTo: resource)
@@ -491,7 +491,7 @@ extension PrivilegeModule.PrivilegeController {
     // 取得 某资源 的所有资源权限
     func __privilege(
         on db: PGDatabase,
-        attachedTo resource: AnyResource,
+        attachedTo resource: GResource,
         on transactor: Transactor? = nil
     ) -> EventLoopRes<[S.QPrivilege], Errcase> {
         let db = transactor?.db ?? self.db
@@ -534,7 +534,7 @@ extension PrivilegeModule.PrivilegeController {
     func __is(
         on db: PGDatabase,
         privilege: S.QPrivilege,
-        attachedTo resource: AnyResource,
+        attachedTo resource: GResource,
         on transactor: Transactor? = nil
     ) -> EventLoopRes<Bool, Errcase> {
         let db = transactor?.db ?? self.db

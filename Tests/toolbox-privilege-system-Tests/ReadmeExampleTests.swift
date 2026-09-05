@@ -46,7 +46,7 @@ struct ReadmeExampleTests {
         let resourceDTO = try await module.resource.create(
             resources: [docResource]
         ).first!
-        let anyResourceDTO = try #require(AnyResource(resourceDTO))
+        let anyResourceDTO = try #require(GResource(resourceDTO))
         
         // 创建一个简单的策略表达式。只要请求的操作是 "read"，就允许放行
         let myPolicy = """

@@ -60,13 +60,39 @@ public extension PrivilegeModule {
                 errThrowing: .resourceCreateFailed,
                 modelBuilder: { .success(__DBM.ResourceModel<T>(from: $0)) },
                 dtoBuilder: { QResource<T>.make(from: $0.fill()) }
-            )
-            .map { 
+            ).map {
                 logger.info("创建资源 操作成功", metadata: ["data": .summaryData($0)])
                 logger.debug("创建资源 结果详细数据", metadata: ["data": .data($0)])
                 return $0 
-            }
-            .logIfFail(logger: logger)
+            }.logIfFail(logger: logger)
+        }
+        
+        public func create(
+            resources: OrderedSet<AnyResource>,
+            on transactor: Transactor? = nil
+        )  -> EventLoopRes<[GResource], Errcase> {
+            let logger = getActionLogger()
+            logger.info("执行 创建资源 操作", metadata: ["resources": .summaryData(resources)])
+            logger.debug("操作参数", metadata: ["resources": .data(resources)])
+            let db = transactor?.db ?? self.db
+            
+            let models = resources.map { $0.dbInstance }
+            
+            return models
+                .create(on: db)
+                .withError(Errcase.resourceCreateFailed, "插入资源失败", category: .internal)
+                .flatMapThrowing
+            { () throws(E.ErrType) in
+                try required(throws: Errcase.resourceCreateFailed, category: .internal) {
+                    try models.map {
+                        try GResource.make(from: $0).get()
+                    }
+                }
+            }.map {
+                logger.info("创建资源 操作成功", metadata: ["data": .summaryData($0)])
+                logger.debug("创建资源 结果详细数据", metadata: ["data": .data($0)])
+                return $0
+            }.logIfFail(logger: logger)
         }
         
         /// 根据 ID 批量删除资源。
@@ -86,7 +112,7 @@ public extension PrivilegeModule {
             let db = transactor?.db ?? self.db
             return __delete(
                 on: db,
-                AnyResource.self,
+                GResource.self,
                 ids: ids,
                 label: "资源",
                 errThrowing: .resourceDeleteFailed,

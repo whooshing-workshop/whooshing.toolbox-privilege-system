@@ -38,6 +38,7 @@ extension PrivilegeSystem.RoleController {
         try await delete(roleIds: roleIds, on: transactor).get()
     }
 
+    @discardableResult
     public func update(
         with updater: PRole.Updater,
         on transactor: Transactor? = nil

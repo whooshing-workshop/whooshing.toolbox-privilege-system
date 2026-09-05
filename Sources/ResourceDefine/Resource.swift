@@ -81,7 +81,7 @@ public extension Resource {
 /// ```swift
 /// let operation = AnyOperation(op: FileOperation.read)
 /// ```
-public struct AnyOperation: Sendable, Codable, Loggerable, CustomStringConvertible {
+public struct AnyOperation: Sendable, Codable, Hashable, Loggerable, CustomStringConvertible {
     /// 发送给 OPA `input.operation` 的原始操作字符串。
     public let rawValue: String
     
@@ -101,5 +101,33 @@ public struct AnyOperation: Sendable, Codable, Loggerable, CustomStringConvertib
     
     public var logDescription: String {
         self.rawValue
+    }
+}
+
+public struct AnyResource: Sendable, Codable, Hashable, Loggerable, CustomStringConvertible {
+    public let type: String
+    public let appId: String
+    public let json: [String: AnyCodable]
+    
+    public init<T: Resource>(from resource: T) {
+        self.type = T.type.rawValue
+        self.appId = resource.appId
+        self.json = resource.json
+    }
+    
+    package init(type: String, appId: String, json: [String : AnyCodable]) {
+        self.type = type
+        self.appId = appId
+        self.json = json
+    }
+    
+    public var rjson: [String: AnyCodable] {[
+        "type": AnyCodable(type),
+        "app_id": AnyCodable(appId),
+        "json": AnyCodable(json)
+    ]}
+    
+    public var description: String {
+        formatJson(rjson)
     }
 }

@@ -4,7 +4,7 @@ import DTOBuilder
 public extension PM {
     struct PrivilegeTAnyResource: DTO.Pivot {
         public typealias Primary = QPrivilege
-        public typealias Secondary = AnyResource
+        public typealias Secondary = GResource
         
         public let id: UUID
         public let privilegeId: UUID

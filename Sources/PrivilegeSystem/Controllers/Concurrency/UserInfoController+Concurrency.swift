@@ -4,6 +4,7 @@ import PrivilegeModule
 // MARK: - UserInfoController Concurrency (UserInfoController.swift)
 
 extension PrivilegeSystem.UserInfoController {
+    @discardableResult
     public func create(
         on transactor: Transactor? = nil,
         @OTOChainRelationBuilder<UUID, PUserInfo, PExtendedInfo>
@@ -19,6 +20,7 @@ extension PrivilegeSystem.UserInfoController {
         try await delete(infoIds: infoIds, on: transactor).get()
     }
 
+    @discardableResult
     public func update(
         with updater: PUserInfo.Updater,
         on transactor: Transactor? = nil
