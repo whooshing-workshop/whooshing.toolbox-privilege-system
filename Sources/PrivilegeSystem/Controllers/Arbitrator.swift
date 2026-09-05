@@ -107,7 +107,7 @@ extension PrivilegeSystem {
             return roleController.is(role: role, appointedTo: user).flatMap {
                 $0 ?
                 self.db.eventLoop.makeSucceededResult(()) :
-                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的身份并未被任命与用户的", metadata: ["user": .data(user), "role": .data(role)], category: .external(suggestions: ["身份必须已任命与 \(user.email)"], userdata: .init(HTTPResponseStatus.forbidden)))
+                self.db.eventLoop.makeFailedResult(Errcase.arbitrationDataCollectFailed, "所提供的身份并未被任命与用户", metadata: ["user": .data(user), "role": .data(role)], category: .external(suggestions: ["身份必须已任命与 \(user.email)"], userdata: .init(HTTPResponseStatus.forbidden)))
             }.flatMap {
                 user.model(from: self.db).errCast(Errcase.arbitrationDataCollectFailed, "User 模型取得失败", category: .internal)
             }.flatMap {
@@ -418,11 +418,18 @@ extension PrivilegeSystem {
             ).flatten(on: eventLoop).flatMap { (res: [(Result.IdKey, OPA.Answer<Bool?>)]) in
                 var result = Result(result: true, reports: [:])
                 for (k, r) in res {
-                    guard let r = r.result else {
-                        return self.eventLoop.makeFailedResult(Errcase.arbitrateFailed, "OPA 查询异常，Path 路径未找到", category: .internal)
+                    let resBool: Bool
+                    if let r = r.result { resBool = r }
+                    else {
+                        switch k.type {
+                        case .role: logger.warning("OPA 路径 \(policyPath(moduleId: k.moduleId, modelId: k.id, type: Role.self, format: .path)) 未找到权限设置，默认为不允许任何访问")
+                        case .domain: logger.warning("OPA 路径 \(policyPath(moduleId: k.moduleId, modelId: k.id, type: Domain.self, format: .path)) 未找到权限设置，默认为不允许任何访问")
+                        case .privilege: return self.eventLoop.makeFailedResult(Errcase.arbitrateFailed, "OPA 查询异常，Path 路径未找到", category: .internal)
+                        }
+                        resBool = false
                     }
-                    result.and(result: r)
-                    result.append(id: k, value: r)
+                    result.and(result: resBool)
+                    result.append(id: k, value: resBool)
                 }
                 return self.eventLoop.makeSucceededResult(result)
             }

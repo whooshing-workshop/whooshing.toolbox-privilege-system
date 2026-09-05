@@ -122,6 +122,7 @@ extension GResource: Query.Queriable {
     public static var paths: [PartialKeyPath<Self>: PartialKeyPath<Model>] {[
         Self.idKey: \.$id,
         \.id: \.$id,
+        \.appId: \.$appId,
         \.data: \.$data,
         \.createdAt: \.$createdAt,
         \.updatedAt: \.$updatedAt
@@ -130,6 +131,7 @@ extension GResource: Query.Queriable {
     public static func buildAllFields<Base>(_ builder: QueryBuilder<Base>) -> QueryBuilder<Base> where Base: FluentKit.Model {
         builder
             .field(Model.self, \.$id)
+            .field(Model.self, \.$appId)
             .field(Model.self, \.$data)
             .field(Model.self, \.$createdAt)
             .field(Model.self, \.$updatedAt)

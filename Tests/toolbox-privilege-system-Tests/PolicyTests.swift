@@ -2681,6 +2681,29 @@ struct PolicyTesting {
         #expect(deny.reports.elements[1].value == true)
         #expect(deny.reports.elements[2].value == false)
     }
+    
+    @Test("空权限仲裁测试")
+    func emptyPrivilegeTest() async throws {
+        let (s, m) = try await TestingShared.getSystem()
+        
+        let user = try await s.account.register(for: PUser(email: "empty_testing@email.com", hashedPassword: Crypto.hash("1234567890").get()))
+        let role = try await #require(s.role.create(roles: [.init(name: "Empty Role", summary: "空权限角色")]).first)
+        
+        try await s.role.appoint {
+            OrderedSet([role]) => OrderedSet([user])
+        }
+
+        let resource = JsonResource(appId: "test201", content: [:])
+        let resourceDTO = try await m.resource.create(resources: [resource]).first!
+        
+        let res = try await s.arbitrator.judge(
+            moduleId: m.moduleId, user: user, role: role,
+            resource: try #require(GResource(resourceDTO)),
+            operation: .init(op: JsonOperation.anything), privilegeIds: []
+        )
+
+        #expect(res.result == false)
+    }
 
     // =========================================================================
     // MARK: 测试结束
