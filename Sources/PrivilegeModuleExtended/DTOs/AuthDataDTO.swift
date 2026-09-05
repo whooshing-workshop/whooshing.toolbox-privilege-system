@@ -21,7 +21,14 @@ public struct AuthData: Content, Authenticatable, CustomStringConvertible, Logge
     
     public var summaryJson: [String: AnyCodable] {[
         "key": AnyCodable(key),
-        "token": AnyCodable(token),
+        "token": AnyCodable([
+            "id": AnyCodable(token.id.shortString),
+            "credential": AnyCodable(token.credential),
+            "user": AnyCodable([
+                "id": AnyCodable(token.user.id),
+                "email": AnyCodable(token.user.email)
+            ])
+        ]),
         "role": AnyCodable([
             "id": AnyCodable(role.id.shortString),
             "name": AnyCodable(role.name)
