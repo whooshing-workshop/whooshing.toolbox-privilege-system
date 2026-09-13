@@ -184,13 +184,28 @@ try await module.privilege.attach {
 
 `BasicPolicy` 有三个特化类型，分别对应仲裁时 OPA 收到的三类 input：
 
-| 特化类型 | 适用对象 | 独有字段 |
+| 特化类型 | 适用对象 | 独有字段（→ OPA input 键） |
 |---|---|---|
-| `RolePolicy` | 角色策略 `PPolicy<Role>` | `role`（`role.id` / `role.name` …）、`policyIds` |
-| `DomainPolicy` | 域策略 `PPolicy<Domain>` | `domainId`、`policyId`、`group`（直接授予时不存在，用 `group.exists` 判断） |
-| `PrivilegePolicy` | 资源权限 `PPrivilege` | `privilegeId`（映射 `input.privilege_id`） |
+| `RolePolicy` | 角色策略 `PPolicy<Role>` | `policyIds` → `input.policy_ids`；`roleId` 为 `role.id` 的快捷方式 |
+| `DomainPolicy` | 域策略 `PPolicy<Domain>` | `domainId` → `input.domain_id`、`policyId` → `input.policy_id`、`group` → `input.group`（直接指派时该键**不存在**，用 `group.exists` 判断） |
+| `PrivilegePolicy` | 资源权限 `PPrivilege` | `privilegeId` → `input.privilege_id` |
 
 三者均可访问 `operation`、`user`、`role` 与 `resource`（动态 JSON，可用点语法任意下钻）。合成语义与 OPA 一致：同一 `allow` 内 `&&` 须全部满足，多个 `allow` 任一满足即可，任一 `deny` 命中即否决；未设置任何规则时拒绝所有。快捷入口有 `.allowAll` 与 `.denyAll`，DSL 未覆盖的表达式可用 `.raw("...")` 原样嵌入。
+
+手写 Rego 时，仲裁 input 的完整结构如下（自 V1.1.1.3 起顶层键统一为 **snake_case**）：
+
+| 键 | 类型 | 说明 | 出现于 |
+|---|---|---|---|
+| `input.operation` | string | 本次操作，如 `"read"` | 全部 |
+| `input.user` | QUser | 发起请求的用户（`id` / `email` / `created_at` …，关系字段为 `{loaded, value, id}` 形式） | 全部 |
+| `input.role` | QRole | 本次使用的角色（`id` / `name` / `summary` …） | 全部 |
+| `input.resource` | object | 业务模块传入的资源 JSON，字段由 `@Resource` 类型决定（如路由资源的 `appId`） | 全部 |
+| `input.policy_ids` | [uuid] | 该角色在本模块下的全部策略 ID | 角色策略 |
+| `input.domain_id` / `input.policy_id` | uuid | 当前域与当前域策略的 ID | 域策略 |
+| `input.group` | QGroup | 该域经由哪个群组授予；直接指派给用户时**整个键不存在**（写 `not input.group`，而非 `input.group == null`） | 域策略 |
+| `input.privilege_id` | uuid | 当前资源权限的 ID | 资源权限策略 |
+
+日期字段（`created_at` 等）以包装对象形式出现：`raw`（自 1970 起的纳秒数，用于比较）、`iso8601`、`year` / `month` / `day` / `hour` / `minute` / `second` / `weekday` 等拆解分量；DSL 的 `.createdAt >= date` 比较基于 `raw`，`.createdAt.weekday` 等则直接取对应分量。
 
 #### 5. 创建角色与人员指派
 
@@ -250,6 +265,16 @@ print(writeResult.reports)
 ```
 
 > **提示:** 仲裁器会直接与 OPA 进行高性能通信，并将相关用户、角色、资源的元数据带入环境，无需您手动解析复杂的依赖网。`judge` 也提供仅传入 `userId` / `roleId` 的重载，便于服务间调用。
+
+仲裁语义（V1.1.1.2 起）：
+
+1. 先校验 `role` 确实任命给了 `user`（直接任命 / 群组任命含祖先群组 / 组内任命任意一种），否则 403。
+2. 取三组策略并**并行**求值：
+   * **角色策略**：该角色在 `moduleId` 下的**全部**策略（同一角色在同一模块下可有多条，每条独立存放在 OPA 路径 `rules.m_<module>.role.v_<role>.p_<policy>`）；
+   * **域策略**：用户直接持有的域 ∪ 用户所在群组及其全部祖先群组持有的域，各取其在 `moduleId` 下的策略（路径 `…​.domain.v_<domain>.p_<policy>`）；在本模块没有策略的域**不参与**仲裁；
+   * **资源权限策略**：`privilegeIds` 指向的每条 privilege（路径 `…​.privilege.p_<privilege>`）。
+3. 最终结果 = 以上所有策略结果的 **AND**；`Result.reports` 以 `(type, moduleId, modelId, policyId)` 为键保留每一条的原始结果。
+4. 角色在 `moduleId` 下**没有任何策略**时不再参与 AND，而是直接以错误结束（V1.1.1.8 起，422 “无效的角色，尚未为其设置任何权限”），避免路由 privilege 策略单独放行一个从未被授权的角色；任一策略在 OPA 中找不到路径 → 401 “OPA 查询异常，路径未找到”。
 
 #### 7. 类型安全的查询 (Query DSL)
 
@@ -319,7 +344,9 @@ RolePolicy()
 ### 注意事项
 
 - 本库依赖运行中的 **PostgreSQL** 与 **OPA / EOPA** 服务；单元测试会在检测到两者监听后才启用（`TestingShared.dbListening && TestingShared.opaListening`）。
-- 同一 `(moduleId, 角色/域)` 下的策略在 OPA 中共用同一路径，请避免为同一角色在同一模块重复创建多条策略。
+- 同一角色 / 域在同一模块下可以有多条策略（V1.1.1.2 起 OPA 路径含 `policy_id`），仲裁时按 **AND** 合并：任一策略拒绝即拒绝。多条 `allow` 写在**同一条**策略内才是“或”关系。
+- 仲裁 input 的顶层键为 snake_case（`module_id` / `policy_ids` / `domain_id` / `policy_id` / `privilege_id`），DTO 字段亦为 snake_case（`created_at` / `user_id`）；而 `ArbitrateData` 请求体仍为 camelCase（`moduleId` / `userId` / `roleId` / `privilegeIds`），编写客户端时请注意区分。
+- **给 DTOBuilder 贡献代码时**：`SuperProperty.id` / `OptionalSuperProperty.id` 必须保持纯只读（不能声明 `package(set)` 等任何可见 setter）。KeyPath 的运行时类型取决于形成它的模块能否看到 setter：包内形成的 `\.$parent.id` 会是 `ReferenceWritableKeyPath`，外部模块形成的则是只读 `KeyPath`，二者不相等，会让 `DTO.paths[\.$parent.id]` 查不到并在 `Query/Filter` 处 fatalError（V1.1.1.7 已修复）。包内写入外键请用 `$parent.set(id:)`。
 - 角色名命中 `reservedRoleName` 时 `role.create` 会被拒绝，请使用 `createAdminIfNotExist` 等专用方法创建。
 
 ---
