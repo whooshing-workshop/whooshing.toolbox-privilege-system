@@ -399,6 +399,10 @@ extension PrivilegeSystem {
             input: ArbitrateData,
             logger: Logger
         ) -> EventLoopRes<Result, Errcase> {
+            guard !input.role.policyIds.isEmpty else {
+                return eventLoop.makeFailedResult(Errcase.arbitrateFailed, "无效的角色，尚未为其设置任何权限", category: .external(suggestions: ["请权限负责人以解决该问题"], userdata: .init(HTTPResponseStatus.unprocessableEntity)))
+            }
+            
             // 取得用户身份的 policy
             let rolesAuth = input.role.policyIds.map { policyId in
                 eventLoop.submitResult { () throws(Errcase.ErrType) in

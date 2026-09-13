@@ -2784,6 +2784,8 @@ struct PolicyTesting {
         let domain = try await #require(s.domain.create(domains: [.init(name: "Multi Policy Domain", summary: "多权限角色")]).first)
         let role = try await #require(s.role.create(roles: [.init(name: "Empty Testing Role", summary: "无权限测试角色")]).first)
         
+        let rolePolicy = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
+        
         let domainPolicy1 = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { input.user.email == \"multi_policy_domain_testing@email.com\" }")
         let domainPolicy2 = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { input.role.name == \"Never!\" }")
         let domainPolicy3 = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { input.role.name == \"Multi Policy Role\" }")
@@ -2794,6 +2796,10 @@ struct PolicyTesting {
         
         try await s.domain.assign {
             OrderedSet([domain]) => OrderedSet([user])
+        }
+        
+        try await s.policy.create(to: Role.self) {
+            OrderedSet([rolePolicy]) => role.id
         }
         
         let policyRelations = try await s.policy.createWithReturning(to: Domain.self) {
@@ -2810,7 +2816,7 @@ struct PolicyTesting {
         )
         
         #expect(res.result == false)
-        #expect(res.reports.count == 3)
+        #expect(res.reports.count == 4)
         let key1 = PrivilegeSystem.Arbitrator.Result.IdKey(type: .domain, moduleId: m.moduleId, modelId: domain.id, policyId: policyRelations[domain.id]![0].id)
         #expect(res.reports[key1] == true)
         let key2 = PrivilegeSystem.Arbitrator.Result.IdKey(type: .domain, moduleId: m.moduleId, modelId: domain.id, policyId: policyRelations[domain.id]![1].id)
@@ -2827,6 +2833,8 @@ struct PolicyTesting {
         let domain = try await #require(s.domain.create(domains: [.init(name: "Multi Policy Domain Should Pass", summary: "多权限角色")]).first)
         let role = try await #require(s.role.create(roles: [.init(name: "Empty Testing Role Should Pass", summary: "无权限测试角色")]).first)
         
+        let rolePolicy = PPolicy<Role>(moduleId: m.moduleId, policy: "allow if { true }")
+        
         let domainPolicy1 = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { input.user.email == \"multi_policy_domain_testing_should_pass@email.com\" }")
         let domainPolicy2 = PPolicy<Domain>(moduleId: m.moduleId, policy: "allow if { input.role.name == \"Empty Testing Role Should Pass\" }")
         
@@ -2836,6 +2844,10 @@ struct PolicyTesting {
         
         try await s.domain.assign {
             OrderedSet([domain]) => OrderedSet([user])
+        }
+        
+        try await s.policy.create(to: Role.self) {
+            OrderedSet([rolePolicy]) => role.id
         }
         
         let policyRelations = try await s.policy.createWithReturning(to: Domain.self) {
@@ -2852,7 +2864,7 @@ struct PolicyTesting {
         )
         
         #expect(res.result == true)
-        #expect(res.reports.count == 2)
+        #expect(res.reports.count == 3)
         let key1 = PrivilegeSystem.Arbitrator.Result.IdKey(type: .domain, moduleId: m.moduleId, modelId: domain.id, policyId: policyRelations[domain.id]![0].id)
         #expect(res.reports[key1] == true)
         let key2 = PrivilegeSystem.Arbitrator.Result.IdKey(type: .domain, moduleId: m.moduleId, modelId: domain.id, policyId: policyRelations[domain.id]![1].id)
@@ -2873,14 +2885,13 @@ struct PolicyTesting {
         let resource = JsonResource(appId: "test201", content: [:])
         let resourceDTO = try await m.resource.create(resources: [resource]).first!
         
-        let res = try await s.arbitrator.judge(
-            moduleId: m.moduleId, user: user, role: role,
-            resource: try #require(GResource(resourceDTO)),
-            operation: .init(op: JsonOperation.anything), privilegeIds: []
-        )
-        
-        #expect(res.result == false)
-        #expect(res.reports.count == 0)
+        await #expect(throws: PrivilegeSystem.Errcase.ErrType.self) {
+            try await s.arbitrator.judge(
+                moduleId: m.moduleId, user: user, role: role,
+                resource: try #require(GResource(resourceDTO)),
+                operation: .init(op: JsonOperation.anything), privilegeIds: []
+            )
+        }
     }
 
     // =========================================================================
