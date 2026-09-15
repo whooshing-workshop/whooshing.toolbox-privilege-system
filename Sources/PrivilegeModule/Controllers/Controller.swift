@@ -101,7 +101,13 @@ package extension Controller {
                     errThrowing: errThrowing
                 ).flatMap { diffs in
                     guard diffs.count == 0 else {
-                        return db.eventLoop.makeFailedResult(errThrowing, "\(label) 记录删除失败，预期记录未在数据库中找到", metadata: ["invalid": .data(diffs)], category: .inherit)
+                        // 返回 404 并在 reason 中列出无效 ID（整批不删除，事务回滚）。
+                        return db.eventLoop.makeFailedResult(
+                            errThrowing,
+                            "\(label) 记录删除失败，以下 ID 未在数据库中找到: \(diffs.map { $0.uuidString }.joined(separator: ", "))",
+                            metadata: ["invalid": .data(diffs)],
+                            category: .external(suggestions: ["请移除不存在的 ID 后重试"], userdata: .init(HTTPResponseStatus.notFound))
+                        )
                     }
                     
                     return db.eventLoop.makeSucceededVoidResult()
@@ -167,7 +173,8 @@ package extension Controller {
                     .withError(errThrowing, "\(label) Returning 时发生错误", category: .internal)
             }.flatMapThrowing { data throws(E.ErrType) in
                 guard let d = data else {
-                    throw errThrowing.d("\(label) 未被成功修改，Returning 未找到其改动", category: .internal)
+                    // 此处为空即目标记录不存在，属于客户端可预期的失败 → 404
+                    throw errThrowing.d("\(label)不存在", category: .external(userdata: .init(HTTPResponseStatus.notFound)))
                 }
                 return try required(throws: errThrowing, category: .internal) {
                     try dtoBuilder(d).get()
@@ -392,15 +399,37 @@ package extension Controller {
                 relations.flatMap { relation in
                     switch action {
                     case .attach:
-                        relation.left.flatMap { l in
-                            relation.right.map { r in
-                                let pivot = Pivot<PivotT>()
-                                pivot.$primaryModel.id = reversed ? r : l
-                                pivot.$secondaryModel.id = reversed ? l : r
-                                return pivot.create(on: db)
-                                    .withError(errThrowing, "将 \(label) 关系插入中间表时失败", category: .internal)
+                        // 先查出已存在的组合，存在则 409 并列出。
+                        [
+                            Pivot<PivotT>.query(on: db)
+                                .filter(\.$primaryModel.$id ~~ (reversed ? relation.right : relation.left))
+                                .filter(\.$secondaryModel.$id ~~ (reversed ? relation.left : relation.right))
+                                .all()
+                                .withError(errThrowing, "查询 \(label) 关系中间表时失败", category: .internal)
+                                .flatMap
+                            { existing in
+                                guard existing.isEmpty else {
+                                    let pairs = existing.map { "(\($0.$primaryModel.id.uuidString), \($0.$secondaryModel.id.uuidString))" }
+                                    return db.eventLoop.makeFailedResult(
+                                        errThrowing,
+                                        "\(label) 关系已存在，不可重复建立: \(pairs.joined(separator: ", "))",
+                                        metadata: ["existing": .stringConvertible(existing.count)],
+                                        category: .external(suggestions: ["请移除已存在的关系后重试"], userdata: .init(HTTPResponseStatus.conflict))
+                                    )
+                                }
+                                return db.eventLoop.makeSucceededVoidResult()
+                            }.flatMap {
+                                relation.left.flatMap { l in
+                                    relation.right.map { r in
+                                        let pivot = Pivot<PivotT>()
+                                        pivot.$primaryModel.id = reversed ? r : l
+                                        pivot.$secondaryModel.id = reversed ? l : r
+                                        return pivot.create(on: db)
+                                            .withError(errThrowing, "将 \(label) 关系插入中间表时失败", category: .internal)
+                                    }
+                                }.flatten(on: db.eventLoop).map { _ in }
                             }
-                        }
+                        ]
                     case .detach:
                         [
                             Pivot<PivotT>.query(on: db)
@@ -412,7 +441,13 @@ package extension Controller {
                             { count in
                                 let expect = relation.right.count * relation.left.count
                                 guard count == expect else {
-                                    return db.eventLoop.makeFailedResult(errThrowing, "\(label) 关系解除失败，预期解除 \(expect) 条关系", metadata: ["count": .stringConvertible(count)], category: .internal)
+                                    // 要解除的关系（部分）不存在属于客户端可预期的失败 → 404，整批回滚
+                                    return db.eventLoop.makeFailedResult(
+                                        errThrowing,
+                                        "\(label) 关系解除失败，预期解除 \(expect) 条关系，数据库中仅存在 \(count) 条",
+                                        metadata: ["count": .stringConvertible(count), "expect": .stringConvertible(expect)],
+                                        category: .external(suggestions: ["请确认所有关系均已建立后再解除"], userdata: .init(HTTPResponseStatus.notFound))
+                                    )
                                 }
                                 
                                 return db.eventLoop.makeSucceededVoidResult()
