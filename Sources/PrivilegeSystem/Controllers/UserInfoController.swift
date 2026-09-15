@@ -114,21 +114,6 @@ public extension PrivilegeSystem.UserInfoController {
         logger.debug("操作参数", metadata: ["relations": .data(relations)])
         let db = transactor?.db ?? self.db
         return db.trans(throws: .userInfoCreateFailed, "数据库事务执行失败", category: .internal) { db in
-            // 【修复 module-privilege-system#11】同一批请求内为同一用户提供多份用户信息：
-            // 下方的存在性检查只对比数据库中已有的记录，同批内的重复只能靠 user_id 唯一约束兜底，
-            // 而约束冲突会被当作内部错误（500）。这里先在批内按 user_id 去重检查，重复则与“已存在”同样返回 409。
-            let duplicatedUserIds = Dictionary(grouping: relations.map { $0.left }, by: { $0 })
-                .filter { $0.value.count > 1 }
-                .keys
-                .sorted { $0.uuidString < $1.uuidString }
-            guard duplicatedUserIds.isEmpty else {
-                return db.eventLoop.makeFailedResult(
-                    PrivilegeSystem.Errcase.userInfoCreateFailed,
-                    "同一批请求中为用户 \"\(duplicatedUserIds.map { $0.uuidString }.joined(separator: "\", \""))\" 提供了多份用户信息，创建失败",
-                    category: .external(suggestions: ["一个用户仅允许创建一个用户信息", "请合并同一用户的多份信息后重试"], userdata: .init(HTTPResponseStatus.conflict))
-                )
-            }
-            
             let infos = relations.map { $0.right.left.raw(for: $0.left) }
             
             return __SDBM.User.Info.query(on: db)
