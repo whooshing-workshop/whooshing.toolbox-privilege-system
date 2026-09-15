@@ -522,10 +522,13 @@ public extension PrivilegeSystem.GroupController {
     ///
     /// `UserInGroupRelation` 一般用于指派特定的组内角色给某个用户。
     ///
+    /// 查询按 **成对** 语义进行：只有 `(userId, groupId)` 恰好等于 `relations` 中某一项的关系才会被返回，
+    /// 用户集合与群组集合交叉产生的其它组合（如查 (A, g1)、(B, g2) 时的 (A, g2)、(B, g1)）不会混入结果。
+    ///
     /// - Parameters:
     ///   - relations: 预期需查询的关系，包含用户 DTO 和群组 DTO。
-    ///   - strict: 如果为 `true`，查出的记录条数不匹配预期的 `relations` 长度则抛出失败。
-    /// - Returns: `EventLoopRes<[UserTGroup], Errcase>`
+    ///   - strict: 如果为 `true`，查出的记录条数不匹配预期的 `relations` 长度（即有关系不存在）则抛出失败（422）。
+    /// - Returns: `EventLoopRes<[UserTGroup], Errcase>`，顺序与数据库返回顺序一致。
     func query(
         relations: OrderedSet<PUserTGroup>,
         strict: Bool = true,
@@ -550,7 +553,9 @@ extension PrivilegeSystem.GroupController {
         relations: OrderedSet<PUserTGroup>,
         strict: Bool
     ) -> EventLoopRes<[__SDBM.UserGroupPivot], PrivilegeSystem.Errcase> {
-        __SDBM.UserGroupPivot.query(on: db)
+        let wanted = Set(relations.map { UserGroupPair(userId: $0.userId, groupId: $0.groupId) })
+        
+        return __SDBM.UserGroupPivot.query(on: db)
             .with(\.$primaryModel)
             .with(\.$secondaryModel)
             .filter(\.$primaryModel.$id ~~ relations.map { $0.userId })
@@ -559,12 +564,21 @@ extension PrivilegeSystem.GroupController {
             .withError(PrivilegeSystem.Errcase.userGroupRelationQueryFailed, "数据库查询时出错", category: .internal)
             .flatMapThrowing
         { rs throws(PrivilegeSystem.Errcase.ErrType) in
+            let matched = rs.filter {
+                wanted.contains(UserGroupPair(userId: $0.$primaryModel.id, groupId: $0.$secondaryModel.id))
+            }
             if strict {
-                guard rs.count == relations.count else {
-                    throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity))).metadata(["expect": .stringConvertible(relations.count), "got": .stringConvertible(rs.count)])
+                guard matched.count == relations.count else {
+                    throw PrivilegeSystem.Errcase.userGroupRelationQueryFailed.d("所查到的关系数量与提供的不符", category: .external(userdata: .init(HTTPResponseStatus.unprocessableEntity))).metadata(["expect": .stringConvertible(relations.count), "got": .stringConvertible(matched.count)])
                 }
             }
-            return rs
+            return matched
         }
     }
+}
+
+/// `GroupController.__query` 用于成对匹配 (userId, groupId) 的键（见 module-privilege-system#12）
+private struct UserGroupPair: Hashable {
+    let userId: UUID
+    let groupId: UUID
 }
